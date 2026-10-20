@@ -1,42 +1,25 @@
-# Phase 5 (B1: Core Operations) handoff
+# Phase 5 (B1: First Working Ecosystem) handoff — v0.2
 
-Prerequisite: Phase 4 foundation (migration 0001, RLS suite passing). Do not start Phases 7–8.
+Prerequisites: `npm run test:all` green; runbook steps 1–3 in the manual done. Do not start Phases 7–8.
 
-## Purpose
-- **Clients:** client records, contacts, status, Brand Base (6 sections, 27 questions), pipelines with stage gates, funnels (past, live, publish later).
-- **Projects (PM):** projects and tasks per client; "My work" grouped by workspace (never merged).
-- **Planner:** focus areas, objectives, measures, actions (a task linked to an objective), updates. Actions are Projects tasks.
-- **Drive (Files):** workspace-scoped files and versions; upload, view, download, share links with expiry.
-- **Office:** Today summary, Team (members, roles, app access), Settings. Non-admins see no Invite or Save.
+## Entry criteria (evidence required)
+1. New Supabase project with 0001–0003 applied; suites pass against a staging copy.
+2. Real sign-in tested end to end: email confirm, password reset, Google, invitation accept, sign-out, deactivation.
+3. Auth screens designed and approved (below). 4. Git remote + CI green.
 
-## Source of truth
-| Record | Owner table | Notes |
-|---|---|---|
-| Client | `clients` | Single record; others reference by id |
-| Project and task | `projects`, to add `tasks` | Planner actions reference task ids, never copies |
-| Plan objectives and measures | to add `plan_objectives`, `measures` | Planner only |
-| Files | `files`, to add `file_versions` | Path always starts with workspace id |
-| Membership and roles | `memberships` | Office Team reads this |
+## Slice order
+0. **Auth shell + Launcher** — sign-in, sign-up, verify email, reset password, accept invitation, "no workspace yet", session expired; Launcher from `launcher_apps()`; workspace switcher writes `profiles.active_workspace_id`.
+1. Clients list/record. 2. Projects + tasks (add `tasks`, composite FKs, `client_visible`). 3. Drive: Supabase Storage, path `workspace_id/...`, signed URLs, share links with expiry (T5, T14). 4. Planner objectives/measures; actions = task ids. 5. Office Team + Settings: invitations, app grants, roles. 6. My work: one query per workspace, two groups.
 
-## Build order (smallest vertical slice first)
-1. Clients list and record (read, then create/edit for editors). Test with T1, D3, D5.
-2. Projects with tasks, scoped to a client. Test cross-client isolation for clients.
-3. Drive upload and list with D2 delete rules. Add signed URLs and expiry (T5, T14).
-4. Planner objectives linked to tasks.
-5. Office Team and Settings (admin-only mutations, D1 rules).
-6. My work: one query per workspace, two labelled groups.
-
-## Rules for every new table
-Copy the pattern in `migrations/0001_foundation.sql`: `workspace_id not null`, `enable` and `force` RLS, explicit policies per command, no policy means no access. Add the table to the T11 list in `test/isolation.test.mjs` and a positive and negative check.
+## UX requirements to approve first (proposed defaults)
+- Auth screens use the shell theme (neutral), not a business palette, because the workspace is unknown before sign-in.
+- Invitation email → link → sign in or create account with the **same** email → joined. Mismatch: one plain line, no detail.
+- Signed in, no membership: "You don't have access to a workspace yet. Ask your admin for an invitation." No other data.
+- Account/profile, notifications centre, app-access editing in Team, global search: design before their slice.
+- FMP tile copy: "Funnel Mapper Pro · Opens in a new tab · own sign-in for now".
 
 ## Acceptance
-- All Phase 4 checks still pass.
-- Each new table has at least one allow and one deny test per role.
-- Empty, loading, error, offline and denied states implemented per the Phase 3 handoff.
-- No `RETURNING` on append-only tables; no cross-workspace joins.
+All existing checks pass; every new table has allow + deny tests per role and a client test; six states per screen; errors only through `toPublicError`; tokens from `packages/ui/tokens.css`.
 
 ## Out of scope
-Agents, Social Planner, Whiteboard, standalone builders, workload views, automations, reports, strategy map, dashboards (Phase 6 or later), Personal workspace (not approved).
-
-## Gaps to resolve first
-Account and profile page, notifications, app-access editing, global search: not designed. Need design before building.
+Agents, Social Planner, Whiteboard, builders, automations, dashboards, Personal workspace, FMP Stage 2, external customer onboarding.

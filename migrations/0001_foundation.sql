@@ -203,7 +203,7 @@ create policy audit_select on audit_events for select using (has_role(workspace_
 create policy audit_insert on audit_events for insert with check (is_staff(workspace_id) and actor_id = current_user_id());
 
 -- Grants for the application role. The app role never owns tables and never bypasses RLS.
-create role app_user nologin;
+do $$ begin if not exists (select 1 from pg_roles where rolname = 'app_user') then create role app_user nologin; end if; end $$;  -- idempotent (audit fix: role is cluster-wide)
 grant usage on schema public to app_user;
 grant select, insert, update, delete on all tables in schema public to app_user;
 grant usage on all sequences in schema public to app_user;

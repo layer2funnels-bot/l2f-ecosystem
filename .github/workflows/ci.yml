@@ -1,0 +1,26 @@
+# Runs on every push and pull request once the repository has a GitHub remote. $0 (free Actions quota).
+name: ci
+on: [push, pull_request]
+permissions: { contents: read }
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:17
+        env: { POSTGRES_USER: tester, POSTGRES_PASSWORD: tester, POSTGRES_DB: postgres }
+        ports: ['5432:5432']
+        options: --health-cmd "pg_isready -U tester" --health-interval 5s --health-timeout 5s --health-retries 10
+    env: { PG_URL: 'postgres://tester:tester@localhost:5432/postgres' }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: sudo apt-get update -q && sudo apt-get install -y -q postgresql-client
+      - run: npm ci
+      - run: npm run check:secrets
+      - run: npm run check:licences
+      - run: npm run check:tokens
+      - run: DRIVERS=pglite,pg npm test
+      - run: npm run drill:restore
+      - run: npm run test:mutation

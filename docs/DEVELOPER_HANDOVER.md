@@ -1,80 +1,75 @@
-# Developer Handover and Technical Operations Manual
+# Developer Handover and Technical Operations Manual (v0.2, 20 Oct 2026)
 
-Status key: **Implemented+Tested** · **Implemented** · **Partial** · **Planned** · **Blocked**
+Status key: **Implemented+Tested** · **Prepared** (written, not run live) · **Planned** · **Blocked (owner)**. Audit details: `docs/AUDIT_REPORT.md`.
 
-Last verified: 47/47 database checks pass on PostgreSQL 16.4 (PGlite). Repository is local only (`git init`), not pushed.
-
-## 1. Vision and scope (summary)
-Two workspaces, Layer2Funnels and Aurj, with strict data isolation. Shared apps (Projects, Planner, Drive) show one workspace at a time. Office, Clients and Client Portal are per workspace. Staff roles: Owner, Admin, Editor, Viewer. Clients are external accounts limited to the Client Portal, which stays unreleased until gate G2 passes. Funnel Mapper Pro is a separate protected product: not inspected, changed or integrated. Children's data is out of scope.
-
-## 2. Phase mapping
-Programme Phase 4 = B0A–B0B (foundation). Programme Phase 5 = B1 (core operations). Programme Phase 6 = B2–B3. Phases 7 and 8 not started.
-
-## 3. Status
-
+## 1. Status
 | Item | Status | Evidence |
 |---|---|---|
-| Workspace isolation (DB, RLS) | Implemented+Tested | T1, T4, T6, T8 pass |
-| Roles and permission policies (D1–D6) | Implemented+Tested | D-series checks pass |
-| Last-owner safeguard | Implemented+Tested | D1e |
-| Client isolation at DB layer | Implemented+Tested | T6a–h |
-| Deactivation takes effect immediately | Implemented+Tested | T7 |
-| Append-only audit log | Implemented+Tested | AU1–AU4 |
-| RLS coverage on all public tables | Implemented+Tested | T11 (8 tables, forced, with policies) |
-| Privileged key exposure check | Implemented+Tested | T12 on current tree (no client bundle exists yet) |
-| Negative control (suite catches leaks) | Verified | Weakened policy → 7 failures |
-| Authentication provider | Planned | Identity assumed via JWT subject; no sign-in flow built |
-| API layer, server functions | Planned | Not built |
-| Active-workspace filtering in shared apps (T2) | Planned | Requires API layer |
-| Storage, signed URLs, share-link expiry (T5, T14) | Planned | Not built |
-| Funnel Mapper Pro Launcher entry (T9) | Planned | Launcher not built |
-| Client Portal (T10, G2) | Blocked by design | Stays disabled until T1–T9 pass for clients |
-| Logging free of cross-workspace ids (T15) | Planned | Not built |
-| Rate limiting (T16) | Planned | Not built |
-| Backups and restore drill (T17) | Planned | Process designed (working doc §6); not built or run |
-| CI pipeline | Planned | Not built |
-| Git remote, hosting, deployment | Blocked | Needs owner approval (no remote, no paid tier) |
+| Workspace + client isolation, roles, deactivation, last owner | Implemented+Tested | isolation 47/47 (PG17 + real PG) |
+| Identity works with current Supabase claims | Implemented+Tested | F1a–c |
+| No cross-workspace references | Implemented+Tested | F2a–e |
+| Tamper-evident audit (auto for permissions, approvals, apps, connections) | Implemented+Tested | F3, F7d |
+| Private policy helpers, pinned search paths | Implemented+Tested | F4a–d |
+| Client-visible allowlist; Client Portal kill switch (G2) | Implemented+Tested | F5, T10a–e |
+| Per-app access, Launcher registry, FMP entitlement | Implemented+Tested | F6, T9a–d |
+| Approvals state machine | Implemented+Tested | F7a–e |
+| Profiles, verified active workspace, invitation-only membership | Implemented+Tested | F8, INV1–11 |
+| Integration layer schema (0003) | Implemented+Tested | I1–I7 |
+| API error contract (T4) | Implemented+Tested | errors 9/9 |
+| Restore drill (T17, local) | Implemented+Tested | drill 3/3 |
+| Design tokens single source + contrast check | Implemented+Tested | `npm run check:tokens` |
+| CI pipeline | Prepared | `.github/workflows/ci.yml` (no remote yet) |
+| Nightly Supabase backup | Prepared | `scripts/backup-supabase.sh`, `backup.yml.disabled` |
+| Sign-in flows, API layer, storage, Launcher UI, rate limit (T16), log hygiene (T15) | Planned | Phase 5 |
+| New Supabase project, hosting, SMTP, Git remote | Blocked (owner) | §6 |
 
-## 4. Repository
+## 2. Repository
 ```
-migrations/0001_foundation.sql   schema, helpers, RLS, grants, last-owner trigger
-test/isolation.test.mjs          47-check RLS suite on real Postgres (PGlite)
-scripts/check-secrets.sh         T12 privileged-key scan
-docs/DECISIONS.md                decision register
-docs/DEVELOPER_HANDOVER.md       this manual
-docs/PHASE5_HANDOFF.md, docs/PHASE6_HANDOFF.md
+migrations/0001_foundation.sql            Phase 4 schema (role creation made idempotent)
+migrations/0002_hardening.sql             audit fixes F1–F9, apps, profiles, invitations
+migrations/0003_integration_foundation.sql connections, external_refs, webhook_inbox, outbox (droppable)
+seed/bootstrap.sql                        first owner + workspaces + FMP entry (run once, by owner)
+packages/core/errors.mjs                  one public error vocabulary (denied = not found)
+packages/ui/tokens.json → tokens.css      design tokens, generated
+test/lib.mjs, isolation.test.mjs, audit.test.mjs, errors.test.mjs, run.mjs
+scripts/check-secrets.sh, check-licences.mjs, build-tokens.mjs, mutation-check.mjs, restore-drill.mjs, backup-supabase.sh
+.github/workflows/ci.yml, backup.yml.disabled
+docs/ AUDIT_REPORT, DECISIONS, DEVELOPER_HANDOVER, PHASE5_HANDOFF, PHASE6_HANDOFF
 ```
 
-## 5. Commands
+## 3. Commands
 ```
-npm install
-npm test                 # runs migration on fresh Postgres and all isolation checks
-npm run check:secrets    # T12
+npm ci
+npm test                 # PG17 (PGlite): isolation + audit + API errors
+npm run test:all         # + real PostgreSQL (PG_URL), restore drill, negative control
+npm run check:secrets && npm run check:licences && npm run check:tokens
+npm run tokens:build     # after editing packages/ui/tokens.json
 ```
-Troubleshooting: if a policy test fails, check `pg_policies` for the table and confirm the test user has a membership row. A `42P01` error about a missing relation during migration means statement ordering; keep `check_function_bodies = off` at the top.
+Real-server tests need `PG_URL` (default `postgres://tester:tester@localhost:5432/postgres`, a superuser).
 
-## 6. Environment and hosting (not deployed)
-| Need | Option | Constraint |
-|---|---|---|
-| Frontend | Cloudflare Pages or Netlify free | Commercial use generally permitted; verify current limits |
-| Database, auth, storage | Supabase free | Pauses after ~1 week idle (outage for portal); no automated backups; 500 MB DB / 1 GB storage |
-| Excluded | Vercel Hobby | Non-commercial terms |
+## 4. Rules for every new table (Phase 5+)
+`workspace_id not null`; composite FK `(workspace_id, x_id)` to any workspace-owned parent; enable + force RLS; explicit policy per command using `private.*` helpers and `private.can_use_app(workspace_id,'<app>')`; client access only via `client_visible and private.client_of(...)`; add audit trigger if it changes permissions or decisions; add allow + deny tests per role to `test/audit.test.mjs`; never `RETURNING` on `audit_events`; map every DB error through `toPublicError`.
 
-Pricing and terms were not browsed in this session; re-verify before any signup.
+## 5. Security model in one paragraph
+Identity = Supabase Auth user id from the JWT. Authorization = active membership (role per workspace) + app grant + row policy, all enforced in Postgres. Clients reach only client-visible rows of their own client, and only while the owner has switched the Portal on. Sign-up creates an identity with no access; access comes from an email-bound invitation. Secrets never enter tables (`secret_ref` is a name).
+
+## 6. Go-live runbook at $0 (each step needs owner approval)
+1. Human owner on GitHub, Supabase, Cloudflare, domain, with 2FA (Phase 2 action #2).
+2. Export `application-office` (2 real clients) and pause it, freeing a free slot.
+3. Create Supabase project (region per decision, Mumbai recommended); apply 0001→0003 in order; run `seed/bootstrap.sql` after the owner's first sign-in.
+4. Auth settings: custom SMTP (Brevo free, sender on layer2funnels.com with SPF/DKIM), Confirm email ON, min password 12, Google provider ON, redirect URLs = our domains only.
+5. Run the test suites against a staging copy (PG_URL to the project's session pooler) before real data.
+6. Private GitHub repo; push; CI runs.
+7. Enable backups: add `SUPABASE_DB_URL` and `AGE_RECIPIENT` secrets, rename `backup.yml.disabled`, run once, then restore into a local server with `pg_restore` and check counts.
+8. Front end on Cloudflare Pages; only the anon key in the browser (`check:secrets` guards).
 
 ## 7. Known risks
-- **Migration runs as a superuser-equivalent.** Helper functions are `security definer` and bypass RLS by design. Production migrations must run as a role with `bypassrls` (Supabase `postgres`). The application role `app_user` never owns tables.
-- **`RETURNING` on append-only tables** fails for non-admins. App code must not use it on `audit_events`.
-- **Denied writes raise errors (42501); denied reads return empty.** The API layer must map both to one generic response to satisfy T4.
-- **Free-tier data loss risk:** no automated backups. Mitigation designed, not implemented.
-- **Drive files are not in the database dump.** Storage needs its own backup.
-- **PGlite is not production Postgres.** Confirm all policies on Supabase before release (run the same suite against a staging project once approved).
+- Free tier pauses after 7 idle days; daily backup job connects daily but whether that counts as activity is **[V15] unverified**.
+- No leaked-password check at $0.
+- Functions are `security definer` and rely on the migration owner bypassing RLS (Supabase `postgres`). Keep it so.
+- Storage files are not in DB dumps; Drive backup is Planned.
+- Server-side workspace deletion must disable audit triggers and the last-owner guard deliberately.
+- Supabase OAuth server (FMP Stage 2) is public beta.
 
-## 8. Decisions and assumptions
-See `docs/DECISIONS.md`. The blueprint files were not present, so decisions are marked "Pending" blueprint check.
-
-## 9. Next action for the next session
-1. Supply the Master Blueprint v1.2 and Decision Register, then reconcile `docs/DECISIONS.md`.
-2. Owner approval to create a private Git remote (no cost) and push.
-3. Choose authentication provider (Supabase Auth on free tier is the default proposal) and wire `current_user_id()` to it.
-4. Build the API layer that maps denials to one response (T4) and add T2, T13, T16.
+## 8. Next action for the next session
+Owner completes runbook steps 1–3; then build Phase 5 slice 0 (auth shell + Launcher) per `PHASE5_HANDOFF.md`.

@@ -1,21 +1,24 @@
-# Decision register (Phase 4)
+# Decision register — implementation (reconciled with Blueprint v1.2, 20 Oct 2026)
 
-Recorded as implementation decisions, not owner approvals. Source: Phase 3 handoff and the Phase 4 working document. The Master Blueprint v1.2 and Decision Register were NOT present in the environment; where they exist, they take precedence and these must be reconciled.
+Owner approvals live in `05_Decision_Register.md`. These are technical decisions made under the open-hand mandate; all are reversible.
 
-| ID | Decision | Implemented as | Rationale | Blueprint check |
-|---|---|---|---|---|
-| D1 | Only owners transfer ownership, demote or remove an owner, or add an owner. Admins manage non-owner rows. A workspace must keep one active owner. | `mem_*` policies + `guard_last_owner` trigger | Prevents admin privilege escalation and orphaned workspaces | Pending |
-| D2 | Editors delete only their own uploads. Client and project deletion needs admin. | `files_delete`, `clients_delete`, `projects_delete` | Limits accidental or hostile mass deletion | Pending |
-| D3 | Editors see all clients in their workspace. Viewers read, cannot write. | `clients_*` policies | Matches "Editor access" default; per-client restriction can be added later without schema change | Pending |
-| D4 | Editors request approvals; admins decide; requesters cannot approve their own request. | `approvals` policies | Separation of duties | Pending |
-| D5 | Clients see only their own client record, projects, and files tied to that client. | `client_of()` in policies | Client isolation; no staff data | Pending |
-| D6 | Brand Base answers: editors and above read and write; admins delete; viewers and clients have no access. | `bb_*` policies | Business-sensitive content | Pending |
-| A1 | Auth identity read from `request.jwt.claim.sub`, the same claim Supabase's `auth.uid()` uses. | `current_user_id()` | Portable to Supabase without policy changes | Pending |
-| A2 | Audit log is append-only; non-admins cannot read it. | no update or delete policy on `audit_events` | Tamper evidence | Pending |
-| A3 | Denied and not-found return identical empty results (reads) and the same error code (writes). | RLS default behaviour; verified T4 | Prevents enumeration | Pending |
-| A4 | Migrations disable function-body validation (`check_function_bodies = off`) so helper functions can precede the tables they query. | first line of migration 0001 | Required for SQL helpers referencing tables created later in the same file | Pending |
-| A5 | Free-tier hosting: Cloudflare Pages (or Netlify free) for frontend, Supabase free for database. Vercel Hobby excluded (non-commercial terms). | Not deployed; see manual section 6 | $0 budget and commercial-use terms | Owner approval needed before any paid tier |
-
-## Open items that need a business owner (not blocking the foundation)
-- Whether a paid business tier is acceptable before real clients use the system (free tier pauses and has no backups).
-- Owner confirmation of the blueprint defaults above, once the Master Blueprint is supplied.
+| ID | Decision | Implemented as | Blueprint link |
+|---|---|---|---|
+| D1 | Only owners add/demote/remove owners; one active owner always | `mem_*` policies, `guard_last_owner` | Consistent with §4.2 |
+| D2 | Editors delete own uploads; client/project delete needs admin | policies | Consistent |
+| D3 | Editors see all clients in their workspace (with Clients app) | `clients_*` | Consistent |
+| D4 | Requesters cannot approve own requests | `appr_*` + `approvals_decide` | R13 spirit |
+| D5 | Clients see only own record and items marked `client_visible` (changed by audit F5) | policies | §10.3 allowlist |
+| D6 | Brand Base: editors+ only | `bb_*` | Consistent |
+| D7 | Per-app access: owners/admins all enabled apps; editors/viewers by grant; invitations grant Office, Projects, Planner, Drive, Clients by default | `can_use_app`, `app_grants` | §4.3 dimension 3, OV5 |
+| D8 | Client Portal and external products switched on only by an owner; Portal off by default (G2 kill switch) | `wsapps_*`, `client_of` | R12, OV6 |
+| D9 | Membership only via admin action or email-bound invitation; sign-up grants nothing | `create_invitation`, `accept_invitation` | §10.1 C, directive §6 |
+| D10 | Policy helpers in `private` schema; only 3 RPCs in `public` | 0002 | R19 |
+| D11 | Audit entries for permissions, approvals, app access, connections are written by triggers (`origin=system`) | `audit_change` | §10.1 A |
+| D12 | Workspaces have `kind internal/external`; deletion is server-side only | 0002 | Directive §3 |
+| D13 | Minimum integration layer as separate, droppable migration | 0003 | R28 (pending approval) |
+| D14 | Supabase Storage before R2; Mumbai region recommended | docs | Resolves Phase 2 vs blueprint |
+| D15 | Tests run on PostgreSQL 17 (PGlite) and a real server; CI uses postgres:17 | `test/` | Matches live Supabase 17 |
+| A1 | Identity resolved like Supabase `auth.uid()` (legacy claim, then `request.jwt.claims`) | `private.current_user_id()` | Fixed by F1 |
+| A2–A4 | Append-only audit; uniform denials; `check_function_bodies = off` | unchanged | — |
+| A5 | Hosting: Cloudflare Pages free; Vercel Hobby excluded | not deployed | V12 |

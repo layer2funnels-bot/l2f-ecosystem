@@ -1,11 +1,13 @@
-// Phase 4 isolation and authorization tests. Runs real PostgreSQL 16 (PGlite) with RLS enforced
-// by executing every check as the non-owner role `app_user`. Exit code 1 on any failure.
-import { PGlite } from '@electric-sql/pglite';
-import { readFileSync } from 'node:fs';
+// Phase 4 isolation and authorization tests (original 47 checks, assertions unchanged).
+// Runs every migration on a fresh database and executes each check as the non-owner role `app_user`,
+// so row-level security really applies. DB_DRIVER=pglite (PostgreSQL 17) or pg (real server).
+// Audit 20 Oct 2026: ported to the shared harness; fixtures now grant app access (F6), switch the
+// Client Portal on for the client checks (G2 kill switch) and mark client deliverables client-visible (F5).
 import { randomUUID } from 'node:crypto';
+import { openDb, migrate } from './lib.mjs';
 
-const db = await PGlite.create();
-await db.exec(readFileSync(new URL('../migrations/0001_foundation.sql', import.meta.url), 'utf8'));
+const db = await openDb();
+await migrate(db);
 
 const results = [];
 const check = (id, name, ok, detail = '') => results.push({ id, name, ok, detail });
@@ -37,10 +39,16 @@ await staff(U.O1, L2F, 'owner'); await staff(U.A1, L2F, 'admin'); await staff(U.
 await staff(U.E2, L2F, 'editor'); await staff(U.V1, L2F, 'viewer'); await staff(U.CAR, L2F, 'editor');
 await staff(U.CAR, AUR, 'editor'); await staff(U.AO, AUR, 'owner'); await staff(U.AE, AUR, 'editor');
 await db.query("insert into memberships (workspace_id, user_id, kind, client_id) values ($1,$2,'client',$3)", [L2F, U.C1, CL_A]);
+// F6: editors and viewers need an app grant; owners and admins use every enabled app.
+for (const [uid, ws] of [[U.E1, L2F], [U.E2, L2F], [U.V1, L2F], [U.CAR, L2F], [U.CAR, AUR], [U.AE, AUR]])
+  for (const app of ['clients', 'projects', 'drive'])
+    await db.query('insert into app_grants (workspace_id, user_id, app_key) values ($1,$2,$3)', [ws, uid, app]);
+await db.query("update workspace_apps set enabled = true where workspace_id = $1 and app_key = 'portal'", [L2F]);
 const PR_A = id(), PR_B = id(), PR_AUR = id();
 await db.query(`insert into projects (id, workspace_id, client_id, name) values
   ($1,$4,$5,'Acme funnel'),($2,$4,$6,'Beta funnel'),($3,$7,$8,'Aurj course')`,
   [PR_A, PR_B, PR_AUR, L2F, CL_A, CL_B, AUR, CL_AUR]);
+await db.query('update projects set client_visible = true where id = $1', [PR_A]);
 const F_E1 = id(), F_E2 = id(), F_AUR = id(), F_CLIENT = id();
 await db.query(`insert into files (id, workspace_id, client_id, uploaded_by, storage_path) values
   ($1,$2,null,$3,$4),($5,$2,null,$6,$7),($8,$9,null,$10,$11),($12,$2,$13,$3,$14)`,
@@ -48,6 +56,7 @@ await db.query(`insert into files (id, workspace_id, client_id, uploaded_by, sto
    F_E2, U.E2, `${L2F}/e2.pdf`,
    F_AUR, AUR, U.AE, `${AUR}/aur.pdf`,
    F_CLIENT, CL_A, `${L2F}/acme-deliverable.pdf`]);
+await db.query('update files set client_visible = true where id = $1', [F_CLIENT]);
 const BB = id();
 await db.query("insert into brand_base_answers (id, workspace_id, client_id, section, question, answer) values ($1,$2,$3,'Offer','Core promise','...')", [BB, L2F, CL_A]);
 const APPR_E1 = id();
@@ -56,7 +65,7 @@ await db.query("insert into approvals (id, workspace_id, subject_type, subject_i
 // ---- T11: RLS coverage ----
 await asSuper();
 const cov = await rows(`select c.relname, c.relrowsecurity, c.relforcerowsecurity,
-  (select count(*) from pg_policies p where p.tablename = c.relname) as policies
+  (select count(*) from pg_policies p where p.schemaname = 'public' and p.tablename = c.relname) as policies
   from pg_class c join pg_namespace n on n.oid = c.relnamespace
   where n.nspname = 'public' and c.relkind = 'r'`);
 const uncovered = cov.filter(r => !r.relrowsecurity || !r.relforcerowsecurity || Number(r.policies) === 0).map(r => r.relname);
@@ -184,17 +193,18 @@ await asSuper();
 const notCovered = [
   ['T2', 'Active-workspace filtering in shared apps', 'API layer not built; DB policies correctly allow both memberships'],
   ['T5', 'Drive share-link expiry and revocation', 'Storage and share links not built'],
-  ['T9', 'Funnel Mapper Pro Launcher entry', 'Launcher not built; protected product not touched'],
-  ['T10', 'Client Portal gate', 'Portal not built; stays disabled'],
+  ['T9', 'Funnel Mapper Pro Launcher entry', 'database side covered in test/audit.test.mjs (T9a-d); Launcher UI not built'],
+  ['T10', 'Client Portal gate', 'database kill switch covered in test/audit.test.mjs (T10a-b); Portal UI not built'],
   ['T12', 'Secret exposure in client bundles', 'run scripts/check-secrets.sh (no client bundle exists yet)'],
   ['T14', 'Signed file URL expiry', 'Storage signing not built'],
   ['T15', 'Logs free of cross-workspace ids', 'Logging layer not built'],
   ['T16', 'Rate limiting on denied requests', 'API layer not built'],
-  ['T17', 'Restore produces passing database', 'Backup job not built; restore test requires a dump tool'],
+  ['T17', 'Restore produces passing database', 'local drill: npm run drill:restore (needs a real PostgreSQL server)'],
 ];
 const passed = results.filter(r => r.ok).length;
 for (const r of results) console.log(`${r.ok ? 'PASS' : 'FAIL'}  ${r.id.padEnd(4)} ${r.name}${r.detail ? ` (${r.detail})` : ''}`);
 console.log('\nNOT TESTED IN THIS RUN:');
 for (const [i, n, why] of notCovered) console.log(`  ${i.padEnd(4)} ${n} - ${why}`);
 console.log(`\n${passed}/${results.length} checks passed`);
+await db.close();
 process.exit(passed === results.length ? 0 : 1);
