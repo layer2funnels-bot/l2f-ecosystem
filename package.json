@@ -1,0 +1,14 @@
+{
+  "name": "l2f-foundation",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Layer2Funnels + Aurj Phase 4 foundation: workspace isolation, roles, RLS. Non-production.",
+  "type": "module",
+  "scripts": {
+    "test": "node test/isolation.test.mjs",
+    "check:secrets": "bash scripts/check-secrets.sh"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.2.17"
+  }
+}
