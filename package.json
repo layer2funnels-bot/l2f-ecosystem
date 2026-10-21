@@ -1,0 +1,25 @@
+{
+  "name": "l2f-ecosystem",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Layer2Funnels + Aurj ecosystem foundation: identity, workspace isolation, app access, audit, integration layer. Non-production.",
+  "type": "module",
+  "scripts": {
+    "test": "node test/run.mjs",
+    "test:pg": "DRIVERS=pg node test/run.mjs",
+    "test:all": "DRIVERS=pglite,pg node test/run.mjs && node scripts/restore-drill.mjs && node scripts/mutation-check.mjs",
+    "test:mutation": "node scripts/mutation-check.mjs",
+    "drill:restore": "node scripts/restore-drill.mjs",
+    "check:secrets": "bash scripts/check-secrets.sh",
+    "check:licences": "node scripts/check-licences.mjs",
+    "tokens:build": "node scripts/build-tokens.mjs",
+    "check:tokens": "node scripts/build-tokens.mjs --check"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "0.3.10",
+    "pg": "8.13.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
