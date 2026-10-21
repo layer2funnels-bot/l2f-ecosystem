@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Header + Organization Switcher — 6 outcomes</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Newsreader:wght@600&family=Schibsted+Grotesk:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+:root{
+  --ink:#1b1f27;--muted:#566070;--panel:#fff;--shell:#eef0f3;--line:#c9cfd8;--line-soft:#e1e5eb;
+  --success:#1d5f9e;--success-tint:#e4edf7;--warn:#f5b942;--warn-text:#8a5200;--warn-tint:#fff1d6;
+  --danger:#b3261e;--danger-tint:#fde8e6;
+  --space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:24px;--space-6:32px;--space-7:48px;
+  --radius-sm:6px;--radius-md:10px;--radius-lg:16px;--radius-pill:999px;
+  --shadow-1:0 1px 2px rgba(16,24,40,.10),0 1px 1px rgba(16,24,40,.06);
+  --shadow-2:0 8px 24px rgba(16,24,40,.14),0 2px 6px rgba(16,24,40,.08);
+  --font-body:"Hanken Grotesk",system-ui,sans-serif;
+  --font-display-l2f:"Schibsted Grotesk",system-ui,sans-serif;
+  --font-display-aurj:"Newsreader",Georgia,serif;
+}
+[data-theme=l2f]{--primary:#173a8f;--on-primary:#fff;--surface:#f5f8fd;--accent:#ff7a59;--accent-text:#b23a1b;--tint:#e3eafa;--control-border:#667391;--font-display:var(--font-display-l2f)}
+[data-theme=aurj]{--primary:#b23a08;--on-primary:#fff;--surface:#fff7ee;--accent:#4db3f0;--accent-text:#14569f;--tint:#fce7d6;--control-border:#7f6f62;--font-display:var(--font-display-aurj)}
+body{margin:0;background:var(--shell);color:var(--ink);font:400 16px/1.5 var(--font-body)}
+h1,h2,h3{font-family:var(--font-display);margin:0;line-height:1.2}
+h1{font-size:28px}h2{font-size:20px}h3{font-size:16px;font-family:var(--font-body);font-weight:600}
+[data-theme=aurj] h1,[data-theme=aurj] h2{font-weight:600}
+p{margin:0}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--primary);outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+svg.i{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- board layout ---------- */
+.board{max-width:1280px;margin:0 auto;padding:var(--space-5) var(--space-4) var(--space-7);display:grid;gap:var(--space-5);grid-template-columns:320px minmax(0,1fr);align-items:start}
+@media (max-width:980px){.board{grid-template-columns:1fr}}
+.guide{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);padding:var(--space-5);box-shadow:var(--shadow-1);position:sticky;top:var(--space-4)}
+@media (max-width:980px){.guide{position:static}}
+.guide h2{font-family:var(--font-body);font-size:18px;font-weight:700;margin-bottom:var(--space-1)}
+.guide .lede{color:var(--muted);font-size:14px;margin-bottom:var(--space-4)}
+.scn{display:grid;gap:var(--space-2);margin:0;padding:0;list-style:none}
+.scn button{width:100%;text-align:left;min-height:44px;padding:var(--space-3);border:1px solid var(--line);border-radius:var(--radius-md);background:var(--panel);display:grid;gap:2px;transition:background-color .14s ease-out,border-color .14s ease-out}
+.scn button:hover{background:#f6f7f9}
+.scn button[aria-pressed=true]{border-color:#173a8f;background:#e3eafa}
+.scn b{font-size:14px;display:flex;gap:var(--space-2);align-items:center}
+.scn .n{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#173a8f;color:#fff;font-size:12px}
+.scn span.d{font-size:13px;color:var(--muted)}
+.how{margin-top:var(--space-4);padding-top:var(--space-4);border-top:1px solid var(--line-soft);font-size:13px;color:var(--muted)}
+.how b{color:var(--ink)}
+.rules{margin:var(--space-2) 0 0;padding-left:18px}
+.rules li{margin-bottom:4px}
+
+/* ---------- app frame ---------- */
+.frame{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-1);overflow:clip;min-width:0}
+.bar4{height:4px;background:var(--primary);transition:background-color .2s ease-out}
+.hdr{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2) var(--space-4);background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.iconbtn{display:inline-grid;place-items:center;width:44px;height:44px;border:0;border-radius:var(--radius-md);background:transparent;position:relative}
+.iconbtn:hover{background:var(--tint)}
+.badge{position:absolute;top:6px;right:6px;min-width:18px;height:18px;padding:0 5px;border-radius:var(--radius-pill);background:var(--primary);color:var(--on-primary);font-size:11px;font-weight:700;display:grid;place-items:center}
+.swwrap{position:relative}
+.sw{display:flex;align-items:center;gap:var(--space-3);min-height:44px;padding:4px var(--space-3) 4px 6px;border:1px solid var(--control-border);border-radius:var(--radius-md);background:var(--panel);max-width:100%}
+.sw:hover{background:var(--tint)}
+.sw[aria-expanded=true]{background:var(--tint)}
+.mark{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;background:var(--primary);color:var(--on-primary);font:700 14px var(--font-body);flex:none;transition:background-color .2s ease-out}
+.sw .t{display:grid;text-align:left;line-height:1.15;min-width:0}
+.sw .t small{font-size:11px;color:var(--muted);letter-spacing:.02em}
+.sw .t strong{font-size:15px;white-space:nowrap}
+.sw .spin{display:none;width:16px;height:16px;border:2px solid var(--line);border-top-color:var(--primary);border-radius:50%;animation:rot .8s linear infinite}
+.sw[data-pending=true] .spin{display:block}
+.sw[data-pending=true] .chev{display:none}
+@keyframes rot{to{transform:rotate(360deg)}}
+.menu{position:absolute;z-index:20;top:calc(100% + 6px);left:0;width:340px;max-width:calc(100vw - 32px);background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-2);padding:var(--space-2);opacity:0;transform:translateY(-4px);pointer-events:none;visibility:hidden;transition:opacity .14s ease-out,transform .14s ease-out,visibility 0s linear .14s}
+.menu[data-open=true]{opacity:1;transform:none;pointer-events:auto;visibility:visible;transition-delay:0s}
+.menu .mh{padding:var(--space-2) var(--space-3);font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.opt{display:flex;align-items:center;gap:var(--space-3);width:100%;min-height:56px;padding:var(--space-2) var(--space-3);border:0;background:transparent;border-radius:var(--radius-md);text-align:left}
+.opt:hover,.opt:focus-visible{background:var(--tint)}
+.opt .mk{width:36px;height:36px;border-radius:9px;display:grid;place-items:center;color:#fff;font-weight:700;flex:none}
+.opt .tx{display:grid;flex:1;min-width:0;line-height:1.25}
+.opt .tx small{color:var(--muted);font-size:13px}
+.opt[aria-disabled=true]{cursor:not-allowed}
+.opt[aria-disabled=true] .mk{background:var(--line)!important;color:var(--muted)}
+.opt[aria-disabled=true] .tx strong{color:var(--muted)}
+.opt .st{display:inline-flex;gap:4px;align-items:center;font-size:12px;font-weight:600;color:var(--success)}
+.opt[aria-disabled=true] .st{color:var(--muted)}
+.mnote{margin:var(--space-2) var(--space-3) var(--space-2);padding:var(--space-3);border-radius:var(--radius-md);background:var(--warn-tint);color:var(--warn-text);font-size:13px;display:flex;gap:var(--space-2)}
+.mfoot{padding:var(--space-2) var(--space-3);font-size:12px;color:var(--muted);border-top:1px solid var(--line-soft);margin-top:var(--space-2)}
+.search{flex:1;min-width:160px;display:flex;align-items:center;gap:var(--space-2);height:44px;padding:0 var(--space-3);border:1px solid var(--control-border);border-radius:var(--radius-md);background:var(--panel);color:var(--muted)}
+.search input{flex:1;min-width:0;border:0;outline:0;background:transparent;font:inherit;color:var(--ink)}
+.search:focus-within{outline:3px solid var(--primary);outline-offset:2px}
+.search kbd{font:600 12px var(--font-body);border:1px solid var(--line);border-radius:var(--radius-sm);padding:1px 6px;color:var(--muted)}
+.sp{flex:1}
+.who{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:var(--tint);color:var(--primary);font-weight:700;font-size:13px;border:1px solid var(--line)}
+@media (max-width:720px){
+  .swwrap{order:1;flex:1}.sw{width:100%}
+  .hdr .iconbtn.hide-s{display:none}
+  .search{order:5;flex-basis:100%}
+  .menu{position:fixed;left:var(--space-3);right:var(--space-3);top:auto;bottom:calc(var(--space-3) + env(safe-area-inset-bottom,0px));width:auto;max-width:none;transform:translateY(12px)}
+}
+.nav{display:flex;gap:2px;padding:0 var(--space-3);background:var(--panel);border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:thin}
+.nav button{min-height:44px;padding:0 var(--space-3);border:0;background:transparent;font-weight:500;color:var(--muted);border-bottom:3px solid transparent;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+.nav button:hover{color:var(--ink);background:var(--tint)}
+.nav button[aria-current=page]{color:var(--primary);border-bottom-color:var(--primary);font-weight:700}
+.nav .appname{display:inline-flex;align-items:center;padding:0 var(--space-3) 0 var(--space-2);margin-right:var(--space-2);font-weight:700;border-right:1px solid var(--line-soft);min-height:44px;white-space:nowrap}
+
+/* ---------- content ---------- */
+.content{padding:var(--space-5);min-height:420px;position:relative}
+.content[aria-busy=true] .real{display:none}
+.content:not([aria-busy=true]) .skel{display:none}
+.real{animation:fadein .18s ease-out}
+@keyframes fadein{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.crumb{font-size:13px;color:var(--muted);margin-bottom:var(--space-2)}
+.sub{color:var(--muted);margin:var(--space-1) 0 var(--space-5)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-1)}
+.rows{list-style:none;margin:0;padding:0}
+.rows li{display:flex;gap:var(--space-3);align-items:center;justify-content:space-between;padding:var(--space-3) var(--space-5);border-bottom:1px solid var(--line-soft)}
+.rows li:last-child{border-bottom:0}
+.rows a,.rows button.lnk{color:var(--primary);font-weight:600;text-decoration:underline;background:none;border:0;padding:0;min-height:44px;text-align:left}
+.pill{font-size:12px;font-weight:600;padding:2px 10px;border-radius:var(--radius-pill);background:var(--line-soft);color:var(--ink);white-space:nowrap}
+.skel .bar{height:14px;border-radius:var(--radius-sm);background:var(--line-soft);margin-bottom:var(--space-3);animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.5}}
+.notice{display:flex;gap:var(--space-3);padding:var(--space-3) var(--space-4);border-radius:var(--radius-md);margin-bottom:var(--space-4);align-items:flex-start;font-size:14px}
+.notice.info{background:var(--success-tint);color:#143f69}
+.notice.err{background:var(--danger-tint);color:#7d1a14}
+.notice .act{margin-left:auto;display:flex;gap:var(--space-2);flex-wrap:wrap}
+.notice p{flex:1}
+.btn{min-height:44px;padding:0 var(--space-4);border-radius:var(--radius-md);border:1px solid var(--control-border);background:var(--panel);font-weight:600}
+.btn:hover{background:var(--tint)}
+.btn.pri{background:var(--primary);color:var(--on-primary);border-color:var(--primary)}
+.btn.pri:hover{filter:brightness(1.12)}
+.btn.link{border:0;background:none;color:var(--primary);text-decoration:underline;padding:0 var(--space-2)}
+.unavail{max-width:560px;margin:var(--space-6) auto;text-align:center}
+.unavail .ic{width:56px;height:56px;border-radius:50%;background:var(--warn-tint);color:var(--warn-text);display:grid;place-items:center;margin:0 auto var(--space-4)}
+.unavail .ic svg{width:28px;height:28px}
+.unavail p{color:var(--muted);margin:var(--space-3) 0 var(--space-5)}
+.unavail .acts{display:flex;gap:var(--space-3);justify-content:center;flex-wrap:wrap}
+.toast{position:absolute;left:50%;bottom:var(--space-4);transform:translate(-50%,8px);background:var(--success-tint);color:#143f69;border:1px solid #9bbbd9;border-radius:var(--radius-md);padding:var(--space-3) var(--space-4);box-shadow:var(--shadow-2);display:flex;gap:var(--space-2);align-items:center;font-weight:600;opacity:0;pointer-events:none;transition:opacity .18s ease-out,transform .18s ease-out;max-width:calc(100% - 32px)}
+.toast[data-show=true]{opacity:1;transform:translate(-50%,0)}
+.fine{margin-top:var(--space-5);font-size:13px;color:var(--muted)}
+.ovl{position:absolute;inset:0;z-index:30;background:rgba(27,31,39,.45);display:grid;place-items:center;padding:var(--space-4)}
+.dlg{background:var(--panel);border-radius:var(--radius-lg);box-shadow:var(--shadow-2);padding:var(--space-5);max-width:460px;width:100%}
+.dlg p{color:var(--muted);margin:var(--space-2) 0 var(--space-4)}
+.dlg .acts{display:flex;gap:var(--space-2);flex-wrap:wrap}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
+</style>
+</head>
+<body>
+<main class="board">
+  <aside class="guide" aria-labelledby="gh">
+    <h2 id="gh">Organization switch: 6 outcomes</h2>
+    <p class="lede">Pick a situation, then use the switcher in the header to switch to <b>Aurj</b>. Your starting point changes with each situation.</p>
+    <ol class="scn" id="scn"></ol>
+    <div class="how">
+      <b>Always true (UX7)</b>
+      <ul class="rules">
+        <li>You stay in the same app. Never sent to the Launcher on its own.</li>
+        <li>The previous organization’s data is cleared before the new one shows.</li>
+        <li>The active organization stays visible in the header, colour bar and page.</li>
+        <li>If a page can’t be shown, we say why and offer next steps.</li>
+        <li>Unsaved work is never lost silently.</li>
+      </ul>
+    </div>
+  </aside>
+
+  <section class="frame" id="frame" data-theme="l2f" aria-label="Prototype: Office in the active organization">
+    <div class="bar4"></div>
+    <header class="hdr">
+      <button class="iconbtn" aria-label="Open the app Launcher" id="launcher"><svg class="i" viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1.5"/><rect x="14" y="4" width="6" height="6" rx="1.5"/><rect x="4" y="14" width="6" height="6" rx="1.5"/><rect x="14" y="14" width="6" height="6" rx="1.5"/></svg></button>
+      <div class="swwrap">
+        <button class="sw" id="sw" aria-haspopup="menu" aria-expanded="false" aria-controls="menu" data-pending="false">
+          <span class="mark" id="swmark">L2</span>
+          <span class="t"><small>Organization</small><strong id="swname">Layer2Funnels</strong></span>
+          <svg class="i chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>
+          <span class="spin" aria-hidden="true"></span>
+        </button>
+        <div class="menu" id="menu" role="menu" aria-label="Switch organization" data-open="false"></div>
+      </div>
+      <label class="search"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4-4"/></svg><span class="sr">Search this organization</span><input id="q" type="search" placeholder="Search Layer2Funnels" autocomplete="off"><kbd aria-hidden="true">/</kbd></label>
+      <button class="iconbtn hide-s" aria-label="Notifications, 3 new"><svg class="i" viewBox="0 0 24 24"><path d="M6 17V11a6 6 0 1 1 12 0v6l1.5 2h-15z"/><path d="M10 21h4"/></svg><span class="badge" aria-hidden="true">3</span></button>
+      <span class="who" role="img" aria-label="Your profile: Tabish Riaz">TR</span>
+    </header>
+    <nav class="nav" id="nav" aria-label="Office sections"></nav>
+    <div class="content" id="content" aria-busy="false">
+      <div id="banner"></div>
+      <div class="skel" aria-hidden="true"><div class="bar" style="width:30%;height:28px"></div><div class="bar" style="width:55%"></div><div class="card" style="padding:24px"><div class="bar" style="width:80%"></div><div class="bar" style="width:70%"></div><div class="bar" style="width:75%"></div></div></div>
+      <div class="real" id="real"></div>
+      <div class="toast" id="toast" role="status"></div>
+    </div>
+    <div class="sr" id="live" role="status" aria-live="polite"></div>
+  </section>
+</main>
+
+<script>
+const ORG={
+  l2f:{id:'l2f',name:'Layer2Funnels',mark:'L2',role:'Owner',color:'#173a8f'},
+  aurj:{id:'aurj',name:'Aurj',mark:'Au',role:'Member',color:'#b23a08'}
+};
+const PAGES=['Home','Planner','Projects','Funnels','Documents','Team','Apps','Admin'];
+const DATA={
+  l2f:{Home:['Review quiz funnel copy','Send Harry Kaye’s brand base','Weekly plan check-in'],
+       Projects:[['quiz','Quiz funnel rebuild','In progress'],['b2','Victor – checkout audit','Review'],['b3','Brand base: new client','Planned']],
+       Funnels:['Fitness quiz funnel','Coaching webinar funnel','Course launch funnel'],
+       Planner:['Q4 focus: client delivery','Goal: 4 funnels live'],Documents:['Funnel build SOP','Brand base questionnaire'],
+       Team:['Tabish Riaz','Hammad','Mustafa','Shahriyar'],Apps:['Social Planner','Whiteboard'],Admin:['Members','Access']},
+  aurj:{Home:['Draft Lesson 12 script','Studio schedule','Curriculum review'],
+       Projects:[['a1','Lesson library, batch 3','In progress'],['a2','Urdu intro series','Review'],['a3','OIT pilot notes','Planned']],
+       Funnels:['Aurj waitlist funnel','Parent info funnel'],
+       Planner:['Q4 focus: lesson production','Goal: 40 lessons published'],Documents:['Studio checklist','Lesson template'],
+       Team:['Tabish Riaz','Waqar Shah Sir'],Apps:['Social Planner','Whiteboard'],Admin:['Members','Access']}
+};
+const SAMPLE='Sample data, not real records.';
+const SCENARIOS=[
+ {t:'Same page exists',d:'On Projects. It exists in Aurj too.',s:{app:'office',page:'Projects',rec:null,aurjMember:true,failNext:false}},
+ {t:'Record isn’t in the other organization',d:'On a Layer2Funnels project. That project can’t exist in Aurj.',s:{app:'office',page:'Projects',rec:'quiz',aurjMember:true,failNext:false}},
+ {t:'App not enabled in the other organization',d:'In Funnel Mapper Pro. Aurj doesn’t have it.',s:{app:'fmp',page:'Mapper',rec:null,aurjMember:true,failNext:false}},
+ {t:'You’re not a member there',d:'Aurj is invitation-only and you haven’t been invited.',s:{app:'office',page:'Projects',rec:null,aurjMember:false,failNext:false}},
+ {t:'The switch couldn’t finish',d:'The connection drops during the check.',s:{app:'office',page:'Projects',rec:null,aurjMember:true,failNext:true}},
+ {t:'Unsaved changes',d:'You’re editing a note and haven’t saved it.',s:{app:'office',page:'Planner',rec:null,aurjMember:true,failNext:false,dirty:true,editor:true}}
+];
+const I={
+ check:'<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
+ lock:'<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
+ warn:'<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4 3 19h18z"/><path d="M12 10v4M12 17v.01"/></svg>',
+ info:'<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.01"/></svg>',
+ cross:'<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6M15 9l-6 6"/></svg>'
+};
+let S,cur=0,timer;
+const $=id=>document.getElementById(id);
+const frame=$('frame'),menu=$('menu'),sw=$('sw');
+
+function reset(i){
+  cur=i;S={org:'l2f',...SCENARIOS[i].s};
+  closeMenu(true);$('banner').innerHTML='';
+  paintGuide();render(true);
+  say('Situation set: '+SCENARIOS[i].t+'. You are in Layer2Funnels.');
+}
+function paintGuide(){
+  $('scn').innerHTML=SCENARIOS.map((c,i)=>`<li><button type="button" data-i="${i}" aria-pressed="${i===cur}"><b><span class="n">${i+1}</span>${c.t}</b><span class="d">${c.d}</span></button></li>`).join('');
+  $('scn').querySelectorAll('button').forEach(b=>b.onclick=()=>reset(+b.dataset.i));
+}
+function say(m){$('live').textContent='';setTimeout(()=>$('live').textContent=m,30)}
+function theme(){const o=ORG[S.org];frame.dataset.theme=o.id;$('swmark').textContent=o.mark;$('swname').textContent=o.name;$('q').placeholder='Search '+o.name}
+
+function render(first){
+  theme();
+  // nav
+  if(S.app==='office'){
+    $('nav').innerHTML='<span class="appname">Office</span>'+PAGES.map(p=>`<button type="button" data-p="${p}" ${p===S.page?'aria-current="page"':''}>${p}</button>`).join('');
+  }else{
+    $('nav').innerHTML='<span class="appname">Funnel Mapper Pro</span><button type="button" aria-current="page">Mapper</button><button type="button" data-p="__reports">Reports</button>';
+  }
+  $('nav').querySelectorAll('button[data-p]').forEach(b=>b.onclick=()=>{if(b.dataset.p.startsWith('__'))return;S.page=b.dataset.p;S.rec=null;$('banner').innerHTML='';render()});
+  const o=ORG[S.org],R=$('real');
+  if(S.unavailable){
+    R.innerHTML=`<div class="unavail"><div class="ic">${I.warn}</div>
+      <h2>${S.unavailable.app} isn’t turned on for ${o.name}</h2>
+      <p>You’re now in ${o.name}. ${S.unavailable.app} is only set up for ${S.unavailable.from}, so there’s nothing to show here. Nothing from ${S.unavailable.from} is on this screen.</p>
+      <div class="acts"><button class="btn pri" id="u1">Go to ${o.name} Office Home</button><button class="btn" id="u2">Switch back to ${S.unavailable.from}</button></div>
+      <p style="margin:var(--space-4) 0 0;font-size:14px">Need it here? <button class="btn link" id="u3">Ask an ${o.name} admin</button> <span class="pill" title="Sending a real request needs backend work later">Needs backend later</span> · <button class="btn link" id="u4">Browse all apps</button></p></div>`;
+    $('u1').onclick=()=>{S.unavailable=null;S.app='office';S.page='Home';render();focusMain()};
+    $('u2').onclick=()=>doSwitch('l2f');
+    $('u3').onclick=()=>toast('Message only for now. No request was sent.');
+    $('u4').onclick=()=>toast('The Launcher opens only because you chose it (prototype stops here).');
+    return;
+  }
+  if(S.app==='fmp'){
+    R.innerHTML=`<div class="crumb">Funnel Mapper Pro · ${o.name}</div><h1>Funnel map</h1><p class="sub">Your ${o.name} funnels and their numbers. ${SAMPLE}</p>
+    <div class="card"><ul class="rows"><li><span>Fitness quiz funnel</span><span class="pill">Live</span></li><li><span>Coaching webinar funnel</span><span class="pill">Draft</span></li></ul></div>`;
+    return;
+  }
+  const d=DATA[S.org];
+  if(S.page==='Projects'&&S.rec){
+    const r=d.Projects.find(x=>x[0]===S.rec)||d.Projects[0];
+    R.innerHTML=`<div class="crumb"><button class="btn link" id="bk">Projects</button> / ${r[1]}</div><h1>${r[1]}</h1><p class="sub">Status: ${r[2]}. ${SAMPLE}</p><div class="card" style="padding:var(--space-5)"><h3>Tasks</h3><p class="sub" style="margin-bottom:0">12 tasks · 4 due this week</p></div>`;
+    $('bk').onclick=()=>{S.rec=null;render()};
+    return;
+  }
+  if(S.page==='Projects'){
+    R.innerHTML=`<div class="crumb">Office · ${o.name}</div><h1>Projects</h1><p class="sub">Live projects and who owns them. ${SAMPLE}</p>
+    <div class="card"><ul class="rows">${d.Projects.map(p=>`<li>${S.org==='l2f'?`<button class="lnk" data-r="${p[0]}">${p[1]}</button>`:`<span style="font-weight:600">${p[1]}</span>`}<span class="pill">${p[2]}</span></li>`).join('')}</ul></div>`;
+    R.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{S.rec=b.dataset.r;render()});
+    return;
+  }
+  if(S.page==='Planner'&&S.editor){
+    R.innerHTML=`<div class="crumb">Office · ${o.name}</div><h1>Planner</h1><p class="sub">${SAMPLE}</p><div class="card" style="padding:var(--space-5)"><label for="note" style="font-weight:600;display:block;margin-bottom:var(--space-2)">Q4 focus note</label><textarea id="note" rows="4" style="width:100%;font:inherit;padding:12px;border:1px solid var(--control-border);border-radius:var(--radius-md)">Focus on delivery quality. Add two more case studies before the Dec launch.</textarea><p class="sub" style="margin:var(--space-2) 0 0;font-size:13px" id="ns">${S.dirty?'Unsaved changes':'All changes saved'}</p></div>`;
+    $('note').oninput=()=>{S.dirty=true;$('ns').textContent='Unsaved changes'};return}
+  const items=d[S.page]||[];
+  R.innerHTML=`<div class="crumb">Office · ${o.name}</div><h1>${S.page}</h1><p class="sub">${S.page==='Home'?'Your work in '+o.name+'. ':''}${SAMPLE}</p>
+  <div class="card"><ul class="rows">${items.map(x=>`<li><span>${x}</span></li>`).join('')}</ul></div>`;
+}
+function focusMain(){const h=$('real').querySelector('h1,h2');if(h){h.tabIndex=-1;h.focus({preventScroll:true})}}
+
+/* ---------- menu ---------- */
+function menuHTML(){
+  const mem={l2f:true,aurj:S.aurjMember};
+  return `<div class="mh" id="mh">Your organizations</div>`+['l2f','aurj'].map(k=>{
+    const o=ORG[k],isCur=S.org===k,dis=!mem[k];
+    return `<button class="opt" role="menuitemradio" aria-checked="${isCur}" data-k="${k}" ${dis?'aria-disabled="true"':''} tabindex="-1">
+      <span class="mk" style="background:${o.color}">${o.mark}</span>
+      <span class="tx"><strong>${o.name}</strong><small>${dis?'Invitation only · you’re not a member':o.role}</small></span>
+      ${isCur?`<span class="st">${I.check}Current</span>`:dis?`<span class="st">${I.lock}No access</span>`:''}</button>`}).join('')
+    +`<div id="mnote"></div><div class="mfoot">Switching keeps you on the same page where it exists. Nothing is copied between organizations.</div>`;
+}
+function openMenu(){menu.innerHTML=menuHTML();menu.dataset.open='true';sw.setAttribute('aria-expanded','true');
+  const items=[...menu.querySelectorAll('.opt')];
+  items.forEach(b=>b.onclick=()=>pick(b.dataset.k,b));
+  (menu.querySelector('[aria-checked=true]')||items[0]).focus()}
+function closeMenu(silent){menu.dataset.open='false';sw.setAttribute('aria-expanded','false');if(!silent)sw.focus()}
+sw.onclick=()=>menu.dataset.open==='true'?closeMenu():openMenu();
+menu.addEventListener('keydown',e=>{
+  const it=[...menu.querySelectorAll('.opt')],i=it.indexOf(document.activeElement);
+  if(e.key==='ArrowDown'){e.preventDefault();it[(i+1)%it.length].focus()}
+  else if(e.key==='ArrowUp'){e.preventDefault();it[(i-1+it.length)%it.length].focus()}
+  else if(e.key==='Escape'){e.preventDefault();closeMenu()}
+  else if(e.key==='Tab'){closeMenu(true)}
+});
+document.addEventListener('click',e=>{if(menu.dataset.open==='true'&&!e.target.closest('.swwrap'))closeMenu(true)});
+
+function pick(k,btn){
+  if(k===S.org){closeMenu();return}
+  if(btn.getAttribute('aria-disabled')==='true'){
+    // Outcome 4: blocked, nothing changes
+    $('mnote').innerHTML=`<div class="mnote" role="alert">${I.lock}<span><b>You’re not a member of ${ORG[k].name}.</b> Membership is by invitation only. Ask an ${ORG[k].name} owner to invite you. You’re still in ${ORG[S.org].name}; nothing has changed.</span></div>`;
+    say('You are not a member of '+ORG[k].name+'. Nothing has changed.');return;
+  }
+  closeMenu(true);
+  if(S.dirty){askUnsaved(k);return}
+  doSwitch(k);
+}
+
+/* ---------- outcome 6: unsaved changes ---------- */
+function askUnsaved(k){
+  const to=ORG[k],d=document.createElement('div');
+  d.className='ovl';d.id='dlg';
+  d.innerHTML=`<div class="dlg" role="alertdialog" aria-modal="true" aria-labelledby="dt" aria-describedby="dd"><h2 id="dt">Save your changes before switching?</h2><p id="dd">You have unsaved changes in <b>${S.page}</b>. They can’t come with you to ${to.name}.</p><div class="acts"><button class="btn pri" id="d1">Save and switch</button><button class="btn" id="d2">Discard and switch</button><button class="btn" id="d3">Stay here</button></div><p class="fine" style="margin-top:var(--space-3)">If saving fails, you stay in ${ORG[S.org].name} and your changes are kept.</p></div>`;
+  $('content').appendChild(d);
+  const btns=[...d.querySelectorAll('button')],close=()=>d.remove();
+  d.onkeydown=e=>{
+    if(e.key==='Escape'){close();sw.focus()}
+    else if(e.key==='Tab'){const i=btns.indexOf(document.activeElement);
+      if(e.shiftKey&&i<=0){e.preventDefault();btns[btns.length-1].focus()}
+      else if(!e.shiftKey&&i===btns.length-1){e.preventDefault();btns[0].focus()}}};
+  $('d1').onclick=()=>{$('d1').textContent='Saving…';btns.forEach(b=>b.disabled=true);setTimeout(()=>{S.dirty=false;close();doSwitch(k)},600)};
+  $('d2').onclick=()=>{S.dirty=false;close();doSwitch(k)};
+  $('d3').onclick=()=>{close();sw.focus();say('Staying in '+ORG[S.org].name+'. Your changes are kept.')};
+  $('d1').focus();
+  say('You have unsaved changes. Choose Save and switch, Discard and switch, or Stay here.');
+}
+
+/* ---------- switch ---------- */
+function doSwitch(k){
+  clearTimeout(timer);
+  const from=S.org,to=ORG[k];
+  $('banner').innerHTML='';
+  sw.dataset.pending='true';sw.disabled=true;
+  $('content').setAttribute('aria-busy','true');
+  say('Switching to '+to.name+'. Clearing '+ORG[from].name+' data.');
+  timer=setTimeout(()=>{
+    sw.dataset.pending='false';sw.disabled=false;
+    if(S.failNext){
+      // Outcome 5: nothing changed
+      S.failNext=false;
+      $('content').setAttribute('aria-busy','false');
+      $('banner').innerHTML=`<div class="notice err" role="alert">${I.cross}<p><b>Couldn’t switch to ${to.name}.</b> The connection dropped before we could confirm your access. You’re still in ${ORG[from].name} and nothing was changed or lost.</p><div class="act"><button class="btn pri" id="retry">Try again</button><button class="btn" id="dis">Dismiss</button></div></div>`;
+      $('retry').onclick=()=>doSwitch(k);$('dis').onclick=()=>{$('banner').innerHTML=''};
+      $('retry').focus();
+      say('Could not switch to '+to.name+'. You are still in '+ORG[from].name+'.');
+      return;
+    }
+    // success path: old org data is gone, render new org
+    S.org=k;S.unavailable=null;S.editor=false;S.dirty=false;let notice='';
+    if(S.app==='fmp'&&k==='aurj'){ // Outcome 3
+      S.unavailable={app:'Funnel Mapper Pro',from:ORG[from].name};
+    }else if(S.app==='office'&&S.page==='Projects'&&S.rec){ // Outcome 2
+      S.rec=null;
+      notice=`<div class="notice info" role="status">${I.info}<p><b>That project belongs to ${ORG[from].name}, so it isn’t here.</b> We’ve taken you to the Projects list in ${to.name}.</p><div class="act"><button class="btn" id="back2">Switch back to ${ORG[from].name}</button></div></div>`;
+    }
+    $('content').setAttribute('aria-busy','false');
+    $('banner').innerHTML=notice;
+    if($('back2'))$('back2').onclick=()=>doSwitch(from);
+    render();
+    if(S.unavailable){say('You are now in '+to.name+'. Funnel Mapper Pro is not turned on here.');focusMain()}
+    else{
+      const where=S.app==='office'?S.page:'Funnel Mapper Pro';
+      toast('Now in '+to.name+' · '+where,true);
+      say('Switched to '+to.name+'. '+(notice?'The project is not in this organization. Showing Projects.':'Showing '+where+'.'));
+      focusMain();
+    }
+  },1100);
+}
+function toast(m,ok){const t=$('toast');t.innerHTML=(ok?I.check:I.info)+'<span></span>';t.lastChild.textContent=m;t.dataset.show='true';clearTimeout(toast.t);toast.t=setTimeout(()=>t.dataset.show='false',3200)}
+document.addEventListener('keydown',e=>{if(e.key==='/'&&!/input|textarea/i.test(document.activeElement.tagName)){e.preventDefault();$('q').focus()}});
+reset(0);
+</script>
+</body>
+</html>

@@ -149,3 +149,6 @@ SUPABASE_URL=... SUPABASE_PUBLISHABLE_KEY=... node scripts/build-web.mjs   # bui
 
 ## 14. Funnel Mapper Pro code copy
 `apps/funnel-mapper/` is an unedited code copy (654 files, source commit in `docs/fmp-copy-manifest.json`). `npm run check:fmp-copy` fails if any file differs, is missing, is extra, or is ignored by git. Reshaping it is **not started** and needs approved designs (and, per FMP-2, any data or database change needs explicit approval). Its dependencies are reported by `npm run check:licences` (informational): review the flagged licences before it is reshaped or deployed.
+
+## 15. Designs (filed 21 Oct 2026)
+`docs/design/` holds the design chat's prototypes and specs, exactly as delivered: 01 switcher, 02 auth, 03 launcher, 04 Office Home, 05 Admin, 06 Funnels, 07 shared states, 08 Funnel Mapper Pro in the ecosystem (all approved with changes, "Ready"), 09 Clients and 10 shell patterns (**delivered, awaiting owner approval**), and `DESIGN_INDEX.md` (owner decisions applied, checks done, assumptions A1–A28). The `.html` files are prototypes for look, copy and behaviour, not production code. `docs/DESIGN_STATUS.md` is now the single register (one row per screen, design status plus current build) with a list of differences between the designs and the data layer. Provisional screens built before the designs have not been reworked yet.

@@ -1,0 +1,252 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Office Funnels</title><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Newsreader:wght@600&family=Schibsted+Grotesk:wght@700&display=swap" rel="stylesheet"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+:root{--ink:#1b1f27;--muted:#566070;--panel:#fff;--shell:#eef0f3;--line:#c9cfd8;--line-soft:#e1e5eb;
+--success:#1d5f9e;--success-tint:#e4edf7;--warn:#f5b942;--warn-text:#8a5200;--warn-tint:#fff1d6;--danger:#b3261e;--danger-tint:#fde8e6;
+--space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:24px;--space-6:32px;--space-7:48px;--space-8:64px;
+--radius-sm:6px;--radius-md:10px;--radius-lg:16px;--radius-pill:999px;
+--shadow-1:0 1px 2px rgba(16,24,40,.10),0 1px 1px rgba(16,24,40,.06);--shadow-2:0 8px 24px rgba(16,24,40,.14),0 2px 6px rgba(16,24,40,.08);
+--font-body:"Hanken Grotesk",system-ui,sans-serif;--font-display-l2f:"Schibsted Grotesk",system-ui,sans-serif;--font-display-aurj:"Newsreader",Georgia,serif}
+[data-theme=l2f]{--primary:#173a8f;--on-primary:#fff;--surface:#f5f8fd;--accent:#ff7a59;--accent-text:#b23a1b;--tint:#e3eafa;--control-border:#667391;--font-display:var(--font-display-l2f)}
+[data-theme=aurj]{--primary:#b23a08;--on-primary:#fff;--surface:#fff7ee;--accent:#4db3f0;--accent-text:#14569f;--tint:#fce7d6;--control-border:#7f6f62;--font-display:var(--font-display-aurj)}
+body{margin:0;background:var(--shell);color:var(--ink);font:400 16px/1.5 var(--font-body)}
+h1,h2,h3,h4{font-family:var(--font-display,var(--font-display-l2f));margin:0;line-height:1.2}
+h1{font-size:28px}h2{font-size:20px}h3{font-size:16px;font-family:var(--font-body);font-weight:600}h4{font:600 13px var(--font-body);color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+[data-theme=aurj] h1,[data-theme=aurj] h2{font-weight:600}
+p{margin:0}button,select,input,textarea{font:inherit;color:inherit}button{cursor:pointer}
+:focus-visible{outline:3px solid var(--primary,#173a8f);outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+svg.i{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.muted{color:var(--muted)}.fine{font-size:13px;color:var(--muted)}
+/* board chrome */
+.bb{max-width:1240px;margin:0 auto;padding:var(--space-5) var(--space-4) var(--space-3);display:flex;flex-wrap:wrap;gap:var(--space-3) var(--space-5);align-items:end;justify-content:space-between}
+.bb h1{font-family:var(--font-body);font-size:22px;font-weight:700}.bb p{color:var(--muted);font-size:14px;max-width:62ch}
+.seg{display:inline-flex;flex-wrap:wrap;gap:4px;padding:4px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-md)}
+.seg button{min-height:44px;padding:0 var(--space-3);border:0;border-radius:8px;background:transparent;font-weight:600;font-size:14px;color:var(--muted)}
+.seg button:hover{background:var(--line-soft)}
+.seg button[aria-pressed=true]{background:#173a8f;color:#fff}
+.bw{max-width:1240px;margin:0 auto;padding:0 var(--space-4) var(--space-7)}
+.note{max-width:1240px;margin:0 auto;padding:0 var(--space-4) var(--space-3)}
+.note div{background:var(--panel);border:1px solid var(--line);border-left:4px solid #173a8f;border-radius:var(--radius-md);padding:var(--space-3) var(--space-4);font-size:14px;color:var(--muted)}
+.note b{color:var(--ink)}
+/* frame, header, nav */
+.frame{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-1);overflow:clip;min-width:0;position:relative}
+.bar4{height:4px;background:var(--primary);transition:background-color .2s ease-out}
+.hdr{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2) var(--space-4);background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.iconbtn{display:inline-grid;place-items:center;width:44px;height:44px;border:0;border-radius:var(--radius-md);background:transparent;position:relative}
+.iconbtn:hover{background:var(--tint)}.iconbtn[aria-current=page]{background:var(--tint);color:var(--primary)}
+.badge{position:absolute;top:6px;right:6px;min-width:18px;height:18px;padding:0 5px;border-radius:var(--radius-pill);background:var(--primary);color:var(--on-primary);font-size:11px;font-weight:700;display:grid;place-items:center}
+.swwrap{position:relative}
+.sw{display:flex;align-items:center;gap:var(--space-3);min-height:44px;padding:4px var(--space-3) 4px 6px;border:1px solid var(--control-border);border-radius:var(--radius-md);background:var(--panel);max-width:100%}
+.sw:hover,.sw[aria-expanded=true]{background:var(--tint)}
+.mark{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;background:var(--primary);color:var(--on-primary);font:700 14px var(--font-body);flex:none}
+.sw .t{display:grid;text-align:left;line-height:1.15;min-width:0}.sw .t small{font-size:11px;color:var(--muted);letter-spacing:.02em}.sw .t strong{font-size:15px;white-space:nowrap}
+.menu{position:absolute;z-index:20;top:calc(100% + 6px);left:0;width:320px;max-width:calc(100vw - 32px);background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-2);padding:var(--space-2);opacity:0;transform:translateY(-4px);pointer-events:none;visibility:hidden;transition:opacity .14s ease-out,transform .14s ease-out,visibility 0s linear .14s}
+.menu[data-open=true]{opacity:1;transform:none;pointer-events:auto;visibility:visible;transition-delay:0s}
+.menu .mh{padding:var(--space-2) var(--space-3);font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.opt{display:flex;align-items:center;gap:var(--space-3);width:100%;min-height:56px;padding:var(--space-2) var(--space-3);border:0;background:transparent;border-radius:var(--radius-md);text-align:left}
+.opt:hover,.opt:focus-visible{background:var(--tint)}.opt .mk{width:36px;height:36px;border-radius:9px;display:grid;place-items:center;color:#fff;font-weight:700;flex:none}
+.opt .tx{display:grid;flex:1;min-width:0;line-height:1.25}.opt .tx small{color:var(--muted);font-size:13px}
+.opt .st{display:inline-flex;gap:4px;align-items:center;font-size:12px;font-weight:600;color:var(--success)}
+.mfoot{padding:var(--space-2) var(--space-3);font-size:12px;color:var(--muted);border-top:1px solid var(--line-soft);margin-top:var(--space-2)}
+.search{flex:1;min-width:160px;display:flex;align-items:center;gap:var(--space-2);height:44px;padding:0 var(--space-3);border:1px solid var(--control-border);border-radius:var(--radius-md);background:var(--panel);color:var(--muted)}
+.search input{flex:1;min-width:0;border:0;outline:0;background:transparent;color:var(--ink)}.search:focus-within{outline:3px solid var(--primary);outline-offset:2px}
+.who{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:var(--tint);color:var(--primary);font-weight:700;font-size:13px;border:1px solid var(--line)}
+@media (max-width:720px){.swwrap{order:1;flex:1}.sw{width:100%}.hdr .hide-s{display:none}.search{order:5;flex-basis:100%}
+.menu{position:fixed;left:var(--space-3);right:var(--space-3);top:auto;bottom:calc(var(--space-3) + env(safe-area-inset-bottom,0px));width:auto;max-width:none;transform:translateY(12px)}}
+.nav{display:flex;gap:2px;padding:0 var(--space-3);background:var(--panel);border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:thin}
+.nav button{min-height:44px;padding:0 var(--space-3);border:0;background:transparent;font-weight:500;color:var(--muted);border-bottom:3px solid transparent;white-space:nowrap}
+.nav button:hover{color:var(--ink);background:var(--tint)}.nav button[aria-current=page]{color:var(--primary);border-bottom-color:var(--primary);font-weight:700}
+.nav .appname{display:inline-flex;align-items:center;padding:0 var(--space-3) 0 var(--space-2);margin-right:var(--space-2);font-weight:700;border-right:1px solid var(--line-soft);min-height:44px;white-space:nowrap}
+.subnav{display:flex;gap:var(--space-2);flex-wrap:wrap;margin-bottom:var(--space-4)}
+.subnav button{min-height:44px;padding:0 var(--space-4);border:1px solid var(--line);border-radius:var(--radius-pill);background:var(--panel);font-weight:600;font-size:14px}
+.subnav button:hover{background:var(--tint)}.subnav button[aria-pressed=true]{background:var(--primary);color:var(--on-primary);border-color:var(--primary)}
+/* content parts */
+.content{padding:var(--space-5);min-height:480px;position:relative}
+.real{animation:fadein .18s ease-out}@keyframes fadein{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.crumb{font-size:13px;color:var(--muted);margin-bottom:var(--space-2)}
+.sub{color:var(--muted);margin:var(--space-1) 0 var(--space-5)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-1)}
+.pad{padding:var(--space-5)}
+.grid{display:grid;gap:var(--space-4)}.g2{grid-template-columns:repeat(2,minmax(0,1fr))}.g3{grid-template-columns:repeat(3,minmax(0,1fr))}.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.split{display:grid;gap:var(--space-4);grid-template-columns:minmax(0,2fr) minmax(0,1fr)}
+@media (max-width:900px){.g3,.g4{grid-template-columns:repeat(2,minmax(0,1fr))}.split{grid-template-columns:1fr}}
+@media (max-width:560px){.g2,.g3,.g4{grid-template-columns:1fr}.content{padding:var(--space-4)}}
+.rows{list-style:none;margin:0;padding:0}.rows li{display:flex;gap:var(--space-3);align-items:center;justify-content:space-between;padding:var(--space-3) var(--space-5);border-bottom:1px solid var(--line-soft);min-height:56px}.rows li:last-child{border-bottom:0}
+.pill{display:inline-flex;gap:4px;align-items:center;font-size:12px;font-weight:600;padding:2px 10px;border-radius:var(--radius-pill);background:var(--line-soft);color:var(--ink);white-space:nowrap}
+.pill.ok{background:var(--success-tint);color:#143f69}.pill.warn{background:var(--warn-tint);color:var(--warn-text)}.pill.bad{background:var(--danger-tint);color:#7d1a14}.pill.pri{background:var(--tint);color:var(--primary)}
+.pill svg.i{width:14px;height:14px}
+.btn{display:inline-flex;gap:var(--space-2);align-items:center;justify-content:center;min-height:44px;padding:0 var(--space-4);border-radius:var(--radius-md);border:1px solid var(--control-border);background:var(--panel);font-weight:600;text-decoration:none;color:var(--ink)}
+.btn:hover{background:var(--tint)}.btn.pri{background:var(--primary);color:var(--on-primary);border-color:var(--primary)}.btn.pri:hover{filter:brightness(1.12)}
+.btn.dng{background:var(--danger);border-color:var(--danger);color:#fff}.btn.dng:hover{filter:brightness(1.1);background:var(--danger)}
+.btn.link{border:0;background:none;color:var(--primary);text-decoration:underline;padding:0 var(--space-2)}.btn:disabled,.btn[aria-disabled=true]{opacity:.55;cursor:not-allowed}
+.acts{display:flex;gap:var(--space-2);flex-wrap:wrap}
+.notice{display:flex;gap:var(--space-3);padding:var(--space-3) var(--space-4);border-radius:var(--radius-md);margin-bottom:var(--space-4);align-items:flex-start;font-size:14px}
+.notice.info{background:var(--success-tint);color:#143f69}.notice.warn{background:var(--warn-tint);color:var(--warn-text)}.notice.err{background:var(--danger-tint);color:#7d1a14}
+.notice p{flex:1}.notice .acts{margin-left:auto}
+/* forms */
+.fld{display:grid;gap:6px;margin-bottom:var(--space-4)}.fld label,.fld .lb{font-weight:600;font-size:14px}.fld .hint{font-size:13px;color:var(--muted)}
+.fld input,.fld select,.fld textarea{min-height:44px;padding:8px 12px;border:1px solid var(--control-border);border-radius:var(--radius-md);background:#fff;width:100%}
+.fld textarea{min-height:96px;resize:vertical}.fld .err{color:#7d1a14;font-size:13px;display:flex;gap:6px;align-items:center}
+.fld input[aria-invalid=true]{border-color:var(--danger);border-width:2px}
+.chk{display:flex;gap:var(--space-3);align-items:flex-start;min-height:44px;padding:var(--space-2) 0}.chk input{width:22px;height:22px;margin-top:2px;accent-color:var(--primary)}
+/* table */
+.tbl{width:100%;border-collapse:collapse}.tbl th{text-align:left;font:600 12px var(--font-body);letter-spacing:.04em;text-transform:uppercase;color:var(--muted);padding:var(--space-3) var(--space-4);border-bottom:1px solid var(--line)}
+.tbl td{padding:var(--space-3) var(--space-4);border-bottom:1px solid var(--line-soft);vertical-align:middle}.tbl tr:last-child td{border-bottom:0}
+.tbl-wrap{overflow-x:auto}
+@media (max-width:720px){.tbl.stack thead{display:none}.tbl.stack,.tbl.stack tbody,.tbl.stack tr,.tbl.stack td{display:block}.tbl.stack tr{padding:var(--space-3) var(--space-4);border-bottom:1px solid var(--line-soft)}.tbl.stack td{border:0;padding:2px 0}.tbl.stack td[data-l]::before{content:attr(data-l)": ";color:var(--muted);font-size:13px}}
+/* dialog + toast */
+.ovl{position:fixed;inset:0;z-index:100;background:rgba(27,31,39,.5);display:grid;place-items:center;padding:var(--space-4);overflow:auto}
+.dlg{background:var(--panel);border-radius:var(--radius-lg);box-shadow:var(--shadow-2);padding:var(--space-5);max-width:500px;width:100%;color:var(--ink)}
+.dlg h2{font-family:var(--font-body);font-size:20px;font-weight:700}.dlg .bd{color:var(--muted);margin:var(--space-2) 0 var(--space-4)}.dlg .bd .fld{color:var(--ink)}
+.toast{position:fixed;left:50%;bottom:calc(var(--space-5) + env(safe-area-inset-bottom,0px));transform:translate(-50%,8px);z-index:120;background:var(--success-tint);color:#143f69;border:1px solid #9bbbd9;border-radius:var(--radius-md);padding:var(--space-3) var(--space-4);box-shadow:var(--shadow-2);display:flex;gap:var(--space-2);align-items:center;font-weight:600;opacity:0;pointer-events:none;transition:opacity .18s ease-out,transform .18s ease-out;max-width:calc(100% - 32px)}
+.toast[data-show=true]{opacity:1;transform:translate(-50%,0)}
+.skel .bar{height:14px;border-radius:var(--radius-sm);background:var(--line-soft);margin-bottom:var(--space-3);animation:pulse 1.2s ease-in-out infinite}@keyframes pulse{50%{opacity:.5}}
+.empty{text-align:center;max-width:460px;margin:var(--space-6) auto}.empty p{color:var(--muted);margin:var(--space-2) 0 var(--space-4)}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
+
+/* tabs, bottom nav (phone) */
+.tabs{display:flex;gap:var(--space-2);border-bottom:1px solid var(--line);margin-bottom:var(--space-4);overflow-x:auto;scrollbar-width:thin}
+.tabs button{min-height:44px;padding:0 var(--space-4);border:0;background:none;font-weight:600;color:var(--muted);border-bottom:3px solid transparent;white-space:nowrap}
+.tabs button:hover{color:var(--ink);background:var(--tint)}.tabs button[aria-selected=true]{color:var(--primary);border-bottom-color:var(--primary)}
+.bnav{display:none}
+@media (max-width:720px){
+ .nav.has-b{display:none}
+ .bnav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--panel);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);box-shadow:0 -2px 8px rgba(16,24,40,.08)}
+ .bnav button{flex:1;min-width:0;min-height:56px;border:0;background:none;display:grid;justify-items:center;align-content:center;gap:2px;font-size:12px;font-weight:600;color:var(--muted);padding:4px 2px}
+ .bnav button[aria-current=page]{color:var(--primary)}.bnav button[aria-current=page] svg{background:var(--tint);border-radius:var(--radius-pill);width:44px;padding:0 12px}
+ body.hasb{padding-bottom:calc(64px + env(safe-area-inset-bottom,0px))}
+}
+.bnav.mock{display:flex;position:absolute;left:0;right:0;bottom:0;box-shadow:none}
+.bnav.mock{background:var(--panel);border-top:1px solid var(--line)}
+.bnav.mock button{flex:1;min-width:0;min-height:56px;border:0;background:none;display:grid;justify-items:center;align-content:center;gap:2px;font-size:12px;font-weight:600;color:var(--muted);padding:4px 2px}
+.bnav.mock button[aria-current=page]{color:var(--primary)}.bnav.mock button[aria-current=page] svg{background:var(--tint);border-radius:var(--radius-pill);width:44px;padding:0 12px}
+
+.tile2{display:grid;gap:var(--space-2);padding:var(--space-4);text-align:left;width:100%;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-1);transition:transform .16s ease-out,box-shadow .16s ease-out;min-height:112px}
+.tile2:hover{transform:translateY(-2px);box-shadow:var(--shadow-2)}.tile2 .num{font:700 30px var(--font-display)}
+.tools{display:flex;gap:var(--space-3);flex-wrap:wrap;margin-bottom:var(--space-3)}.tools .search{flex:1;min-width:200px}.tools select{min-height:44px;padding:0 10px;border:1px solid var(--control-border);border-radius:var(--radius-md);background:#fff}
+.sec h4{margin-bottom:var(--space-1)}.sec{padding:var(--space-4) var(--space-5);border-bottom:1px solid var(--line-soft)}.sec:last-child{border-bottom:0}.sec p{white-space:pre-wrap}
+.link{color:var(--primary);font-weight:600;text-decoration:underline;background:none;border:0;padding:0;min-height:44px;text-align:left}
+.int{background:var(--warn-tint);border-radius:var(--radius-md);padding:var(--space-3) var(--space-4);margin:var(--space-4) var(--space-5)}.int h4{color:var(--warn-text)}
+.sticky{position:sticky;bottom:0;background:var(--panel);border-top:1px solid var(--line);padding:var(--space-3) var(--space-5);display:flex;gap:var(--space-2);flex-wrap:wrap;align-items:center;border-radius:0 0 var(--radius-lg) var(--radius-lg)}</style></head><body><div class="bb"><div><h1>5 · Office → Funnels</h1><p>One pattern for all four record types: list, record, edit, share with client, archive, restore, permanent delete. Funnel maps themselves stay in Funnel Mapper Pro; the link between them is a separate design that needs your approval.</p></div><div id="sg0"></div></div>
+<div class="note"><div><b>Try:</b> open a record, edit it and press Cancel, share it with a client, archive it, then open Archived and delete it. Switch to <b>Viewer</b> or <b>Editor</b> to see what changes.</div></div>
+<div class="note"><div>Prototype. Who can do what is an <b>assumption</b> until checked against the permission catalog. See DESIGN_INDEX.md → Assumptions.</div></div><div class="bw"><div class="frame" id="frame" data-theme="l2f"><div class="bar4"></div><header class="hdr" id="hdr"></header><nav class="nav" id="nav" aria-label="Office sections"></nav><main class="content" id="main"></main></div></div><script>const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
+const P={check:'<path d="m5 12.5 4.5 4.5L19 7.5"/>',lock:'<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',warn:'<path d="M12 4 3 19h18z"/><path d="M12 10v4M12 17v.01"/>',info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.01"/>',cross:'<circle cx="12" cy="12" r="9"/><path d="m9 9 6 6M15 9l-6 6"/>',search:'<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4-4"/>',bell:'<path d="M6 17V11a6 6 0 1 1 12 0v6l1.5 2h-15z"/><path d="M10 21h4"/>',grid:'<rect x="4" y="4" width="6" height="6" rx="1.5"/><rect x="14" y="4" width="6" height="6" rx="1.5"/><rect x="4" y="14" width="6" height="6" rx="1.5"/><rect x="14" y="14" width="6" height="6" rx="1.5"/>',chev:'<path d="m7 10 5 5 5-5"/>',plus:'<path d="M12 5v14M5 12h14"/>',more:'<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',share:'<path d="M12 15V4M8 8l4-4 4 4"/><path d="M5 13v6h14v-6"/>',archive:'<rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v10h14V9M10 13h4"/>',trash:'<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>',edit:'<path d="M4 20h4L19 9l-4-4L4 16z"/>',eye:'<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',undo:'<path d="M9 7 4 12l5 5"/><path d="M4 12h10a6 6 0 0 1 0 12"/>',user:'<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/>',mail:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',ext:'<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v6H4V6h6"/>',arrow:'<path d="M5 12h14M13 6l6 6-6 6"/>',eyeoff:'<path d="M3 3l18 18"/><path d="M10 6c.6-.1 1.300-.2 2-.2 6 0 10 6.200 10 6.200s-1.200 2-3.200 3.800M6.300 7.500C3.700 9.300 2 12 2 12s4 7 10 7c1.700 0 3.200-.5 4.500-1.200"/>',key:'<circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M16 7l3 3"/>',home:'<path d="M3 11 12 4l9 7v9H3z"/>',doc:'<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/>',star:'<path d="m12 3 2.700 5.600 6.100.8-4.500 4.200 1.100 6.100L12 16.800 6.600 19.700l1.100-6.100L3.200 9.400l6.100-.8z"/>'};
+const ic=(n,c='')=>`<svg class="i ${c}" viewBox="0 0 24 24" aria-hidden="true">${P[n]||''}</svg>`;
+const ORGS={l2f:{id:'l2f',name:'Layer2Funnels',mark:'L2',color:'#173a8f',role:'Owner'},aurj:{id:'aurj',name:'Aurj',mark:'Au',color:'#b23a08',role:'Owner'}};
+let _t;function toast(m,ok=true){let t=$('#toast');if(!t){t=document.createElement('div');t.id='toast';t.className='toast';t.setAttribute('role','status');document.body.appendChild(t)}
+t.innerHTML=ic(ok?'check':'info')+'<span></span>';t.lastChild.textContent=m;t.dataset.show='true';clearTimeout(_t);_t=setTimeout(()=>t.dataset.show='false',3200)}
+function dialog({title,body,actions,wide}){const prev=document.activeElement,o=document.createElement('div');o.className='ovl';
+o.innerHTML=`<div class="dlg" role="dialog" aria-modal="true" aria-labelledby="dlt" style="${wide?'max-width:620px':''}"><h2 id="dlt">${title}</h2><div class="bd">${body}</div><div class="acts" id="dla"></div></div>`;
+document.body.appendChild(o);const close=()=>{o.remove();prev&&prev.focus&&prev.focus()};const a=$('#dla',o);
+actions.forEach(x=>{const b=document.createElement('button');b.type='button';b.className='btn '+(x.cls||'');b.textContent=x.label;b.onclick=()=>{if(x.on){const r=x.on(close,b);if(r===false)return}if(!x.keep)close()};a.appendChild(b)});
+const f=()=>$$('button,input,select,textarea,[href]',o).filter(e=>!e.disabled);
+o.onkeydown=e=>{if(e.key==='Escape'){e.stopPropagation();close()}else if(e.key==='Tab'){const l=f(),i=l.indexOf(document.activeElement);if(e.shiftKey&&i<=0){e.preventDefault();l[l.length-1].focus()}else if(!e.shiftKey&&i===l.length-1){e.preventDefault();l[0].focus()}}};
+(o.querySelector('[autofocus]')||(actions.find(x=>x.focus)?a.children[actions.findIndex(x=>x.focus)]:null)||f()[0]).focus();return close}
+function seg(el,opts,cur,on){el.className='seg';el.innerHTML=opts.map(([k,l])=>`<button type="button" data-k="${k}" aria-pressed="${k===cur}">${l}</button>`).join('');
+$$('button',el).forEach(b=>b.onclick=()=>{$$('button',el).forEach(x=>x.setAttribute('aria-pressed',x===b));on(b.dataset.k)})}
+/* shared header: launcher button, org switcher, search, bell, profile. opts:{launcherCurrent,onOrg,searchLabel} */
+function mountHeader(root,st,o={}){
+root.innerHTML=`<button class="iconbtn" aria-label="Open the app Launcher" ${o.launcherCurrent?'aria-current="page"':''} data-act="launcher">${ic('grid')}</button>
+<div class="swwrap"><button class="sw" aria-haspopup="menu" aria-expanded="false" aria-controls="menu-${root.id}"><span class="mark">${ORGS[st.org].mark}</span><span class="t"><small>Organization</small><strong>${ORGS[st.org].name}</strong></span>${ic('chev')}</button>
+<div class="menu" id="menu-${root.id}" role="menu" aria-label="Switch organization" data-open="false"></div></div>
+<label class="search">${ic('search')}<span class="sr">Search this organization</span><input type="search" placeholder="Search ${ORGS[st.org].name}" autocomplete="off"></label>
+<button class="iconbtn hide-s" aria-label="Notifications, 3 new">${ic('bell')}<span class="badge" aria-hidden="true">3</span></button><span class="who" role="img" aria-label="Your profile: Tabish Riaz">TR</span>`;
+const sw=$('.sw',root),m=$('.menu',root);
+const close=(f)=>{m.dataset.open='false';sw.setAttribute('aria-expanded','false');if(f)sw.focus()};
+sw.onclick=()=>{if(m.dataset.open==='true')return close(true);
+m.innerHTML=`<div class="mh">Your organizations</div>`+Object.values(ORGS).map(g=>`<button class="opt" role="menuitemradio" aria-checked="${g.id===st.org}" data-k="${g.id}"><span class="mk" style="background:${g.color}">${g.mark}</span><span class="tx"><strong>${g.name}</strong><small>${g.role}</small></span>${g.id===st.org?`<span class="st">${ic('check')}Current</span>`:''}</button>`).join('')+`<div class="mfoot">Switching keeps you on the same page where it exists. The full set of switch outcomes is in the approved switcher board.</div>`;
+m.dataset.open='true';sw.setAttribute('aria-expanded','true');$$('.opt',m).forEach(b=>b.onclick=()=>{close();if(b.dataset.k!==st.org)o.onOrg&&o.onOrg(b.dataset.k)});($('[aria-checked=true]',m)).focus()};
+m.onkeydown=e=>{const it=$$('.opt',m),i=it.indexOf(document.activeElement);if(e.key==='ArrowDown'){e.preventDefault();it[(i+1)%it.length].focus()}else if(e.key==='ArrowUp'){e.preventDefault();it[(i-1+it.length)%it.length].focus()}else if(e.key==='Escape'){close(true)}else if(e.key==='Tab')close()};
+document.addEventListener('click',e=>{if(m.dataset.open==='true'&&!e.target.closest('.swwrap'))close()});
+$('[data-act=launcher]',root).onclick=()=>o.onLauncher&&o.onLauncher();}
+const NI={Home:'home',Planner:'clock',Projects:'doc',Funnels:'star',Documents:'doc',Team:'user',Apps:'grid',Admin:'key',Clients:'user','Requests & Approvals':'check','SOPs & Tools':'doc',Settings:'key',Dashboard:'home',Reports:'doc',More:'more'};
+const NS={'Requests & Approvals':'Requests','SOPs & Tools':'SOPs','Documents':'Docs'};
+function nav(root,app,items,cur,on,o={}){root.innerHTML=`<span class="appname">${app}</span>`+items.map(p=>`<button type="button" data-p="${p}" ${p===cur?'aria-current="page"':''}>${p}</button>`).join('');$$('button[data-p]',root).forEach(b=>b.onclick=()=>on(b.dataset.p));
+ const fr=root.closest('.frame');if(!fr)return;$$('.bnav:not(.mock)',fr).forEach(e=>e.remove());if(o.bottom===false){return}
+ root.classList.add('has-b');document.body.classList.add('hasb');
+ const main=items.length>5?items.slice(0,4):items,more=items.length>5?items.slice(4):[],inMore=more.includes(cur);
+ const b=document.createElement('nav');b.className='bnav';b.setAttribute('aria-label',app+' sections');
+ b.innerHTML=main.map(p=>`<button type="button" data-p="${p}" ${p===cur?'aria-current="page"':''}>${ic(NI[p]||'doc')}<span>${NS[p]||p}</span></button>`).join('')+(more.length?`<button type="button" data-more="1" aria-haspopup="dialog" ${inMore?'aria-current="page"':''}>${ic('more')}<span>More</span></button>`:'');
+ fr.appendChild(b);$$('button[data-p]',b).forEach(x=>x.onclick=()=>on(x.dataset.p));
+ const mb=$('[data-more]',b);if(mb)mb.onclick=()=>{let cl;const h=more.map(p=>`<button type="button" class="btn" data-m="${p}" style="justify-content:flex-start;width:100%;margin-bottom:8px" ${p===cur?'aria-current="page"':''}>${ic(NI[p]||'doc')}${p}</button>`).join('');
+  cl=dialog({title:'More in '+app,body:h,actions:[{label:'Close',focus:1}]});$$('[data-m]',document).forEach(x=>x.onclick=()=>{cl();on(x.dataset.m)})}}
+function pageHead(crumb,title,sub,right=''){return `<div class="crumb">${crumb}</div><div style="display:flex;flex-wrap:wrap;gap:var(--space-3);justify-content:space-between;align-items:flex-start"><div><h1>${title}</h1><p class="sub">${sub}</p></div><div class="acts">${right}</div></div>`}
+const SAMPLE='Sample data, not real records.';
+const PLATE=`<svg viewBox="0 0 120 90" width="120" height="90" aria-hidden="true" style="flex:none"><g stroke="#1b1f27" stroke-opacity=".12"><path d="M60 52 100 70 60 88 20 70z" fill="#c9cfd8"/><path d="M60 38 100 56 60 74 20 56z" fill="var(--tint,#e3eafa)"/><path d="M60 24 100 42 60 60 20 42z" fill="var(--accent,#ff7a59)"/><path d="M60 10 100 28 60 46 20 28z" fill="var(--primary,#173a8f)"/></g></svg>`;
+
+
+const CFG={avatars:{label:'Avatars',full:'Customer avatars',one:'avatar',sec:[['Who they are','A busy coach who wants clients without more tech.'],['Motivations','Wants steady leads and more free time.'],['Objections','“I’ve tried funnels before and they didn’t convert.”'],['Language they use','“fill my calendar”, “done for me”, “no tech headaches”'],['Evidence','From six intro calls and fourteen survey answers.']]},
+offers:{label:'Offers & products',full:'Offers & products',one:'offer',sec:[['Promise','A working funnel live in your business.'],['Price and terms','Sample: one-time fee, paid in two parts.'],['What’s included','Strategy, copy, build and launch checks.'],['Who it’s for','Coaches and course creators ready to sell online.']]},
+stories:{label:'Stories',full:'Story bank',one:'story',sec:[['Type','Customer result'],['The story','A coach had a funnel that sat empty for months. After a rebuild it brought in leads in the first week.'],['Where to use it','Sales page, welcome email, webinar opening.']]},
+brands:{label:'Brand kits',full:'Brand kits',one:'brand kit',sec:[['Colours','Primary deep blue. Accent coral. Light surface.'],['Fonts','Headings: a bold grotesk. Body: a clean sans.'],['Voice and tone','Plain, direct, warm. Short sentences.'],['Logo notes','Keep clear space equal to the logo height.']]}};
+const TY=['avatars','offers','stories','brands'];
+function mk(type,name,summary,status,shared=[]){return{id:Math.random().toString(36).slice(2,8),type,name,summary,status,shared,upd:status==='Archived'?'3 weeks ago':'2 days ago',used:status==='Archived'?[]:['Fitness quiz funnel'],f:CFG[type].sec.map(s=>s[1]),notes:'Remember to refresh after the next customer call.'}}
+const DB={l2f:{avatars:[mk('avatars','Busy coach, 35–45','Wants clients, not more software.','Active',['Harry Kaye PT']),mk('avatars','First-time course creator','Has the idea, needs the structure.','Active'),mk('avatars','Consultant going online','Moving from in-person to online.','Archived')],
+offers:[mk('offers','Done-for-you funnel build','Strategy, copy and build.','Active'),mk('offers','Funnel Done Right Challenge','Seven days, beginner friendly.','Active')],
+stories:[mk('stories','The funnel that sat empty','Before and after a rebuild.','Active'),mk('stories','Three leads in a week','A quiz funnel’s first week.','Active')],
+brands:[mk('brands','Layer2Funnels brand kit','Colours, fonts and voice.','Active')]},
+aurj:{avatars:[mk('avatars','Parent of a school student','Wants clear lessons in Urdu.','Active'),mk('avatars','Self-learner, 18–25','Learns on a phone at night.','Active')],offers:[mk('offers','Aurj starter course','First ten lessons.','Active')],stories:[mk('stories','Why lessons in Urdu','The idea behind Aurj.','Active')],brands:[mk('brands','Aurj brand kit','Colours, fonts and voice.','Active')]}};
+const CLIENTS={l2f:['Harry Kaye PT','Victor (checkout audit)','Dana Friedman'],aurj:['Sample Student Group']};
+let st={org:'l2f',role:'editor',type:'avatars',view:'home',id:null,filter:'Active',q:'',draft:null,dirty:false};
+const F=$('#frame'),M=$('#main');
+seg($('#sg0'),[['owner','Owner'],['admin','Admin'],['editor','Editor'],['viewer','Viewer']],'editor',k=>{st.role=k;draw()});
+const can=a=>({edit:st.role!=='viewer',del:st.role==='owner'||st.role==='admin'})[a];
+const list=()=>DB[st.org][st.type],rec=()=>list().find(r=>r.id===st.id);
+const PG=['Home','Planner','Projects','Funnels','Documents','Team','Apps','Admin'];
+const SN=[['home','Home'],...TY.map(t=>[t,CFG[t].label])];
+function go(v,x={}){Object.assign(st,{view:v,dirty:false,draft:null},x);draw();const h=$('h1',M);h&&(h.tabIndex=-1,h.focus({preventScroll:true}))}
+function guard(next){if(st.view==='edit'&&st.dirty){unsaved(next);return}next()}
+function unsaved(next){dialog({title:'You have unsaved changes',body:'Save them before you leave, or they’ll be lost.',actions:[{label:'Save and leave',cls:'pri',on:c=>{if(!save(true))return false;c();next()},keep:1},{label:'Discard and leave',on:()=>{st.dirty=false;next()}},{label:'Keep editing',focus:1}]})}
+function draw(){F.dataset.theme=st.org;const o=ORGS[st.org];
+mountHeader($('#hdr'),st,{onOrg:k=>guard(()=>{const had=st.view==='record'||st.view==='edit';st.org=k;if(had)Object.assign(st,{view:'list',id:null,dirty:false});draw();toast('Now in '+ORGS[k].name+(had?' · that record isn’t here, showing the list':' · Funnels'),true)}),onLauncher:()=>toast('Opens the Launcher (you chose it).',false)});
+nav($('#nav'),'Office',PG,'Funnels',p=>p!=='Funnels'&&toast('Opens '+p+' (designed separately).',false));
+const sub=`<div class="subnav" role="group" aria-label="Funnels sections">${SN.map(([k,l])=>`<button type="button" data-s="${k}" aria-pressed="${(st.view==='home'&&k==='home')||(st.view!=='home'&&k===st.type)}">${l}</button>`).join('')}</div>`;
+M.innerHTML=`<div class="real">${sub}<div id="v"></div></div>`;
+$$('[data-s]',M).forEach(b=>b.onclick=()=>guard(()=>b.dataset.s==='home'?go('home'):go('list',{type:b.dataset.s,filter:'Active',q:''})));
+({home:vHome,list:vList,record:vRec,edit:vEdit})[st.view]()}
+function vHome(){const o=ORGS[st.org],all=TY.flatMap(t=>DB[st.org][t]).filter(r=>r.status==='Active').slice(0,4);
+$('#v').innerHTML=pageHead('Office · Funnels','Funnels','Your '+o.name+' funnel assets in one place. '+SAMPLE)+
+`<div class="grid g4">${TY.map(t=>`<button class="tile2" data-t="${t}"><span class="fine">${CFG[t].full}</span><span class="num">${DB[st.org][t].filter(r=>r.status==='Active').length}</span><span class="link" style="min-height:0">Open</span></button>`).join('')}</div>
+<div class="split" style="margin-top:var(--space-4)"><section class="card"><h3 style="padding:var(--space-4) var(--space-5) 0">Recently changed</h3><ul class="rows">${all.map(r=>`<li><span><b>${r.name}</b><br><span class="fine">${CFG[r.type].one} · ${r.upd}</span></span><button class="btn" data-o="${r.id}" data-t="${r.type}">Open</button></li>`).join('')}</ul></section>
+<section class="card pad"><h3>Funnel maps</h3><p class="fine" style="margin:var(--space-2) 0 var(--space-3)">Funnel maps live in the Funnel Mapper Pro app. How they appear here needs a deliberate design first.</p><span class="pill warn">Link design pending</span></section></div>`;
+$$('[data-t]:not([data-o])',$('#v')).forEach(b=>b.onclick=()=>go('list',{type:b.dataset.t,filter:'Active',q:''}));$$('[data-o]',$('#v')).forEach(b=>b.onclick=()=>go('record',{type:b.dataset.t,id:b.dataset.o}))}
+function vList(){const c=CFG[st.type];let r=list().filter(x=>st.filter==='All'||x.status===st.filter).filter(x=>(x.name+x.summary).toLowerCase().includes(st.q.toLowerCase()));
+$('#v').innerHTML=pageHead('Office · Funnels · '+c.label,c.full,SAMPLE,can('edit')?`<button class="btn pri" id="nw">${ic('plus')}New ${c.one}</button>`:'')+
+(st.role==='viewer'?`<div class="notice info">${ic('eye')}<p>You can view these. Ask an editor to change them.</p></div>`:'')+
+`<div class="tools"><label class="search">${ic('search')}<span class="sr">Search ${c.label}</span><input id="q" type="search" placeholder="Search ${c.label.toLowerCase()}" value="${st.q}"></label><label class="sr" for="fl">Show</label><select id="fl">${['Active','Archived','All'].map(x=>`<option ${x===st.filter?'selected':''}>${x}</option>`).join('')}</select></div>
+${r.length?`<div class="card tbl-wrap"><table class="tbl stack"><caption class="sr">${c.full}</caption><thead><tr><th>Name</th><th>Used in</th><th>Sharing</th><th>Updated</th><th><span class="sr">Actions</span></th></tr></thead><tbody>${r.map(x=>`<tr><td><button class="link" data-o="${x.id}"><b>${x.name}</b></button><div class="fine">${x.summary}</div></td><td data-l="Used in">${x.used.length?x.used.length+' funnel'+(x.used.length>1?'s':''):'None'}</td><td data-l="Sharing">${x.status==='Archived'?`<span class="pill">Archived</span>`:x.shared.length?`<span class="pill pri">${ic('share')}${x.shared.length} client</span>`:`<span class="pill">Internal</span>`}</td><td data-l="Updated" class="muted">${x.upd}</td><td><div class="acts"><button class="btn" data-o="${x.id}">Open<span class="sr"> ${x.name}</span></button>${can('edit')?(x.status==='Archived'?`<button class="btn" data-rs="${x.id}">Restore<span class="sr"> ${x.name}</span></button>`:`<button class="btn" data-ar="${x.id}">Archive<span class="sr"> ${x.name}</span></button>`):''}</div></td></tr>`).join('')}</tbody></table></div>`:
+`<div class="empty card pad">${PLATE}<h2>${st.q?'No matches':st.filter==='Archived'?'Nothing archived':'No '+c.label.toLowerCase()+' yet'}</h2><p>${st.q?'Try a different word, or clear the search.':st.filter==='Archived'?'Archived items wait here until you restore or delete them.':can('edit')?'Create your first '+c.one+' to start building your library.':'When someone adds one, you’ll see it here.'}</p>${st.q?'<button class="btn" id="cl">Clear search</button>':(can('edit')&&st.filter==='Active'?`<button class="btn pri" id="nw2">New ${c.one}</button>`:'')}</div>`}`;
+$('#nw')&&($('#nw').onclick=newRec);$('#nw2')&&($('#nw2').onclick=newRec);$('#cl')&&($('#cl').onclick=()=>{st.q='';draw()});
+$('#q').oninput=e=>{st.q=e.target.value;const p=e.target.selectionStart;draw();const q=$('#q');q.focus();q.setSelectionRange(p,p)};$('#fl').onchange=e=>{st.filter=e.target.value;draw()};
+$$('[data-o]',$('#v')).forEach(b=>b.onclick=()=>go('record',{id:b.dataset.o}));$$('[data-ar]').forEach(b=>b.onclick=()=>archive(b.dataset.ar));$$('[data-rs]').forEach(b=>b.onclick=()=>restore(b.dataset.rs))}
+function newRec(){const r=mk(st.type,'','','Active');r.f=CFG[st.type].sec.map(()=>'');r.used=[];r.upd='Just now';r.notes='';r.isNew=true;go('edit',{draft:r,id:r.id})}
+function vRec(){const r=rec();if(!r)return notfound();const c=CFG[st.type],arch=r.status==='Archived';
+$('#v').innerHTML=pageHead(`<button class="link" id="bk">${c.full}</button> / ${r.name}`,r.name,r.summary,
+(st.role==='viewer'?'':(arch?`<button class="btn" id="rs">${ic('undo')}Restore</button>`:`<button class="btn" id="ed">${ic('edit')}Edit</button><button class="btn" id="sh">${ic('share')}Share with client</button><button class="btn" id="ar">${ic('archive')}Archive</button>`)))+
+(st.role==='viewer'?`<div class="notice info">${ic('eye')}<p><b>Read only.</b> You can view this ${c.one} but not change it.</p></div>`:'')+
+(arch?`<div class="notice warn">${ic('archive')}<p><b>This ${c.one} is archived.</b> It’s hidden from lists and clients can’t see it. ${can('del')?'You can restore it, or delete it permanently.':'An owner or admin can delete it permanently.'}</p>${can('del')?`<div class="acts"><button class="btn dng" id="dl">${ic('trash')}Delete permanently</button></div>`:''}</div>`:'')+
+`<div class="split"><section class="card">${c.sec.map((s,i)=>`<div class="sec"><h4>${s[0]}</h4><p>${r.f[i]||'<span class="muted">Not filled in yet.</span>'}</p></div>`).join('')}<div class="int"><h4>Internal notes · never shared</h4><p>${r.notes||'None'}</p></div></section>
+<div class="grid" style="align-content:start"><section class="card pad"><h3>Shared with clients</h3>${r.shared.length&&!arch?`<ul class="rows" style="margin:var(--space-2) calc(var(--space-5)*-1) 0">${r.shared.map((s,i)=>`<li><span>${s}</span>${can('edit')?`<button class="btn" data-un="${i}">Stop sharing<span class="sr"> with ${s}</span></button>`:''}</li>`).join('')}</ul>`:`<p class="fine" style="margin-top:var(--space-2)">${arch&&r.shared.length?'Paused while archived.':'Not shared. Only your team can see it.'}</p>`}</section>
+<section class="card pad"><h3>Used in</h3>${r.used.length?`<ul style="margin:var(--space-2) 0 0;padding-left:18px">${r.used.map(u=>`<li>${u}</li>`).join('')}</ul><p class="fine" style="margin-top:var(--space-2)">References only. Changing this ${c.one} doesn’t copy it anywhere.</p>`:`<p class="fine" style="margin-top:var(--space-2)">Not used in any funnel yet.</p>`}</section></div></div>`;
+$('#bk').onclick=()=>go('list');$('#ed')&&($('#ed').onclick=()=>go('edit',{draft:JSON.parse(JSON.stringify(r)),id:r.id}));$('#sh')&&($('#sh').onclick=()=>share(r));$('#ar')&&($('#ar').onclick=()=>archive(r.id));$('#rs')&&($('#rs').onclick=()=>restore(r.id));$('#dl')&&($('#dl').onclick=()=>del(r));
+$$('[data-un]').forEach(b=>b.onclick=()=>{const n=r.shared[+b.dataset.un];dialog({title:'Stop sharing with '+n+'?',body:n+' loses access right away. Your team’s copy isn’t affected.',actions:[{label:'Stop sharing',cls:'dng',on:()=>{r.shared.splice(+b.dataset.un,1);draw();toast('Stopped sharing with '+n+'.',false)}},{label:'Keep sharing',focus:1}]})})}
+function vEdit(){const d=st.draft,c=CFG[st.type];$('#v').innerHTML=pageHead(`<button class="link" id="bk">${c.full}</button> / ${d.isNew?'New '+c.one:'Edit'}`,d.isNew?'New '+c.one:'Edit '+(d.name||c.one),'Changes aren’t saved until you press Save.')+
+`<form id="f" class="card" novalidate><div style="padding:var(--space-5) var(--space-5) 0"><div class="fld"><label for="nm">Name</label><input id="nm" value="${d.name.replace(/"/g,'&quot;')}" autocomplete="off"><span class="err" id="nme" role="alert" hidden></span></div><div class="fld"><label for="sm">Short summary</label><input id="sm" value="${d.summary.replace(/"/g,'&quot;')}" autocomplete="off"><span class="hint">One line so people can tell it apart in a list.</span></div>
+${c.sec.map((s,i)=>`<div class="fld"><label for="f${i}">${s[0]}</label><textarea id="f${i}">${d.f[i]}</textarea></div>`).join('')}<div class="fld"><label for="nt">Internal notes</label><textarea id="nt">${d.notes}</textarea><span class="hint">Only your team sees this. It’s never shared with a client.</span></div></div>
+<div class="sticky"><button class="btn pri" type="submit">Save</button><button class="btn" type="button" id="cn">Cancel</button><span class="fine" id="ds" role="status">${st.dirty?'Unsaved changes':'No changes yet'}</span></div></form>`;
+const mark=()=>{st.dirty=true;$('#ds').textContent='Unsaved changes'};$$('input,textarea',$('#f')).forEach(i=>i.oninput=()=>{pull();mark()});
+$('#bk').onclick=()=>guard(()=>go(d.isNew?'list':'record'));$('#cn').onclick=()=>guard(()=>go(d.isNew?'list':'record'));$('#f').onsubmit=e=>{e.preventDefault();pull();save()&&go('record')}}
+function pull(){const d=st.draft;d.name=$('#nm').value;d.summary=$('#sm').value;d.f=CFG[st.type].sec.map((_,i)=>$('#f'+i).value);d.notes=$('#nt').value}
+function save(silent){const d=st.draft;if(!d.name.trim()){const i=$('#nm');i&&(i.setAttribute('aria-invalid','true'),$('#nme').hidden=false,$('#nme').innerHTML=ic('cross')+'Give it a name so people can find it.',i.focus());return false}
+d.upd='Just now';delete d.isNew;const L=list(),i=L.findIndex(x=>x.id===d.id);i>=0?L[i]=d:L.unshift(d);st.dirty=false;toast('Saved.');return true}
+function archive(id){const r=list().find(x=>x.id===id);dialog({title:'Archive “'+r.name+'”?',body:`It disappears from lists${r.shared.length?' and '+r.shared.join(', ')+' can no longer see it':''}. Nothing is deleted. You can restore it any time.`,actions:[{label:'Archive',cls:'pri',on:()=>{r.status='Archived';if(st.view==='record')st.view='list';draw();toast('Archived. Restore it from the Archived list.',true)}},{label:'Cancel',focus:1}]})}
+function restore(id){const r=list().find(x=>x.id===id);r.status='Active';st.filter='Active';draw();toast('Restored.')}
+function del(r){const close=dialog({title:'Delete “'+r.name+'” permanently?',wide:1,body:`<div class="notice err">${ic('warn')}<p><b>This can’t be undone.</b> It’s removed for everyone${r.shared.length?', and removed from '+r.shared.length+' client share':''}.</p></div><div class="fld"><label for="cf">Type the name to confirm</label><input id="cf" autocomplete="off" autofocus><span class="hint">${r.name}</span></div>`,
+actions:[{label:'Delete permanently',cls:'dng',keep:1,on:(c,b)=>{if($('#cf').value.trim()!==r.name){$('#cf').setAttribute('aria-invalid','true');$('#cf').focus();return false}const L=list();L.splice(L.indexOf(r),1);c();go('list',{filter:'Archived'});toast('Deleted permanently.',false)}},{label:'Cancel'}]})}
+function share(r){const cl=CLIENTS[st.org].filter(c=>!r.shared.includes(c)),c=CFG[st.type];if(!cl.length)return toast('Already shared with every client here.',false);
+dialog({title:'Share with a client',wide:1,body:`<p style="margin-bottom:var(--space-3)">Clients see only what you pick, and only in their Client Portal. They can view it, not change it.</p><div class="fld"><label for="sc">Client</label><select id="sc">${cl.map(x=>`<option>${x}</option>`).join('')}</select></div><div class="fld"><span class="lb">What they’ll see</span>${c.sec.map((s,i)=>`<label class="chk"><input type="checkbox" checked data-i="${i}"><span>${s[0]}</span></label>`).join('')}<label class="chk"><input type="checkbox" disabled><span class="muted">Internal notes (never shared)</span></label></div><div class="notice info" style="margin:0">${ic('info')}<p>The Client Portal is locked for now. This saves the choice; nothing is visible to the client until the Portal is turned on.</p></div>`,
+actions:[{label:'Share',cls:'pri',on:()=>{const n=$('#sc').value;r.shared.push(n);draw();toast('Shared with '+n+'.')}},{label:'Cancel'}]})}
+function notfound(){$('#v').innerHTML=`<div class="empty card pad"><h2>We couldn’t find that</h2><p>It may have moved, or you may not have access.</p><button class="btn pri" id="gb">Back to Funnels</button></div>`;$('#gb').onclick=()=>go('home')}
+draw();
+</script></body></html>
