@@ -57,8 +57,8 @@ Identity = Supabase Auth user id from the JWT. Authorization = active membership
 
 ## 6. Go-live runbook at $0 (each step needs owner approval)
 1. Human owner on GitHub, Supabase, Cloudflare, domain, with 2FA (Phase 2 action #2).
-2. Export `application-office` (2 real clients) and pause it, freeing a free slot.
-3. Create Supabase project (region per decision, Mumbai recommended); apply 0001→0004 in order; run `seed/bootstrap.sql` after the owner's first sign-in.
+2. Only at go-live and with approval: export `application-office` with `scripts/export-project.sh`, verify with `DUMP_FILE=... npm run drill:restore`, then decide on the slot (docs/INFRASTRUCTURE.md).
+3. Create Supabase project (region: London unless the latency test in docs/INFRASTRUCTURE.md says otherwise); apply 0001→0004 in order; run `seed/bootstrap.sql` after the owner's first sign-in.
 4. Auth settings: custom SMTP (Brevo free, sender on layer2funnels.com with SPF/DKIM), Confirm email ON, min password 12, Google provider ON, redirect URLs = our domains only.
 5. Run the test suites against a staging copy (PG_URL to the project's session pooler) before real data.
 6. Private GitHub repo; push; CI runs.

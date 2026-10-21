@@ -40,3 +40,6 @@ Palettes (L2F blue #173A8F + coral; Aurj #B23A08 + sky), fonts (Hanken Grotesk, 
 
 ## 7. Open questions for the session
 Global switcher vs fixed label (recommend global) · merge Home/My Work in Projects · Office Documents = Drive org space · where SOPs live · how much of Admin → Access ships first (recommend: levels, assignments, effective access) · Portal domain and branding (client brand kit only inside portal content, ecosystem chrome stays).
+
+## 8. Engine constraints for design (see ENGINES.md)
+Whiteboard = Excalidraw-based canvas; Docs = TipTap-based editor; Sheets later (no xlsx import/export or live co-editing in the free tier); no Slides editor in Phase 5; no live cursors in Phase 5. Design editor shells around single-user autosave + version history.

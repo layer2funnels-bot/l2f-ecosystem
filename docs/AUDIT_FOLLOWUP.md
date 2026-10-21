@@ -44,8 +44,8 @@ Product: Funnel data ownership with FMP · editor/whiteboard engines · public f
 
 ## A6. Critical blockers needing you
 1. Move GitHub, Supabase, Cloudflare and domain to your own account with 2FA (accounts are under a bot user).
-2. Approve: export + pause `application-office` (2 real clients) to free the second free slot.
-3. Approve creating the new Supabase project (region: Mumbai recommended).
+2. ~~Pause application-office~~ — withdrawn 21 Oct: not needed until go-live; see INFRASTRUCTURE.md.
+3. Region: London recommended pending a 5-minute latency test (INFRASTRUCTURE.md §5).
 4. FMP: allow read-only code review so its data ownership and shared sign-in can be planned.
 
 ## E. Prioritised next steps
@@ -58,3 +58,8 @@ Product: Funnel data ownership with FMP · editor/whiteboard engines · public f
 | 5 | Clients workflow (stages, requests, versions) → Portal projections → G2 | Claude Code | After 4 + your review of `APP_STRUCTURE_REVIEW.md` §3 |
 | 6 | Projects, Drive storage, Planner | Claude Code | After 4 |
 | 7 | FMP Stage 2, Social Planner via GHL, Whiteboard/editor engines | Later | Needs decisions |
+
+## Addendum 21 Oct (later): status after re-verification
+- Re-ran everything: isolation 47/47, audit 63/63, authz 25/25 on PostgreSQL 17 and real PostgreSQL; API errors 9/9; restore drill 3/3; restore-from-export path RD pass (synthetic); 9/9 negative controls caught.
+- These are **database-level** proofs. Live sign-in, email delivery, hosting and production readiness are **not** verified.
+- New: `docs/INFRASTRUCTURE.md` (region, slot, application-office dependencies and safe export), `docs/ENGINES.md` (engine licences and choices), `scripts/export-project.sh` (prepared, not run), `restore-drill.mjs` DUMP_FILE mode (tested).

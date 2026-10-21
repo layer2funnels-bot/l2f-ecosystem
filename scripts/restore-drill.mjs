@@ -11,6 +11,19 @@ const urlFor = (db) => { const u = new URL(base); u.pathname = `/${db}`; return 
 const admin = new pg.Client({ connectionString: base.toString() }); await admin.connect();
 const SRC = `drill_src_${Date.now()}`, DST = `drill_dst_${Date.now()}`;
 const results = []; const check = (id, n, ok, d = '') => results.push({ id, n, ok, d });
+if (process.env.DUMP_FILE) {   // verify a REAL export (e.g. from scripts/export-project.sh) restores cleanly
+  try {
+    await admin.query(`create database ${DST}`);
+    execFileSync('pg_restore', ['--no-owner', '--no-acl', '-d', urlFor(DST), process.env.DUMP_FILE], { stdio: 'pipe' });
+    const c = new pg.Client({ connectionString: urlFor(DST) }); await c.connect();
+    const t = (await c.query("select count(*)::int n from information_schema.tables where table_schema='public'")).rows[0].n;
+    console.log(`restored ${t} public tables into a scratch database; compare with rowcounts.txt in the export`);
+    await c.end(); check('RD', 'Real export restores without error', t > 0);
+  } catch (e) { check('RD', 'Real export restores without error', false, e.message); }
+  finally { await admin.query(`drop database if exists ${DST}`); await admin.end(); }
+  for (const r of results) console.log(`${r.ok ? 'PASS' : 'FAIL'}  ${r.id}  ${r.n}${r.ok ? '' : ` (${r.d})`}`);
+  process.exit(results.every(r => r.ok) ? 0 : 1);
+}
 try {
   await admin.query(`create database ${SRC}`); await admin.query(`create database ${DST}`);
   const src = new pg.Client({ connectionString: urlFor(SRC) }); await src.connect();
