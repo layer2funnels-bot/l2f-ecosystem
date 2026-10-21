@@ -22,3 +22,9 @@ Owner approvals live in `05_Decision_Register.md`. These are technical decisions
 | A1 | Identity resolved like Supabase `auth.uid()` (legacy claim, then `request.jwt.claims`) | `private.current_user_id()` | Fixed by F1 |
 | A2–A4 | Append-only audit; uniform denials; `check_function_bodies = off` | unchanged | — |
 | A5 | Hosting: Cloudflare Pages free; Vercel Hobby excluded | not deployed | V12 |
+| D16 | Shared authorization foundation: catalog, access levels, groups, scoped assignments, allow/deny overrides; decision order deny > allow > role default; role floors; owner recovery for platform permissions | 0004, `private.permission_decision` | Owner rule (21 Oct) |
+| D17 | Client and project access is scoped: editors see only assigned clients/projects unless given an organization-wide level (changes D3) | 0004 policies | WCIGA (21 Oct) |
+| D18 | Archive before delete; hard delete owner-only and refused while work exists (changes D2) | 0004 trigger | App Foundation rule |
+| D19 | Audit records actor kind; agent actions refused until Layer 2 Agents is approved | 0004 | AI & Integration rule |
+| D20 | App lifecycle: coming-soon apps show a tile and hold no data | 0004 | Agents = coming soon |
+| D21 | "Organization" in specs = `workspaces` row; table not renamed | docs | Terminology |

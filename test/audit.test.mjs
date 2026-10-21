@@ -26,6 +26,10 @@ await db.query("insert into memberships (workspace_id,user_id,kind,client_id) va
 for (const [u, ws] of [[U.ED, L2F], [U.VW, L2F], [U.AED, AUR]])
   for (const app of ['clients', 'projects', 'drive'])
     await db.query('insert into app_grants (workspace_id,user_id,app_key) values ($1,$2,$3)', [ws, u, app]);
+const level = async (ws, name) => (await db.query('select id from access_levels where workspace_id=$1 and name=$2', [ws, name])).rows[0].id;
+const assign = async (ws, uid, name, client = null) => db.query("insert into access_assignments (workspace_id, access_level_id, principal_type, principal_id, client_id) values ($1,$2,'user',$3,$4)", [ws, await level(ws, name), uid, client]);
+for (const [u, ws] of [[U.ED, L2F], [U.AED, AUR]]) { await assign(ws, u, 'All clients · edit'); await assign(ws, u, 'All projects · edit'); }
+await assign(L2F, U.VW, 'All clients · read');
 await db.query("insert into workspace_apps (workspace_id, app_key, enabled) values ($1,'funnel_mapper_pro',true)", [L2F]);
 await db.query("insert into app_grants (workspace_id,user_id,app_key) values ($1,$2,'funnel_mapper_pro')", [L2F, U.ED]);
 const PR_VIS = id(), PR_INT = id(), F_VIS = id(), F_INT = id();
@@ -77,7 +81,7 @@ const publicExec = await rows(`select p.oid::regprocedure::text f from pg_proc p
   where n.nspname in ('public','private') and has_function_privilege('public', p.oid, 'execute')`);
 check('F4b', 'No public or private function is executable by PUBLIC', publicExec.length === 0, publicExec.map(r => r.f).join(', '));
 const apiFns = (await rows(`select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' order by 1`)).map(r => r.proname);
-check('F4c', 'Only the three intended RPCs exist in the API schema', JSON.stringify(apiFns) === JSON.stringify(['accept_invitation', 'create_invitation', 'launcher_apps']), apiFns.join(','));
+check('F4c', 'Only the four intended RPCs exist in the API schema', JSON.stringify(apiFns) === JSON.stringify(['accept_invitation', 'create_invitation', 'effective_access', 'launcher_apps']), apiFns.join(','));
 const unsafe = await rows(`select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
   where n.nspname in ('public','private') and (p.proconfig is null or not exists (select 1 from unnest(p.proconfig) c where c like 'search_path=%'))`);
 check('F4d', 'Every function pins its search_path', unsafe.length === 0, unsafe.map(r => r.proname).join(','));

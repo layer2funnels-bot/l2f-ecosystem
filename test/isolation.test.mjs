@@ -44,6 +44,11 @@ for (const [uid, ws] of [[U.E1, L2F], [U.E2, L2F], [U.V1, L2F], [U.CAR, L2F], [U
   for (const app of ['clients', 'projects', 'drive'])
     await db.query('insert into app_grants (workspace_id, user_id, app_key) values ($1,$2,$3)', [ws, uid, app]);
 await db.query("update workspace_apps set enabled = true where workspace_id = $1 and app_key = 'portal'", [L2F]);
+// 0004 (WCIGA: access to one client never grants another): editors/viewers need an access level.
+const level = async (ws, name) => (await db.query('select id from access_levels where workspace_id=$1 and name=$2', [ws, name])).rows[0].id;
+const assign = async (ws, uid, name) => db.query("insert into access_assignments (workspace_id, access_level_id, principal_type, principal_id) values ($1,$2,'user',$3)", [ws, await level(ws, name), uid]);
+for (const [uid, ws] of [[U.E1, L2F], [U.E2, L2F], [U.CAR, L2F], [U.CAR, AUR], [U.AE, AUR]]) { await assign(ws, uid, 'All clients · edit'); await assign(ws, uid, 'All projects · edit'); }
+await assign(L2F, U.V1, 'All clients · read'); await assign(L2F, U.V1, 'All projects · read');
 const PR_A = id(), PR_B = id(), PR_AUR = id();
 await db.query(`insert into projects (id, workspace_id, client_id, name) values
   ($1,$4,$5,'Acme funnel'),($2,$4,$6,'Beta funnel'),($3,$7,$8,'Aurj course')`,
@@ -106,7 +111,9 @@ check('V1a', 'Viewer cannot write a client', (await errCode(() => db.query("inse
 check('D6', 'Viewer sees no Brand Base answers', (await rows('select id from brand_base_answers')).length === 0);
 check('V1b', 'Viewer can read staff files', (await rows('select id from files where workspace_id = $1', [L2F])).length === 3);
 await asUser(U.A1);
-check('D2b', 'Admin can delete a client', (await affected('delete from clients where id = $1', [CL_B])) === 1);
+// Changed 21 Oct 2026 by the owner's App Foundation rule ("never silently lose records"): hard delete is
+// owner-only and refused while work exists; archive instead. Was: 'Admin can delete a client' === 1.
+check('D2b', 'Admin cannot hard-delete a client (owner-only; archive instead)', (await affected('delete from clients where id = $1', [CL_B])) === 0);
 check('D6b', 'Admin can read Brand Base answers', (await rows('select id from brand_base_answers')).length === 1);
 
 // ---- D2 file deletion ----

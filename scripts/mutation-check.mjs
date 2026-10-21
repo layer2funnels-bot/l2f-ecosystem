@@ -8,16 +8,18 @@ const mutations = {
   'G2 portal switch ignored': `create or replace function private.client_of(ws uuid, cid uuid) returns boolean language sql stable security definer set search_path='' as $$ select exists (select 1 from public.memberships m where m.workspace_id = ws and m.user_id = private.current_user_id() and m.kind='client' and m.status='active' and m.client_id = cid) $$;`,
   'F6 app grants ignored': `create or replace function private.can_use_app(ws uuid, app text) returns boolean language sql stable security definer set search_path='' as $$ select private.has_role(ws,'viewer') $$;`,
   'Workspace isolation broken': `drop policy clients_select on clients; create policy clients_select on clients for select using (true);`,
-  'F7 pre-approved requests allowed': `drop policy appr_insert on approvals; create policy appr_insert on approvals for insert with check (private.has_role(workspace_id,'editor'));`,
+  'AZ deny no longer beats allow': `create or replace function private.has_permission(ws uuid, perm text, p_client uuid default null, p_project uuid default null) returns boolean language sql stable security definer set search_path='' as $$ select private.permission_decision(ws, private.current_user_id(), perm, p_client, p_project) like 'allow:%' or exists (select 1 from public.permission_overrides o where o.workspace_id = ws and o.principal_id = private.current_user_id() and o.permission_key = perm) $$;`,
+  'AZ client scope ignored (one client grants all)': `drop policy clients_select on clients; create policy clients_select on clients for select using (private.can_use_app(workspace_id,'clients') and (private.has_permission(workspace_id,'clients.client.view') or exists (select 1 from access_assignments a where a.principal_id = private.current_user_id() and a.client_id is not null)));`,
+  'F7 pre-approved requests allowed': `drop policy appr_insert on approvals; create policy appr_insert on approvals for insert with check (private.has_permission(workspace_id,'approvals.request.create'));`,
 };
 let ok = true;
 for (const [name, sql] of Object.entries(mutations)) {
-  const fails = ['test/isolation.test.mjs', 'test/audit.test.mjs'].map(f => {
+  const fails = ['test/isolation.test.mjs', 'test/audit.test.mjs', 'test/authz.test.mjs'].map(f => {
     const r = spawnSync(process.execPath, [f], { env: { ...process.env, MUTATION_SQL: sql }, encoding: 'utf8' });
     return { n: (r.stdout.match(/^FAIL/gm) || []).length, status: r.status };
   });
   const caught = fails.some(f => f.status !== 0 && f.n > 0);
   ok &&= caught;
-  console.log(`${caught ? 'CAUGHT ' : 'MISSED '} ${name}  (failing checks: isolation ${fails[0].n}, audit ${fails[1].n})`);
+  console.log(`${caught ? 'CAUGHT ' : 'MISSED '} ${name}  (failing checks: isolation ${fails[0].n}, audit ${fails[1].n}, authz ${fails[2].n})`);
 }
 process.exit(ok ? 0 : 1);
