@@ -136,7 +136,7 @@ SUPABASE_URL=... SUPABASE_PUBLISHABLE_KEY=... node scripts/build-web.mjs   # bui
 - Tokens: stored in `localStorage` (static hosting has no server session). Defences: strict CSP (`_headers`), no `innerHTML` anywhere (tested), one refresh then "session ended". A future move to cookies is possible if the owner prefers; it changes `session.js`/`api.js` only.
 - `x-org-id`: every request sends it; the nil UUID means "no organization chosen yet" and works only for listing organizations, switching and accepting an invitation.
 - **Go-live additions beyond runbook §6** (all need owner approval): create the Pages project (build `node scripts/build-web.mjs`, output `dist/web`, flags in `wrangler.toml`), set encrypted variables `DATABASE_URL` (session pooler), `SUPABASE_JWKS_URL`, `SUPABASE_JWT_ISSUER`, rebuild with the live URL and publishable key, self-host the three fonts, set Auth redirect URLs to the Pages domain.
-- Funnel Mapper Pro: the Launcher shows it as a plain tile (own sign-in, new tab). No connection exists (FMP-2).
+- Funnel Mapper Pro is a regular app (FMP-1): normal tile, same tab, ecosystem header. Until moving it onto the ecosystem sign-in and database is approved (FMP-2), its data and sign-in stay its own.
 
 ## 13. Clients data layer (0008) rules of use
 - `clients` stays minimal and is readable by that client's own contact. Everything internal lives in **`client_profiles`** (business name, niche, contact details, status, stage, tags): no client policy exists on it, so a contact sees their client's name and nothing else (tested CT13, CA12).
@@ -152,3 +152,9 @@ SUPABASE_URL=... SUPABASE_PUBLISHABLE_KEY=... node scripts/build-web.mjs   # bui
 
 ## 15. Designs (filed 21 Oct 2026)
 `docs/design/` holds the design chat's prototypes and specs, exactly as delivered: 01 switcher, 02 auth, 03 launcher, 04 Office Home, 05 Admin, 06 Funnels, 07 shared states, 08 Funnel Mapper Pro in the ecosystem (all approved with changes, "Ready"), 09 Clients and 10 shell patterns (**delivered, awaiting owner approval**), and `DESIGN_INDEX.md` (owner decisions applied, checks done, assumptions A1–A28). The `.html` files are prototypes for look, copy and behaviour, not production code. `docs/DESIGN_STATUS.md` is now the single register (one row per screen, design status plus current build) with a list of differences between the designs and the data layer. Provisional screens built before the designs have not been reworked yet.
+
+## 16. Security: the Data API is closed (migration 0010)
+- Supabase's own interfaces (PostgREST `/rest/v1`, GraphQL) are open to every signed-in person for anything granted to `authenticated`. We grant **nothing**, so direct calls with a person's own token read and write nothing and call no function. Only our API (rate limits, typed operations, `x-org-id`, safe logs) reaches the data, as the role `app_user`.
+- The API's database login (Supabase: `postgres` via the pooler) must be allowed to `set role app_user`. PostgreSQL 16+ gives a role's creator an admin-only link (no SET), so the migration runs `grant app_user to postgres with set true, inherit true`. **Check this after applying migrations on any new database** (`begin; set local role app_user; rollback;` as the API login); the local end-to-end run fails loudly if it is missing.
+- Every new migration: grant to `app_user` only; never to `anon`/`authenticated`; revoke PUBLIC execute on new functions (F4b enforces it). `service_role` (server key) is never used by the API.
+- Proof you can re-run: `node test/direct-access.test.mjs`, `npm run test:mutation` (DA controls), `npm run test:e2e` (E21–E28 against the real stack).

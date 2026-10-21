@@ -1,7 +1,7 @@
 // Runs every suite on every requested engine. DRIVERS=pglite (default) | pg | pglite,pg
 import { spawnSync } from 'node:child_process';
 const drivers = (process.env.DRIVERS || 'pglite').split(',');
-const suites = ['test/isolation.test.mjs', 'test/audit.test.mjs', 'test/authz.test.mjs', 'test/switch.test.mjs', 'test/api.test.mjs', 'test/funnels.test.mjs', 'test/funnels-api.test.mjs', 'test/clients.test.mjs', 'test/rate-limit-store.test.mjs'];
+const suites = ['test/isolation.test.mjs', 'test/audit.test.mjs', 'test/authz.test.mjs', 'test/switch.test.mjs', 'test/api.test.mjs', 'test/funnels.test.mjs', 'test/funnels-api.test.mjs', 'test/clients.test.mjs', 'test/rate-limit-store.test.mjs', 'test/direct-access.test.mjs', 'test/permissions-scope.test.mjs', 'test/shell-admin.test.mjs'];
 let failed = 0;
 for (const d of drivers) for (const s of suites) {
   const r = spawnSync(process.execPath, [s], { env: { ...process.env, DB_DRIVER: d }, encoding: 'utf8' });

@@ -24,15 +24,26 @@ const mutations = {
   'CL sharing needs no permission (requests)': `drop trigger client_requests_guard on client_requests;`,
   'CL client request scope removed': `drop policy org_scope on client_profiles;`,
   'CL stage in use can be deleted': `drop trigger client_stages_in_use on client_stages;`,
+  'DA signed-in role can read tables directly (API bypass)': `grant select on public.clients to authenticated;`,
+  'DA signed-in role can write tables directly': `grant insert, update, delete on public.memberships to authenticated;`,
+  'DA signed-in role can call our functions directly': `grant execute on function public.launcher_apps(uuid) to authenticated;`,
+  'DA visitor role can read tables directly': `grant select on public.workspaces to anon;`,
+  'DA private schema exposed to the signed-in role': `grant usage on schema private to authenticated;`,
+  'PS permissions list ignores the decision (offers every client)': `create or replace function public.my_permissions() returns table (permission_key text, scope text, client_id uuid, project_id uuid) language sql stable security definer set search_path='' as $$ select p.key, 'client'::text, c.id, null::uuid from public.permissions p cross join public.clients c where 'client' = any (p.scopes) and private.is_staff(c.workspace_id) $$; grant execute on function public.my_permissions() to app_user;`,
+  'PS permissions list shows hidden scope (organization-wide for everyone)': `create or replace function public.my_permissions() returns table (permission_key text, scope text, client_id uuid, project_id uuid) language sql stable security definer set search_path='' as $$ select p.key, 'workspace'::text, null::uuid, null::uuid from public.permissions p where private.is_staff(coalesce(nullif(private.request_org(),'')::uuid, '00000000-0000-0000-0000-000000000000')) $$; grant execute on function public.my_permissions() to app_user;`,
+  'SH last-owner guard removed': `drop trigger memberships_last_owner on public.memberships;`,
+  'SH member admin skips the owner and role checks': `create or replace function private.member_target(p_user uuid, p_new_role text) returns uuid language plpgsql stable security definer set search_path='' as $$ begin return private.request_org()::uuid; end $$;`,
+  'SH invitation preview ignores whose e-mail it was sent to': `create or replace function public.invitation_preview(p_token text) returns table (org_name text, org_slug text, kind text, role text, inviter_name text, email text) language sql stable security definer set search_path='' as $$ select w.name, w.slug, i.kind, i.role, 'x', i.email from public.invitations i join public.workspaces w on w.id = i.workspace_id where i.token_hash = encode(sha256(convert_to(coalesce(p_token,''),'UTF8')),'hex') $$; grant execute on function public.invitation_preview(text) to app_user;`,
 };
+const SUITES = ['isolation', 'audit', 'authz', 'switch', 'api', 'funnels', 'funnels-api', 'clients', 'direct-access', 'permissions-scope', 'shell-admin'];
 let ok = true;
 for (const [name, sql] of Object.entries(mutations)) {
-  const fails = ['test/isolation.test.mjs', 'test/audit.test.mjs', 'test/authz.test.mjs', 'test/switch.test.mjs', 'test/api.test.mjs', 'test/funnels.test.mjs', 'test/funnels-api.test.mjs', 'test/clients.test.mjs'].map(f => {
+  const fails = SUITES.map((n) => `test/${n}.test.mjs`).map(f => {
     const r = spawnSync(process.execPath, [f], { env: { ...process.env, MUTATION_SQL: sql }, encoding: 'utf8' });
     return { n: (r.stdout.match(/^FAIL/gm) || []).length, status: r.status };
   });
   const caught = fails.some(f => f.status !== 0 && f.n > 0);
   ok &&= caught;
-  console.log(`${caught ? 'CAUGHT ' : 'MISSED '} ${name}  (failing checks: isolation ${fails[0].n}, audit ${fails[1].n}, authz ${fails[2].n}, switch ${fails[3].n}, api ${fails[4].n}, funnels ${fails[5].n}, funnels-api ${fails[6].n}, clients ${fails[7].n})`);
+  console.log(`${caught ? 'CAUGHT ' : 'MISSED '} ${name}  (failing checks: ${SUITES.map((n, i) => `${n} ${fails[i].n}`).join(', ')})`);
 }
 process.exit(ok ? 0 : 1);

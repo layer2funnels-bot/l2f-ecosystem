@@ -35,7 +35,10 @@ export async function openDb(driver = process.env.DB_DRIVER || 'pglite') {
   };
 }
 
+// Supabase creates these roles before any migration runs; emulate that so migrations' conditional grants (and the lockdown) really execute.
+const SUPABASE_ROLES = "do $$ declare r text; begin foreach r in array array['anon','authenticated','service_role'] loop if not exists (select 1 from pg_roles where rolname = r) then execute format('create role %I nologin', r); end if; end loop; end $$;";
 export async function migrate(db) {
+  await db.exec(SUPABASE_ROLES);
   for (const f of migrationFiles()) await db.exec(readFileSync(f, 'utf8'));
   if (process.env.MUTATION_SQL) await db.exec(process.env.MUTATION_SQL);  // negative-control runs only
 }

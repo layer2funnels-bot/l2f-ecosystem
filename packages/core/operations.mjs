@@ -9,10 +9,12 @@ export { defineOperation };
 
 import { funnelOperations } from './funnel-operations.mjs';
 import { clientsOperations } from './client-operations.mjs';
+import { shellOperations } from './shell-operations.mjs';
 
 export const operations = Object.freeze(Object.fromEntries([
   ...funnelOperations,
   ...clientsOperations,
+  ...shellOperations,
   defineOperation({ name: 'org.list', class: 'read', allowNoOrg: true, run: (q) => q('select org_id, name, slug, member_kind, role, is_active from my_organizations()') }),
   defineOperation({
     name: 'launcher.list', class: 'read',
@@ -22,6 +24,11 @@ export const operations = Object.freeze(Object.fromEntries([
     name: 'org.switch', class: 'write', allowNoOrg: true,
     input: { org: { type: 'uuid', required: true }, app: { type: 'text', required: true, max: 60 }, page: { type: 'text', max: 100 } },
     run: (q, _ctx, i) => q('select * from resolve_org_switch($1, $2, $3)', [i.org, i.app, i.page ?? null]),
+  }),
+  defineOperation({
+    // what the caller may do here: organization-wide, and on the clients/projects where they hold it at that narrower scope only
+    name: 'access.mine', class: 'read',
+    run: (q) => q('select permission_key, scope, client_id, project_id from my_permissions()'),
   }),
   defineOperation({
     name: 'access.effective', class: 'read',
