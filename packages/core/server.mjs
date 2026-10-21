@@ -12,7 +12,7 @@ import { createSafeLogger } from './safe-log.mjs';
 import { createRateLimiter } from './rate-limit.mjs';
 import { createPgRateLimiter, createTieredLimiter } from './rate-limit-store.mjs';
 
-export function createServer(env, { sink = (l) => console.log(JSON.stringify(l)) } = {}) {
+export function createServer(env, { sink = (l) => console.log(JSON.stringify(l)), limits } = {}) {      // `limits` is for tests that load a page many times; production uses the defaults
   if (!env.DATABASE_URL) throw new Error('DATABASE_URL is required');
   if (!env.SUPABASE_JWT_SECRET && !env.SUPABASE_JWKS_URL) throw new Error('SUPABASE_JWT_SECRET or SUPABASE_JWKS_URL is required');
   const pool = new pg.Pool({ connectionString: env.DATABASE_URL, max: Number(env.DB_POOL_MAX ?? 5) });
@@ -22,7 +22,7 @@ export function createServer(env, { sink = (l) => console.log(JSON.stringify(l))
   });
   const logger = createSafeLogger(sink);
   // RATE_LIMIT_STORE=postgres shares counters across instances (migration 0009). Default: per-instance memory only.
-  const local = createRateLimiter();
+  const local = createRateLimiter(limits ? { limits } : {});
   const limiter = env.RATE_LIMIT_STORE === 'postgres'
     ? createTieredLimiter({ local, shared: createPgRateLimiter({ query: async (sql, p) => (await pool.query(sql, p)).rows }), onError: () => logger.log({ class: 'rate_store_unavailable' }) })
     : local;

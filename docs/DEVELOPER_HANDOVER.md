@@ -124,18 +124,23 @@ The default demo keys printed by `supabase start` are public and local-only; nev
 - Clients and Value Ladder call `funnel_references` (target by ID, one per row). Nothing here reads or writes Funnel Mapper Pro (FMP-2); FMP stays a link/entitlement only.
 - The existing `brand_base_answers` (Clients → Brand Base) is a separate, older table. Whether Brand Base answers fold into brand kits is a product decision for the Funnels/Clients UI sessions; not changed here.
 
-## 12. Web app and local run (slice 0, Funnels screens)
+## 12. Web app and local run (screens built to the approved designs 01 to 07)
 ```
 npm run stack:start && npm run stack:migrate     # local Supabase (Docker) + our migrations
 npm run dev                                       # http://127.0.0.1:8788 — web app + /api through the same handler Pages will run
 npm run test:e2e                                  # API end-to-end with real Auth tokens (20 checks)
-npm run test:e2e:ui                               # real Chromium end-to-end (26 checks; needs Playwright installed globally; screenshots in ./e2e-shots)
+npm run test:e2e:ui                               # real Chromium end-to-end (79 checks: auth, Launcher, Home, Admin, Funnels, six switch outcomes, widths 390/768/1280, keyboard, reduced motion; needs Playwright installed globally; screenshots in ./e2e-shots)
 SUPABASE_URL=... SUPABASE_PUBLISHABLE_KEY=... node scripts/build-web.mjs   # builds dist/web (never deploys)
 ```
 - Local sign-up works without e-mail because the local stack has "confirm email" off. The e-mail screens (check your email, reset, invitation e-mail) are built to the live flow but their e-mail delivery is only tested at go-live (SMTP is runbook step 4).
 - Tokens: stored in `localStorage` (static hosting has no server session). Defences: strict CSP (`_headers`), no `innerHTML` anywhere (tested), one refresh then "session ended". A future move to cookies is possible if the owner prefers; it changes `session.js`/`api.js` only.
 - `x-org-id`: every request sends it; the nil UUID means "no organization chosen yet" and works only for listing organizations, switching and accepting an invitation.
 - **Go-live additions beyond runbook §6** (all need owner approval): create the Pages project (build `node scripts/build-web.mjs`, output `dist/web`, flags in `wrangler.toml`), set encrypted variables `DATABASE_URL` (session pooler), `SUPABASE_JWKS_URL`, `SUPABASE_JWT_ISSUER`, rebuild with the live URL and publishable key, self-host the three fonts, set Auth redirect URLs to the Pages domain.
+- **Layout of `apps/web/js`**: `app.js` (boot, routing, organization switching, account flows), `routes.js`, `perm.js` (what the person may do, from `access.mine`: organization-wide or on one client), `dirty.js` (unsaved-work registry used by the switcher and by leaving a page), `ui.js` (dialog, toast, tabs, fields and the shared states of design 07), `views/` (auth, shell, launcher, home, admin, funnels). Styles: `ui.css` (from the approved designs) on `packages/ui/tokens.css`; fonts self-hosted (`fonts.css`).
+- **Content-Security-Policy forbids inline style attributes**, so `dom.js` sets `style` through the CSSOM (`el.style.cssText`); never write `setAttribute('style', …)` or markup strings. Visually hidden text (`.sr`) is absolutely positioned: any horizontally scrolling wrapper needs `position: relative` (`.tbl-wrap` has it) or the hidden text widens the page.
+- **Development status badge**: `showDesignStatus` in `config.js` (build flag `SHOW_DESIGN_STATUS=true`) shows a small badge on screens that have no design yet; production builds never show it. There are no in-screen "Needs design" notes any more.
+- **Admin screens read the real rules**: the Levels table is built from `access.roles` (the permission catalog), Effective access from `access.effective` grouped by what a permission is about (`funnels.*`, `clients.*`), "Deny instead" is stored as a set of denials tied to a level (`access.denials.*`).
+- **Browser run and rate limits**: the production limits (read 120, write 30, sensitive 5 per minute per person) stay; `createServer(env, { limits })` lets the browser run use higher ones because it loads many pages as one person.
 - Funnel Mapper Pro is a regular app (FMP-1): normal tile, same tab, ecosystem header. Until moving it onto the ecosystem sign-in and database is approved (FMP-2), its data and sign-in stay its own.
 
 ## 13. Clients data layer (0008) rules of use

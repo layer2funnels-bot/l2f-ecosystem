@@ -9,6 +9,10 @@ import * as errors from '../packages/core/errors.mjs';
 import { FUNNEL_TYPES as SERVER_TYPES } from '../packages/core/funnel-operations.mjs';
 import { FIELD_DEFS } from '../apps/web/js/views/funnels.js';
 import { operations } from '../packages/core/operations.mjs';
+import { permissionSet, canWith, canAnywhereWith } from '../apps/web/js/perm.js';
+import { reasonChips, foldEffective, levelMatrix } from '../apps/web/js/views/admin.js';
+import { MIN_PASSWORD } from '../apps/web/js/gotrue.js';
+import { dirty } from '../apps/web/js/dirty.js';
 const { results, check } = recorder();
 const spec = { name: { type: 'text', required: true, max: 5 }, tags: { type: 'list', items: 'text', max: 2, itemMax: 3 }, price: { type: 'number' }, cur: { type: 'currency' }, c: { type: 'hex' } };
 check('V1', 'Valid input passes and only declared fields come through', JSON.stringify(validate(spec, { name: 'abc', tags: ['a', 'bc'], price: 4.5, cur: 'USD', c: '#aabbcc' }).value) === '{"name":"abc","tags":["a","bc"],"price":4.5,"cur":"USD","c":"#aabbcc"}');
@@ -55,7 +59,29 @@ check('W16', 'A network failure is reported as offline, never thrown', (await of
 check('W17', 'E-mail shape check accepts normal addresses and refuses junk', isEmail('a.b+c@example.co.uk') && !isEmail('a@b') && !isEmail('a b@c.com') && !isEmail(''));
 const secretsInWeb = ['config.js', 'js/app.js', 'js/api.js', 'js/gotrue.js'].map((f) => readFileSync(new URL(`../apps/web/${f}`, import.meta.url), 'utf8')).join('\n');
 check('W18', 'No privileged key names or JWT-shaped strings in browser code', !/service_role|sb_secret_|SERVICE_ROLE|eyJ[A-Za-z0-9_-]{10,}\./.test(secretsInWeb));
-const noInner = ['js/app.js', 'js/dom.js', 'js/views/auth.js', 'js/views/common.js', 'js/views/funnels.js', 'js/views/launcher.js', 'js/views/shell.js'].map((f) => readFileSync(new URL(`../apps/web/${f}`, import.meta.url), 'utf8')).join('\n').replace(/\/\/.*$/gm, '');   // comments may mention the words
+const noInner = ['js/app.js', 'js/dom.js', 'js/views/auth.js', 'js/ui.js', 'js/perm.js', 'js/dirty.js', 'js/views/funnels.js', 'js/views/launcher.js', 'js/views/shell.js', 'js/views/admin.js', 'js/views/home.js'].map((f) => readFileSync(new URL(`../apps/web/${f}`, import.meta.url), 'utf8')).join('\n').replace(/\/\/.*$/gm, '');   // comments may mention the words
 check('W19', 'No innerHTML, insertAdjacentHTML, document.write or eval anywhere in browser code (data can never become markup)', !/innerHTML|insertAdjacentHTML|document\.write|eval\(|new Function/.test(noInner));
+
+// ---- Admin routes, scoped permissions, access explanations, unsaved-work registry (screens built to designs 01 to 07)
+check('W20', 'Admin routes parse (members, access with its three views) and map to the registry pages used by the switcher',
+  parseRoute('#/office/admin').params.tab === 'members' && parseRoute('#/office/admin/access/effective').params.sub === 'effective' && parseRoute('#/office/admin/access').params.sub === 'levels' && parseRoute('#/office/admin/nope').name === 'not-found'
+  && pageKeyFor(parseRoute('#/office/admin/members')).page === 'admin.members' && pageKeyFor(parseRoute('#/office/admin/access/levels')).page === 'admin.access' && routeForPage('office', 'admin.access') === '#/office/admin/access/levels'
+  && parseRoute('#/office/planner').name === 'office-page' && parseRoute('#/office/team').params.page === 'team');
+const mine = permissionSet([{ permission_key: 'funnels.avatar.view', scope: 'workspace' }, { permission_key: 'funnels.avatar.edit', scope: 'client', client_id: 'c1' }]);
+check('W21', 'A person who holds a permission on one client only sees the buttons for that client, and no others', canWith(mine, 'funnels.avatar.edit', 'c1') && !canWith(mine, 'funnels.avatar.edit', 'c2') && !canWith(mine, 'funnels.avatar.edit', null)
+  && canWith(mine, 'funnels.avatar.view', 'c2') && canAnywhereWith(mine, 'funnels.avatar.edit') && !canAnywhereWith(mine, 'funnels.avatar.create'));
+check('W22', 'Access reasons are shown in plain words and a denial always reads as Deny wins',
+  reasonChips('allow:role-owner')[0] === 'Owner level' && reasonChips('allow:level:Client team')[0] === 'Level: Client team' && reasonChips('deny:override:deny-level:abc:no drive').join() === 'Denied,Deny wins'
+  && reasonChips('deny:no-grant')[0] === 'Not assigned' && reasonChips('deny:role-floor-admin')[0].includes('Admin') && reasonChips('deny:app-not-available')[0] === 'App not turned on' && reasonChips('???')[0] === 'No access');
+const folded = foldEffective([{ permission_key: 'drive.file.view', app_key: 'drive', allowed: false, reason: 'deny:override:deny-level:x:why' }, { permission_key: 'drive.file.upload', app_key: 'drive', allowed: false, reason: 'deny:override:deny-level:x:why' },
+  { permission_key: 'clients.client.view', app_key: 'clients', allowed: true, reason: 'allow:level:Client team' }, { permission_key: 'planner.goal.view', app_key: 'planner', allowed: true, reason: 'allow:role-editor' }, { permission_key: 'planner.goal.edit', app_key: 'planner', allowed: true, reason: 'allow:role-editor' }]);
+check('W23', 'Effective access folds permissions into one row per area: Can edit, Can view or No access, with the reasons',
+  folded.find((r) => r.area === 'Drive').result === 'none' && folded.find((r) => r.area === 'Drive').why.includes('Deny wins') && folded.find((r) => r.area === 'Clients').result === 'view' && folded.find((r) => r.area === 'Planner').result === 'edit' && folded.find((r) => r.area === 'Planner').why[0] === 'Editor level');
+const matrix = levelMatrix([{ key: 'clients.client.view', app_key: 'clients', description: 'View a client', floor_role: 'viewer', default_role: 'admin' }, { key: 'clients.client.create', app_key: 'clients', description: 'Create a client', floor_role: 'editor', default_role: 'editor' }]);
+check('W23b', 'Funnels permissions hosted by the Office app are shown as their own area, "Funnels records"', foldEffective([{ permission_key: 'funnels.avatar.view', app_key: 'office', allowed: true, reason: 'allow:role-editor' }])[0].area === 'Funnels records');
+check('W24', 'The Levels table is read from the permission catalog: defaults and floors decide which level gets each ability', JSON.stringify(matrix[0].rows.map((r) => r.cells)) === '[[true,true,false,false],[true,true,true,false]]');
+check('W25', 'Passwords need at least 10 characters (design 02)', MIN_PASSWORD === 10);
+let saved = 0; dirty.set('Avatars', async () => { saved++; return true; });
+check('W26', 'Unsaved work is registered with a label and a save action, and clearing it forgets it', dirty.isDirty() && dirty.get().label === 'Avatars' && (await dirty.get().save()) === true && saved === 1 && (dirty.clear(), !dirty.isDirty()));
 for (const x of results) console.log(`${x.ok ? 'PASS' : 'FAIL'}  ${x.id.padEnd(4)} ${x.name}`);
 const p = results.filter((x) => x.ok).length; console.log(`\n${p}/${results.length} checks passed`); process.exit(p === results.length ? 0 : 1);
