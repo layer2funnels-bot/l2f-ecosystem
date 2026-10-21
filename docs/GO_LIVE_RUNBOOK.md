@@ -94,7 +94,7 @@ Free Supabase projects pause after 7 idle days. Add secrets `SITE_URL`, `SUPABAS
 
 ## 12. First sign-in, bootstrap, team (owner)
 1. The owner signs up with the owner e-mail (or Google) and confirms.
-2. Assistant runs `seed/bootstrap.sql` for that user (creates the organization and owner membership; only the owner's address is named in it; read it before running).
+2. The owner runs `seed/bootstrap.sql` in the Supabase SQL editor with `:owner_id` replaced by that user's id (Authentication → Users). It creates the two organizations (Layer2Funnels and Aurj), makes the owner their owner, and adds the Funnel Mapper Pro Launcher tile to Layer2Funnels with **no address yet** (the tile shows "not set up here" until its live address is entered; that happens with the FMP approval). Read it before running; it is the only statement that creates organizations.
 3. Owner opens Admin → Members and Access and invites each person with a role. Until e-mail is working the invitation link is shown to the inviter.
 4. Verify the Launcher tiles for an Editor and a Viewer by signing in as a test member; deactivate the test members.
 *Check:* an invited person sees only what their role allows (Effective access page). *Undo:* deactivate members; delete the organization row only with the owner's recovery procedure (`platform.access.review`).
