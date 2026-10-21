@@ -38,3 +38,4 @@ Owner approvals live in `05_Decision_Register.md`. These are technical decisions
 | UX4 | SOPs live once in the Drive organization space as protected documents; Clients stages and other apps link to them |
 | UX5 | Office → Admin → Access ships first with: access levels, assignments, effective-access view (groups and restriction screens later; backend already supports them) |
 | UX6 | Client Portal on its own subdomain (proposed `portal.layer2funnels.com`, `portal.aurj...` later) with its own session; ecosystem chrome stays; client brand kit appears only inside portal content |
+| UX7 | Organization switching keeps the current app and equivalent page; never auto-redirects to the Launcher; old-organization data cleared; isolation enforced in the database (`org_scope` policies, `resolve_org_switch`) |

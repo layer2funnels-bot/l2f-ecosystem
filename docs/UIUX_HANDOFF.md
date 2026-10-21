@@ -41,5 +41,16 @@ Palettes (L2F blue #173A8F + coral; Aurj #B23A08 + sky), fonts (Hanken Grotesk, 
 ## 7. Decisions approved by the owner (21 Oct) — design to these
 UX1 one global org switcher in every header · UX2 Projects Home + My Work merged · UX3 Office Documents = Drive org space · UX4 SOPs live once in Drive (protected), linked from Clients stages · UX5 Admin → Access first release = levels, assignments, effective access · UX6 Portal on its own subdomain and session, ecosystem chrome, client brand kit only inside content. Full list: DECISIONS.md.
 
+## 7b. Organization switching spec (approved requirement — design every app to this)
+1. The switcher is in every app header; switching keeps the app and page.
+2. During the switch: show a brief "Switching to Aurj…" state over the content area; the old organization's data disappears immediately (no stale lists, counts, search results or open drawers). Header colour and organization name change together with the data.
+3. Outcomes to design, per app (all inside the same app, never the Launcher):
+   - **Same page:** content reloads for the new organization; a short confirmation "Now in Aurj".
+   - **Record not carried:** land on the list page with an info line: "That item belongs to Layer2Funnels, so you're now on Clients in Aurj."
+   - **Page not permitted:** land on the app's home with: "You don't have access to Admin · Access in Aurj." + "Ask an admin" action.
+   - **App not available:** stay in the app frame with an explanation panel: "Clients isn't available to you in Aurj." Actions: Switch back · Ask an admin · Open another app (opens the Launcher only when the user clicks it).
+   - **Switch refused:** nothing changes; inline message "You don't have access to that organization."
+4. A failed network switch keeps the user where they were with a retry (Phase 3 rule kept).
+5. Accessibility: announce the new organization to screen readers; focus moves to the page title.
 ## 8. Engine constraints for design (see ENGINES.md)
 Whiteboard = Excalidraw-based canvas; Docs = TipTap-based editor; Sheets later (no xlsx import/export or live co-editing in the free tier); no Slides editor in Phase 5; no live cursors in Phase 5. Design editor shells around single-user autosave + version history.

@@ -43,12 +43,13 @@ export async function migrate(db) {
 // Sets identity exactly as PostgREST does. format: 'claims' (current Supabase) or 'legacy'.
 export function session(db) {
   const clear = async () => {
-    await db.query("select set_config('request.jwt.claim.sub', '', false), set_config('request.jwt.claim.email', '', false), set_config('request.jwt.claims', '', false)");
+    await db.query("select set_config('request.jwt.claim.sub', '', false), set_config('request.jwt.claim.email', '', false), set_config('request.jwt.claims', '', false), set_config('request.headers', '', false), set_config('app.org_id', '', false)");
   };
   return {
-    asUser: async (uid, { email = null, format = 'claims' } = {}) => {
+    asUser: async (uid, { email = null, format = 'claims', org = null } = {}) => {
       await db.exec('reset role; set role app_user;');
       await clear();
+      if (org) await db.query("select set_config('request.headers', $1, false)", [JSON.stringify({ 'x-org-id': org })]);
       if (format === 'legacy') {
         await db.query("select set_config('request.jwt.claim.sub', $1, false)", [uid]);
         if (email) await db.query("select set_config('request.jwt.claim.email', $1, false)", [email]);

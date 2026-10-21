@@ -81,7 +81,7 @@ const publicExec = await rows(`select p.oid::regprocedure::text f from pg_proc p
   where n.nspname in ('public','private') and has_function_privilege('public', p.oid, 'execute')`);
 check('F4b', 'No public or private function is executable by PUBLIC', publicExec.length === 0, publicExec.map(r => r.f).join(', '));
 const apiFns = (await rows(`select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' order by 1`)).map(r => r.proname);
-check('F4c', 'Only the four intended RPCs exist in the API schema', JSON.stringify(apiFns) === JSON.stringify(['accept_invitation', 'create_invitation', 'effective_access', 'launcher_apps']), apiFns.join(','));
+check('F4c', 'Only the five intended RPCs exist in the API schema', JSON.stringify(apiFns) === JSON.stringify(['accept_invitation', 'create_invitation', 'effective_access', 'launcher_apps', 'resolve_org_switch']), apiFns.join(','));
 const unsafe = await rows(`select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
   where n.nspname in ('public','private') and (p.proconfig is null or not exists (select 1 from unnest(p.proconfig) c where c like 'search_path=%'))`);
 check('F4d', 'Every function pins its search_path', unsafe.length === 0, unsafe.map(r => r.proname).join(','));

@@ -66,3 +66,14 @@ Scope: organization grant covers everything inside; client grant covers that cli
 
 ## 6. Funnel Mapper Pro and the Funnels menu
 The new pack calls FMP the funnel system of record and wants Office → Funnels to show funnels, avatars, offers, products, story bank, brand kit and copy. **[Rec]** Stage 1 (now): Funnels menu = portfolio page that opens FMP (built entitlement). Stage 2: shared sign-in, then FMP exposes a read API for the portfolio. Avatars/offers/story bank/brand kit: decide whether they live in FMP or in the ecosystem **after** FMP's code is reviewed — this is the single most important open data-ownership decision, because Clients and Value Ladder also reference offers, avatars and brand kits.
+
+## 7. Organization switching (owner requirement, approved 21 Oct 2026) [Built + tested]
+**Rule NAV1:** switching organization keeps the user in the same app and, when allowed, on the equivalent page. The Launcher is never opened automatically.
+| Layer | Mechanism | Evidence |
+|---|---|---|
+| Database scope | Every request carries `x-org-id` (server code: `app.org_id`). A RESTRICTIVE policy on all 21 organization-owned tables hides every other organization's rows, even for people in both. It can only narrow, never widen; a malformed value shows nothing | S11–S17 |
+| Switch resolver | `resolve_org_switch(org, app, page)` checks membership, sets the active organization, and returns one outcome: `same_page`, `record_not_carried` (one-record pages land on their list), `page_unavailable` (land on the app's home with an explanation), `app_unavailable` (stay, explain, offer next steps), `not_available` (nothing changes; identical for "not a member" and "doesn't exist") | S1–S10, S19 |
+| Page registry | `app_pages`: each page declares its permission and whether it shows one record. New apps register their pages | S1, S4–S6 |
+| Browser module | `packages/core/org-switch.mjs`: cache tagged by organization, wiped on switch, late responses from the old organization refused, all requests send the new header | B1–B4 |
+**Rule NAV2:** record ids are never carried between organizations; deep links always include the organization; a link opened for the wrong active organization shows the standard denied/not-found state with a "switch organization" option only if the user belongs to the other one.
+**Rule NAV3:** "My work" is the only multi-organization view; it makes one request per organization (each with its header) and shows two labelled groups (S18).
