@@ -93,7 +93,7 @@ const otherReq = (await db.query("insert into client_requests (workspace_id,clie
 await asUser(U.CL1);
 check('CT17', 'A client sees only the visible, unarchived requests and updates of their own client', (await rows('select id from client_requests')).map((r) => r.id).join() === rq && (await rows('select id from client_updates')).map((r) => r.id).join() === up);
 check('CT18', 'A client cannot create, change or delete any of it', (await errCode(() => db.query("insert into client_requests (workspace_id,client_id,title) values ($1,$2,'x')", [L, C1]))) === '42501'
-  && (await affected("update client_requests set response='hi' where id=$1", [rq])) === 0 && (await affected('delete from client_updates where id=$1', [up])) === 0);
+  && ['42501', 'no-error'].includes(await errCode(() => db.query("update client_requests set response='hi' where id=$1", [rq]))) && (await rows('select response from client_requests where id=$1', [rq]))[0].response === null && (await affected('delete from client_updates where id=$1', [up])) === 0);
 await asUser(U.CL2);
 check('CT19', 'Another client sees only their own', (await rows('select id from client_requests')).map((r) => r.id).join() === otherReq && (await rows('select id from client_updates')).length === 0);
 await asUser(U.ADM); await db.query('update client_updates set archived_at=now() where id=$1', [up]);
