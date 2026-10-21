@@ -1,2 +1,2 @@
-# l2f-ecosystem
-Private monorepo for the Layer2Funnels ecosystem applications, shared services, and infrastructure.
+# Layer2Funnels + Aurj ecosystem foundation (non-production)
+Start with `docs/AUDIT_REPORT.md`, then `docs/DEVELOPER_HANDOVER.md`. Run `npm ci && npm test`.

@@ -1,0 +1,23 @@
+# PREPARED, NOT ENABLED. Rename to backup.yml only after the owner approves (manual §8).
+# Daily encrypted database backup kept 30 days as a private workflow artifact. $0 within the free quota.
+name: backup
+on:
+  schedule: [{ cron: '30 21 * * *' }]   # 02:30 Pakistan time
+  workflow_dispatch: {}
+permissions: { contents: read }
+jobs:
+  backup:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt noble-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update -q && sudo apt-get install -y -q postgresql-client-17 age
+      - run: bash scripts/backup-supabase.sh
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          AGE_RECIPIENT: ${{ secrets.AGE_RECIPIENT }}
+      - uses: actions/upload-artifact@v4
+        with: { name: db-backup, path: 'l2f-backup-*.tar.age', retention-days: 30, if-no-files-found: error }
