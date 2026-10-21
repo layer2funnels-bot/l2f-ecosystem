@@ -57,7 +57,7 @@ r = await call('clients.list', {}, U.ADMIN_BOTH, A);
 const namesA = r.body.data.map((x) => x.name);
 check('A6', 'Same person, same operation: the header decides which organization’s rows come back', same(namesL, ['L2F client']) && same(namesA, ['Aurj client']));
 r = await call('clients.list', {}, U.L_ONLY, A);
-check('A7', 'A header naming an organization the person does not belong to returns nothing', r.status === 200 && r.body.data.length === 0);
+check('A7', 'A header naming an organization the person does not belong to is refused as not found (before any query runs)', r.status === 404);
 await db.exec('reset role');
 const leak = (await db.query("select current_setting('request.headers', true) h, current_setting('request.jwt.claims', true) c, current_user u")).rows[0];
 check('A8', 'No identity or header survives past the request (transaction-local; role restored)', !leak.h && !leak.c && leak.u !== 'app_user');

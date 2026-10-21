@@ -23,7 +23,7 @@ export const operations = Object.freeze(Object.fromEntries([
   ...shellOperations,
   defineOperation({ name: 'org.list', class: 'read', allowNoOrg: true, run: (q) => q('select org_id, name, slug, member_kind, role, is_active from my_organizations()') }),
   defineOperation({
-    name: 'launcher.list', class: 'read',
+    name: 'launcher.list', class: 'read', audience: 'any',
     run: (q, ctx) => q('select app_key, name, scope, launch_url, lifecycle from launcher_apps($1)', [ctx.orgId]),
   }),
   defineOperation({

@@ -53,6 +53,7 @@ const mutations = {
   'PL organization scope removed on objectives': `drop policy org_scope on planner_objectives;`,
   'PL review client taken from the caller': `drop trigger planner_reviews_guard on planner_reviews;`,
   'PL objective with work can be deleted': `drop trigger planner_objectives_in_use on planner_objectives;`,
+  'AU audience gate treats every caller as staff': `create or replace function public.my_audience(p_org uuid) returns text language sql stable security definer set search_path='' as $$ select 'staff'::text $$;`,
   'SH last-owner guard removed': `drop trigger memberships_last_owner on public.memberships;`,
   'SH member admin skips the owner and role checks': `create or replace function private.member_target(p_user uuid, p_new_role text) returns uuid language plpgsql stable security definer set search_path='' as $$ begin return private.request_org()::uuid; end $$;`,
   'SH invitation preview ignores whose e-mail it was sent to': `create or replace function public.invitation_preview(p_token text) returns table (org_name text, org_slug text, kind text, role text, inviter_name text, email text) language sql stable security definer set search_path='' as $$ select w.name, w.slug, i.kind, i.role, 'x', i.email from public.invitations i join public.workspaces w on w.id = i.workspace_id where i.token_hash = encode(sha256(convert_to(coalesce(p_token,''),'UTF8')),'hex') $$; grant execute on function public.invitation_preview(text) to app_user;`,

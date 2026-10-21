@@ -165,7 +165,7 @@ r = await call('clients.get', { id: c100.id }, U.NOAPP);
 check('CA11', 'Someone without the Clients app gets the same not-found as for a missing client', r.status === 404 && JSON.stringify((await call('clients.get', { id: id() }, U.NOAPP)).body.error) === JSON.stringify(r.body.error));
 await asSuper(); await db.query("update workspace_apps set enabled=true where workspace_id=$1 and app_key='portal'", [L]);
 r = await call('clients.get', { id: C1 }, U.CL1);
-check('CA12', 'A client contact calling the API sees their client’s name only: every profile field is empty', r.status === 200 && r.body.data[0].name === 'Client One' && r.body.data[0].email === null && r.body.data[0].status === null && r.body.data[0].tags === null);
+check('CA12', 'A client contact calling a staff operation is refused as not found (the Portal projection replaces it, see test/portal.test.mjs)', r.status === 404);
 r = await call('clients.archive', { id: c100.id }, U.ED);
 const arch = r;
 r = await call('clients.list', { archived: true }, U.ED);
