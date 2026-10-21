@@ -17,6 +17,7 @@ Deliverable D. Read with `APP_STRUCTURE_REVIEW.md` and `ARCHITECTURE.md`. No des
 
 ## 3. Screens to design, in build order
 **Slice 0 (blocks everything):** sign in · sign up · verify email · reset password · accept invitation (email must match) · signed in without any organization ("ask your admin for an invitation") · session expired · Launcher (tiles from `launcher_apps`, coming-soon state, FMP tile "opens in a new tab · own sign-in for now").
+**Office → Funnels (business records, owner ruling 21 Oct, FMP-1):** Funnels home (portfolio + "Open Funnel Mapper Pro" link) · Avatars · Offers & products · Story bank · Brand kits (list, record, archive, client-visible toggle). These screens are designed in Office, never inside FMP; FMP keeps its own mapping UI unchanged.
 **Office:** Home · Admin → Members (invite, role, deactivate) · Access (levels per app, groups, assign at org/client/project scope, restrictions with reason/expiry, effective-access view showing *why*) · Apps (enable, Portal switch owner-only with warning) · Integrations · Audit.
 **Clients:** list (table/pipeline) · client record tabs (Overview, Work, Requests & Approvals, Documents & Brand Kit, Team Notes) · stage workspace with step actions (request info, send exact version, share update) · archive client (no delete for staff).
 **Projects:** My Work (merged with Home) · project list · project workspace (Overview, Tasks, List/Board, Docs, Whiteboards, Activity) · task drawer with timer.

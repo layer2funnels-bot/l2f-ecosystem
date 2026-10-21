@@ -73,7 +73,7 @@ Identity = Supabase Auth user id from the JWT. Authorization = active membership
 - Functions are `security definer` and rely on the migration owner bypassing RLS (Supabase `postgres`). Keep it so.
 - Storage files are not in DB dumps; Drive backup is Planned.
 - Server-side workspace deletion must disable audit triggers and the last-owner guard deliberately.
-- Supabase OAuth server (FMP Stage 2) is public beta.
+- Supabase OAuth server (FMP Stage 2) is public beta. FMP Stage 2 needs explicit owner approval (FMP-2).
 
 ## 8. Next action for the next session
 Owner completes runbook steps 1–3; then build Phase 5 slice 0 (auth shell + Launcher) per `PHASE5_HANDOFF.md`.

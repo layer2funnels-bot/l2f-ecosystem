@@ -61,11 +61,19 @@ Scope: organization grant covers everything inside; client grant covers that cli
 | Comments/activity, notifications, search | Missing | Phase 5 (minimal versions) |
 | Realtime/presence (Whiteboard, editors) | Missing | Later; check free Realtime quota [V] |
 | Background jobs | Prepared (backup) | on demand first ($0) |
-| Funnel Mapper Pro integration | Entitlement + link only | Stage 2 after owner approval |
+| Funnel business records (Office → Funnels) | Schema in 0006 [Built]; UI Phase 5 | Phase 5 |
+| Funnel Mapper Pro integration | Entitlement + link only; FMP untouched | Stage 2, only after explicit owner approval and a data-ownership design |
 | AI | None (correct) | revenue-gated |
 
-## 6. Funnel Mapper Pro and the Funnels menu
-The new pack calls FMP the funnel system of record and wants Office → Funnels to show funnels, avatars, offers, products, story bank, brand kit and copy. **[Rec]** Stage 1 (now): Funnels menu = portfolio page that opens FMP (built entitlement). Stage 2: shared sign-in, then FMP exposes a read API for the portfolio. Avatars/offers/story bank/brand kit: decide whether they live in FMP or in the ecosystem **after** FMP's code is reviewed — this is the single most important open data-ownership decision, because Clients and Value Ladder also reference offers, avatars and brand kits.
+## 6. Funnel Mapper Pro and the Funnels menu (corrected 21 Oct 2026; decisions FMP-1, FMP-2)
+Funnel Mapper Pro (FMP) is part of the Layer2Funnels ecosystem. Its funnel-mapping features, data and workflows are preserved.
+| Responsibility | Owner |
+|---|---|
+| Avatars, offers and products, story bank, brand kits, other funnel business records | **Office → Funnels** (ecosystem database, migration 0006) |
+| Funnel mapping (maps, nodes, canvas, FMP's own data and database) | **Funnel Mapper Pro** (unchanged) |
+**[Built]** Business-record tables follow all foundation rules (organization-owned, `funnels.*` permissions, audit, archive-before-delete, `client_visible`). Clients and Value Ladder reference these records by ID. Nothing is duplicated inside FMP.
+**Stage 1 (now):** the FMP tile and entitlement exist; the Funnels menu shows the business records plus a link that opens FMP. FMP has its own sign-in.
+**Stage 2 (needs explicit owner approval, not designed yet):** any connection between Funnels and FMP (e.g. FMP reading avatars or brand kits, or Funnels listing FMP maps) is designed deliberately: which side owns each field, read versus write, which permission governs it. No FMP rewrite, data move, database change or workflow change without approval.
 
 ## 7. Organization switching (owner requirement, approved 21 Oct 2026) [Built + tested]
 **Rule NAV1:** switching organization keeps the user in the same app and, when allowed, on the equivalent page. The Launcher is never opened automatically.

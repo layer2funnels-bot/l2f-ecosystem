@@ -40,13 +40,13 @@ Command: `npm run test:all && npm run check:secrets && npm run check:licences &&
 
 ## A5. Remaining gaps
 Security/infra: no live auth test · API layer (typed operations, rate limit, safe logs) · storage service · search/notifications · realtime · backups not enabled · free-tier pause risk · no leaked-password check at $0 · bot-owned accounts.
-Product: Funnel data ownership with FMP · editor/whiteboard engines · public forms design · Portal projections.
+Product: ~~Funnel data ownership with FMP~~ (decided 21 Oct, FMP-1: Office → Funnels) · editor/whiteboard engines · public forms design · Portal projections.
 
 ## A6. Critical blockers needing you
 1. Move GitHub, Supabase, Cloudflare and domain to your own account with 2FA (accounts are under a bot user).
 2. ~~Pause application-office~~ — withdrawn 21 Oct: not needed until go-live; see INFRASTRUCTURE.md.
 3. Region: London recommended pending a 5-minute latency test (INFRASTRUCTURE.md §5).
-4. FMP: allow read-only code review so its data ownership and shared sign-in can be planned.
+4. ~~FMP code review for data ownership~~ — not needed (FMP-1). A review is only needed if you approve a Stage 2 connection (FMP-2).
 
 ## E. Prioritised next steps
 | Order | Work | Who | Ready? |
@@ -57,7 +57,7 @@ Product: Funnel data ownership with FMP · editor/whiteboard engines · public f
 | 4 | API layer + auth shell + Launcher + Admin → Access screens | Claude Code | After 2–3 |
 | 5 | Clients workflow (stages, requests, versions) → Portal projections → G2 | Claude Code | After 4 + your review of `APP_STRUCTURE_REVIEW.md` §3 |
 | 6 | Projects, Drive storage, Planner | Claude Code | After 4 |
-| 7 | FMP Stage 2, Social Planner via GHL, Whiteboard/editor engines | Later | Needs decisions |
+| 7 | FMP Stage 2 (needs approval, FMP-2), Social Planner via GHL, Whiteboard/editor engines | Later | Needs decisions |
 
 ## Addendum 21 Oct (later): status after re-verification
 - Re-ran everything: isolation 47/47, audit 63/63, authz 25/25 on PostgreSQL 17 and real PostgreSQL; API errors 9/9; restore drill 3/3; restore-from-export path RD pass (synthetic); 9/9 negative controls caught.

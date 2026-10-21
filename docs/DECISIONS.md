@@ -17,7 +17,7 @@ Owner approvals live in `05_Decision_Register.md`. These are technical decisions
 | D11 | Audit entries for permissions, approvals, app access, connections are written by triggers (`origin=system`) | `audit_change` | §10.1 A |
 | D12 | Workspaces have `kind internal/external`; deletion is server-side only | 0002 | Directive §3 |
 | D13 | Minimum integration layer as separate, droppable migration | 0003 | R28 (pending approval) |
-| D14 | Supabase Storage before R2; Mumbai region recommended | docs | Resolves Phase 2 vs blueprint |
+| D14 | Supabase Storage before R2; region: see INFRASTRUCTURE.md §5 (London provisional; Mumbai if two more tests agree) | docs | Resolves Phase 2 vs blueprint |
 | D15 | Tests run on PostgreSQL 17 (PGlite) and a real server; CI uses postgres:17 | `test/` | Matches live Supabase 17 |
 | A1 | Identity resolved like Supabase `auth.uid()` (legacy claim, then `request.jwt.claims`) | `private.current_user_id()` | Fixed by F1 |
 | A2–A4 | Append-only audit; uniform denials; `check_function_bodies = off` | unchanged | — |
@@ -39,3 +39,9 @@ Owner approvals live in `05_Decision_Register.md`. These are technical decisions
 | UX5 | Office → Admin → Access ships first with: access levels, assignments, effective-access view (groups and restriction screens later; backend already supports them) |
 | UX6 | Client Portal on its own subdomain (proposed `portal.layer2funnels.com`, `portal.aurj...` later) with its own session; ecosystem chrome stays; client brand kit appears only inside portal content |
 | UX7 | Organization switching keeps the current app and equivalent page; never auto-redirects to the Launcher; old-organization data cleared; isolation enforced in the database (`org_scope` policies, `resolve_org_switch`) |
+
+## Funnel Mapper Pro decisions (owner clarification, 21 Oct 2026)
+| ID | Decision |
+|---|---|
+| FMP-1 | Funnel Mapper Pro is part of the ecosystem. Funnel business records (avatars, offers and products, story bank, brand kits, related records) are managed in **Office → Funnels** on the ecosystem database (migration 0006). They are not built or duplicated inside Funnel Mapper Pro. Clients and Value Ladder reference them by ID. Supersedes the open question in ARCHITECTURE §6 and APP_STRUCTURE_REVIEW §3.1 |
+| FMP-2 | Funnel Mapper Pro and its data, database and workflows are preserved. No rewrite, data move, database change or workflow change without explicit owner approval. Any connection between Office → Funnels and FMP (Stage 2) is designed first, with named data ownership and permissions, and approved before building |

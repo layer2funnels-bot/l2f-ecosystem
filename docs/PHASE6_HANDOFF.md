@@ -14,3 +14,6 @@ Which project/file fields clients see; portal messages rules; approval subject t
 
 ## Out of scope
 Agents (Phase 7), Aurj workflows (Phase 8), public forms, multiplayer.
+
+## Funnel records in the Portal (FMP-1)
+If a client may see an avatar, offer or brand kit, it is an Office → Funnels record with `client_visible` set and is read through a Portal projection (ER5). Funnel Mapper Pro data is never exposed through the Portal without an approved Stage 2 design (FMP-2).
