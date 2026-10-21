@@ -133,10 +133,10 @@ check('F6e', 'Admin sees every enabled app without a grant', (await rows('select
 
 // ---------------- F7 approvals ----------------
 await asUser(U.ED);
-check('F7a', 'Editor cannot insert a pre-approved request',
-  (await errCode(() => db.query("insert into approvals (workspace_id,subject_type,subject_id,requested_by,status) values ($1,'deliverable',$2,$3,'approved')", [L2F, F_VIS, U.ED]))) === '42501');
 const AP = id();
-await db.query("insert into approvals (id,workspace_id,subject_type,subject_id,requested_by) values ($1,$2,'deliverable',$3,$4)", [AP, L2F, F_VIS, U.ED]);
+await db.query("insert into approvals (id,workspace_id,subject_type,subject_id,requested_by,status) values ($1,$2,'deliverable',$3,$4,'approved')", [AP, L2F, F_VIS, U.ED]);
+check('F7a', 'Editor cannot insert a pre-approved request: whatever status is sent, the request is stored as pending and undecided',
+  (await rows('select status, decided_by from approvals where id=$1', [AP]))[0].status === 'pending' && (await rows('select decided_by from approvals where id=$1', [AP]))[0].decided_by === null);
 await asUser(U.ADM);
 check('F7b', 'Decision cannot change what was requested',
   (await errCode(() => db.query("update approvals set status='approved', subject_id=$2 where id=$1", [AP, id()]))) === 'P0001');

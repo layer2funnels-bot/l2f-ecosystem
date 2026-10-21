@@ -13,6 +13,7 @@ import { projectsOperations } from './project-operations.mjs';
 import { driveOperations } from './drive-operations.mjs';
 import { plannerOperations } from './planner-operations.mjs';
 import { shellOperations } from './shell-operations.mjs';
+import { approvalsOperations } from './approvals-operations.mjs';
 
 export const operations = Object.freeze(Object.fromEntries([
   ...funnelOperations,
@@ -21,6 +22,7 @@ export const operations = Object.freeze(Object.fromEntries([
   ...driveOperations,
   ...plannerOperations,
   ...shellOperations,
+  ...approvalsOperations,
   defineOperation({ name: 'org.list', class: 'read', allowNoOrg: true, run: (q) => q('select org_id, name, slug, member_kind, role, is_active from my_organizations()') }),
   defineOperation({
     name: 'launcher.list', class: 'read', audience: 'any',
