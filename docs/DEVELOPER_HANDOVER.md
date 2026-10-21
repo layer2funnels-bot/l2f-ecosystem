@@ -24,7 +24,11 @@ Status key: **Implemented+Tested** · **Prepared** (written, not run live) · **
 | CI pipeline | Prepared | `.github/workflows/ci.yml` (no remote yet) |
 | Nightly Supabase backup | Prepared | `scripts/backup-supabase.sh`, `backup.yml.disabled` |
 | API layer: typed operations, error contract, `x-org-id` on every request, rate limit (T16), safe logs (T15) | Implemented+Tested | api 32/32 (PGlite, real PG, Supabase local stack) |
-| Sign-in flows, storage, Launcher UI | Planned | Phase 5 |
+| JWT verification (HS256 + ES256/JWKS, WebCrypto) and HTTP routes (`/api/<operation>`, same-origin, size/type limits) | Implemented+Tested | http 29/29; real ES256 tokens from the local stack (`npm run test:e2e` 14/14) |
+| Auth shell (sign in/up, verify email, reset, accept invitation, no workspace, session expired) and Launcher, Office → Funnels screens | Implemented+Tested, **needs design** | browser run `npm run test:e2e:ui` 25/25 (real Chromium, real local Auth); logic tests web 24/24 |
+| Organization list for the switcher (`my_organizations`, 0007) | Implemented+Tested | funnels-api 33/33 |
+| Cloudflare Pages Function + build + headers | Prepared (not deployed) | `functions/api/[[route]].js`, `scripts/build-web.mjs`, `apps/web/_headers`, `wrangler.toml` |
+| Storage, Drive, Admin screens, other apps | Planned | Phase 5 |
 | New Supabase project, hosting, SMTP, Git remote | Blocked (owner) | §6 |
 
 ## 2. Repository
@@ -34,12 +38,16 @@ migrations/0002_hardening.sql             audit fixes F1–F9, apps, profiles, i
 migrations/0003_integration_foundation.sql connections, external_refs, webhook_inbox, outbox (droppable)
 migrations/0005_org_switching.sql          org_scope policies, app_pages, resolve_org_switch
 migrations/0004_authorization_foundation.sql permission catalog, access levels, groups, assignments, overrides, lifecycle
+migrations/0007_my_organizations.sql      my_organizations() for the switcher
 migrations/0006_funnels_foundation.sql    Office → Funnels records (funnel_avatars/offers/stories/brand_kits/references), funnels.* permissions, starter levels
 seed/bootstrap.sql                        first owner + workspaces + FMP entry (run once, by owner)
 packages/core/errors.mjs                  one public error vocabulary (denied = not found; adds rate_limited 429, org_required 400)
 packages/core/api.mjs                     request pipeline: org header → identity → operation → input → rate limit → DB → public error
 packages/core/operations.mjs              typed operations (launcher.list, org.switch, access.effective, clients.list, invitation.create/accept)
-packages/core/validate.mjs, rate-limit.mjs, safe-log.mjs, pg-executor.mjs
+packages/core/validate.mjs, rate-limit.mjs, safe-log.mjs, pg-executor.mjs, jwt.mjs, http.mjs, server.mjs, funnel-operations.mjs
+apps/web/                                 the browser app: static ES modules, no framework, no build step (see §12)
+functions/api/[[route]].js                Cloudflare Pages Function (prepared)
+scripts/dev-server.mjs, stack-migrate.mjs, e2e-local.mjs, e2e-ui.mjs, build-web.mjs
 packages/ui/tokens.json → tokens.css      design tokens, generated
 test/lib.mjs, isolation.test.mjs, audit.test.mjs, errors.test.mjs, run.mjs
 scripts/check-secrets.sh, check-licences.mjs, build-tokens.mjs, mutation-check.mjs, restore-drill.mjs, backup-supabase.sh
@@ -100,7 +108,8 @@ The default demo keys printed by `supabase start` are public and local-only; nev
 - New operation: add `defineOperation` in `operations.mjs` with a typed `input`, a rate-limit `class` (read 120/min, write 30/min, sensitive 5/min per person), and test it in `test/api.test.mjs`. All errors go through `toPublicError`.
 - Logs: only allowlisted fields (`safe-log.mjs`); no bodies, ids, emails, tokens or database text.
 - Limits are in memory (one free-tier server). A multi-instance deployment needs a shared store; the `take(key, class)` interface stays the same.
-- Not built: HTTP route files, JWT verification, CORS, the browser client wrapper (they depend on the hosting choice, which needs owner approval).
+- HTTP: `packages/core/http.mjs` (standard Request/Response), JWT in `jwt.mjs`, wiring in `server.mjs`. Same-origin only: no CORS. A 401 `session_expired` is the one answer that tells a caller their own token is bad.
+- Not yet: per-isolate rate limits only (Workers instances do not share memory: a shared store is needed before real traffic), CI job for the browser/e2e runs (needs Docker + Playwright).
 
 ## 11. Office → Funnels (0006) rules of use
 - Tables: `funnel_avatars`, `funnel_offers`, `funnel_stories`, `funnel_brand_kits`, `funnel_references`. Permissions are `funnels.<avatar|offer|story|brandkit>.<view|create|edit|delete>`, `funnels.record.share`, `funnels.reference.view|manage`, registered under the Office app. Starter levels: “Funnels · edit”, “Funnels · read”.
@@ -108,3 +117,17 @@ The default demo keys printed by `supabase start` are public and local-only; nev
 - Delete: archive first (`archived_at`), owner-only, refused while referenced. Audit records short labels and flags, never long text.
 - Clients and Value Ladder call `funnel_references` (target by ID, one per row). Nothing here reads or writes Funnel Mapper Pro (FMP-2); FMP stays a link/entitlement only.
 - The existing `brand_base_answers` (Clients → Brand Base) is a separate, older table. Whether Brand Base answers fold into brand kits is a product decision for the Funnels/Clients UI sessions; not changed here.
+
+## 12. Web app and local run (slice 0, Funnels screens)
+```
+npm run stack:start && npm run stack:migrate     # local Supabase (Docker) + our migrations
+npm run dev                                       # http://127.0.0.1:8788 — web app + /api through the same handler Pages will run
+npm run test:e2e                                  # API end-to-end with real Auth tokens (14 checks)
+npm run test:e2e:ui                               # real Chromium end-to-end (25 checks; needs Playwright installed globally; screenshots in ./e2e-shots)
+SUPABASE_URL=... SUPABASE_PUBLISHABLE_KEY=... node scripts/build-web.mjs   # builds dist/web (never deploys)
+```
+- Local sign-up works without e-mail because the local stack has "confirm email" off. The e-mail screens (check your email, reset, invitation e-mail) are built to the live flow but their e-mail delivery is only tested at go-live (SMTP is runbook step 4).
+- Tokens: stored in `localStorage` (static hosting has no server session). Defences: strict CSP (`_headers`), no `innerHTML` anywhere (tested), one refresh then "session ended". A future move to cookies is possible if the owner prefers; it changes `session.js`/`api.js` only.
+- `x-org-id`: every request sends it; the nil UUID means "no organization chosen yet" and works only for listing organizations, switching and accepting an invitation.
+- **Go-live additions beyond runbook §6** (all need owner approval): create the Pages project (build `node scripts/build-web.mjs`, output `dist/web`, flags in `wrangler.toml`), set encrypted variables `DATABASE_URL` (session pooler), `SUPABASE_JWKS_URL`, `SUPABASE_JWT_ISSUER`, rebuild with the live URL and publishable key, self-host the three fonts, set Auth redirect URLs to the Pages domain.
+- Funnel Mapper Pro: the Launcher shows it as a plain tile (own sign-in, new tab). No connection exists (FMP-2).

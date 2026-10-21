@@ -48,3 +48,8 @@ Owner approvals live in `05_Decision_Register.md`. These are technical decisions
 | FMP-3 | Funnel records use app `office` with `funnels.*` permission keys; org-wide or per-client; sharing with a client is a separate permission; references from Clients and Value Ladder are rows in `funnel_references` (by ID, never copies). Migration 0006 does not touch FMP |
 | API-1 | API layer: every request carries `x-org-id` (nil UUID only for org switch and invitation accept); organization is never read from input; one error contract; rate classes read 120 / write 30 / sensitive 5 per minute per person; logs are allowlist-only |
 | INF-1 | Local development uses the Supabase CLI local stack (Docker) with the suites run as `supabase_admin`; CI uses postgres:17 with PG17 client tools |
+| WEB-1 | Hosting: Cloudflare Pages (free): static app in `apps/web` plus one Pages Function for `/api/*`. Built and run locally only; deployment needs owner approval (go-live in one step, owner decision 21 Oct) |
+| WEB-2 | Browser app is plain ES modules, no framework and no build step; auth by direct calls to Supabase Auth with the publishable key; tokens in `localStorage` behind a strict CSP; no `innerHTML` (tested) |
+| WEB-3 | Screens without an approved design are built on the tokens and carry a visible "Needs design" note; register in `docs/DESIGN_STATUS.md` |
+| WEB-4 | Brand Base (Clients) and brand kits (Funnels) stay separate; revisit when the Funnels screens are designed (owner decision 21 Oct). Does not affect FMP or application-office |
+| WEB-5 | Default organization at first sign-in = the one where the person holds the highest role, then by name |
