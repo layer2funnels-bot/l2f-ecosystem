@@ -71,7 +71,8 @@ check('U3', 'Show password toggles the field and its label state', (await page.g
 await page.fill('#em', 'nobody@example.com'); await page.fill('#pw', 'wrong-password-wrong'); await page.click('button[type=submit]'); await wait('That email and password don’t match.');
 check('U4', 'A wrong password gives one plain line that does not reveal whether the email exists', true);
 await page.getByRole('button', { name: 'Forgot password?' }).click(); await wait('Reset your password');
-await page.fill('#em', 'nobody@example.com'); await page.click('button[type=submit]'); await wait('Check your email');
+// the view swaps its form just after the heading shows; fill again if the swap ate the first fill (slow runners)
+await page.fill('#em', 'nobody@example.com'); await page.waitForTimeout(250); if ((await page.inputValue('#em')) !== 'nobody@example.com') await page.fill('#em', 'nobody@example.com'); await page.click('button[type=submit]'); await wait('Check your email');
 check('U5', 'Reset shows the same "check your email" answer for any address, with a 30 second resend wait', (await page.locator('main').innerText()).includes('If an account exists for') && (await page.getByRole('button', { name: /Resend email in \d+s/ }).getAttribute('aria-disabled')) === 'true');
 await shot(page, 'a2-check-email');
 await page.getByRole('button', { name: 'Use a different email' }).click(); await wait('Reset your password');

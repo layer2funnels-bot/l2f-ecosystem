@@ -25,6 +25,8 @@ jobs:
       - run: cp .env.example .env.local
       - name: Local Supabase stack (FMP's own migrations and seed)
         run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor
+      - name: Local demo keys into .env.local (service-role key and a sign-up code, both local-only values)
+        run: bash "$GITHUB_WORKSPACE/scripts/fmp-local-env.sh"
       - run: npx playwright install --with-deps chromium
       - name: Full browser suite (the copy)
         run: npx playwright test --reporter=line,json ${{ inputs.specs }}
@@ -54,6 +56,10 @@ jobs:
           ref: 13a1e864   # the commit the copy was taken from; change deliberately
           token: ${{ secrets.FMP_READ_TOKEN }}
           persist-credentials: false
+      - name: Helper script from this repository
+        if: steps.t.outputs.ok == 'true'
+        uses: actions/checkout@v4
+        with: { path: ecosystem, sparse-checkout: scripts/fmp-local-env.sh, sparse-checkout-cone-mode: false }
       - if: steps.t.outputs.ok == 'true'
         uses: actions/setup-node@v4
         with: { node-version: 22 }
@@ -64,6 +70,9 @@ jobs:
         run: npm ci && cp .env.example .env.local
       - if: steps.t.outputs.ok == 'true'
         run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor
+      - name: Local demo keys into .env.local
+        if: steps.t.outputs.ok == 'true'
+        run: bash "$GITHUB_WORKSPACE/ecosystem/scripts/fmp-local-env.sh"
       - if: steps.t.outputs.ok == 'true'
         run: npx playwright install --with-deps chromium
       - name: Full browser suite (the original)
