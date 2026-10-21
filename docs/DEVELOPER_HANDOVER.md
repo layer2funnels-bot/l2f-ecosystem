@@ -77,3 +77,13 @@ Identity = Supabase Auth user id from the JWT. Authorization = active membership
 
 ## 8. Next action for the next session
 Owner completes runbook steps 1–3; then build Phase 5 slice 0 (auth shell + Launcher) per `PHASE5_HANDOFF.md`.
+
+## 9. Local Supabase stack (added 21 Oct 2026, Phase 5 slice 0)
+`supabase/config.toml` is committed; no live project is involved. Needs Docker and the Supabase CLI (v2.121 tested).
+```
+npm run stack:start      # Postgres 17 + Auth + REST + Kong only (no Studio/Storage/Realtime); first start pulls images, ~3 min
+npm run test:stack       # test/run.mjs against the local stack as supabase_admin (superuser)
+npm run stack:stop
+```
+Result 21 Oct: isolation 47/47, audit 63/63, authz 25/25, switch 23/23, errors 9/9 on the local stack. The default `postgres` user there is **not** a superuser, so the suites use `supabase_admin` (local demo password only). The restore drill needs `pg_dump` 17 on PATH (`/usr/lib/postgresql/17/bin`).
+The default demo keys printed by `supabase start` are public and local-only; never put them in a real environment.

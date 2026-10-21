@@ -13,7 +13,10 @@
     "check:secrets": "bash scripts/check-secrets.sh",
     "check:licences": "node scripts/check-licences.mjs",
     "tokens:build": "node scripts/build-tokens.mjs",
-    "check:tokens": "node scripts/build-tokens.mjs --check"
+    "check:tokens": "node scripts/build-tokens.mjs --check",
+    "stack:start": "supabase start -x studio,imgproxy,edge-runtime,logflare,vector,realtime,storage-api,mailpit,supavisor",
+    "stack:stop": "supabase stop",
+    "test:stack": "PG_URL=postgres://supabase_admin:postgres@127.0.0.1:54322/postgres DRIVERS=pg node test/run.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "0.3.10",
