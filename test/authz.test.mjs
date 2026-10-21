@@ -117,7 +117,9 @@ check('AZ15', 'Switching an app off hides its data and keeps every record', hidd
 check('AZ16a', 'Owner cannot hard-delete a client that still has work', (await errCode(() => db.query('delete from clients where id=$1', [CA]))) === 'P0001');
 await asSuper(); const CE = id(); await db.query("insert into clients (id,workspace_id,name) values ($1,$2,'Empty')", [CE, L]);
 await asUser(U.OWN);
-check('AZ16b', 'Owner can delete an empty client (and it is audited)', (await affected('delete from clients where id=$1', [CE])) === 1);
+check('AZ16b0', 'Even an empty client must be archived before it can be deleted', (await errCode(() => db.query('delete from clients where id=$1', [CE]))) === 'P0001');
+await db.query('update clients set archived_at = now() where id=$1', [CE]);
+check('AZ16b', 'Owner can delete an empty, archived client (and it is audited)', (await affected('delete from clients where id=$1', [CE])) === 1);
 // AZ17 attribution: integration vs user; agents refused
 await asUser(U.ADM);
 await db.query("select set_config('app.actor_kind','integration',false)");

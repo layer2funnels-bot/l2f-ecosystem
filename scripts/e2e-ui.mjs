@@ -45,6 +45,8 @@ const L = await org('layer2funnels', 'Layer2Funnels'), A = await org('aurj', 'Au
 await admin.query("insert into memberships (workspace_id,user_id,kind,role) values ($1,$2,'staff','owner'),($3,$2,'staff','editor') on conflict do nothing", [L, uid, A]);
 await admin.query("insert into workspace_apps (workspace_id,app_key,enabled,launch_url) values ($1,'funnel_mapper_pro',true,'https://example.com/fmp') on conflict (workspace_id, app_key) do update set launch_url = excluded.launch_url", [L]);
 await admin.query("insert into app_grants (workspace_id,user_id,app_key) values ($1,$2,'office'),($1,$2,'projects') on conflict do nothing", [A, uid]);
+const liveClient = (await admin.query("insert into clients (workspace_id,name) values ($1,$2) returning id", [L, `UI Client ${stamp}`])).rows[0].id;
+await admin.query("insert into clients (workspace_id,name,archived_at) values ($1,$2,now())", [L, `Archived Client ${stamp}`]);
 
 await page.getByText('Check again').click(); await wait('Your apps');
 check('U4', 'After an admin adds them, "Check again" shows the Launcher with the organization in the header', (await page.locator('.org-name').innerText()) === 'Layer2Funnels' && (await page.getAttribute('html', 'data-theme')) === 'l2f');
@@ -62,6 +64,8 @@ await page.locator('.appnav a', { hasText: 'Avatars' }).click(); await wait('No 
 check('U8', 'Empty list is designed on purpose with a create action (owner)', await page.getByText('New avatar').first().isVisible());
 await shot('05-avatars-empty');
 await page.getByText('New avatar').first().click(); await wait('New avatar');
+const scopeOptions = await page.locator('#r-client option').allInnerTexts();
+check('U8b', 'The "Belongs to" list offers live clients (from the Clients data layer) and never archived ones', scopeOptions.includes(`UI Client ${stamp}`) && !scopeOptions.some((o) => o.startsWith('Archived Client')));
 await page.fill('#r-name', 'Busy founder'); await page.fill('#r-pains', 'No time to follow up'); await page.click('button[type=submit]');
 await page.waitForSelector('text=Belongs to:'); 
 check('U9', 'Creating an avatar opens its record: Internal, organization-wide', (await page.locator('main').innerText()).includes('Organization-wide') && (await page.locator('main').innerText()).includes('Internal'));

@@ -20,6 +20,8 @@ All screens use only the design tokens (`packages/ui/tokens.css`): colours, spac
 | Funnels lists (4) | `#/office/funnels/<type>` | Built, needs design | loading, empty (create or view-only wording), error, archived, client filter, audience chip |
 | Funnels record (4) | `…/<type>/<id|new>` | Built, needs design | loading, error, not found (same as denied), saving, field errors by name, read-only (no permission / archived), share, archive, restore, delete |
 | Other apps | `#/app/<key>` | “Not built yet” placeholder | coming soon |
-| Admin → Members / Access / Apps, Clients, Projects, Drive, Planner, Portal | — | **Planned**, not started | — |
+| Clients (list, record tabs, stages, requests, updates, team notes) | — | **Data layer and API built and tested (migration 0008); no screens, waiting for approved designs** | — |
+| Funnel Mapper Pro (unedited code copy in `apps/funnel-mapper`) | — | Copied for study; reshaping (header, switcher, tokens, sign-in) **not started**, waits for approved designs | — |
+| Admin → Members / Access / Apps, Projects, Drive, Planner, Portal | — | **Planned**, not started | — |
 
 Gaps the design session should settle (found while building): where “Needs design” notes go once designs land; the Launcher tile layout when many apps exist; mobile navigation pattern (currently a wrapping link row); how a client-scoped permission is shown to a person who only holds it at client scope (the UI asks the organization-level answer today, so such a person sees fewer buttons than they may use); fonts (system fallback now; self-host Hanken Grotesk / Schibsted Grotesk / Newsreader at go-live — the CSP allows only `'self'` fonts).

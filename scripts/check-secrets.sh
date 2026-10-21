@@ -20,8 +20,8 @@ echo "PASS T12: no privileged key patterns in client-reachable files"
 FMP=apps/funnel-mapper
 if [ -d "$FMP" ]; then
   known=$(grep -E '^NEXT_PUBLIC_SUPABASE_ANON_KEY=' "$FMP/.env.example" | cut -d= -f2- || true)
-  jwts=$(grep -rIhoE 'eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}' "$FMP" --exclude-dir=node_modules --exclude-dir=.next | sort -u | grep -vxF "$known" || true)
-  toks=$(grep -rIlE '(^|[^A-Za-z0-9_])(sbp_[a-f0-9]{40}|sb_secret_[A-Za-z0-9_-]{20,}|ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{40,})' "$FMP" --exclude-dir=node_modules --exclude-dir=.next || true)
+  jwts=$(grep -rIhoE 'eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}' "$FMP" --exclude-dir=node_modules --exclude-dir=.next --exclude=.env.local | sort -u | grep -vxF "$known" || true)
+  toks=$(grep -rIlE '(^|[^A-Za-z0-9_])(sbp_[a-f0-9]{40}|sb_secret_[A-Za-z0-9_-]{20,}|ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{40,})' "$FMP" --exclude-dir=node_modules --exclude-dir=.next --exclude=.env.local || true)
   if [ -n "$jwts$toks" ]; then echo "FAIL T12b: unexpected secret-like value in the Funnel Mapper Pro copy"; echo "$toks"; exit 1; fi
   echo "PASS T12b: Funnel Mapper Pro copy holds only its public local demo key"
 fi

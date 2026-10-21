@@ -24,10 +24,14 @@ Status key: **Implemented+Tested** · **Prepared** (written, not run live) · **
 | CI pipeline | Prepared | `.github/workflows/ci.yml` (no remote yet) |
 | Nightly Supabase backup | Prepared | `scripts/backup-supabase.sh`, `backup.yml.disabled` |
 | API layer: typed operations, error contract, `x-org-id` on every request, rate limit (T16), safe logs (T15) | Implemented+Tested | api 32/32 (PGlite, real PG, Supabase local stack) |
-| JWT verification (HS256 + ES256/JWKS, WebCrypto) and HTTP routes (`/api/<operation>`, same-origin, size/type limits) | Implemented+Tested | http 29/29; real ES256 tokens from the local stack (`npm run test:e2e` 14/14) |
-| Auth shell (sign in/up, verify email, reset, accept invitation, no workspace, session expired) and Launcher, Office → Funnels screens | Implemented+Tested, **needs design** | browser run `npm run test:e2e:ui` 25/25 (real Chromium, real local Auth); logic tests web 24/24 |
+| JWT verification (HS256 + ES256/JWKS, WebCrypto) and HTTP routes (`/api/<operation>`, same-origin, size/type limits) | Implemented+Tested | http 29/29; real ES256 tokens from the local stack (`npm run test:e2e` 20/20, including Clients) |
+| Auth shell (sign in/up, verify email, reset, accept invitation, no workspace, session expired) and Launcher, Office → Funnels screens | Implemented+Tested, **needs design** | browser run `npm run test:e2e:ui` 26/26 (real Chromium, real local Auth); logic tests web 24/24 |
 | Organization list for the switcher (`my_organizations`, 0007) | Implemented+Tested | funnels-api 33/33 |
 | Cloudflare Pages Function + build + headers | Prepared (not deployed) | `functions/api/[[route]].js`, `scripts/build-web.mjs`, `apps/web/_headers`, `wrangler.toml` |
+| Clients app data layer and API (0008): profiles, stages, team notes, requests, updates; 34 operations | Implemented+Tested (no screens: waiting for designs) | clients 59/59 |
+| Shared rate-limit store (0009) | Prepared, off by default | rate-limit-store 13/13, incl. two-instance proof |
+| Funnel Mapper Pro read-only inventory and unedited code copy | Done, not wired to anything | docs/FMP_INVENTORY.md, docs/FMP_COPY_REPORT.md, `npm run check:fmp-copy` |
+| CI: browser and end-to-end job, FMP copy job | Prepared (runs on the next push) | `.github/workflows/ci.yml` |
 | Storage, Drive, Admin screens, other apps | Planned | Phase 5 |
 | New Supabase project, hosting, SMTP, Git remote | Blocked (owner) | §6 |
 
@@ -38,6 +42,8 @@ migrations/0002_hardening.sql             audit fixes F1–F9, apps, profiles, i
 migrations/0003_integration_foundation.sql connections, external_refs, webhook_inbox, outbox (droppable)
 migrations/0005_org_switching.sql          org_scope policies, app_pages, resolve_org_switch
 migrations/0004_authorization_foundation.sql permission catalog, access levels, groups, assignments, overrides, lifecycle
+migrations/0009_rate_limit_store.sql        shared rate-limit counters (prepared, off by default)
+migrations/0008_clients_foundation.sql    Clients: client_profiles, client_stages, client_notes, client_requests, client_updates
 migrations/0007_my_organizations.sql      my_organizations() for the switcher
 migrations/0006_funnels_foundation.sql    Office → Funnels records (funnel_avatars/offers/stories/brand_kits/references), funnels.* permissions, starter levels
 seed/bootstrap.sql                        first owner + workspaces + FMP entry (run once, by owner)
@@ -86,7 +92,7 @@ Identity = Supabase Auth user id from the JWT. Authorization = active membership
 - No leaked-password check at $0.
 - Functions are `security definer` and rely on the migration owner bypassing RLS (Supabase `postgres`). Keep it so.
 - Storage files are not in DB dumps; Drive backup is Planned.
-- Server-side workspace deletion must disable audit triggers and the last-owner guard deliberately.
+- Server-side workspace deletion must disable audit triggers, the last-owner guard and the archive-before-delete triggers (funnel and client records) deliberately.
 - Supabase OAuth server (FMP Stage 2) is public beta. FMP Stage 2 needs explicit owner approval (FMP-2).
 
 ## 8. Next action for the next session
@@ -122,8 +128,8 @@ The default demo keys printed by `supabase start` are public and local-only; nev
 ```
 npm run stack:start && npm run stack:migrate     # local Supabase (Docker) + our migrations
 npm run dev                                       # http://127.0.0.1:8788 — web app + /api through the same handler Pages will run
-npm run test:e2e                                  # API end-to-end with real Auth tokens (14 checks)
-npm run test:e2e:ui                               # real Chromium end-to-end (25 checks; needs Playwright installed globally; screenshots in ./e2e-shots)
+npm run test:e2e                                  # API end-to-end with real Auth tokens (20 checks)
+npm run test:e2e:ui                               # real Chromium end-to-end (26 checks; needs Playwright installed globally; screenshots in ./e2e-shots)
 SUPABASE_URL=... SUPABASE_PUBLISHABLE_KEY=... node scripts/build-web.mjs   # builds dist/web (never deploys)
 ```
 - Local sign-up works without e-mail because the local stack has "confirm email" off. The e-mail screens (check your email, reset, invitation e-mail) are built to the live flow but their e-mail delivery is only tested at go-live (SMTP is runbook step 4).
@@ -131,3 +137,15 @@ SUPABASE_URL=... SUPABASE_PUBLISHABLE_KEY=... node scripts/build-web.mjs   # bui
 - `x-org-id`: every request sends it; the nil UUID means "no organization chosen yet" and works only for listing organizations, switching and accepting an invitation.
 - **Go-live additions beyond runbook §6** (all need owner approval): create the Pages project (build `node scripts/build-web.mjs`, output `dist/web`, flags in `wrangler.toml`), set encrypted variables `DATABASE_URL` (session pooler), `SUPABASE_JWKS_URL`, `SUPABASE_JWT_ISSUER`, rebuild with the live URL and publishable key, self-host the three fonts, set Auth redirect URLs to the Pages domain.
 - Funnel Mapper Pro: the Launcher shows it as a plain tile (own sign-in, new tab). No connection exists (FMP-2).
+
+## 13. Clients data layer (0008) rules of use
+- `clients` stays minimal and is readable by that client's own contact. Everything internal lives in **`client_profiles`** (business name, niche, contact details, status, stage, tags): no client policy exists on it, so a contact sees their client's name and nothing else (tested CT13, CA12).
+- **Team notes are internal by construction**: `client_notes` has no `client_visible` column and no client policy (tested by looking at the catalog, CT14). There is no "share note" operation.
+- Requests and updates carry `client_visible` (default internal); sharing needs `clients.record.share` (default admin). Clients only ever see visible, unarchived ones, only while the Portal is on. Client replies are **not** writable yet (Phase 6): staff log answers.
+- Stages are the organization's own list (`client_stages`, `clients.stage.manage`). The five defaults are **placeholders** (Onboarding, Strategy, Build [progress only], Launch, Optimise): the specs say "5 stages" and "Build = progress only" but do not name them. Owner to confirm; editing them needs no code change.
+- Archive before delete everywhere, now including `clients` itself (an empty client must be archived first); delete is owner-only and refused while the client has any work.
+- Audit records flags and short labels, never note/update text or contact details.
+- Overlap with Funnel Mapper Pro's own client list is documented in `docs/FMP_INVENTORY.md` §7; nothing connects them (FMP-2).
+
+## 14. Funnel Mapper Pro code copy
+`apps/funnel-mapper/` is an unedited code copy (654 files, source commit in `docs/fmp-copy-manifest.json`). `npm run check:fmp-copy` fails if any file differs, is missing, is extra, or is ignored by git. Reshaping it is **not started** and needs approved designs (and, per FMP-2, any data or database change needs explicit approval). Its dependencies are reported by `npm run check:licences` (informational): review the flagged licences before it is reshaped or deployed.

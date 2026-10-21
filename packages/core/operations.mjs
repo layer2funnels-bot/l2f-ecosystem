@@ -8,9 +8,11 @@ import { defineOperation } from './define.mjs';
 export { defineOperation };
 
 import { funnelOperations } from './funnel-operations.mjs';
+import { clientsOperations } from './client-operations.mjs';
 
 export const operations = Object.freeze(Object.fromEntries([
   ...funnelOperations,
+  ...clientsOperations,
   defineOperation({ name: 'org.list', class: 'read', allowNoOrg: true, run: (q) => q('select org_id, name, slug, member_kind, role, is_active from my_organizations()') }),
   defineOperation({
     name: 'launcher.list', class: 'read',
@@ -25,10 +27,6 @@ export const operations = Object.freeze(Object.fromEntries([
     name: 'access.effective', class: 'read',
     input: { user: { type: 'uuid' }, client: { type: 'uuid' } },
     run: (q, ctx, i) => q('select permission_key, app_key, allowed, reason from effective_access($1, $2, $3)', [ctx.orgId, i.user ?? null, i.client ?? null]),
-  }),
-  defineOperation({
-    name: 'clients.list', class: 'read',
-    run: (q) => q('select id, name from clients where archived_at is null order by name limit 200'),
   }),
   defineOperation({
     name: 'invitation.create', class: 'sensitive',

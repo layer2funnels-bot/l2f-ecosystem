@@ -53,3 +53,7 @@ Owner approvals live in `05_Decision_Register.md`. These are technical decisions
 | WEB-3 | Screens without an approved design are built on the tokens and carry a visible "Needs design" note; register in `docs/DESIGN_STATUS.md` |
 | WEB-4 | Brand Base (Clients) and brand kits (Funnels) stay separate; revisit when the Funnels screens are designed (owner decision 21 Oct). Does not affect FMP or application-office |
 | WEB-5 | Default organization at first sign-in = the one where the person holds the highest role, then by name |
+| CLI-1 | Clients data layer: internal profile in its own table (never client-readable); team notes internal by construction; requests/updates shareable with `clients.record.share`; stages are an owner-editable list per organization (names are placeholders, to confirm) |
+| CLI-2 | Archive before delete applies to `clients` too (an empty client must be archived first). Supersedes the "empty clients may be deleted directly" part of D18 |
+| RL-1 | Shared rate limits live in a Postgres counter table behind a two-method interface, tiered after the in-memory limiter, writes and sensitive only, falling back to memory if the store fails; off until go-live (docs/RATE_LIMIT_DESIGN.md) |
+| FMP-4 | Owner approved (21 Oct 2026) an exact, code-only copy of Funnel Mapper Pro into `apps/funnel-mapper/` (no data, no database connection, no deploy, no edits). The original repository and its live projects were only read. Reshaping waits for approved designs |

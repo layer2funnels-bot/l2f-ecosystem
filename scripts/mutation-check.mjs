@@ -18,15 +18,21 @@ const mutations = {
   'FN sharing needs no permission': `drop trigger funnel_avatars_guard on funnel_avatars;`,
   'FN funnel request scope removed': `drop policy org_scope on funnel_offers;`,
   'FN cross-organization avatar link allowed': `alter table funnel_offers drop constraint funnel_offers_workspace_id_avatar_id_fkey; alter table funnel_offers add foreign key (avatar_id) references funnel_avatars(id);`,
+  'CL team notes readable by the client': `create policy client_notes_leak on client_notes for select using (private.client_of(workspace_id, client_id));`,
+  'CL internal profile readable by the client': `create policy client_profiles_leak on client_profiles for select using (private.client_of(workspace_id, client_id));`,
+  'CL archive-before-delete removed on notes': `drop trigger client_notes_refuse_delete on client_notes;`,
+  'CL sharing needs no permission (requests)': `drop trigger client_requests_guard on client_requests;`,
+  'CL client request scope removed': `drop policy org_scope on client_profiles;`,
+  'CL stage in use can be deleted': `drop trigger client_stages_in_use on client_stages;`,
 };
 let ok = true;
 for (const [name, sql] of Object.entries(mutations)) {
-  const fails = ['test/isolation.test.mjs', 'test/audit.test.mjs', 'test/authz.test.mjs', 'test/switch.test.mjs', 'test/api.test.mjs', 'test/funnels.test.mjs'].map(f => {
+  const fails = ['test/isolation.test.mjs', 'test/audit.test.mjs', 'test/authz.test.mjs', 'test/switch.test.mjs', 'test/api.test.mjs', 'test/funnels.test.mjs', 'test/funnels-api.test.mjs', 'test/clients.test.mjs'].map(f => {
     const r = spawnSync(process.execPath, [f], { env: { ...process.env, MUTATION_SQL: sql }, encoding: 'utf8' });
     return { n: (r.stdout.match(/^FAIL/gm) || []).length, status: r.status };
   });
   const caught = fails.some(f => f.status !== 0 && f.n > 0);
   ok &&= caught;
-  console.log(`${caught ? 'CAUGHT ' : 'MISSED '} ${name}  (failing checks: isolation ${fails[0].n}, audit ${fails[1].n}, authz ${fails[2].n}, switch ${fails[3].n}, api ${fails[4].n}, funnels ${fails[5].n})`);
+  console.log(`${caught ? 'CAUGHT ' : 'MISSED '} ${name}  (failing checks: isolation ${fails[0].n}, audit ${fails[1].n}, authz ${fails[2].n}, switch ${fails[3].n}, api ${fails[4].n}, funnels ${fails[5].n}, funnels-api ${fails[6].n}, clients ${fails[7].n})`);
 }
 process.exit(ok ? 0 : 1);

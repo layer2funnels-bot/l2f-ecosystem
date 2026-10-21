@@ -61,6 +61,23 @@ check('E13', 'The new member now sees their default apps', r.status === 200 && r
 r = await post('funnels.avatars.list', {}, { token: guest.token });
 check('E14', 'The new editor sees the funnel records of the organization they joined', r.status === 200 && r.body.data.some((x) => x.id === av.id));
 
+// ---- Clients data layer through real tokens (migration 0008)
+r = await post('clients.create', { name: `E2E Client ${stamp}`, business_name: 'E2E Co', status: 'active', stage: 'strategy', tags: ['e2e'] });
+const cl = r.body.data?.[0];
+check('E15', 'Clients: create with profile and stage through the real stack', r.status === 200 && cl?.status === 'active' && cl?.stage_key === 'strategy');
+r = await post('clients.notes.create', { client: cl.id, body: 'e2e note' });
+check('E16', 'Clients: a team note is added (internal only)', r.status === 200 && r.body.data[0].client_id === cl.id);
+r = await post('clients.requests.create', { client: cl.id, title: 'Send logo', due_on: '2026-12-01' });
+const rq = r.body.data?.[0];
+r = await post('clients.requests.share', { id: rq.id, visible: true });
+check('E17', 'Clients: a request is created and shared by an owner', r.status === 200 && r.body.data[0].client_visible === true);
+r = await post('clients.get', { id: cl.id }, { token: guest.token });
+check('E18', 'Clients: the invited editor has no client access by default (a plain not-found, no leak)', r.status === 404);
+r = await post('clients.get', { id: cl.id }, { org: A });
+check('E19', 'Clients: the other organization header cannot see it', r.status === 404);
+r = await post('clients.stages.list');
+check('E20', 'Clients: the five default stages are there', r.status === 200 && r.body.data.length === 5);
+
 await s.close(); await admin.end();
 for (const x of results) console.log(`${x.ok ? 'PASS' : 'FAIL'}  ${x.id.padEnd(4)} ${x.n}${x.ok ? '' : `  [${x.d}]`}`);
 const p = results.filter((x) => x.ok).length; console.log(`\n${p}/${results.length} checks passed`); process.exit(p === results.length ? 0 : 1);

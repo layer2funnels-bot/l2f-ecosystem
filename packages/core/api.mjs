@@ -46,7 +46,7 @@ export function createApi({ executor, logger, limiter = createRateLimiter(), ope
       const v = validate(op.input, request.input);
       if (!v.ok) return fail(requestId, logName, t0, { ...INVALID, fields: v.fields });
 
-      const gate = limiter.take(userId, op.class);
+      const gate = await limiter.take(userId, op.class);   // sync (in memory) or async (shared store)
       if (!gate.allowed) return fail(requestId, logName, t0, { ...RATE_LIMITED, retryAfterSeconds: gate.retryAfterSeconds });
 
       try {
