@@ -1,0 +1,18 @@
+# PREPARED, NOT ENABLED. Rename to keepalive.yml only after the owner approves (docs/GO_LIVE_RUNBOOK.md step 11).
+# Supabase's free plan pauses a project after 7 idle days. This calls the live site and the project's API once a day.
+# Whether API calls count as "activity" is UNVERIFIED [V15]; the daily backup also connects to the database. Check the project dashboard after a week.
+name: keepalive
+on:
+  schedule: [{ cron: '11 6 * * *' }]
+  workflow_dispatch: {}
+permissions: { contents: read }
+jobs:
+  ping:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Site and API function are up
+        run: curl -fsS --max-time 30 "${{ secrets.SITE_URL }}/api/health"
+      - name: The project's API answers (publishable key only; the Data API is closed, so a 401 or an empty answer is the expected, healthy result)
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 -H "apikey: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}" "${{ secrets.SUPABASE_URL }}/auth/v1/health")
+          echo "auth health: $code"; test "$code" = 200
