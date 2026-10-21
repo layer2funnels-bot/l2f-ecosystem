@@ -7,7 +7,7 @@ Rules that still apply: code only; no real data; no connection to any live proje
 | File | Change | Reason |
 |---|---|---|
 | `.env.example` | Added `ECOSYSTEM_LAUNCHER_URL` (empty). | The Launcher button in the new header opens the ecosystem Launcher once an address is set; no value is committed. |
-| `app/layout.tsx` | Always light (`data-theme="light"`); no saved theme read; the theme script and cookie removed. | Design 08: light by default, dark later; nothing may flip the copy back to dark. |
+| `app/layout.tsx` | Always light (`data-theme="light"`); no saved theme read; the theme script and cookie removed. Fonts now self-hosted (`next/font/local`, the same three families and weights) instead of `next/font/google`. | Design 08: light by default, dark later; nothing may flip the copy back to dark. |
 | `app/globals.css` | Colour tokens replaced by the ecosystem tokens (light default, dark kept for later); `--color-edge` added; editor height rule for the compact header. | Design 08 colour mapping: Emerald retired, blue primary, success blue, leak and warning amber-brown, no green on nodes. |
 | `app/(app)/layout.tsx` | Sidebar, old top strip and theme sync replaced by the ecosystem header; unused sidebar queries (pinned clients, counts) dropped. | Design 08: REPLACE top bar, logo, user menu. Data shown is the same. |
 | `app/(app)/page.tsx` | Status dot colour for active funnels: green to the success blue. | Design 08 colour mapping (success). |
@@ -30,3 +30,12 @@ Rules that still apply: code only; no real data; no connection to any live proje
 | `lib/funnel-preview.ts` | Default frame colour in previews: Emerald to the primary blue. | Same. |
 | `lib/style.ts` | Connection presets Yes and Purchase: green to the success blue; Emphasis and Ghost borders: Emerald to the primary blue. | Design 08 colour mapping (success, brand). |
 | `components/eco-header.tsx` | New: the ecosystem header (colour bar, Launcher button, organization control, search, create actions, profile menu, Funnel Mapper Pro menu, phone bottom bar, compact editor variant). | Design 08: REPLACE the top bar, logo and user menu; ecosystem look and navigation. |
+| `app/fonts/bricolage-grotesque-latin-500-normal.woff2` | Added (latin subset, unmodified from the `@fontsource` npm package). | Self-hosted font: the build must never fetch Google Fonts (a fetch failure broke a CI build). SIL OFL 1.1. |
+| `app/fonts/bricolage-grotesque-latin-700-normal.woff2` | Added (latin subset, unmodified from the `@fontsource` npm package). | Self-hosted font: the build must never fetch Google Fonts (a fetch failure broke a CI build). SIL OFL 1.1. |
+| `app/fonts/bricolage-grotesque-latin-800-normal.woff2` | Added (latin subset, unmodified from the `@fontsource` npm package). | Self-hosted font: the build must never fetch Google Fonts (a fetch failure broke a CI build). SIL OFL 1.1. |
+| `app/fonts/dm-sans-latin-400-normal.woff2` | Added (latin subset, unmodified from the `@fontsource` npm package). | Self-hosted font: the build must never fetch Google Fonts (a fetch failure broke a CI build). SIL OFL 1.1. |
+| `app/fonts/dm-sans-latin-500-normal.woff2` | Added (latin subset, unmodified from the `@fontsource` npm package). | Self-hosted font: the build must never fetch Google Fonts (a fetch failure broke a CI build). SIL OFL 1.1. |
+| `app/fonts/dm-sans-latin-700-normal.woff2` | Added (latin subset, unmodified from the `@fontsource` npm package). | Self-hosted font: the build must never fetch Google Fonts (a fetch failure broke a CI build). SIL OFL 1.1. |
+| `app/fonts/jetbrains-mono-latin-400-normal.woff2` | Added (latin subset, unmodified from the `@fontsource` npm package). | Self-hosted font: the build must never fetch Google Fonts (a fetch failure broke a CI build). SIL OFL 1.1. |
+| `app/fonts/jetbrains-mono-latin-500-normal.woff2` | Added (latin subset, unmodified from the `@fontsource` npm package). | Self-hosted font: the build must never fetch Google Fonts (a fetch failure broke a CI build). SIL OFL 1.1. |
+| `app/fonts/LICENSES.txt` | Added: the three OFL licence texts. | Licence obligation for the bundled fonts. |
