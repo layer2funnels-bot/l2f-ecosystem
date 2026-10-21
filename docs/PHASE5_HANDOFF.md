@@ -8,8 +8,8 @@ Prerequisites: `npm run test:all` green; runbook steps 1–3 in the manual done.
 3. Auth screens designed and approved (below). 4. Git remote + CI green.
 
 ## Slice order
-0. **Auth shell + Launcher** — sign-in, sign-up, verify email, reset password, accept invitation, "no workspace yet", session expired; Launcher from `launcher_apps()`; global organization switcher calls `resolve_org_switch` and uses `packages/core/org-switch.mjs` (stay in app; never auto-Launcher; wipe old-org cache).
-1. Clients list/record. **1b. Office → Funnels records** (avatars, offers/products, story bank, brand kits on migration 0006; link to open FMP; nothing built inside FMP). 2. Projects + tasks (add `tasks`, composite FKs, `client_visible`). 3. Drive: Supabase Storage, path `workspace_id/...`, signed URLs, share links with expiry (T5, T14). 4. Planner objectives/measures; actions = task ids. 5. Office Team + Settings: invitations, app grants, roles. 6. My work: one query per workspace, two groups.
+0. **Auth shell + Launcher** (backend API layer built and tested: `packages/core/api.mjs`; remaining: route wiring, JWT verification, screens) — sign-in, sign-up, verify email, reset password, accept invitation, "no workspace yet", session expired; Launcher from `launcher_apps()`; global organization switcher calls `resolve_org_switch` and uses `packages/core/org-switch.mjs` (stay in app; never auto-Launcher; wipe old-org cache).
+1. Clients list/record. **1b. Office → Funnels records** (database foundation built: migration 0006; screens and API operations remain; link to open FMP; nothing built inside FMP). 2. Projects + tasks (add `tasks`, composite FKs, `client_visible`). 3. Drive: Supabase Storage, path `workspace_id/...`, signed URLs, share links with expiry (T5, T14). 4. Planner objectives/measures; actions = task ids. 5. Office Team + Settings: invitations, app grants, roles. 6. My work: one query per workspace, two groups.
 
 ## UX requirements to approve first (proposed defaults)
 - Auth screens use the shell theme (neutral), not a business palette, because the workspace is unknown before sign-in.

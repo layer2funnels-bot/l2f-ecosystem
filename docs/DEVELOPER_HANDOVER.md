@@ -17,6 +17,7 @@ Status key: **Implemented+Tested** · **Prepared** (written, not run live) · **
 | Integration layer schema (0003) | Implemented+Tested | I1–I7 |
 | Shared authorization foundation, client/project scope, archive-before-delete, actor kind, app lifecycle (0004) | Implemented+Tested | authz 25/25 |
 | Organization switching: request scope, resolver, page registry, browser cache module (0005) | Implemented+Tested | switch 23/23 |
+| Office → Funnels data foundation (0006): avatars, offers/products, story bank, brand kits, references from Clients and Value Ladder | Implemented+Tested | funnels 38/38 |
 | API error contract (T4) | Implemented+Tested | errors 9/9 |
 | Restore drill (T17, local) | Implemented+Tested | drill 3/3 |
 | Design tokens single source + contrast check | Implemented+Tested | `npm run check:tokens` |
@@ -33,6 +34,7 @@ migrations/0002_hardening.sql             audit fixes F1–F9, apps, profiles, i
 migrations/0003_integration_foundation.sql connections, external_refs, webhook_inbox, outbox (droppable)
 migrations/0005_org_switching.sql          org_scope policies, app_pages, resolve_org_switch
 migrations/0004_authorization_foundation.sql permission catalog, access levels, groups, assignments, overrides, lifecycle
+migrations/0006_funnels_foundation.sql    Office → Funnels records (funnel_avatars/offers/stories/brand_kits/references), funnels.* permissions, starter levels
 seed/bootstrap.sql                        first owner + workspaces + FMP entry (run once, by owner)
 packages/core/errors.mjs                  one public error vocabulary (denied = not found; adds rate_limited 429, org_required 400)
 packages/core/api.mjs                     request pipeline: org header → identity → operation → input → rate limit → DB → public error
@@ -64,7 +66,7 @@ Identity = Supabase Auth user id from the JWT. Authorization = active membership
 ## 6. Go-live runbook at $0 (each step needs owner approval)
 1. Human owner on GitHub, Supabase, Cloudflare, domain, with 2FA (Phase 2 action #2).
 2. Only at go-live and with approval: export `application-office` with `scripts/export-project.sh`, verify with `DUMP_FILE=... npm run drill:restore`, then decide on the slot (docs/INFRASTRUCTURE.md).
-3. Create Supabase project (region: London unless the latency test in docs/INFRASTRUCTURE.md says otherwise); apply 0001→0005 in order; run `seed/bootstrap.sql` after the owner's first sign-in.
+3. Create Supabase project (region: Mumbai if two more CloudPing tests agree with the first, otherwise London; see docs/INFRASTRUCTURE.md); apply 0001→0006 in order; run `seed/bootstrap.sql` after the owner's first sign-in.
 4. Auth settings: custom SMTP (Brevo free, sender on layer2funnels.com with SPF/DKIM), Confirm email ON, min password 12, Google provider ON, redirect URLs = our domains only.
 5. Run the test suites against a staging copy (PG_URL to the project's session pooler) before real data.
 6. Private GitHub repo; push; CI runs.
@@ -80,7 +82,7 @@ Identity = Supabase Auth user id from the JWT. Authorization = active membership
 - Supabase OAuth server (FMP Stage 2) is public beta. FMP Stage 2 needs explicit owner approval (FMP-2).
 
 ## 8. Next action for the next session
-Owner completes runbook steps 1–3; then build Phase 5 slice 0 (auth shell + Launcher) per `PHASE5_HANDOFF.md`.
+Slice 0 backend and the Funnels data foundation are built and tested locally. Remaining slice 0 work: HTTP route wiring + JWT verification (needs the hosting decision), the auth shell and Launcher UI (needs the approved auth-screen designs), then Office → Funnels screens. Owner completes runbook steps 1–3 before anything goes live.
 
 ## 9. Local Supabase stack (added 21 Oct 2026, Phase 5 slice 0)
 `supabase/config.toml` is committed; no live project is involved. Needs Docker and the Supabase CLI (v2.121 tested).
@@ -99,3 +101,10 @@ The default demo keys printed by `supabase start` are public and local-only; nev
 - Logs: only allowlisted fields (`safe-log.mjs`); no bodies, ids, emails, tokens or database text.
 - Limits are in memory (one free-tier server). A multi-instance deployment needs a shared store; the `take(key, class)` interface stays the same.
 - Not built: HTTP route files, JWT verification, CORS, the browser client wrapper (they depend on the hosting choice, which needs owner approval).
+
+## 11. Office → Funnels (0006) rules of use
+- Tables: `funnel_avatars`, `funnel_offers`, `funnel_stories`, `funnel_brand_kits`, `funnel_references`. Permissions are `funnels.<avatar|offer|story|brandkit>.<view|create|edit|delete>`, `funnels.record.share`, `funnels.reference.view|manage`, registered under the Office app. Starter levels: “Funnels · edit”, “Funnels · read”.
+- A record is org-wide (`client_id` null) or belongs to one client. `client_visible` needs a client and the `funnels.record.share` permission (default admin). Clients only ever see visible, unarchived records of their own client, and only while the Portal is on.
+- Delete: archive first (`archived_at`), owner-only, refused while referenced. Audit records short labels and flags, never long text.
+- Clients and Value Ladder call `funnel_references` (target by ID, one per row). Nothing here reads or writes Funnel Mapper Pro (FMP-2); FMP stays a link/entitlement only.
+- The existing `brand_base_answers` (Clients → Brand Base) is a separate, older table. Whether Brand Base answers fold into brand kits is a product decision for the Funnels/Clients UI sessions; not changed here.

@@ -71,7 +71,7 @@ Funnel Mapper Pro (FMP) is part of the Layer2Funnels ecosystem. Its funnel-mappi
 |---|---|
 | Avatars, offers and products, story bank, brand kits, other funnel business records | **Office → Funnels** (ecosystem database, migration 0006) |
 | Funnel mapping (maps, nodes, canvas, FMP's own data and database) | **Funnel Mapper Pro** (unchanged) |
-**[Built]** Business-record tables follow all foundation rules (organization-owned, `funnels.*` permissions, audit, archive-before-delete, `client_visible`). Clients and Value Ladder reference these records by ID. Nothing is duplicated inside FMP.
+**[Built, migration 0006, tests funnels 38/38]** Business-record tables (`funnel_avatars`, `funnel_offers`, `funnel_stories`, `funnel_brand_kits`, `funnel_references`) follow all foundation rules (organization-owned, `funnels.*` permissions, audit, archive-before-delete, `client_visible`). Clients and Value Ladder reference these records by ID. Nothing is duplicated inside FMP.
 **Stage 1 (now):** the FMP tile and entitlement exist; the Funnels menu shows the business records plus a link that opens FMP. FMP has its own sign-in.
 **Stage 2 (needs explicit owner approval, not designed yet):** any connection between Funnels and FMP (e.g. FMP reading avatars or brand kits, or Funnels listing FMP maps) is designed deliberately: which side owns each field, read versus write, which permission governs it. No FMP rewrite, data move, database change or workflow change without approval.
 

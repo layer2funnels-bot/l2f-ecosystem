@@ -13,15 +13,20 @@ const mutations = {
   'SW org scope removed (old org leaks after switch)': `drop policy org_scope on clients;`,
   'SW switch skips membership check': `create or replace function public.resolve_org_switch(p_org uuid, p_app text, p_page text default null) returns table (outcome text, org_id uuid, org_name text, app_key text, page_key text, message text) language sql security definer set search_path = '' as $$ select 'same_page'::text, p_org, null::text, p_app, p_page, null::text $$;`,
   'F7 pre-approved requests allowed': `drop policy appr_insert on approvals; create policy appr_insert on approvals for insert with check (private.has_permission(workspace_id,'approvals.request.create'));`,
+  'FN client sees internal funnel records': `drop policy funnel_avatars_select on funnel_avatars; create policy funnel_avatars_select on funnel_avatars for select using (private.has_permission(workspace_id,'funnels.avatar.view',client_id) or private.client_of(workspace_id, client_id));`,
+  'FN archive-before-delete removed': `drop trigger funnel_avatars_refuse_delete on funnel_avatars;`,
+  'FN sharing needs no permission': `drop trigger funnel_avatars_guard on funnel_avatars;`,
+  'FN funnel request scope removed': `drop policy org_scope on funnel_offers;`,
+  'FN cross-organization avatar link allowed': `alter table funnel_offers drop constraint funnel_offers_workspace_id_avatar_id_fkey; alter table funnel_offers add foreign key (avatar_id) references funnel_avatars(id);`,
 };
 let ok = true;
 for (const [name, sql] of Object.entries(mutations)) {
-  const fails = ['test/isolation.test.mjs', 'test/audit.test.mjs', 'test/authz.test.mjs', 'test/switch.test.mjs'].map(f => {
+  const fails = ['test/isolation.test.mjs', 'test/audit.test.mjs', 'test/authz.test.mjs', 'test/switch.test.mjs', 'test/api.test.mjs', 'test/funnels.test.mjs'].map(f => {
     const r = spawnSync(process.execPath, [f], { env: { ...process.env, MUTATION_SQL: sql }, encoding: 'utf8' });
     return { n: (r.stdout.match(/^FAIL/gm) || []).length, status: r.status };
   });
   const caught = fails.some(f => f.status !== 0 && f.n > 0);
   ok &&= caught;
-  console.log(`${caught ? 'CAUGHT ' : 'MISSED '} ${name}  (failing checks: isolation ${fails[0].n}, audit ${fails[1].n}, authz ${fails[2].n}, switch ${fails[3].n})`);
+  console.log(`${caught ? 'CAUGHT ' : 'MISSED '} ${name}  (failing checks: isolation ${fails[0].n}, audit ${fails[1].n}, authz ${fails[2].n}, switch ${fails[3].n}, api ${fails[4].n}, funnels ${fails[5].n})`);
 }
 process.exit(ok ? 0 : 1);
