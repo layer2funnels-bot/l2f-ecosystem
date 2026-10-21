@@ -9,10 +9,12 @@ export { defineOperation };
 
 import { funnelOperations } from './funnel-operations.mjs';
 import { clientsOperations } from './client-operations.mjs';
+import { shellOperations } from './shell-operations.mjs';
 
 export const operations = Object.freeze(Object.fromEntries([
   ...funnelOperations,
   ...clientsOperations,
+  ...shellOperations,
   defineOperation({ name: 'org.list', class: 'read', allowNoOrg: true, run: (q) => q('select org_id, name, slug, member_kind, role, is_active from my_organizations()') }),
   defineOperation({
     name: 'launcher.list', class: 'read',
