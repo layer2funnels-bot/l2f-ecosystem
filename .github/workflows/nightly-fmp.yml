@@ -25,6 +25,10 @@ jobs:
       - run: cp .env.example .env.local
       - name: Local Supabase stack (FMP's own migrations and seed)
         run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor
+      - name: Local demo keys into .env.local (service-role key and a sign-up code, both local-only values)
+        run: |
+          KEY=$(supabase status -o env | sed -n 's/^SERVICE_ROLE_KEY="\(.*\)"$/\1/p')
+          sed -i "s|^SUPABASE_SERVICE_ROLE_KEY=.*|SUPABASE_SERVICE_ROLE_KEY=$KEY|; s|^INDEPENDENT_SIGNUP_CODE=.*|INDEPENDENT_SIGNUP_CODE=local-demo-code|" .env.local
       - run: npx playwright install --with-deps chromium
       - name: Full browser suite (the copy)
         run: npx playwright test --reporter=line,json ${{ inputs.specs }}
@@ -64,6 +68,11 @@ jobs:
         run: npm ci && cp .env.example .env.local
       - if: steps.t.outputs.ok == 'true'
         run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor
+      - name: Local demo keys into .env.local
+        if: steps.t.outputs.ok == 'true'
+        run: |
+          KEY=$(supabase status -o env | sed -n 's/^SERVICE_ROLE_KEY="\(.*\)"$/\1/p')
+          sed -i "s|^SUPABASE_SERVICE_ROLE_KEY=.*|SUPABASE_SERVICE_ROLE_KEY=$KEY|; s|^INDEPENDENT_SIGNUP_CODE=.*|INDEPENDENT_SIGNUP_CODE=local-demo-code|" .env.local
       - if: steps.t.outputs.ok == 'true'
         run: npx playwright install --with-deps chromium
       - name: Full browser suite (the original)
