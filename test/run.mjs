@@ -1,7 +1,7 @@
 // Runs every suite on every requested engine. DRIVERS=pglite (default) | pg | pglite,pg
 import { spawnSync } from 'node:child_process';
 const drivers = (process.env.DRIVERS || 'pglite').split(',');
-const suites = ['test/isolation.test.mjs', 'test/audit.test.mjs', 'test/authz.test.mjs', 'test/switch.test.mjs'];
+const suites = ['test/isolation.test.mjs', 'test/audit.test.mjs', 'test/authz.test.mjs', 'test/switch.test.mjs', 'test/api.test.mjs', 'test/funnels.test.mjs', 'test/funnels-api.test.mjs', 'test/clients.test.mjs', 'test/rate-limit-store.test.mjs'];
 let failed = 0;
 for (const d of drivers) for (const s of suites) {
   const r = spawnSync(process.execPath, [s], { env: { ...process.env, DB_DRIVER: d }, encoding: 'utf8' });
@@ -11,7 +11,10 @@ for (const d of drivers) for (const s of suites) {
   for (const f of fails) console.log(`        ${f}`);
   if (r.status !== 0) failed++;
 }
-const e = spawnSync(process.execPath, ['test/errors.test.mjs'], { encoding: 'utf8' });
-console.log(`${e.status === 0 ? 'PASS' : 'FAIL'}  [api   ] test/errors.test.mjs       ${(e.stdout.match(/\d+\/\d+ checks passed/) || [''])[0]}`);
-if (e.status !== 0) failed++;
+for (const f of ['test/errors.test.mjs', 'test/http.test.mjs', 'test/web.test.mjs']) {
+  const e = spawnSync(process.execPath, [f], { encoding: 'utf8' });
+  console.log(`${e.status === 0 ? 'PASS' : 'FAIL'}  [api   ] ${f.padEnd(26)} ${(e.stdout.match(/\d+\/\d+ checks passed/) || [''])[0]}`);
+  for (const l of e.stdout.split('\n').filter(l => l.startsWith('FAIL'))) console.log(`        ${l}`);
+  if (e.status !== 0) failed++;
+}
 process.exit(failed ? 1 : 0);

@@ -1,0 +1,200 @@
+{
+ "name": "Webinar funnel",
+ "nodes": [
+  {
+   "id": "ngr",
+   "type": "fbads",
+   "name": "Facebook ads",
+   "x": 40,
+   "y": 200,
+   "p": {
+    "model": "cpm",
+    "visitors": 1000,
+    "spend": 500,
+    "clicks": 1000,
+    "cpc": 0.5,
+    "impr": 200000,
+    "cpm": 9,
+    "ctr": 1.2
+   }
+  },
+  {
+   "id": "ngs",
+   "type": "optin",
+   "name": "Webinar registration",
+   "x": 320,
+   "y": 200,
+   "p": {
+    "cr": 30,
+    "lead": true
+   }
+  },
+  {
+   "id": "ngt",
+   "type": "thanks",
+   "name": "Thank-you page",
+   "x": 600,
+   "y": 60,
+   "p": {
+    "cr": 100,
+    "lead": false
+   }
+  },
+  {
+   "id": "ngu",
+   "type": "seq",
+   "name": "Reminder emails",
+   "x": 600,
+   "y": 300,
+   "p": {
+    "cr": 55,
+    "costPer": 0,
+    "count": 4
+   }
+  },
+  {
+   "id": "ngv",
+   "type": "webinar",
+   "name": "Live webinar",
+   "x": 880,
+   "y": 300,
+   "p": {
+    "cr": 30,
+    "lead": false
+   }
+  },
+  {
+   "id": "ngw",
+   "type": "checkout",
+   "name": "Program checkout",
+   "x": 1160,
+   "y": 300,
+   "p": {
+    "cr": 8,
+    "price": 997,
+    "newc": true,
+    "disc": 0,
+    "refund": 0,
+    "fulfil": 0,
+    "aff": 0
+   }
+  },
+  {
+   "id": "ngx",
+   "type": "bump",
+   "name": "Workbook bump",
+   "x": 1440,
+   "y": 180,
+   "p": {
+    "cr": 30,
+    "price": 47,
+    "newc": false,
+    "disc": 0,
+    "refund": 0,
+    "fulfil": 0,
+    "aff": 0
+   }
+  },
+  {
+   "id": "ngy",
+   "type": "upsell",
+   "name": "VIP upgrade",
+   "x": 1440,
+   "y": 420,
+   "p": {
+    "cr": 15,
+    "price": 497,
+    "newc": false,
+    "disc": 0,
+    "refund": 0,
+    "fulfil": 0,
+    "aff": 0
+   }
+  },
+  {
+   "id": "ngz",
+   "type": "replay",
+   "name": "Replay",
+   "x": 880,
+   "y": 520,
+   "p": {
+    "cr": 10,
+    "lead": false
+   }
+  }
+ ],
+ "edges": [
+  {
+   "id": "enh0",
+   "from": "ngr",
+   "to": "ngs",
+   "port": "main",
+   "share": 100
+  },
+  {
+   "id": "enh1",
+   "from": "ngs",
+   "to": "ngt",
+   "port": "main",
+   "share": 100
+  },
+  {
+   "id": "enh2",
+   "from": "ngs",
+   "to": "ngu",
+   "port": "main",
+   "share": 100
+  },
+  {
+   "id": "enh3",
+   "from": "ngu",
+   "to": "ngv",
+   "port": "main",
+   "share": 100
+  },
+  {
+   "id": "enh4",
+   "from": "ngv",
+   "to": "ngw",
+   "port": "main",
+   "share": 100
+  },
+  {
+   "id": "enh5",
+   "from": "ngw",
+   "to": "ngx",
+   "port": "main",
+   "share": 100
+  },
+  {
+   "id": "enh6",
+   "from": "ngw",
+   "to": "ngy",
+   "port": "main",
+   "share": 100
+  },
+  {
+   "id": "enh7",
+   "from": "ngu",
+   "to": "ngz",
+   "share": 100,
+   "no": true
+  },
+  {
+   "id": "enh8",
+   "from": "ngz",
+   "to": "ngw",
+   "port": "main",
+   "share": 100
+  }
+ ],
+ "cur": "$",
+ "basis": "ltv",
+ "fixed": 250,
+ "whatif": {
+  "traffic": 1.2,
+  "conv": 0.9
+ },
+ "target": 20000,
+ "app": "funnel-mapper"
+}

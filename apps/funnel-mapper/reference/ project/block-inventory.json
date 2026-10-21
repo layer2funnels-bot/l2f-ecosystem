@@ -1,0 +1,1278 @@
+{
+  "_note": "Canonical block inventory. Entries with source=your-app-screenshot are taken from your app's library screenshots (Communities 8 of 11 visible, AI Calling 4/4, AI Automation 9/9 with 'Write Code' inferred from a cropped label). Other categories are earlier design entries and must be reconciled against the app's block-definitions.",
+  "total_in_this_inventory": 170,
+  "target_total": 169,
+  "counts_by_category": {
+    "Traffic sources": 39,
+    "Pages": 19,
+    "Offers & checkout": 14,
+    "Actions & events": 19,
+    "Email & Communication": 12,
+    "Sales & CRM": 17,
+    "Logic & goals": 15,
+    "Notes & layout": 14,
+    "Communities": 8,
+    "AI Calling": 4,
+    "AI Automation": 9
+  },
+  "canonical_dimensions": {
+    "outer_width_px": 200,
+    "icon_tile_px": 28,
+    "padding_px": 10,
+    "port_px": 11,
+    "base_outer_height_px": 76,
+    "page_offer_outer_height_px": 114,
+    "note": "Page & Offer are 38px taller than other families (preview strip). Objects on a row are centre-aligned so lines stay straight.",
+    "preview_strip_px": "174 x 30 (compact, on-canvas default)",
+    "rich_thumbnail_px": "174 x 104 (library / object-system / hover)",
+    "price_tab": {
+      "height_px": 20,
+      "pad_x_px": 7,
+      "offset_top_px": -10,
+      "offset_left_px": 12
+    }
+  },
+  "families": [
+    "source",
+    "page",
+    "offer",
+    "action",
+    "message",
+    "crm",
+    "logic",
+    "goal",
+    "note"
+  ],
+  "blocks": [
+    {
+      "name": "Facebook Ads",
+      "category": "Traffic sources",
+      "family": "source",
+      "shape": "circle",
+      "color": "#1877F2"
+    },
+    {
+      "name": "Instagram Ads",
+      "category": "Traffic sources",
+      "family": "source",
+      "shape": "circle",
+      "color": "#E4405F"
+    },
+    {
+      "name": "Google Ads",
+      "category": "Traffic sources",
+      "family": "source",
+      "shape": "circle",
+      "color": "#4285F4"
+    },
+    {
+      "name": "YouTube Ads",
+      "category": "Traffic sources",
+      "family": "source",
+      "shape": "circle",
+      "color": "#FF0000"
+    },
+    {
+      "name": "TikTok Ads",
+      "category": "Traffic sources",
+      "family": "source",
+      "shape": "circle",
+      "color": "#010101"
+    },
+    {
+      "name": "LinkedIn Ads",
+      "category": "Traffic sources",
+      "family": "source",
+      "shape": "circle",
+      "color": "#0A66C2"
+    },
+    {
+      "name": "X (Twitter) Ads",
+      "category": "Traffic sources",
+      "family": "source",
+      "shape": "circle",
+      "color": "#000000"
+    },
+    {
+      "name": "Pinterest Ads",
+      "category": "Traffic sources",
+      "family": "source",
+      "shape": "circle",
+      "color": "#E60023"
+    },
+    {
+      "name": "Reddit Ads",
+      "category": "Traffic sources",
+      "family": "source",
+      "shape": "circle",
+      "color": "#FF4500"
+    },
+    {
+      "name": "Bing Ads",
+      "category": "Traffic sources",
+      "family": "source",
+      "shape": "circle",
+      "color": "#174AE4"
+    },
+    {
+      "name": "Snapchat Ads",
+      "category": "Traffic sources",
+      "family": "source",
+      "shape": "circle",
+      "color": "#0B0B0B"
+    },
+    {
+      "name": "Quora Ads",
+      "category": "Traffic sources",
+      "family": "source",
+      "shape": "circle",
+      "color": "#B92B27"
+    },
+    {
+      "name": "Google",
+      "category": "Traffic sources",
+      "family": "source",
+      "shape": "circle",
+      "color": "#4285F4"
+    },
+    {
+      "name": "Bing",
+      "category": "Traffic sources",
+      "family": "source",
+      "shape": "circle",
+      "color": "#174AE4"
+    },
+    {
+      "name": "YouTube",
+      "category": "Traffic sources",
+      "family": "source",
+      "shape": "circle",
+      "color": "#FF0000"
+    },
+    {
+      "name": "DuckDuckGo",
+      "category": "Traffic sources",
+      "family": "source",
+      "shape": "circle",
+      "color": "#DE5833"
+    },
+    {
+      "name": "All search",
+      "category": "Traffic sources",
+      "family": "source",
+      "shape": "circle",
+      "color": "#64748B"
+    },
+    {
+      "name": "Facebook",
+      "category": "Traffic sources",
+      "family": "source",
+      "shape": "circle",
+      "color": "#1877F2"
+    },
+    {
+      "name": "Instagram",
+      "category": "Traffic sources",
+      "family": "source",
+      "shape": "circle",
+      "color": "#E4405F"
+    },
+    {
+      "name": "LinkedIn",
+      "category": "Traffic sources",
+      "family": "source",
+      "shape": "circle",
+      "color": "#0A66C2"
+    },
+    {
+      "name": "TikTok",
+      "category": "Traffic sources",
+      "family": "source",
+      "shape": "circle",
+      "color": "#010101"
+    },
+    {
+      "name": "X (Twitter)",
+      "category": "Traffic sources",
+      "family": "source",
+      "shape": "circle",
+      "color": "#000000"
+    },
+    {
+      "name": "Pinterest",
+      "category": "Traffic sources",
+      "family": "source",
+      "shape": "circle",
+      "color": "#E60023"
+    },
+    {
+      "name": "Reddit",
+      "category": "Traffic sources",
+      "family": "source",
+      "shape": "circle",
+      "color": "#FF4500"
+    },
+    {
+      "name": "Threads",
+      "category": "Traffic sources",
+      "family": "source",
+      "shape": "circle",
+      "color": "#000000"
+    },
+    {
+      "name": "Email",
+      "category": "Traffic sources",
+      "family": "source",
+      "shape": "circle",
+      "color": "#0EA5E9"
+    },
+    {
+      "name": "Direct",
+      "category": "Traffic sources",
+      "family": "source",
+      "shape": "circle",
+      "color": "#64748B"
+    },
+    {
+      "name": "Affiliates",
+      "category": "Traffic sources",
+      "family": "source",
+      "shape": "circle",
+      "color": "#10B981"
+    },
+    {
+      "name": "Referral",
+      "category": "Traffic sources",
+      "family": "source",
+      "shape": "circle",
+      "color": "#10B981"
+    },
+    {
+      "name": "QR code",
+      "category": "Traffic sources",
+      "family": "source",
+      "shape": "circle",
+      "color": "#475569"
+    },
+    {
+      "name": "Podcast",
+      "category": "Traffic sources",
+      "family": "source",
+      "shape": "circle",
+      "color": "#8B5CF6"
+    },
+    {
+      "name": "Webinar traffic",
+      "category": "Traffic sources",
+      "family": "source",
+      "shape": "circle",
+      "color": "#A78BFA"
+    },
+    {
+      "name": "Print ad",
+      "category": "Traffic sources",
+      "family": "source",
+      "shape": "circle",
+      "color": "#60A5FA"
+    },
+    {
+      "name": "TV ad",
+      "category": "Traffic sources",
+      "family": "source",
+      "shape": "circle",
+      "color": "#60A5FA"
+    },
+    {
+      "name": "Radio",
+      "category": "Traffic sources",
+      "family": "source",
+      "shape": "circle",
+      "color": "#60A5FA"
+    },
+    {
+      "name": "Billboard",
+      "category": "Traffic sources",
+      "family": "source",
+      "shape": "circle",
+      "color": "#60A5FA"
+    },
+    {
+      "name": "Direct mail",
+      "category": "Traffic sources",
+      "family": "source",
+      "shape": "circle",
+      "color": "#60A5FA"
+    },
+    {
+      "name": "Event / conference",
+      "category": "Traffic sources",
+      "family": "source",
+      "shape": "circle",
+      "color": "#60A5FA"
+    },
+    {
+      "name": "Flyer",
+      "category": "Traffic sources",
+      "family": "source",
+      "shape": "circle",
+      "color": "#60A5FA"
+    },
+    {
+      "name": "Opt-in page",
+      "category": "Pages",
+      "family": "page",
+      "shape": "card",
+      "color": "#A78BFA",
+      "wireframe": "optin"
+    },
+    {
+      "name": "Squeeze page",
+      "category": "Pages",
+      "family": "page",
+      "shape": "card",
+      "color": "#A78BFA",
+      "wireframe": "optin"
+    },
+    {
+      "name": "Landing page",
+      "category": "Pages",
+      "family": "page",
+      "shape": "card",
+      "color": "#A78BFA",
+      "wireframe": "sales"
+    },
+    {
+      "name": "Sales page",
+      "category": "Pages",
+      "family": "page",
+      "shape": "card",
+      "color": "#A78BFA",
+      "wireframe": "sales"
+    },
+    {
+      "name": "Long-form sales page",
+      "category": "Pages",
+      "family": "page",
+      "shape": "card",
+      "color": "#A78BFA",
+      "wireframe": "sales"
+    },
+    {
+      "name": "VSL page",
+      "category": "Pages",
+      "family": "page",
+      "shape": "card",
+      "color": "#A78BFA",
+      "wireframe": "vsl"
+    },
+    {
+      "name": "Webinar registration",
+      "category": "Pages",
+      "family": "page",
+      "shape": "card",
+      "color": "#A78BFA",
+      "wireframe": "webinar"
+    },
+    {
+      "name": "Webinar live",
+      "category": "Pages",
+      "family": "page",
+      "shape": "card",
+      "color": "#A78BFA",
+      "wireframe": "webinar"
+    },
+    {
+      "name": "Webinar replay",
+      "category": "Pages",
+      "family": "page",
+      "shape": "card",
+      "color": "#A78BFA",
+      "wireframe": "webinar"
+    },
+    {
+      "name": "Quiz page",
+      "category": "Pages",
+      "family": "page",
+      "shape": "card",
+      "color": "#A78BFA",
+      "wireframe": "quiz"
+    },
+    {
+      "name": "Survey page",
+      "category": "Pages",
+      "family": "page",
+      "shape": "card",
+      "color": "#A78BFA",
+      "wireframe": "quiz"
+    },
+    {
+      "name": "Application page",
+      "category": "Pages",
+      "family": "page",
+      "shape": "card",
+      "color": "#A78BFA",
+      "wireframe": "application"
+    },
+    {
+      "name": "Booking / calendar",
+      "category": "Pages",
+      "family": "page",
+      "shape": "card",
+      "color": "#A78BFA",
+      "wireframe": "booking"
+    },
+    {
+      "name": "Thank-you page",
+      "category": "Pages",
+      "family": "page",
+      "shape": "card",
+      "color": "#A78BFA",
+      "wireframe": "thankyou"
+    },
+    {
+      "name": "Download / delivery",
+      "category": "Pages",
+      "family": "page",
+      "shape": "card",
+      "color": "#A78BFA",
+      "wireframe": "thankyou"
+    },
+    {
+      "name": "Blog post",
+      "category": "Pages",
+      "family": "page",
+      "shape": "card",
+      "color": "#A78BFA",
+      "wireframe": "sales"
+    },
+    {
+      "name": "Members area",
+      "category": "Pages",
+      "family": "page",
+      "shape": "card",
+      "color": "#A78BFA",
+      "wireframe": "members"
+    },
+    {
+      "name": "Home / about",
+      "category": "Pages",
+      "family": "page",
+      "shape": "card",
+      "color": "#A78BFA",
+      "wireframe": "sales"
+    },
+    {
+      "name": "Popup",
+      "category": "Pages",
+      "family": "page",
+      "shape": "card",
+      "color": "#A78BFA",
+      "wireframe": "optin"
+    },
+    {
+      "name": "Checkout / order form",
+      "category": "Offers & checkout",
+      "family": "offer",
+      "shape": "card",
+      "color": "#FB923C"
+    },
+    {
+      "name": "One-step order",
+      "category": "Offers & checkout",
+      "family": "offer",
+      "shape": "card",
+      "color": "#FB923C"
+    },
+    {
+      "name": "Two-step order",
+      "category": "Offers & checkout",
+      "family": "offer",
+      "shape": "card",
+      "color": "#FB923C"
+    },
+    {
+      "name": "Order bump",
+      "category": "Offers & checkout",
+      "family": "offer",
+      "shape": "card",
+      "color": "#FB923C"
+    },
+    {
+      "name": "Upsell (OTO)",
+      "category": "Offers & checkout",
+      "family": "offer",
+      "shape": "card",
+      "color": "#FB923C"
+    },
+    {
+      "name": "Downsell",
+      "category": "Offers & checkout",
+      "family": "offer",
+      "shape": "card",
+      "color": "#FB923C"
+    },
+    {
+      "name": "Subscription",
+      "category": "Offers & checkout",
+      "family": "offer",
+      "shape": "card",
+      "color": "#FB923C"
+    },
+    {
+      "name": "Membership",
+      "category": "Offers & checkout",
+      "family": "offer",
+      "shape": "card",
+      "color": "#FB923C"
+    },
+    {
+      "name": "Payment plan",
+      "category": "Offers & checkout",
+      "family": "offer",
+      "shape": "card",
+      "color": "#FB923C"
+    },
+    {
+      "name": "Free trial",
+      "category": "Offers & checkout",
+      "family": "offer",
+      "shape": "card",
+      "color": "#FB923C"
+    },
+    {
+      "name": "Cart",
+      "category": "Offers & checkout",
+      "family": "offer",
+      "shape": "card",
+      "color": "#FB923C"
+    },
+    {
+      "name": "Product",
+      "category": "Offers & checkout",
+      "family": "offer",
+      "shape": "card",
+      "color": "#FB923C"
+    },
+    {
+      "name": "Bundle",
+      "category": "Offers & checkout",
+      "family": "offer",
+      "shape": "card",
+      "color": "#FB923C"
+    },
+    {
+      "name": "Coupon / discount",
+      "category": "Offers & checkout",
+      "family": "offer",
+      "shape": "card",
+      "color": "#FB923C"
+    },
+    {
+      "name": "Purchase",
+      "category": "Actions & events",
+      "family": "action",
+      "shape": "diamond",
+      "color": "#2DD4BF"
+    },
+    {
+      "name": "Add to cart",
+      "category": "Actions & events",
+      "family": "action",
+      "shape": "diamond",
+      "color": "#2DD4BF"
+    },
+    {
+      "name": "Form submit",
+      "category": "Actions & events",
+      "family": "action",
+      "shape": "diamond",
+      "color": "#2DD4BF"
+    },
+    {
+      "name": "Button click",
+      "category": "Actions & events",
+      "family": "action",
+      "shape": "diamond",
+      "color": "#2DD4BF"
+    },
+    {
+      "name": "Link click",
+      "category": "Actions & events",
+      "family": "action",
+      "shape": "diamond",
+      "color": "#2DD4BF"
+    },
+    {
+      "name": "Watch video",
+      "category": "Actions & events",
+      "family": "action",
+      "shape": "diamond",
+      "color": "#2DD4BF"
+    },
+    {
+      "name": "Scroll depth",
+      "category": "Actions & events",
+      "family": "action",
+      "shape": "diamond",
+      "color": "#2DD4BF"
+    },
+    {
+      "name": "Page view",
+      "category": "Actions & events",
+      "family": "action",
+      "shape": "diamond",
+      "color": "#2DD4BF"
+    },
+    {
+      "name": "Opt-in event",
+      "category": "Actions & events",
+      "family": "action",
+      "shape": "diamond",
+      "color": "#2DD4BF"
+    },
+    {
+      "name": "Booking made",
+      "category": "Actions & events",
+      "family": "action",
+      "shape": "diamond",
+      "color": "#2DD4BF"
+    },
+    {
+      "name": "Application submitted",
+      "category": "Actions & events",
+      "family": "action",
+      "shape": "diamond",
+      "color": "#2DD4BF"
+    },
+    {
+      "name": "Quiz completed",
+      "category": "Actions & events",
+      "family": "action",
+      "shape": "diamond",
+      "color": "#2DD4BF"
+    },
+    {
+      "name": "Survey completed",
+      "category": "Actions & events",
+      "family": "action",
+      "shape": "diamond",
+      "color": "#2DD4BF"
+    },
+    {
+      "name": "Deal won",
+      "category": "Actions & events",
+      "family": "action",
+      "shape": "diamond",
+      "color": "#2DD4BF"
+    },
+    {
+      "name": "Deal lost",
+      "category": "Actions & events",
+      "family": "action",
+      "shape": "diamond",
+      "color": "#2DD4BF"
+    },
+    {
+      "name": "Refund",
+      "category": "Actions & events",
+      "family": "action",
+      "shape": "diamond",
+      "color": "#2DD4BF"
+    },
+    {
+      "name": "Add tag",
+      "category": "Actions & events",
+      "family": "action",
+      "shape": "diamond",
+      "color": "#2DD4BF"
+    },
+    {
+      "name": "Add to list",
+      "category": "Actions & events",
+      "family": "action",
+      "shape": "diamond",
+      "color": "#2DD4BF"
+    },
+    {
+      "name": "Custom event",
+      "category": "Actions & events",
+      "family": "action",
+      "shape": "diamond",
+      "color": "#2DD4BF"
+    },
+    {
+      "name": "Email",
+      "category": "Email & Communication",
+      "family": "message",
+      "shape": "capsule",
+      "color": "#0EA5E9"
+    },
+    {
+      "name": "SMS",
+      "category": "Email & Communication",
+      "family": "message",
+      "shape": "capsule",
+      "color": "#22C55E"
+    },
+    {
+      "name": "WhatsApp",
+      "category": "Email & Communication",
+      "family": "message",
+      "shape": "capsule",
+      "color": "#25D366"
+    },
+    {
+      "name": "Phone call",
+      "category": "Email & Communication",
+      "family": "message",
+      "shape": "capsule",
+      "color": "#10B981"
+    },
+    {
+      "name": "Voicemail",
+      "category": "Email & Communication",
+      "family": "message",
+      "shape": "capsule",
+      "color": "#8B5CF6"
+    },
+    {
+      "name": "Push notification",
+      "category": "Email & Communication",
+      "family": "message",
+      "shape": "capsule",
+      "color": "#6366F1"
+    },
+    {
+      "name": "Messenger",
+      "category": "Email & Communication",
+      "family": "message",
+      "shape": "capsule",
+      "color": "#0084FF"
+    },
+    {
+      "name": "Telegram",
+      "category": "Email & Communication",
+      "family": "message",
+      "shape": "capsule",
+      "color": "#26A5E4"
+    },
+    {
+      "name": "Slack message",
+      "category": "Email & Communication",
+      "family": "message",
+      "shape": "capsule",
+      "color": "#4A154B"
+    },
+    {
+      "name": "In-app message",
+      "category": "Email & Communication",
+      "family": "message",
+      "shape": "capsule",
+      "color": "#6366F1"
+    },
+    {
+      "name": "Chatbot",
+      "category": "Email & Communication",
+      "family": "message",
+      "shape": "capsule",
+      "color": "#6366F1"
+    },
+    {
+      "name": "Wait / delay",
+      "category": "Email & Communication",
+      "family": "message",
+      "shape": "capsule",
+      "color": "#2DD4BF"
+    },
+    {
+      "name": "HubSpot",
+      "category": "Sales & CRM",
+      "family": "crm",
+      "shape": "circle",
+      "color": "#FF7A59"
+    },
+    {
+      "name": "Salesforce",
+      "category": "Sales & CRM",
+      "family": "crm",
+      "shape": "circle",
+      "color": "#00A1E0"
+    },
+    {
+      "name": "Mailchimp",
+      "category": "Sales & CRM",
+      "family": "crm",
+      "shape": "circle",
+      "color": "#FFE01B"
+    },
+    {
+      "name": "ActiveCampaign",
+      "category": "Sales & CRM",
+      "family": "crm",
+      "shape": "circle",
+      "color": "#356AE6"
+    },
+    {
+      "name": "Keap",
+      "category": "Sales & CRM",
+      "family": "crm",
+      "shape": "circle",
+      "color": "#2BB673"
+    },
+    {
+      "name": "Pipedrive",
+      "category": "Sales & CRM",
+      "family": "crm",
+      "shape": "circle",
+      "color": "#172733"
+    },
+    {
+      "name": "Ontraport",
+      "category": "Sales & CRM",
+      "family": "crm",
+      "shape": "circle",
+      "color": "#4A90D9"
+    },
+    {
+      "name": "GoHighLevel",
+      "category": "Sales & CRM",
+      "family": "crm",
+      "shape": "circle",
+      "color": "#2A3A8C"
+    },
+    {
+      "name": "Intercom",
+      "category": "Sales & CRM",
+      "family": "crm",
+      "shape": "circle",
+      "color": "#1F8DED"
+    },
+    {
+      "name": "Drip",
+      "category": "Sales & CRM",
+      "family": "crm",
+      "shape": "circle",
+      "color": "#EF5781"
+    },
+    {
+      "name": "ConvertKit",
+      "category": "Sales & CRM",
+      "family": "crm",
+      "shape": "circle",
+      "color": "#FB6970"
+    },
+    {
+      "name": "Klaviyo",
+      "category": "Sales & CRM",
+      "family": "crm",
+      "shape": "circle",
+      "color": "#111111"
+    },
+    {
+      "name": "Zoho",
+      "category": "Sales & CRM",
+      "family": "crm",
+      "shape": "circle",
+      "color": "#E42527"
+    },
+    {
+      "name": "Constant Contact",
+      "category": "Sales & CRM",
+      "family": "crm",
+      "shape": "circle",
+      "color": "#1C588F"
+    },
+    {
+      "name": "Marketo",
+      "category": "Sales & CRM",
+      "family": "crm",
+      "shape": "circle",
+      "color": "#5C4C9F"
+    },
+    {
+      "name": "Zapier",
+      "category": "Sales & CRM",
+      "family": "crm",
+      "shape": "circle",
+      "color": "#FF4A00"
+    },
+    {
+      "name": "Webhook",
+      "category": "Sales & CRM",
+      "family": "crm",
+      "shape": "circle",
+      "color": "#64748B"
+    },
+    {
+      "name": "Condition",
+      "category": "Logic & goals",
+      "family": "logic",
+      "shape": "square",
+      "color": "#FBBF24"
+    },
+    {
+      "name": "A/B split",
+      "category": "Logic & goals",
+      "family": "logic",
+      "shape": "square",
+      "color": "#FBBF24"
+    },
+    {
+      "name": "Multivariate split",
+      "category": "Logic & goals",
+      "family": "logic",
+      "shape": "square",
+      "color": "#FBBF24"
+    },
+    {
+      "name": "Random split",
+      "category": "Logic & goals",
+      "family": "logic",
+      "shape": "square",
+      "color": "#FBBF24"
+    },
+    {
+      "name": "Traffic split",
+      "category": "Logic & goals",
+      "family": "logic",
+      "shape": "square",
+      "color": "#FBBF24"
+    },
+    {
+      "name": "Merge",
+      "category": "Logic & goals",
+      "family": "logic",
+      "shape": "square",
+      "color": "#FBBF24"
+    },
+    {
+      "name": "Filter",
+      "category": "Logic & goals",
+      "family": "logic",
+      "shape": "square",
+      "color": "#FBBF24"
+    },
+    {
+      "name": "Delay gate",
+      "category": "Logic & goals",
+      "family": "logic",
+      "shape": "square",
+      "color": "#FBBF24"
+    },
+    {
+      "name": "Revenue goal",
+      "category": "Logic & goals",
+      "family": "goal",
+      "shape": "capsule",
+      "color": "#84CC16"
+    },
+    {
+      "name": "Profit goal",
+      "category": "Logic & goals",
+      "family": "goal",
+      "shape": "capsule",
+      "color": "#84CC16"
+    },
+    {
+      "name": "Leads goal",
+      "category": "Logic & goals",
+      "family": "goal",
+      "shape": "capsule",
+      "color": "#84CC16"
+    },
+    {
+      "name": "Customers goal",
+      "category": "Logic & goals",
+      "family": "goal",
+      "shape": "capsule",
+      "color": "#84CC16"
+    },
+    {
+      "name": "Conversion-rate goal",
+      "category": "Logic & goals",
+      "family": "goal",
+      "shape": "capsule",
+      "color": "#84CC16"
+    },
+    {
+      "name": "Step-completion goal",
+      "category": "Logic & goals",
+      "family": "goal",
+      "shape": "capsule",
+      "color": "#84CC16"
+    },
+    {
+      "name": "End / exit",
+      "category": "Logic & goals",
+      "family": "goal",
+      "shape": "capsule",
+      "color": "#84CC16"
+    },
+    {
+      "name": "Sticky note",
+      "category": "Notes & layout",
+      "family": "note",
+      "shape": "note",
+      "color": "#94A3B8"
+    },
+    {
+      "name": "Text",
+      "category": "Notes & layout",
+      "family": "note",
+      "shape": "note",
+      "color": "#94A3B8"
+    },
+    {
+      "name": "Heading",
+      "category": "Notes & layout",
+      "family": "note",
+      "shape": "note",
+      "color": "#94A3B8"
+    },
+    {
+      "name": "Frame / stage",
+      "category": "Notes & layout",
+      "family": "note",
+      "shape": "note",
+      "color": "#94A3B8"
+    },
+    {
+      "name": "Rectangle",
+      "category": "Notes & layout",
+      "family": "note",
+      "shape": "note",
+      "color": "#94A3B8"
+    },
+    {
+      "name": "Ellipse",
+      "category": "Notes & layout",
+      "family": "note",
+      "shape": "note",
+      "color": "#94A3B8"
+    },
+    {
+      "name": "Line / arrow",
+      "category": "Notes & layout",
+      "family": "note",
+      "shape": "note",
+      "color": "#94A3B8"
+    },
+    {
+      "name": "Image",
+      "category": "Notes & layout",
+      "family": "note",
+      "shape": "note",
+      "color": "#94A3B8"
+    },
+    {
+      "name": "Video embed",
+      "category": "Notes & layout",
+      "family": "note",
+      "shape": "note",
+      "color": "#94A3B8"
+    },
+    {
+      "name": "Link card",
+      "category": "Notes & layout",
+      "family": "note",
+      "shape": "note",
+      "color": "#94A3B8"
+    },
+    {
+      "name": "Checklist",
+      "category": "Notes & layout",
+      "family": "note",
+      "shape": "note",
+      "color": "#94A3B8"
+    },
+    {
+      "name": "Goal pill",
+      "category": "Notes & layout",
+      "family": "note",
+      "shape": "note",
+      "color": "#94A3B8"
+    },
+    {
+      "name": "Divider",
+      "category": "Notes & layout",
+      "family": "note",
+      "shape": "note",
+      "color": "#94A3B8"
+    },
+    {
+      "name": "Emoji / icon",
+      "category": "Notes & layout",
+      "family": "note",
+      "shape": "note",
+      "color": "#94A3B8"
+    },
+    {
+      "name": "Facebook Group",
+      "category": "Communities",
+      "family": "crm",
+      "shape": "circle",
+      "color": "#1877F2",
+      "source": "your-app-screenshot"
+    },
+    {
+      "name": "WhatsApp Group",
+      "category": "Communities",
+      "family": "crm",
+      "shape": "circle",
+      "color": "#25D366",
+      "source": "your-app-screenshot"
+    },
+    {
+      "name": "Telegram Group",
+      "category": "Communities",
+      "family": "crm",
+      "shape": "circle",
+      "color": "#26A5E4",
+      "source": "your-app-screenshot"
+    },
+    {
+      "name": "Skool",
+      "category": "Communities",
+      "family": "crm",
+      "shape": "circle",
+      "color": "#14B8A6",
+      "source": "your-app-screenshot"
+    },
+    {
+      "name": "Courses.gg",
+      "category": "Communities",
+      "family": "crm",
+      "shape": "circle",
+      "color": "#14B8A6",
+      "source": "your-app-screenshot"
+    },
+    {
+      "name": "Kajabi",
+      "category": "Communities",
+      "family": "crm",
+      "shape": "circle",
+      "color": "#14B8A6",
+      "source": "your-app-screenshot"
+    },
+    {
+      "name": "Thinkific",
+      "category": "Communities",
+      "family": "crm",
+      "shape": "circle",
+      "color": "#14B8A6",
+      "source": "your-app-screenshot"
+    },
+    {
+      "name": "Teachable",
+      "category": "Communities",
+      "family": "crm",
+      "shape": "circle",
+      "color": "#14B8A6",
+      "source": "your-app-screenshot"
+    },
+    {
+      "name": "AI Call Incoming",
+      "category": "AI Calling",
+      "family": "message",
+      "shape": "capsule",
+      "color": "#2DD4BF",
+      "source": "your-app-screenshot"
+    },
+    {
+      "name": "AI Call Outgoing",
+      "category": "AI Calling",
+      "family": "message",
+      "shape": "capsule",
+      "color": "#2DD4BF",
+      "source": "your-app-screenshot"
+    },
+    {
+      "name": "AI Call Setter",
+      "category": "AI Calling",
+      "family": "message",
+      "shape": "capsule",
+      "color": "#2DD4BF",
+      "source": "your-app-screenshot"
+    },
+    {
+      "name": "AI Closer",
+      "category": "AI Calling",
+      "family": "message",
+      "shape": "capsule",
+      "color": "#2DD4BF",
+      "source": "your-app-screenshot"
+    },
+    {
+      "name": "OpenAI",
+      "category": "AI Automation",
+      "family": "crm",
+      "shape": "circle",
+      "color": "#10A37F",
+      "source": "your-app-screenshot"
+    },
+    {
+      "name": "ChatGPT",
+      "category": "AI Automation",
+      "family": "crm",
+      "shape": "circle",
+      "color": "#10A37F",
+      "source": "your-app-screenshot"
+    },
+    {
+      "name": "Anthropic",
+      "category": "AI Automation",
+      "family": "crm",
+      "shape": "circle",
+      "color": "#D97757",
+      "source": "your-app-screenshot"
+    },
+    {
+      "name": "Voice-to-Text",
+      "category": "AI Automation",
+      "family": "crm",
+      "shape": "circle",
+      "color": "#6366F1",
+      "source": "your-app-screenshot"
+    },
+    {
+      "name": "Text-to-Speech",
+      "category": "AI Automation",
+      "family": "crm",
+      "shape": "circle",
+      "color": "#6366F1",
+      "source": "your-app-screenshot"
+    },
+    {
+      "name": "Image Generation",
+      "category": "AI Automation",
+      "family": "crm",
+      "shape": "circle",
+      "color": "#6366F1",
+      "source": "your-app-screenshot"
+    },
+    {
+      "name": "Video Generation",
+      "category": "AI Automation",
+      "family": "crm",
+      "shape": "circle",
+      "color": "#6366F1",
+      "source": "your-app-screenshot"
+    },
+    {
+      "name": "Data Analytics",
+      "category": "AI Automation",
+      "family": "crm",
+      "shape": "circle",
+      "color": "#6366F1",
+      "source": "your-app-screenshot"
+    },
+    {
+      "name": "Write Code",
+      "category": "AI Automation",
+      "family": "crm",
+      "shape": "circle",
+      "color": "#6366F1",
+      "source": "your-app-screenshot"
+    }
+  ]
+}

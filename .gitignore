@@ -3,3 +3,6 @@ node_modules/
 .env.*
 *.dump
 *.age
+e2e-shots/
+dist/
+!apps/funnel-mapper/.env.example

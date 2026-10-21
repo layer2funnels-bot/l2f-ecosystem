@@ -27,6 +27,54 @@ jobs:
       - run: npm run check:secrets
       - run: npm run check:licences
       - run: npm run check:tokens
+      - run: npm run check:fmp-copy
       - run: DRIVERS=pglite,pg npm test
       - run: npm run drill:restore
       - run: npm run test:mutation
+
+  # Real browser + real Supabase Auth + our routes + Postgres, all on the runner (Supabase CLI local stack, Docker). No live project.
+  e2e:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - uses: supabase/setup-cli@v1
+        with: { version: 2.121.0 }
+      - name: Start the local Supabase stack and apply our migrations
+        run: |
+          npm run stack:start
+          npm run stack:migrate
+      - name: Playwright (not a project dependency; installed for this job only)
+        run: |
+          npm install --no-save --no-package-lock playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: API end-to-end (real Auth tokens)
+        run: npm run test:e2e
+      - name: Browser end-to-end (real Chromium)
+        run: npm run test:e2e:ui
+        env: { PLAYWRIGHT_MODULE: '${{ github.workspace }}/node_modules/playwright' }
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with: { name: e2e-shots, path: e2e-shots, if-no-files-found: ignore }
+      - if: always()
+        run: supabase stop --no-backup || true
+
+  # The unedited Funnel Mapper Pro code copy must keep building and passing its own checks (its database and browser suites
+  # need their own Supabase stack and run on demand: see docs/FMP_COPY_REPORT.md). No environment files, no live project.
+  fmp-copy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults: { run: { working-directory: apps/funnel-mapper } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24, cache: npm, cache-dependency-path: apps/funnel-mapper/package-lock.json }
+      - run: npm ci
+      - run: npm run check:files
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      - run: npm run typecheck

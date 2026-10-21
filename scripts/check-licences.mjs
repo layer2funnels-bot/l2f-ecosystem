@@ -13,3 +13,17 @@ for (const [path, meta] of Object.entries(lock.packages || {})) {
 }
 if (bad.length) { console.log('FAIL licence check:\n  ' + bad.join('\n  ')); process.exit(1); }
 console.log(`PASS licence check: ${n} packages, all on the allowlist`);
+
+// Funnel Mapper Pro code copy: its own dependency tree (not installed or shipped by the ecosystem). Reported, not failing:
+// anything listed here needs a review entry in docs/DECISIONS.md BEFORE the copy is reshaped into the ecosystem or deployed.
+try {
+  const fmp = JSON.parse(readFileSync(new URL('../apps/funnel-mapper/package-lock.json', import.meta.url), 'utf8'));
+  const flagged = new Map(); let total = 0;
+  for (const [path, meta] of Object.entries(fmp.packages || {})) {
+    if (!path) continue; total++;
+    const lic = String(meta.license ?? 'UNKNOWN');
+    if (!lic.replace(/[()]/g, '').split(/\s+OR\s+/).some((p) => ALLOW.has(p.trim()))) flagged.set(lic, [...(flagged.get(lic) ?? []), path.replace(/^.*node_modules\//, '')]);
+  }
+  console.log(`INFO FMP copy: ${total} packages, ${[...flagged.values()].flat().length} outside the allowlist (review before reshaping or deploying)`);
+  for (const [lic, pk] of flagged) console.log(`  ${lic}: ${[...new Set(pk)].slice(0, 6).join(', ')}${pk.length > 6 ? ', …' : ''}`);
+} catch { /* copy not present */ }

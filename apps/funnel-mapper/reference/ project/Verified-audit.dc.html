@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Verified audit</title><script src="./support.js"></script></head>
+<body><x-dc><helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&amp;family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&amp;family=JetBrains+Mono:wght@500&amp;display=swap">
+<style>
+body{margin:0;background:#070B14}*{box-sizing:border-box}
+.app{font-family:'DM Sans',system-ui,sans-serif;color:#CBD5E1;background:#0B1220;width:1440px;position:relative;font-size:13.5px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.doc{position:absolute;left:120px;width:1200px;top:48px}
+h1,h2,h3{font-family:'Bricolage Grotesque','DM Sans',sans-serif;letter-spacing:-.01em;color:#F8FAFC;font-weight:600}
+h1{font-size:30px;margin:0 0 14px}h2{font-size:21px;margin:40px 0 14px;padding-top:22px;border-top:1px solid #1E293B;color:#10B981}h3{font-size:16px;margin:24px 0 10px}
+p{margin:0 0 12px}strong{color:#F1F5F9;font-weight:600}
+code{font-family:'JetBrains Mono',monospace;font-size:12px;background:#0F172A;border:1px solid #1E293B;border-radius:4px;padding:0 5px;color:#E2E8F0}
+kbd{font-family:'JetBrains Mono',monospace;font-size:11px;color:#E2E8F0;border:1px solid #334155;border-bottom-width:2px;border-radius:4px;padding:0 4px;background:#0F172A}
+table{width:100%;border-collapse:collapse;margin:6px 0 18px;font-size:12.5px}
+th{text-align:left;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:#94A3B8;font-weight:600;padding:8px 10px;border-bottom:1px solid #334155}
+td{padding:9px 10px;border-bottom:1px solid #1E293B;vertical-align:top}
+ul,ol{margin:0 0 14px;padding-left:20px}li{margin-bottom:6px}
+li.cb{list-style:none;margin-left:-20px;padding-left:28px;position:relative}.bx{position:absolute;left:0;top:4px;width:14px;height:14px;border:1.5px solid #475569;border-radius:4px}
+hr{border:0;border-top:1px solid #1E293B;margin:24px 0}em{color:#94A3B8}
+</style></helmet>
+<div class="app" style="height:5728px"><div class="doc"><h1>Funnel Mapper Pro V2 — Verified audit and corrections for approval</h1>
+<p><strong>Scope.</strong> I checked the 11 findings from the screenshot audit against all 37 boards in the design package, the V1 product audit in the project files, and the recorded product decisions. <strong>I have no access to the running app or its repository</strong>, so anything about current app behaviour is marked <em>needs verification</em>. Nothing here changes maths or business logic.</p>
+<p><strong>What was done in this pass (your direct requests):</strong> your block icons in the library and the editor sidebar; the page screenshot thumbnails and hover peek applied across the product boards; a new <em>Blocks sidebar</em> board (which answers where widgets live); and the simulation spec for Claude Code (<code>SIMULATION_SPEC.md</code>). <strong>The corrections below are proposals.</strong> Approve them and I will apply them.</p>
+<h2>1. The 11 findings, checked</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Finding</th>
+<th>Status</th>
+<th>Where</th>
+<th>What's wrong, and why it matters</th>
+<th>Correction</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Visual direction</td>
+<td><strong>Not present</strong> in the design; <strong>confirmed</strong> as a risk</td>
+<td>All 37 boards are dark. Settings › <em>Appearance</em> exists, but its options are not designed.</td>
+<td>The light screenshot almost certainly came from the <strong>current live app</strong> (light theme, red accent), not V2. The risk is the Appearance page: if it offers a light theme, nothing in the package designs it.</td>
+<td><strong>Dark is authoritative</strong> (your decision). Either remove the theme choice from Appearance, or approve a light theme as a separate project.</td>
+<td>Package + your decision</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Revenue and periods</td>
+<td><strong>Confirmed</strong></td>
+<td>Canvas objects (<code>$3,064</code>, <code>$3,188</code>, <code>$1,234</code> show no period); Forecast (<code>Revenue $196.2k</code> sits next to monthly figures); Client (<code>Planned revenue (live) $63,250 / mo</code>); <em>Count revenue as First payment / Lifetime value</em> changes every revenue figure but is shown only in the funnel panel.</td>
+<td>A person can't tell whether <code>$3,188</code> is per month, per year or lifetime, or whether <code>$196.2k</code> is a total. Wrong decisions follow.</td>
+<td>Every money figure carries a period: <code>/ mo</code>, <code>/ yr</code>, or <code>12-mo total</code>. When the funnel counts lifetime value, add an <code>LTV</code> tag beside revenue on the KPI strip, Reports header, widgets and PDF. Forecast totals read <code>12-month total</code>. Drop "(live)" from the Client page.</td>
+<td>Package</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Fractional people</td>
+<td><strong>Confirmed</strong></td>
+<td>Canvas <code>82.8 buy</code>, <code>No 53.8</code>, <code>45.7 buy</code>; KPI strip and Reports <code>Customers 128.5</code>; block Analytics <code>Day 75.6 → 34</code></td>
+<td>Half a customer reads as a bug and undermines trust in every other number.</td>
+<td>Show whole people everywhere (<code>83 buy</code>), with the exact modelled value on hover (<code>82.8 · modelled average</code>). Under 10, show one decimal with <em>avg</em>. Money is still calculated from the exact values. <strong>Needs your decision</strong> (Q2).</td>
+<td>Package</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Simulation comparison</td>
+<td><strong>Partly confirmed</strong></td>
+<td><em>Simulate › Scenarios</em> lists Baseline "Current map" <strong>and</strong> Expected "Same as map". The top bar shows only <code>Expected</code>. No board shows the canvas while simulating.</td>
+<td>Two names for the same thing confuse which one is the comparison point. Without a simulation view, changed assumptions and before → after live only in a list. Timestamps are not used (good).</td>
+<td>Rename to <strong>Baseline (current map)</strong> and remove the duplicate Expected, or give it real assumptions. Top bar: <code>Scenario: Best case · vs Baseline</code>. Simulation as specified in <code>SIMULATION_SPEC.md</code>: Δ chips on changed blocks, before → after on the KPI strip.</td>
+<td>Package</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Validation status</td>
+<td><strong>Confirmed</strong> (label)</td>
+<td>KPI strip <code>4 checks</code>; panel <code>Health · 4 checks — Fix in order</code></td>
+<td>"4 checks" reads like 4 passed when it means 4 problems. "Health" sounds like performance.</td>
+<td>Rename to <strong>Model checks</strong>: <code>4 to fix</code> (amber) or <code>All clear</code> (emerald). Keep it separate from performance (Biggest leak) and from data freshness (<code>Actuals updated 3 Oct</code>).</td>
+<td>Package</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Data provenance</td>
+<td><strong>Confirmed</strong></td>
+<td><em>Track › Actuals</em> tab exists. Widgets show <code>Actual / Plan · −7.7% vs plan · last full month</code>. Canvas and Reports don't mark which numbers are modelled and which are actual.</td>
+<td>A strategist presenting to a client must know whether a figure was measured or assumed.</td>
+<td>One tag system: <strong>Plan</strong> (modelled), <strong>Forecast</strong> (projected), <strong>Actual</strong> (entered or imported, with period and source on hover). The Reports header states the basis: <code>Plan · Expected scenario · per month</code>.</td>
+<td>Package; actuals behaviour needs verification</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Navigation and labels</td>
+<td><strong>Confirmed</strong> (wording)</td>
+<td>Top bar <code>Expected</code> (an unlabelled scenario name), <code>Tidy up</code>, view toggle <code>Clean · Performance · Layers</code>. "Live" means three things: block status, funnel status, and recalculated numbers.</td>
+<td>Ambiguous words slow every new user, and "Live" can mislead a client.</td>
+<td><code>Scenario: Expected</code>. <code>Tidy up</code> → <strong>Arrange</strong>, with tooltip <em>Tidy up blocks ⇧⌘L</em>. "Live" only for published funnels and pages; recalculated numbers get no label. The 16 icon-only editor buttons already have accessible names, so keep them.</td>
+<td>Package</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Canvas connections</td>
+<td><strong>Mostly working</strong></td>
+<td><code>Blocks-and-lines.dc.html</code>: converted = solid + right (Y) port; didn't convert = dashed orange + bottom (N) port; skip = dotted. People on every path.</td>
+<td>Not colour-only (good). Gap: path labels shrink to about 7px at 60% zoom and no low-zoom rule exists.</td>
+<td>Below 50% zoom hide path numbers but keep thickness and dashes. Keep the people count on hover.</td>
+<td>Package</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Product coverage</td>
+<td><strong>Mostly covered</strong></td>
+<td>Home, Clients, Client, Products, Funnels, Templates, Editor, Funnel tools, Performance, Widgets, Reports, Share, Shared view, Present, Settings</td>
+<td>Missing: a new client and new workspace setup flow (buttons exist, no form board), an export preview (PDF / PNG), an Appearance page, and simulation (now specified).</td>
+<td>Add boards for: New client form, PDF export preview, and either Appearance or its removal.</td>
+<td>Package</td>
+</tr>
+<tr>
+<td>10</td>
+<td>States and devices</td>
+<td><strong>Confirmed gaps</strong></td>
+<td>No first-use state anywhere; few product-level empty states; loading and error only for thumbnails; <code>Saved</code> exists but not unsaved, offline or save-failed; viewer role only in Settings; phones designed at 390 only; phone controls 28–34px</td>
+<td>Blank or unexplained screens are where people get stuck. Small targets cause mis-taps.</td>
+<td>Design empty and first-use states for canvas, clients, funnels and reports. Add save states (<em>Saving… / Saved / Not saved — retry / Offline</em>). Add the viewer-role editor. Make phone targets 44px. Check 414 and 430.</td>
+<td>Package</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Intelligence readiness</td>
+<td><strong>Good foundations exist</strong></td>
+<td><em>Biggest leak</em> with <strong>Locate</strong>; <em>Model checks</em> with <em>Fix in order</em>; goal impact (<code>Hitting 50% adds about $375 / mo</code>); Reports <em>Try in What-if</em> and <em>Click a bar to find it on the map</em></td>
+<td>These are deterministic, useful and already in the right places.</td>
+<td>Unify them as one <strong>Finding</strong> component (headline · evidence · impact · action). Reserve an Insights slot in block Analytics. Add provenance tags (finding 6) and a command registry behind ⌘K. Build no intelligence features now.</td>
+<td>Package</td>
+</tr>
+</tbody>
+</table>
+<h2>2. Prioritised corrections</h2>
+<h3>P0 — must fix before design freeze</h3>
+<table>
+<thead>
+<tr>
+<th>Screen / component</th>
+<th>Correction</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Canvas, KPI strip, Reports, Widgets, PDF</td>
+<td>Period and basis on every money figure (finding 2).</td>
+</tr>
+<tr>
+<td>Same surfaces</td>
+<td>Whole-person display rule (finding 3, after your decision).</td>
+</tr>
+<tr>
+<td>Scenarios + top bar</td>
+<td>Baseline naming, the scenario chip, the simulation view per spec (finding 4).</td>
+</tr>
+<tr>
+<td>Funnel panel + KPI strip</td>
+<td>"Model checks · 4 to fix" (finding 5).</td>
+</tr>
+<tr>
+<td>Canvas, Reports, Track</td>
+<td>Plan / Forecast / Actual tags and the Actuals period picker (finding 6).</td>
+</tr>
+<tr>
+<td>Canvas, Clients, Funnels, Reports</td>
+<td>First-use and empty states (finding 10).</td>
+</tr>
+<tr>
+<td>Phone editor</td>
+<td>44px touch targets (finding 10).</td>
+</tr>
+<tr>
+<td>Whole package</td>
+<td>One visual check in a real browser (nothing has been verified by screenshot).</td>
+</tr>
+<tr>
+<td>Library</td>
+<td>Reconcile the library count against the app's block definitions; send the 3 Communities blocks below the fold.</td>
+</tr>
+</tbody>
+</table>
+<h3>P1 — strongly recommended</h3>
+<table>
+<thead>
+<tr>
+<th>Screen / component</th>
+<th>Correction</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Top bar</td>
+<td><code>Scenario:</code> label; Tidy up → Arrange; one meaning for "Live" (finding 7).</td>
+</tr>
+<tr>
+<td>Canvas</td>
+<td>Low-zoom rule for path labels and page objects (finding 8).</td>
+</tr>
+<tr>
+<td>Save indicator</td>
+<td>Saving / Not saved — retry / Offline (finding 10).</td>
+</tr>
+<tr>
+<td>Editor</td>
+<td>Viewer-role state; report-level error and no-data states (finding 10).</td>
+</tr>
+<tr>
+<td>New boards</td>
+<td>New client form; PDF export preview; simulation board from the spec (finding 9).</td>
+</tr>
+<tr>
+<td>Insights</td>
+<td>One <em>Finding</em> component replacing three styles (finding 11).</td>
+</tr>
+<tr>
+<td>Phones</td>
+<td>414 and 430 checked against 390.</td>
+</tr>
+</tbody>
+</table>
+<h3>P2 — future enhancement</h3>
+<ul>
+<li>A split-screen scenario map.</li>
+<li>Light theme, only if you want one (finding 1).</li>
+<li><em>Show page previews</em> switch on share links (client privacy).</li>
+<li>An Intelligence entry in navigation, only when real findings exist.</li>
+</ul>
+<h2>3. What already works well</h2>
+<ul>
+<li>The page object: a window of the real page, two numbers, a type caption, and Y / N paths. A person recognises a page before reading it.</li>
+<li>Connections read without colour alone (port position, dash, labels).</li>
+<li><strong>Model / Simulate / Track</strong> is a clear product loop, and Scenarios already say what they change in words, not timestamps.</li>
+<li><em>Biggest leak → Locate</em> and goal impact are the right kind of help: deterministic, contextual and actionable.</li>
+<li>Reports state "Per month unless stated" and "Same engine as the map and the PDF". That is exactly the trust message.</li>
+<li>The dark, Emerald, editorial direction is applied consistently on all 37 boards.</li>
+</ul>
+<h2>4. Simpler, like GERU and Funnelytics</h2>
+<p>Their strength is that each screen asks one thing of you. Applied here:</p>
+<ul>
+<li><strong>Blocks sidebar (done):</strong> one list instead of 9 filter chips plus sections. Search, Recent, client products, then categories.</li>
+<li><strong>Funnel panel:</strong> 3 modes with 11 sub-tabs is the heaviest part of the product. Proposal: each mode opens on its most-used view, and the rest sit one level down.</li>
+<li>Model: Overview, with Steps / Sources / Costs below.</li>
+<li>Simulate: What-if, with Scenarios below.</li>
+<li>Track: Forecast, with Actuals below.</li>
+<li><strong>Numbers on objects:</strong> keep two numbers per object. Resist adding more.</li>
+<li><strong>KPI strip:</strong> keep 6 KPIs plus <em>more</em>.</li>
+</ul>
+<h2>5. Questions that need your decision</h2>
+<ol>
+<li><strong>Light theme:</strong> remove the theme choice from Appearance, or design a light theme later?</li>
+<li><strong>People:</strong> round to whole numbers in the UI with the exact value on hover (recommended), or show decimals with an <em>est.</em> label?</li>
+<li><strong>Expected scenario:</strong> delete it (it equals Baseline) or give it real assumptions?</li>
+<li><strong>Revenue basis:</strong> when a funnel counts lifetime value, show <code>LTV</code> beside every revenue figure (recommended), or only in Reports?</li>
+<li><strong>Actuals:</strong> where do actuals come from: typed in, imported (CSV), or both? This decides what the source tag says.</li>
+<li><strong>Simulation:</strong> v1 without a split-screen map, as in the spec? And no random (Monte Carlo) simulation?</li>
+<li><strong>Communities:</strong> send the 3 blocks below the fold, and the rest of the block definitions, to lock the count.</li>
+</ol>
+<h2>6. Design-freeze checklist</h2>
+<ul>
+<li class="cb"><span class="bx"></span>Every money figure has a period (and LTV when relevant).</li>
+<li class="cb"><span class="bx"></span>People shown by the agreed rule.</li>
+<li class="cb"><span class="bx"></span>Baseline is unambiguous; scenario chip in the top bar; simulation view built from the spec.</li>
+<li class="cb"><span class="bx"></span>"Model checks" separate from performance and from data freshness.</li>
+<li class="cb"><span class="bx"></span>Plan / Forecast / Actual tags with period and source.</li>
+<li class="cb"><span class="bx"></span>First-use and empty states for canvas, clients, funnels and reports.</li>
+<li class="cb"><span class="bx"></span>Save states including offline and failed.</li>
+<li class="cb"><span class="bx"></span>Viewer-role editor.</li>
+<li class="cb"><span class="bx"></span>Phone targets 44px; 414 and 430 checked.</li>
+<li class="cb"><span class="bx"></span>New client form and PDF export preview designed.</li>
+<li class="cb"><span class="bx"></span>Library count reconciled and read live from the block list.</li>
+<li class="cb"><span class="bx"></span>One visual pass in a real browser, every board.</li>
+</ul>
+<h2>7. Gaps that prevent a firm conclusion</h2>
+<ul>
+<li><strong>No access to the running app or its code.</strong> Current behaviour of actuals, sharing permissions, exports and the Appearance setting is inferred from the V1 audit and the designs.</li>
+<li><strong>The screenshot audit's source image wasn't supplied.</strong> I'm assuming it was the live app, based on the light theme.</li>
+<li><strong>The block definitions file has not been provided.</strong> The count can't be certified.</li>
+<li><strong>No board has been seen rendered.</strong> All checks were structural plus the image crops I viewed.</li>
+</ul></div></div></x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":5728}}'>
+class Component extends DCLogic { renderVals() { return {}; } }
+</script></body></html>

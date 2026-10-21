@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Page URL → thumbnail</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<!-- Rebuilt on the funnel-native page object (the captured screenshot fills the object's page window). Merged over the earlier strip-node version; no user edits were present in that version. -->
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&amp;family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#070B14}
+*{box-sizing:border-box}
+.app{font-family:'DM Sans',system-ui,sans-serif;color:#E2E8F0;background:#0B1220;width:1440px;position:relative;font-size:13px;line-height:1.35;-webkit-font-smoothing:antialiased;font-feature-settings:'tnum' 1}
+.disp{font-family:'Bricolage Grotesque','DM Sans',sans-serif;letter-spacing:-.01em}
+h2.t{margin:0;font-size:26px;font-weight:600;color:#F8FAFC}
+p.lead{margin:4px 0 0;color:#94A3B8;font-size:13.5px;max-width:980px}
+.grid{position:absolute;left:62px;right:62px;top:150px;display:flex;flex-wrap:wrap;gap:20px}
+.cell{width:246px}
+.cap{display:flex;align-items:center;gap:8px;margin:0 0 9px;font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:#94A3B8;font-weight:600}
+.cap i{width:18px;height:18px;border-radius:50%;background:#1E293B;border:1px solid #334155;color:#CBD5E1;display:grid;place-items:center;font-size:10px;font-weight:700;letter-spacing:0;font-family:'JetBrains Mono',monospace;flex:none}
+.pane{background:#0F172A;border:1px solid #1E293B;border-radius:12px;padding:14px;height:184px;display:flex;flex-direction:column;justify-content:center}
+/* page node */
+.node{width:196px;margin:0 auto;background:#111827;border:1px solid #2A3648;border-radius:10px;padding:10px;position:relative}
+.node.sel{border-color:#10B981;box-shadow:0 0 0 1px #10B981,0 0 0 5px rgba(16,185,129,.16)}
+.nh{display:flex;align-items:center;gap:8px;padding-right:12px}
+.ni{width:26px;height:26px;border-radius:7px;display:grid;place-items:center;flex:none;background:rgba(167,139,250,.15);color:#A78BFA}
+.nt{display:flex;flex-direction:column;min-width:0;flex:1}
+.nt b{font-weight:600;font-size:13px;color:#F1F5F9}.nt span{font-size:11px;color:#94A3B8}
+.st{width:7px;height:7px;border-radius:50%;position:absolute;right:10px;top:12px}.st.live{background:#22C55E}.st.plan{border:1.5px solid #64748B}
+.wfw{margin:-2px -2px 8px;height:48px;border-radius:6px;background:#0B1220;border:1px solid #1E293B;overflow:hidden;position:relative}
+.wfw.tall{height:62px}
+.shot{position:absolute;inset:0;background:#0B1220}
+.shot .cr{height:9px;background:#1E293B;display:flex;align-items:center;gap:3px;padding:0 5px}
+.shot .cr i{width:3px;height:3px;border-radius:50%;background:#475569;display:block}
+.shimmer{position:absolute;inset:0;background:linear-gradient(100deg,#0F172A 30%,#1E293B 50%,#0F172A 70%)}
+.spin{width:16px;height:16px;border-radius:50%;border:2px solid #334155;border-top-color:#34D399;position:absolute;left:50%;top:50%;margin:-8px 0 0 -8px}
+.bd{position:absolute;top:5px;left:5px;height:15px;padding:0 6px;border-radius:4px;font-size:9.5px;font-weight:700;display:inline-flex;align-items:center;gap:3px}
+.nm{margin-top:9px;padding-top:8px;border-top:1px solid #1E293B;font-size:11.5px;color:#94A3B8}
+/* inspector control fragment */
+.ins{background:#111827;border:1px solid #273449;border-radius:10px;padding:12px}
+.ins .lab{font-size:11px;color:#94A3B8;font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px}
+.inw{display:flex;align-items:center;gap:8px;height:32px;padding:0 10px;background:#0B1220;border:1px solid #334155;border-radius:8px;color:#94A3B8;font-size:12px}
+.inw.foc{border-color:#10B981;box-shadow:0 0 0 3px rgba(16,185,129,.15)}
+.inw input{flex:1;min-width:0;background:transparent;border:0;color:#F1F5F9;font:inherit;font-size:12.5px;outline:none}
+.btn{height:30px;padding:0 11px;border-radius:7px;border:1px solid #334155;background:transparent;color:#CBD5E1;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+.btn.pri{background:#10B981;border-color:#10B981;color:#03241A}
+.btn.dis{color:#475569;border-color:#273449}
+.menu{background:#1E293B;border:1px solid #334155;border-radius:9px;box-shadow:0 14px 34px rgba(0,0,0,.5);padding:5px;width:150px}
+.mi{display:flex;align-items:center;gap:9px;height:30px;padding:0 8px;border-radius:6px;color:#E2E8F0;font-size:12.5px}
+.mi:hover,.mi.h{background:#0B1220}.mi.danger{color:#FCA5A5}
+kbd{font-family:'JetBrains Mono',monospace;font-size:10px;color:#94A3B8;border:1px solid #334155;border-radius:3px;padding:0 3px;background:#0B1220}
+.note{background:#0F172A;border:1px solid #1E293B;border-radius:12px;padding:16px 18px;color:#94A3B8;font-size:12.5px;line-height:1.55}
+.note b{color:#E2E8F0}
+
+/* ===== Page / Offer object (funnel-native) ===== */
+.node.fam-page,.node.fam-offer{height:112px;padding:0;overflow:visible}
+.pgo{display:flex;flex-direction:column;height:100%;border-radius:inherit;overflow:hidden}
+.pgo-top{display:flex;gap:10px;flex:1;min-height:0;padding:7px 10px 0 8px}
+.pgo-win{width:68px;height:76px;flex:none;border-radius:5px;overflow:hidden;background:#F4F6FA;border:1px solid #475569;box-shadow:0 2px 6px rgba(0,0,0,.4);box-sizing:border-box}
+.pgo-chrome{height:9px;background:#E3E8F0;display:flex;align-items:center;gap:2px;padding:0 4px;border-bottom:1px solid #D4DAE6;box-sizing:border-box}
+.pgo-chrome i{width:3px;height:3px;border-radius:50%;display:block;background:#AEB7C6}
+.pgo-chrome i:nth-child(1){background:#F87171}.pgo-chrome i:nth-child(2){background:#FBBF24}.pgo-chrome i:nth-child(3){background:#34D399}
+.pgo-win svg{display:block}
+.pgo-info{min-width:0;flex:1;display:flex;flex-direction:column;justify-content:space-between;padding:1px 0 5px}
+.pgo-title{font-size:13px;font-weight:600;color:#F1F5F9;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
+.pgo-m{display:flex;flex-direction:column;gap:1px;min-width:0}
+.pgo-l{font-size:10.5px;color:#94A3B8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pgo-l strong{color:#E2E8F0;font-weight:600}
+.pgo-r{font-family:'Bricolage Grotesque',sans-serif;font-size:15px;font-weight:600;color:#F1F5F9;line-height:1.15;letter-spacing:-.01em}
+.pgo-cap{height:22px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 10px 0 8px;background:#0B1220;border-top:1px solid #1E293B}
+.pgo-ty{display:flex;align-items:center;gap:6px;font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;white-space:nowrap;min-width:0}
+.pgo-ic{width:14px;height:14px;border-radius:4px;display:grid;place-items:center;color:#fff;flex:none}
+.pgo-ic svg{width:9px;height:9px}
+.node .pgo-cap .st{position:static;flex:none}
+.node.fam-page .port,.node.fam-offer .port{width:16px;height:16px;border:2px solid #0B1220;display:grid;place-items:center;font-size:8.5px;font-weight:800;line-height:1;color:#03241A;z-index:3;box-sizing:border-box}
+.node.fam-page .port.pr,.node.fam-offer .port.pr{right:-9px;left:auto;top:50%;margin-top:-8px;background:#10B981}
+.node.fam-page .port.pr::after,.node.fam-offer .port.pr::after{content:"Y"}
+.node.fam-page .port.pb,.node.fam-offer .port.pb{left:50%;margin-left:-8px;bottom:-9px;top:auto;background:#F97316}
+.node.fam-page .port.pb::after,.node.fam-offer .port.pb::after{content:"N"}
+.node.fam-page .port.pl,.node.fam-offer .port.pl{left:-7px;top:50%;margin-top:-6px;width:12px;height:12px;background:#0B1220;border:2px solid #64748B}
+.port{position:absolute;border-radius:50%}
+.mw{display:block;border-radius:5px;overflow:hidden;background:#F4F6FA;border:1px solid #475569;box-shadow:0 2px 6px rgba(0,0,0,.4)}.mwc{display:flex;gap:2px;align-items:center;height:7px;padding:0 3px;background:#E3E8F0}.mwc i{width:2.5px;height:2.5px;border-radius:50%;display:block}.mwc i:nth-child(1){background:#F87171}.mwc i:nth-child(2){background:#FBBF24}.mwc i:nth-child(3){background:#34D399}.mw svg{display:block}.pgo-cap .st{width:7px;height:7px;border-radius:50%;display:block}.pgo-cap .st.live{background:#22C55E}.pgo-cap .st.plan{border:1.5px solid #64748B}
+
+/* four neutral ports: the line is chosen when you connect, not by the port */
+.node.fam-page .port,.node.fam-offer .port{width:12px!important;height:12px!important;border:2px solid #64748B!important;background:#0B1220!important;font-size:0!important;box-sizing:border-box;display:block}
+.node.fam-page .port::after,.node.fam-offer .port::after{content:none!important}
+.node.fam-page .port.pr,.node.fam-offer .port.pr{right:-7px;left:auto;top:50%;margin-top:-6px}
+.node.fam-page .port.pl,.node.fam-offer .port.pl{left:-7px;top:50%;margin-top:-6px}
+.node.fam-page .port.pb,.node.fam-offer .port.pb{left:50%;margin-left:-6px;bottom:-7px;top:auto}
+.node.fam-page::before,.node.fam-offer::before{content:"";position:absolute;left:50%;top:-7px;margin-left:-6px;width:12px;height:12px;border-radius:50%;background:#0B1220;border:2px solid #64748B;box-sizing:border-box;z-index:3}
+
+/* ports appear on hover, selection or while connecting; a calm map at rest */
+.node.fam-page .port,.node.fam-offer .port,.node.fam-page::before,.node.fam-offer::before{opacity:0;transition:opacity .12s}
+.node.fam-page:hover .port,.node.fam-offer:hover .port,.node.fam-page.sel .port,.node.fam-offer.sel .port,.node.fam-page.hov .port,.node.fam-offer.hov .port,.node.fam-page.msel .port,.node.fam-offer.msel .port,.node.on-port .port,
+.node.fam-page:hover::before,.node.fam-offer:hover::before,.node.fam-page.sel::before,.node.fam-offer.sel::before,.node.fam-page.hov::before,.node.fam-offer.hov::before,.node.fam-page.msel::before,.node.fam-offer.msel::before,.node.on-port::before{opacity:1}
+</style>
+</helmet>
+<div class="app" style="height:1080px">
+  <div style="position:absolute;left:62px;top:38px;right:62px">
+    <h2 class="t disp">Page URL → real thumbnail</h2>
+    <p class="lead">A Page block shows its real screenshot once a URL is captured — a first-class visual, not a browser placeholder. Until then it shows the <b>semantic page-type wireframe</b> for its type. Below: every state of the capture lifecycle and the inspector control that drives it.</p>
+  </div>
+
+  <div class="grid">
+    <!-- 1 --><div class="cell"><div class="cap"><i>1</i> No preview yet</div><div class="pane"><div class="node fam-page "><div class="pgo"><div class="pgo-top"><div class="pgo-win"><div class="pgo-chrome"><i></i><i></i><i></i></div><svg width="66" height="65" viewBox="0 0 66 65" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><rect width="66" height="65" fill="#F4F6FA"/><rect x="6" y="5" width="54" height="21" rx="2" fill="#D9DFEA"/><path d="M6 26 L21.12 14.450000000000001 L33.0 20.119999999999997 L43.8 11.3 L60 26 Z" fill="#C3CBD9"/><circle cx="16.8" cy="10.25" r="2.6" fill="#AEB7C6"/><rect x="8" y="30" width="40" height="4" rx="1.5" fill="#334155"/><rect x="8" y="37" width="50" height="2.5" rx="1.2" fill="#AEB7C6"/><rect x="8" y="42" width="44" height="2.5" rx="1.2" fill="#AEB7C6"/><rect x="8" y="50" width="28" height="9" rx="2" fill="#8B5CF6"/></svg></div><div class="pgo-info"><div class="pgo-title">Sales page</div><div class="pgo-m"><span class="pgo-l">No screenshot</span></div></div></div><div class="pgo-cap"><span class="pgo-ty" style="color:#A78BFA"><span class="pgo-ic" style="background:#A78BFA"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6"/></svg></span>Sales page</span><span class="st plan"></span></div></div><span class="port pl"></span><span class="port pr"></span><span class="port pb"></span></div></div></div>
+    <!-- 2 -->
+    <div class="cell"><div class="cap"><i>2</i> Add URL (input)</div>
+      <div class="pane"><div class="ins"><div class="lab">Page preview</div><div class="inw foc"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1 M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"></path></svg><input placeholder="https://…" value=""><span style="color:#64748B">|</span></div><div style="display:flex;gap:7px;margin-top:9px"><button class="btn dis">Capture screenshot</button></div></div></div>
+    </div>
+    <!-- 3 -->
+    <div class="cell"><div class="cap"><i>3</i> URL entered</div>
+      <div class="pane"><div class="ins"><div class="lab">Page preview</div><div class="inw"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1 M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"></path></svg><input value="getfit.co/sales" readonly></div><div style="display:flex;gap:7px;margin-top:9px"><button class="btn pri"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>Capture</button></div></div></div>
+    </div>
+    <!-- 4 --><div class="cell"><div class="cap"><i>4</i> Loading</div><div class="pane"><div class="node fam-page "><div class="pgo"><div class="pgo-top"><div class="pgo-win"><div class="pgo-chrome"><i></i><i></i><i></i></div><svg width="66" height="65" viewBox="0 0 66 65"><rect width="66" height="65" fill="#E8ECF3"/><rect width="66" height="65" fill="url(#sh)"/><defs><linearGradient id="sh" x1="0" x2="1"><stop offset="0" stop-color="#E8ECF3"/><stop offset=".5" stop-color="#F8FAFC"/><stop offset="1" stop-color="#E8ECF3"/></linearGradient></defs><circle cx="33" cy="32" r="9" fill="none" stroke="#CBD5E1" stroke-width="3"/><path d="M33 23a9 9 0 0 1 9 9" fill="none" stroke="#10B981" stroke-width="3" stroke-linecap="round"/></svg></div><div class="pgo-info"><div class="pgo-title">Sales page</div><div class="pgo-m"><span class="pgo-l">Capturing getfit.co/sales…</span></div></div></div><div class="pgo-cap"><span class="pgo-ty" style="color:#A78BFA"><span class="pgo-ic" style="background:#A78BFA"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6"/></svg></span>Sales page</span><span class="st plan"></span></div></div><span class="port pl"></span><span class="port pr"></span><span class="port pb"></span></div></div></div>
+    <!-- 5 --><div class="cell"><div class="cap"><i>5</i> Success — real shot</div><div class="pane"><div class="node fam-page sel"><div class="pgo"><div class="pgo-top"><div class="pgo-win"><div class="pgo-chrome"><i></i><i></i><i></i></div><svg width="66" height="65" viewBox="0 0 66 65"><defs><linearGradient id="sk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7DB6F2"/><stop offset="1" stop-color="#DCEBFA"/></linearGradient></defs><rect width="66" height="65" fill="#fff"/><rect width="66" height="6" fill="#111827"/><rect x="4" y="2" width="8" height="2" rx="1" fill="#34D399"/><rect x="42" y="2" width="6" height="2" rx="1" fill="#64748B"/><rect x="51" y="2" width="6" height="2" rx="1" fill="#64748B"/><rect y="6" width="66" height="24" fill="url(#sk)"/><path d="M0 30L14 17l9 7 11-10 14 12 18-6v16z" fill="#2F6B4F" opacity=".85"/><circle cx="52" cy="13" r="4" fill="#FDE68A"/><rect x="6" y="9" width="30" height="3.4" rx="1.4" fill="#fff"/><rect x="6" y="15" width="22" height="2.2" rx="1.1" fill="#fff" opacity=".8"/><rect x="6" y="34" width="38" height="4" rx="1.6" fill="#1F2937"/><rect x="6" y="41" width="52" height="2.4" rx="1.2" fill="#9CA3AF"/><rect x="6" y="46" width="46" height="2.4" rx="1.2" fill="#9CA3AF"/><rect x="6" y="53" width="24" height="8" rx="2" fill="#16A34A"/><rect x="34" y="53" width="24" height="8" rx="2" fill="#F3F4F6" stroke="#D1D5DB"/></svg></div><div class="pgo-info"><div class="pgo-title">Sales page</div><div class="pgo-m"><span class="pgo-l">Captured just now</span></div></div></div><div class="pgo-cap"><span class="pgo-ty" style="color:#A78BFA"><span class="pgo-ic" style="background:#A78BFA"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6"/></svg></span>Sales page</span><span class="st live"></span></div></div><span class="port pl"></span><span class="port pr"></span><span class="port pb"></span></div></div></div>
+    <!-- 6 --><div class="cell"><div class="cap"><i>6</i> Error</div><div class="pane"><div class="node fam-page "><div class="pgo"><div class="pgo-top"><div class="pgo-win"><div class="pgo-chrome"><i></i><i></i><i></i></div><svg width="66" height="65" viewBox="0 0 66 65"><g opacity=".35"><rect width="66" height="65" fill="#F4F6FA"/><rect x="6" y="5" width="54" height="21" rx="2" fill="#D9DFEA"/><path d="M6 26 L21.12 14.450000000000001 L33.0 20.119999999999997 L43.8 11.3 L60 26 Z" fill="#C3CBD9"/><circle cx="16.8" cy="10.25" r="2.6" fill="#AEB7C6"/><rect x="8" y="30" width="40" height="4" rx="1.5" fill="#334155"/><rect x="8" y="37" width="50" height="2.5" rx="1.2" fill="#AEB7C6"/><rect x="8" y="42" width="44" height="2.5" rx="1.2" fill="#AEB7C6"/><rect x="8" y="50" width="28" height="9" rx="2" fill="#8B5CF6"/></g><rect width="66" height="65" fill="#FEF2F2" opacity=".72"/><circle cx="33" cy="28" r="10" fill="#fff" stroke="#F87171" stroke-width="2"/><path d="M33 22v7 M33 33h.01" stroke="#EF4444" stroke-width="2.4" stroke-linecap="round"/><rect x="11" y="45" width="44" height="3.4" rx="1.7" fill="#EF4444" opacity=".8"/></svg></div><div class="pgo-info"><div class="pgo-title">Sales page</div><div class="pgo-m"><span class="pgo-l">Page unreachable</span></div></div></div><div class="pgo-cap"><span class="pgo-ty" style="color:#A78BFA"><span class="pgo-ic" style="background:#A78BFA"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6"/></svg></span>Sales page</span><span class="st plan"></span></div></div><span class="port pl"></span><span class="port pr"></span><span class="port pb"></span></div></div></div>
+    <!-- 7 -->
+    <div class="cell"><div class="cap"><i>7</i> Retry</div>
+      <div class="pane"><div class="ins"><div class="lab">Page preview</div><div style="display:flex;align-items:center;gap:8px;color:#FCA5A5;font-size:12px;margin-bottom:10px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v4 M12 16h.01"></path></svg>Capture failed — timed out.</div><div style="display:flex;gap:7px"><button class="btn pri"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6 M3 13a9 9 0 1 0 2.6-6.4L3 9"></path></svg>Retry</button><button class="btn">Edit URL</button></div></div></div>
+    </div>
+    <!-- 8 --><div class="cell"><div class="cap"><i>8</i> Replace / Open / Remove</div><div class="pane" style="position:relative"><div class="node fam-page "><div class="pgo"><div class="pgo-top"><div class="pgo-win"><div class="pgo-chrome"><i></i><i></i><i></i></div><svg width="66" height="65" viewBox="0 0 66 65"><defs><linearGradient id="sk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7DB6F2"/><stop offset="1" stop-color="#DCEBFA"/></linearGradient></defs><rect width="66" height="65" fill="#fff"/><rect width="66" height="6" fill="#111827"/><rect x="4" y="2" width="8" height="2" rx="1" fill="#34D399"/><rect x="42" y="2" width="6" height="2" rx="1" fill="#64748B"/><rect x="51" y="2" width="6" height="2" rx="1" fill="#64748B"/><rect y="6" width="66" height="24" fill="url(#sk)"/><path d="M0 30L14 17l9 7 11-10 14 12 18-6v16z" fill="#2F6B4F" opacity=".85"/><circle cx="52" cy="13" r="4" fill="#FDE68A"/><rect x="6" y="9" width="30" height="3.4" rx="1.4" fill="#fff"/><rect x="6" y="15" width="22" height="2.2" rx="1.1" fill="#fff" opacity=".8"/><rect x="6" y="34" width="38" height="4" rx="1.6" fill="#1F2937"/><rect x="6" y="41" width="52" height="2.4" rx="1.2" fill="#9CA3AF"/><rect x="6" y="46" width="46" height="2.4" rx="1.2" fill="#9CA3AF"/><rect x="6" y="53" width="24" height="8" rx="2" fill="#16A34A"/><rect x="34" y="53" width="24" height="8" rx="2" fill="#F3F4F6" stroke="#D1D5DB"/></svg></div><div class="pgo-info"><div class="pgo-title">Sales page</div><div class="pgo-m"><span class="pgo-l">2,300 → <strong>1,035</strong></span><div class="pgo-r">45%</div></div></div></div><div class="pgo-cap"><span class="pgo-ty" style="color:#A78BFA"><span class="pgo-ic" style="background:#A78BFA"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6"/></svg></span>Sales page</span><span class="st live"></span></div></div><span class="port pl"></span><span class="port pr"></span><span class="port pb"></span></div><div class="menu" style="margin:6px 0 0 4px;position:absolute;left:210px;top:30px"><div class="mi"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Re-capture</div><div class="mi"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6 M15 3h6v6 M10 14L21 3"/></svg>Open page</div><div class="mi danger"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18 M8 6V4h8v2 M19 6l-1 14H6L5 6"/></svg>Remove</div></div></div></div>
+    <!-- 9 --><div class="cell"><div class="cap"><i>9</i> Removed → reverts</div><div class="pane"><div class="node fam-page "><div class="pgo"><div class="pgo-top"><div class="pgo-win"><div class="pgo-chrome"><i></i><i></i><i></i></div><svg width="66" height="65" viewBox="0 0 66 65" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><rect width="66" height="65" fill="#F4F6FA"/><rect x="6" y="5" width="54" height="21" rx="2" fill="#D9DFEA"/><path d="M6 26 L21.12 14.450000000000001 L33.0 20.119999999999997 L43.8 11.3 L60 26 Z" fill="#C3CBD9"/><circle cx="16.8" cy="10.25" r="2.6" fill="#AEB7C6"/><rect x="8" y="30" width="40" height="4" rx="1.5" fill="#334155"/><rect x="8" y="37" width="50" height="2.5" rx="1.2" fill="#AEB7C6"/><rect x="8" y="42" width="44" height="2.5" rx="1.2" fill="#AEB7C6"/><rect x="8" y="50" width="28" height="9" rx="2" fill="#8B5CF6"/></svg></div><div class="pgo-info"><div class="pgo-title">Sales page</div><div class="pgo-m"><span class="pgo-l">Back to wireframe</span></div></div></div><div class="pgo-cap"><span class="pgo-ty" style="color:#A78BFA"><span class="pgo-ic" style="background:#A78BFA"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6"/></svg></span>Sales page</span><span class="st plan"></span></div></div><span class="port pl"></span><span class="port pr"></span><span class="port pb"></span></div></div></div>
+    <!-- 10 --><div class="cell"><div class="cap"><i>10</i> Semantic fallback</div><div class="pane"><div style="display:flex;gap:10px;justify-content:center"><span class="mw" style="width:54px"><span class="mwc"><i></i><i></i><i></i></span><svg width="52" height="51" viewBox="0 0 66 65" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><rect width="66" height="65" fill="#F4F6FA"/><rect x="8" y="7" width="50" height="4" rx="1.5" fill="#334155"/><rect x="14" y="14" width="38" height="2.5" rx="1.2" fill="#AEB7C6"/><rect x="9" y="24" width="48" height="9" rx="2" fill="#fff" stroke="#CBD5E1" stroke-width="1"/><rect x="9" y="37" width="48" height="9" rx="2" fill="#fff" stroke="#CBD5E1" stroke-width="1"/><rect x="9" y="50" width="48" height="9" rx="2" fill="#8B5CF6"/></svg></span><span class="mw" style="width:54px"><span class="mwc"><i></i><i></i><i></i></span><svg width="52" height="51" viewBox="0 0 66 65" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><rect width="66" height="65" fill="#F4F6FA"/><rect x="6" y="6" width="54" height="31" rx="2" fill="#1F2937"/><circle cx="33" cy="21.5" r="7" fill="#fff" opacity=".92"/><path d="M30.9 18.0 l6.3 3.5 l-6.3 3.5 z" fill="#1F2937"/><rect x="10" y="42" width="46" height="4" rx="1.5" fill="#334155"/><rect x="10" y="50" width="46" height="9" rx="2" fill="#8B5CF6"/></svg></span></div><p style="margin:10px 0 0;font-size:11.5px;color:#94A3B8;text-align:center;line-height:1.45">Each type keeps its own window &mdash; never a generic placeholder.</p></div></div>
+  </div>
+
+  <div style="position:absolute;left:62px;right:62px;top:870px" class="note">
+    <b>Where the thumbnail travels:</b> the captured image fills the object's page window at every zoom on the canvas, on the selected object, in the library's recents, in Presentation and in PDF / PNG / SVG exports. &nbsp;&middot;&nbsp; <b>The fallback is the design, not a stopgap:</b> with no URL the window shows the semantic wireframe for its page type, so a map is fully readable before any page exists. &nbsp;&middot;&nbsp; <b>Capture is display-only</b> &mdash; it never touches funnel maths or the data model.
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1080}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

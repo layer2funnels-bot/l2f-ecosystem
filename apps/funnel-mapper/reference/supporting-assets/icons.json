@@ -1,0 +1,585 @@
+{
+ "_note": "The owner's block icons, cut from the 169 Block Master Library design at 2x (WebP, transparent). display_px = size on screen at 100%. Use these for Traffic sources, Actions & events, Email & Communication, Sales & CRM, Logic & goals, Notes & layout. Pages and Offers use the page-window tile; Communities, AI Calling and AI Automation use system tiles until designed. For production, replace brand marks with licensed vector logos.",
+ "icons": {
+  "Traffic sources / Facebook Ads": {
+   "file": "Traffic__01.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Traffic sources / Instagram Ads": {
+   "file": "Traffic__02.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Traffic sources / Google Ads": {
+   "file": "Traffic__03.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Traffic sources / YouTube Ads": {
+   "file": "Traffic__04.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Traffic sources / TikTok Ads": {
+   "file": "Traffic__05.webp",
+   "display_px": 16,
+   "shape": "circle"
+  },
+  "Traffic sources / LinkedIn Ads": {
+   "file": "Traffic__06.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Traffic sources / X (Twitter) Ads": {
+   "file": "Traffic__07.webp",
+   "display_px": 15,
+   "shape": "circle"
+  },
+  "Traffic sources / Pinterest Ads": {
+   "file": "Traffic__08.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Traffic sources / Reddit Ads": {
+   "file": "Traffic__09.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Traffic sources / Bing Ads": {
+   "file": "Traffic__10.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Traffic sources / Snapchat Ads": {
+   "file": "Traffic__11.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Traffic sources / Quora Ads": {
+   "file": "Traffic__12.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Traffic sources / Google": {
+   "file": "Traffic__13.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Traffic sources / Bing": {
+   "file": "Traffic__14.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Traffic sources / YouTube": {
+   "file": "Traffic__15.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Traffic sources / DuckDuckGo": {
+   "file": "Traffic__16.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Traffic sources / All search": {
+   "file": "Traffic__17.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Traffic sources / Facebook": {
+   "file": "Traffic__18.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Traffic sources / Instagram": {
+   "file": "Traffic__19.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Traffic sources / LinkedIn": {
+   "file": "Traffic__20.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Traffic sources / TikTok": {
+   "file": "Traffic__21.webp",
+   "display_px": 16,
+   "shape": "circle"
+  },
+  "Traffic sources / X (Twitter)": {
+   "file": "Traffic__22.webp",
+   "display_px": 16,
+   "shape": "circle"
+  },
+  "Traffic sources / Pinterest": {
+   "file": "Traffic__23.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Traffic sources / Reddit": {
+   "file": "Traffic__24.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Traffic sources / Threads": {
+   "file": "Traffic__25.webp",
+   "display_px": 18,
+   "shape": "circle"
+  },
+  "Traffic sources / Email": {
+   "file": "Traffic__26.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Traffic sources / Direct": {
+   "file": "Traffic__27.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Traffic sources / Affiliates": {
+   "file": "Traffic__28.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Traffic sources / Referral": {
+   "file": "Traffic__29.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Traffic sources / QR code": {
+   "file": "Traffic__30.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Traffic sources / Podcast": {
+   "file": "Traffic__31.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Traffic sources / Webinar traffic": {
+   "file": "Traffic__32.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Traffic sources / Print ad": {
+   "file": "Traffic__33.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Traffic sources / TV ad": {
+   "file": "Traffic__34.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Traffic sources / Radio": {
+   "file": "Traffic__35.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Traffic sources / Billboard": {
+   "file": "Traffic__36.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Traffic sources / Direct mail": {
+   "file": "Traffic__37.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Traffic sources / Event / conference": {
+   "file": "Traffic__38.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Traffic sources / Flyer": {
+   "file": "Traffic__39.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Actions & events / Purchase": {
+   "file": "Actions__01.webp",
+   "display_px": 54,
+   "shape": "diamond"
+  },
+  "Actions & events / Add to cart": {
+   "file": "Actions__02.webp",
+   "display_px": 54,
+   "shape": "diamond"
+  },
+  "Actions & events / Form submit": {
+   "file": "Actions__03.webp",
+   "display_px": 54,
+   "shape": "diamond"
+  },
+  "Actions & events / Button click": {
+   "file": "Actions__04.webp",
+   "display_px": 54,
+   "shape": "diamond"
+  },
+  "Actions & events / Link click": {
+   "file": "Actions__05.webp",
+   "display_px": 54,
+   "shape": "diamond"
+  },
+  "Actions & events / Watch video": {
+   "file": "Actions__06.webp",
+   "display_px": 54,
+   "shape": "diamond"
+  },
+  "Actions & events / Scroll depth": {
+   "file": "Actions__07.webp",
+   "display_px": 54,
+   "shape": "diamond"
+  },
+  "Actions & events / Page view": {
+   "file": "Actions__08.webp",
+   "display_px": 54,
+   "shape": "diamond"
+  },
+  "Actions & events / Opt-in event": {
+   "file": "Actions__09.webp",
+   "display_px": 54,
+   "shape": "diamond"
+  },
+  "Actions & events / Booking made": {
+   "file": "Actions__10.webp",
+   "display_px": 54,
+   "shape": "diamond"
+  },
+  "Actions & events / Application submitted": {
+   "file": "Actions__11.webp",
+   "display_px": 54,
+   "shape": "diamond"
+  },
+  "Actions & events / Quiz completed": {
+   "file": "Actions__12.webp",
+   "display_px": 54,
+   "shape": "diamond"
+  },
+  "Actions & events / Survey completed": {
+   "file": "Actions__13.webp",
+   "display_px": 54,
+   "shape": "diamond"
+  },
+  "Actions & events / Deal won": {
+   "file": "Actions__14.webp",
+   "display_px": 54,
+   "shape": "diamond"
+  },
+  "Actions & events / Deal lost": {
+   "file": "Actions__15.webp",
+   "display_px": 54,
+   "shape": "diamond"
+  },
+  "Actions & events / Refund": {
+   "file": "Actions__16.webp",
+   "display_px": 54,
+   "shape": "diamond"
+  },
+  "Actions & events / Add tag": {
+   "file": "Actions__17.webp",
+   "display_px": 54,
+   "shape": "diamond"
+  },
+  "Actions & events / Add to list": {
+   "file": "Actions__18.webp",
+   "display_px": 54,
+   "shape": "diamond"
+  },
+  "Actions & events / Custom event": {
+   "file": "Actions__19.webp",
+   "display_px": 54,
+   "shape": "diamond"
+  },
+  "Email & Communication / Email": {
+   "file": "Email__01.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Email & Communication / SMS": {
+   "file": "Email__02.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Email & Communication / WhatsApp": {
+   "file": "Email__03.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Email & Communication / Phone call": {
+   "file": "Email__04.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Email & Communication / Voicemail": {
+   "file": "Email__05.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Email & Communication / Push notification": {
+   "file": "Email__06.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Email & Communication / Messenger": {
+   "file": "Email__07.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Email & Communication / Telegram": {
+   "file": "Email__08.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Email & Communication / Slack message": {
+   "file": "Email__09.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Email & Communication / In-app message": {
+   "file": "Email__10.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Email & Communication / Chatbot": {
+   "file": "Email__11.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Email & Communication / Wait / delay": {
+   "file": "Email__12.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Sales & CRM / HubSpot": {
+   "file": "Sales__01.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Sales & CRM / Salesforce": {
+   "file": "Sales__02.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Sales & CRM / Mailchimp": {
+   "file": "Sales__03.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Sales & CRM / ActiveCampaign": {
+   "file": "Sales__04.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Sales & CRM / Keap": {
+   "file": "Sales__05.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Sales & CRM / Pipedrive": {
+   "file": "Sales__06.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Sales & CRM / Ontraport": {
+   "file": "Sales__07.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Sales & CRM / GoHighLevel": {
+   "file": "Sales__08.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Sales & CRM / Intercom": {
+   "file": "Sales__09.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Sales & CRM / Drip": {
+   "file": "Sales__10.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Sales & CRM / ConvertKit": {
+   "file": "Sales__11.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Sales & CRM / Klaviyo": {
+   "file": "Sales__12.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Sales & CRM / Zoho": {
+   "file": "Sales__13.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Sales & CRM / Constant Contact": {
+   "file": "Sales__14.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Sales & CRM / Marketo": {
+   "file": "Sales__15.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Sales & CRM / Zapier": {
+   "file": "Sales__16.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Sales & CRM / Webhook": {
+   "file": "Sales__17.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Logic & goals / Condition": {
+   "file": "Logic__01.webp",
+   "display_px": 44,
+   "shape": "rect"
+  },
+  "Logic & goals / A/B split": {
+   "file": "Logic__02.webp",
+   "display_px": 44,
+   "shape": "rect"
+  },
+  "Logic & goals / Multivariate split": {
+   "file": "Logic__03.webp",
+   "display_px": 44,
+   "shape": "rect"
+  },
+  "Logic & goals / Random split": {
+   "file": "Logic__04.webp",
+   "display_px": 44,
+   "shape": "rect"
+  },
+  "Logic & goals / Traffic split": {
+   "file": "Logic__05.webp",
+   "display_px": 44,
+   "shape": "rect"
+  },
+  "Logic & goals / Merge": {
+   "file": "Logic__06.webp",
+   "display_px": 44,
+   "shape": "rect"
+  },
+  "Logic & goals / Filter": {
+   "file": "Logic__07.webp",
+   "display_px": 44,
+   "shape": "rect"
+  },
+  "Logic & goals / Delay gate": {
+   "file": "Logic__08.webp",
+   "display_px": 44,
+   "shape": "rect"
+  },
+  "Logic & goals / Revenue goal": {
+   "file": "Logic__09.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Logic & goals / Profit goal": {
+   "file": "Logic__10.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Logic & goals / Leads goal": {
+   "file": "Logic__11.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Logic & goals / Customers goal": {
+   "file": "Logic__12.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Logic & goals / Conversion-rate goal": {
+   "file": "Logic__13.webp",
+   "display_px": 44,
+   "shape": "circle"
+  },
+  "Logic & goals / Step-completion goal": {
+   "file": "Logic__14.webp",
+   "display_px": 44,
+   "shape": "rect"
+  },
+  "Logic & goals / End / exit": {
+   "file": "Logic__15.webp",
+   "display_px": 44,
+   "shape": "rect"
+  },
+  "Notes & layout / Sticky note": {
+   "file": "Notes__01.webp",
+   "display_px": 44,
+   "shape": "rect"
+  },
+  "Notes & layout / Text": {
+   "file": "Notes__02.webp",
+   "display_px": 44,
+   "shape": "rect"
+  },
+  "Notes & layout / Heading": {
+   "file": "Notes__03.webp",
+   "display_px": 44,
+   "shape": "rect"
+  },
+  "Notes & layout / Frame / stage": {
+   "file": "Notes__04.webp",
+   "display_px": 44,
+   "shape": "rect"
+  },
+  "Notes & layout / Rectangle": {
+   "file": "Notes__05.webp",
+   "display_px": 44,
+   "shape": "rect"
+  },
+  "Notes & layout / Ellipse": {
+   "file": "Notes__06.webp",
+   "display_px": 44,
+   "shape": "rect"
+  },
+  "Notes & layout / Line / arrow": {
+   "file": "Notes__07.webp",
+   "display_px": 44,
+   "shape": "rect"
+  },
+  "Notes & layout / Image": {
+   "file": "Notes__08.webp",
+   "display_px": 44,
+   "shape": "rect"
+  },
+  "Notes & layout / Video embed": {
+   "file": "Notes__09.webp",
+   "display_px": 44,
+   "shape": "rect"
+  },
+  "Notes & layout / Link card": {
+   "file": "Notes__10.webp",
+   "display_px": 44,
+   "shape": "rect"
+  },
+  "Notes & layout / Checklist": {
+   "file": "Notes__11.webp",
+   "display_px": 44,
+   "shape": "rect"
+  },
+  "Notes & layout / Goal pill": {
+   "file": "Notes__12.webp",
+   "display_px": 44,
+   "shape": "rect"
+  },
+  "Notes & layout / Divider": {
+   "file": "Notes__13.webp",
+   "display_px": 44,
+   "shape": "rect"
+  },
+  "Notes & layout / Emoji / icon": {
+   "file": "Notes__14.webp",
+   "display_px": 44,
+   "shape": "rect"
+  }
+ }
+}

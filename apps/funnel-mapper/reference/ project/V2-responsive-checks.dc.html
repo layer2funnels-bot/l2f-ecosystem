@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Responsive checks</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&amp;family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#070B14}
+*{box-sizing:border-box}
+a{color:#34D399}a:hover{color:#6EE7B7}
+.app{font-family:'DM Sans',system-ui,sans-serif;color:#E2E8F0;background:#0B1220;width:1440px;position:relative;font-size:13px;line-height:1.4;-webkit-font-smoothing:antialiased;font-feature-settings:'tnum' 1;overflow:hidden}
+.disp{font-family:'Bricolage Grotesque','DM Sans',sans-serif;letter-spacing:-.01em}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace}
+button{font:inherit;color:inherit;cursor:pointer}
+input,select{font:inherit;color:inherit}
+h1,h2,h3,h4,h5,p{margin:0}
+.top{height:48px;display:flex;align-items:center;gap:12px;padding:0 12px;background:#111827;border-bottom:1px solid #1E293B;position:relative;z-index:5}
+.logo{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:#10B981;color:#04281C;flex:none}
+.sp{flex:1}
+.btn{height:32px;padding:0 12px;border-radius:8px;border:1px solid #334155;background:transparent;color:#E2E8F0;font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+.btn:hover{background:#1E293B}
+.btn.pri{background:#10B981;border-color:#10B981;color:#04281C;font-weight:600}
+.btn.pri:hover{background:#34D399}
+.btn.dng{background:#DC2626;border-color:#DC2626;color:#fff;font-weight:600}
+.btn.off{opacity:.45;cursor:not-allowed}
+.btn.sm{height:28px;padding:0 10px;font-size:12px}
+.ib{width:32px;height:32px;border:0;background:transparent;border-radius:7px;color:#94A3B8;display:inline-grid;place-items:center}
+.ib:hover{background:#1E293B;color:#E2E8F0}
+.seg{display:inline-flex;background:#0B1220;border:1px solid #273449;border-radius:8px;padding:2px;gap:2px}
+.seg button{border:0;background:transparent;color:#94A3B8;height:26px;padding:0 12px;border-radius:6px;font-size:12.5px;font-weight:500}
+.seg button.on{background:#1E293B;color:#F1F5F9;box-shadow:0 0 0 1px #334155 inset}
+.chip{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 10px;border:1px solid #334155;background:#0B1220;border-radius:8px;color:#E2E8F0;font-size:12.5px}
+.chip.on{border-color:#10B981;box-shadow:0 0 0 3px rgba(16,185,129,.15)}
+.pill{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 9px;border-radius:999px;border:1px solid #334155;font-size:11px;color:#CBD5E1;white-space:nowrap}
+.pill.g{border-color:rgba(16,185,129,.5);color:#6EE7B7;background:rgba(16,185,129,.08)}
+.pill.a{border-color:rgba(245,158,11,.5);color:#FCD34D;background:rgba(245,158,11,.08)}
+.pill.r{border-color:rgba(248,113,113,.5);color:#FCA5A5;background:rgba(248,113,113,.08)}
+.pill.b{border-color:rgba(96,165,250,.5);color:#93C5FD;background:rgba(96,165,250,.08)}
+.newtag{display:inline-flex;align-items:center;height:18px;padding:0 7px;border-radius:999px;background:#10B981;color:#04281C;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.eyebrow{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:#94A3B8;font-weight:600}
+.muted{color:#94A3B8}
+.body{display:flex;min-height:0}
+.lrail{width:56px;flex:none;background:#0F172A;border-right:1px solid #1E293B;display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:4px}
+.ri{width:40px;height:40px;border-radius:9px;border:0;background:transparent;color:#94A3B8;display:grid;place-items:center;position:relative}
+.ri.on{background:#1E293B;color:#34D399}
+.ri .dot{position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:#10B981;border:2px solid #0F172A}
+.lpanel{width:320px;flex:none;background:#111827;border-right:1px solid #1E293B;display:flex;flex-direction:column;min-height:0}
+.ph{display:flex;align-items:center;gap:8px;padding:14px 16px 10px}
+.ph h3{font-family:'Bricolage Grotesque',sans-serif;font-size:17px;font-weight:600;color:#F8FAFC}
+.cv{flex:1;position:relative;overflow:hidden;background-color:#0B1220;background-image:radial-gradient(rgba(148,163,184,.14) 1px,transparent 1.2px);background-size:22px 22px}
+.rpanel{width:340px;flex:none;background:#111827;border-left:1px solid #1E293B;display:flex;flex-direction:column;min-height:0}
+.rrail{width:56px;flex:none;background:#111827;border-left:1px solid #1E293B;display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:4px}
+.inp{height:36px;width:100%;background:#0B1220;border:1px solid #334155;border-radius:8px;color:#F1F5F9;padding:0 11px;font-size:13px}
+.inp::placeholder{color:#64748B}
+.inp.foc{border-color:#10B981;box-shadow:0 0 0 3px rgba(16,185,129,.15)}
+label.fl{display:block;font-size:12px;color:#CBD5E1;font-weight:500;margin-bottom:6px}
+.opt{color:#94A3B8;font-weight:400;margin-left:6px;font-size:11.5px}
+.node{position:absolute;background:#111827;border:1px solid #2A3648;border-radius:10px;padding:8px 10px;display:flex;align-items:center;gap:8px}
+.node .k{width:22px;height:22px;border-radius:6px;flex:none}
+.node b{font-size:12px;font-weight:600;color:#F1F5F9;display:block;line-height:1.2}
+.node span.s{font-size:10.5px;color:#94A3B8;display:block}
+.node.sel{border-color:#10B981;box-shadow:0 0 0 1px #10B981,0 0 0 5px rgba(16,185,129,.16)}
+.ln{position:absolute;background:#3B82F6}
+.lnd{position:absolute;border-color:#3B82F6;border-style:dashed;border-width:0}
+.ah{position:absolute;width:0;height:0}
+.pt{position:absolute;width:11px;height:11px;border-radius:50%;background:#0B1220;border:2px solid #10B981}
+.ep{position:absolute;background:#111827;border:1px solid #334155;border-radius:6px;padding:2px 7px;font-size:10.5px;color:#E2E8F0;white-space:nowrap}
+.ep.am{border-color:rgba(245,158,11,.6);color:#FCD34D}
+.card{background:#111827;border:1px solid #273449;border-radius:12px}
+.note{background:#0F172A;border:1px solid #1E293B;border-radius:12px;padding:14px 16px;color:#94A3B8;font-size:12.5px;line-height:1.5}
+.note b{color:#E2E8F0}
+.hd{padding:28px 40px 20px;border-bottom:1px solid #1E293B}
+.hd h2{font-family:'Bricolage Grotesque',sans-serif;font-size:28px;font-weight:600;color:#F8FAFC}
+.hd p{margin-top:6px;color:#94A3B8;font-size:14px;max-width:1000px}
+.cap{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#94A3B8;font-weight:600;margin:0 0 10px;display:flex;align-items:center;gap:8px}
+.ovl{position:absolute;left:0;right:0;top:0;bottom:0;background:rgba(3,7,18,.66)}
+.modal{position:absolute;background:#111827;border:1px solid #334155;border-radius:16px;box-shadow:0 24px 80px rgba(0,0,0,.55)}
+.mh{padding:20px 24px 4px}
+.mh h3{font-family:'Bricolage Grotesque',sans-serif;font-size:21px;font-weight:600;color:#F8FAFC}
+.mh p{margin-top:6px;color:#94A3B8;font-size:13px}
+.mf{display:flex;align-items:center;gap:10px;padding:16px 24px;border-top:1px solid #1E293B}
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{text-align:left;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:#94A3B8;font-weight:600;padding:10px 14px;border-bottom:1px solid #1E293B}
+.tbl td{padding:12px 14px;border-bottom:1px solid #1E293B;font-size:13px;color:#E2E8F0}
+.tbl td.n,.tbl th.n{text-align:right}
+.cal{width:252px}
+.cal h5{text-align:center;font-size:13px;font-weight:600;color:#F1F5F9;margin-bottom:8px}
+.cg{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
+.cg i{font-style:normal;height:32px;display:grid;place-items:center;font-size:12.5px;color:#E2E8F0;border-radius:6px}
+.cg i.h{height:22px;font-size:11px;color:#94A3B8;font-weight:600}
+.cg i.o{color:#475569}
+.cg i.r{background:rgba(16,185,129,.16);border-radius:0}
+.cg i.s{background:#10B981;color:#04281C;font-weight:700}
+</style>
+</helmet>
+<div class="app" style="height:1560px"><div class="hd"><h2>Responsive checks for the new features</h2><p>Laptop, tablet and phone rules for everything added in this round. The existing 1280, 1024, 768 and phone boards still apply to the rest of the app.</p></div><div style="padding:24px 40px"><div class="card"><table class="tbl"><thead><tr><th style="width:210px">Feature</th><th>Laptop 1280&ndash;1440</th><th>Tablet 768&ndash;1024</th><th>Phone 390</th></tr></thead><tbody><tr><td><b style="font-weight:600">Left panel (Blocks, Templates, Math)</b></td><td>Open by default, collapses to a 56 px rail with [</td><td>Collapsed rail by default, opens over the map</td><td>Bottom sheet, drag handle, 44 px rows</td></tr><tr><td><b style="font-weight:600">Right panel (inspector)</b></td><td>Open by default, collapses to a 56 px rail with ]</td><td>Collapsed rail by default, opens over the map</td><td>Bottom sheet that rises on tap of a block</td></tr><tr><td><b style="font-weight:600">Templates list</b></td><td>320 px panel with search and filters</td><td>Same panel as an overlay</td><td>Full-width sheet, one template per row</td></tr><tr><td><b style="font-weight:600">Template customize form</b></td><td>Centered, 640 px wide</td><td>Centered, 90% wide</td><td>Full-screen sheet, fields stacked, buttons pinned at the bottom</td></tr><tr><td><b style="font-weight:600">Date range and calendar</b></td><td>Two months side by side</td><td>Two months side by side</td><td>One month, presets as a row of chips above</td></tr><tr><td><b style="font-weight:600">Month-to-month data grid</b></td><td>Steps &times; months, no horizontal scroll</td><td>Scrolls sideways inside its own box</td><td>Month tabs, one month at a time, steps stacked</td></tr><tr><td><b style="font-weight:600">Home KPIs and range</b></td><td>Four columns, no card borders</td><td>Two columns</td><td>One column, range control full width</td></tr><tr><td><b style="font-weight:600">Delete confirmation</b></td><td>Centered modal</td><td>Centered modal</td><td>Bottom sheet, full-width buttons</td></tr><tr><td><b style="font-weight:600">Trash table</b></td><td>All columns</td><td>Actions collapse to a menu</td><td>Rows become stacked cards</td></tr><tr><td><b style="font-weight:600">Page thumbnail preview</b></td><td>On hover, thumbnail only</td><td>On hover, thumbnail only</td><td>On tap of the thumbnail, tap anywhere to close</td></tr><tr><td><b style="font-weight:600">Map canvas</b></td><td>Mouse wheel zoom, drag to pan</td><td>Pinch zoom, one-finger pan</td><td>Pinch zoom, two-finger pan, 44 px touch targets</td></tr><tr><td><b style="font-weight:600">Top bar and KPI bar</b></td><td>No horizontal overflow</td><td>Secondary KPIs collapse to &ldquo;6 more&rdquo;</td><td>KPI bar scrolls sideways, primary six first</td></tr></tbody></table></div></div><div style="position:absolute;left:40px;top:760px;width:390px;height:760px;border:1px solid #334155;border-radius:30px;background:#0B1220;overflow:hidden"><div style="padding:14px 18px;border-bottom:1px solid #1E293B;font-weight:600;color:#F8FAFC" class="disp">Templates</div><div style="padding:14px 16px"><div class="chip" style="width:100%;height:44px;color:#94A3B8"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6"></circle><path d="M20 20l-4.5-4.5"></path></svg>Search 13 templates</div></div><div style="padding:0 8px"><div style="display:flex;align-items:center;gap:10px;height:56px;padding:0 10px;border-bottom:1px solid #1E293B"><span class="mono muted" style="width:20px;font-size:11px">1</span><span style="flex:1"><b style="font-size:14px;color:#F1F5F9;font-weight:600">Lead Squeeze</b><br><span class="muted" style="font-size:11.5px">Lead gen</span></span><span class="mono muted" style="font-size:11px">6 steps</span></div><div style="display:flex;align-items:center;gap:10px;height:56px;padding:0 10px;border-bottom:1px solid #1E293B"><span class="mono muted" style="width:20px;font-size:11px">2</span><span style="flex:1"><b style="font-size:14px;color:#F1F5F9;font-weight:600">Survey</b><br><span class="muted" style="font-size:11.5px">Lead gen</span></span><span class="mono muted" style="font-size:11px">11 steps</span></div><div style="display:flex;align-items:center;gap:10px;height:56px;padding:0 10px;border-bottom:1px solid #1E293B"><span class="mono muted" style="width:20px;font-size:11px">3</span><span style="flex:1"><b style="font-size:14px;color:#F1F5F9;font-weight:600">Summit</b><br><span class="muted" style="font-size:11.5px">Events</span></span><span class="mono muted" style="font-size:11px">11 steps</span></div><div style="display:flex;align-items:center;gap:10px;height:56px;padding:0 10px;border-bottom:1px solid #1E293B"><span class="mono muted" style="width:20px;font-size:11px">4</span><span style="flex:1"><b style="font-size:14px;color:#F1F5F9;font-weight:600">Free Challenge Funnel</b><br><span class="muted" style="font-size:11.5px">Events</span></span><span class="mono muted" style="font-size:11px">17 steps</span></div><div style="display:flex;align-items:center;gap:10px;height:56px;padding:0 10px;border-bottom:1px solid #1E293B"><span class="mono muted" style="width:20px;font-size:11px">5</span><span style="flex:1"><b style="font-size:14px;color:#F1F5F9;font-weight:600">Book Funnel</b><br><span class="muted" style="font-size:11.5px">Sales</span></span><span class="mono muted" style="font-size:11px">6 steps</span></div><div style="display:flex;align-items:center;gap:10px;height:56px;padding:0 10px;border-bottom:1px solid #1E293B"><span class="mono muted" style="width:20px;font-size:11px">6</span><span style="flex:1"><b style="font-size:14px;color:#F1F5F9;font-weight:600">Cart Funnel</b><br><span class="muted" style="font-size:11.5px">Sales</span></span><span class="mono muted" style="font-size:11px">8 steps</span></div><div style="display:flex;align-items:center;gap:10px;height:56px;padding:0 10px;border-bottom:1px solid #1E293B"><span class="mono muted" style="width:20px;font-size:11px">7</span><span style="flex:1"><b style="font-size:14px;color:#F1F5F9;font-weight:600">Paid Challenge Funnel</b><br><span class="muted" style="font-size:11.5px">Events</span></span><span class="mono muted" style="font-size:11px">14 steps</span></div><div style="display:flex;align-items:center;gap:10px;height:56px;padding:0 10px;border-bottom:1px solid #1E293B"><span class="mono muted" style="width:20px;font-size:11px">8</span><span style="flex:1"><b style="font-size:14px;color:#F1F5F9;font-weight:600">Video Sales Letter Funnel</b><br><span class="muted" style="font-size:11.5px">Sales</span></span><span class="mono muted" style="font-size:11px">7 steps</span></div></div></div><div style="position:absolute;left:525px;top:760px;width:390px;height:760px;border:1px solid #334155;border-radius:30px;background:#0B1220;overflow:hidden"><div style="padding:14px 18px;border-bottom:1px solid #1E293B;font-weight:600;color:#F8FAFC" class="disp">Customize template</div><div style="padding:16px"><div style="font-size:13px;color:#94A3B8;margin-bottom:12px">All fields are optional.</div><label class="fl" for="ph-fn">Funnel name</label><input id="ph-fn" class="inp" style="height:44px" placeholder="Webinar Funnel"><label class="fl" for="ph-p0" style="margin-top:14px">Webinar Opt-in</label><input id="ph-p0" class="inp" style="height:44px;margin-bottom:6px" placeholder="Page name"><input class="inp" style="height:44px" placeholder="https://" aria-label="Webinar Opt-in URL"><label class="fl" for="ph-p1" style="margin-top:14px">Registration Thank You</label><input id="ph-p1" class="inp" style="height:44px;margin-bottom:6px" placeholder="Page name"><input class="inp" style="height:44px" placeholder="https://" aria-label="Registration Thank You URL"><label class="fl" for="ph-p2" style="margin-top:14px">Webinar Live</label><input id="ph-p2" class="inp" style="height:44px;margin-bottom:6px" placeholder="Page name"><input class="inp" style="height:44px" placeholder="https://" aria-label="Webinar Live URL"></div><div style="position:absolute;left:0;right:0;bottom:0;padding:14px 16px;border-top:1px solid #1E293B;background:#111827;display:flex;gap:10px"><button class="btn" style="flex:1;height:44px;justify-content:center">Skip</button><button class="btn pri" style="flex:1;height:44px;justify-content:center">Create funnel</button></div></div><div style="position:absolute;left:1010px;top:760px;width:390px;height:760px;border:1px solid #334155;border-radius:30px;background:#0B1220;overflow:hidden"><div style="padding:14px 18px;border-bottom:1px solid #1E293B;font-weight:600;color:#F8FAFC" class="disp">Date range</div><div style="padding:16px"><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px"><span class="pill" style="height:34px">This month</span><span class="pill" style="height:34px">Last 3 months</span><span class="pill g" style="height:34px">Custom</span></div><div style="text-align:center;font-weight:600;color:#F1F5F9;margin-bottom:8px">Nov 2026</div><div class="cg"><i class="h">Su</i><i class="h">Mo</i><i class="h">Tu</i><i class="h">We</i><i class="h">Th</i><i class="h">Fr</i><i class="h">Sa</i><i class="s" style="height:44px">1</i><i class="r" style="height:44px">2</i><i class="r" style="height:44px">3</i><i class="r" style="height:44px">4</i><i class="r" style="height:44px">5</i><i class="r" style="height:44px">6</i><i class="r" style="height:44px">7</i><i class="r" style="height:44px">8</i><i class="r" style="height:44px">9</i><i class="r" style="height:44px">10</i><i class="r" style="height:44px">11</i><i class="r" style="height:44px">12</i><i class="r" style="height:44px">13</i><i class="r" style="height:44px">14</i><i class="r" style="height:44px">15</i><i class="r" style="height:44px">16</i><i class="r" style="height:44px">17</i><i class="r" style="height:44px">18</i><i class="r" style="height:44px">19</i><i class="r" style="height:44px">20</i><i class="r" style="height:44px">21</i><i class="r" style="height:44px">22</i><i class="r" style="height:44px">23</i><i class="r" style="height:44px">24</i><i class="r" style="height:44px">25</i><i class="r" style="height:44px">26</i><i class="r" style="height:44px">27</i><i class="r" style="height:44px">28</i><i class="r" style="height:44px">29</i><i class="s" style="height:44px">30</i><i class="o"></i><i class="o"></i><i class="o"></i><i class="o"></i><i class="o"></i></div></div><div style="position:absolute;left:0;right:0;bottom:0;padding:14px 16px;border-top:1px solid #1E293B;background:#111827;display:flex;gap:10px"><button class="btn" style="flex:1;height:44px;justify-content:center">Cancel</button><button class="btn pri" style="flex:1;height:44px;justify-content:center">Apply</button></div></div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1560}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
