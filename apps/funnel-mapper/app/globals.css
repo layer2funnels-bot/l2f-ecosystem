@@ -1,105 +1,103 @@
 @import "tailwindcss";
 
-/* Locked Emerald design tokens (docs/MASTER_HANDOFF.md §5). Dark-first; a light variant via [data-theme="light"]. */
+/* Ecosystem design tokens (docs/design/08, 21 Oct 2026). Light is the default; Emerald is retired in this copy only. The dark values stay
+   for a later option (no switch is offered). Blue is --primary; the map's meaning is carried by line style, icons and printed numbers, not hue alone. */
 :root {
   /* surfaces */
-  --bg: #0b1220; /* canvas / page */
+  --bg: #f5f8fd; /* canvas / page */
+  --dot: #d3dce9;
+  --library: #ffffff; /* left block library */
+  --chrome: #ffffff; /* top / bottom workspace chrome, cards */
+  --panel: #ffffff;
+  --panel2: #e3eafa; /* inspector / raised / hover / inputs */
+  --line: #c9cfd8;
+  --ink: #1b1f27;
+  --muted: #566070;
+  /* brand: the ecosystem primary */
+  --brand: #173a8f;
+  --brand-hover: #12307a;
+  --brand-press: #0e2765;
+  --brand-light: #173a8f; /* links, icons and highlights on light surfaces */
+  --brand-ink: #ffffff; /* text on the primary colour */
+  --brand-soft: #e3eafa;
+  --side: #ffffff;
+  --side-ink: #1b1f27;
+  --side-muted: #566070;
+  --side-item: #e3eafa;
+  --side-line: #c9cfd8;
+  /* node categories (design 08): hue-mapped, readable with dark icons; the saturated stripe colours arrive with the node stripe change */
+  --c-traffic: #7cc4f5; /* sky */
+  --c-page: #c4b5f4; /* violet */
+  --c-offer: #ffa68f; /* coral */
+  --c-action: #9db4ee; /* blue */
+  --c-logic: #f5b942; /* amber */
+  --c-goal: #e59ac4; /* magenta */
+  --c-note: #d9cbb8; /* sand */
+  --cat-ink: #1b1f27; /* icons on category colours */
+  --good: #1d5f9e; /* success / people who continue: blue (with a check and the % on the label) */
+  --bad: #b3261e; /* broken: red text with a cross */
+  --neg: #b3261e; /* negative money */
+  --warn: #8a5200; /* leak / warning text (amber fills use #f5b942 with this as the outline) */
+  --edge: #667391; /* node border, same as inputs */
+  /* leak = people lost, attention = health checks: dashed lines and a triangle, never colour alone */
+  --lost: #8a5200;
+  --attention: #8a5200;
+  /* categorical chart series, validated against #ffffff: blue, orange, violet, brown, sky */
+  --chart-1: #173a8f;
+  --chart-2: #c2410c;
+  --chart-3: #6b46c1;
+  --chart-4: #8a5200;
+  --chart-5: #4db3f0;
+  --alt: var(--lost);
+  --backdrop: rgba(15, 23, 42, 0.45);
+  --shadow: 0 1px 2px rgba(15, 23, 42, 0.06), 0 6px 18px rgba(15, 23, 42, 0.08);
+  color-scheme: light;
+}
+/* Dark (a later option, not offered): the old dark surfaces with the ecosystem blue lifted for contrast */
+:root[data-theme="dark"] {
+  --bg: #0b1220;
   --dot: #1c2738;
-  --library: #0f172a; /* left block library, app sidebar */
-  --chrome: #111827; /* top / bottom workspace chrome, cards */
+  --library: #0f172a;
+  --chrome: #111827;
   --panel: #111827;
-  --panel2: #1e293b; /* inspector / panels / inputs */
+  --panel2: #1e293b;
   --line: #334155;
   --ink: #e2e8f0;
   --muted: #94a3b8;
-  /* brand */
-  --brand: #10b981;
-  --brand-hover: #059669;
-  --brand-press: #047857;
-  --brand-light: #34d399; /* links, icons and highlights on dark surfaces */
-  --brand-ink: #0b1220; /* text on emerald (8.5:1) */
-  --brand-soft: rgba(16, 185, 129, 0.12);
+  --brand: #6b8ee0;
+  --brand-hover: #86a3ea;
+  --brand-press: #a3b8f0;
+  --brand-light: #9db4ee;
+  --brand-ink: #0b1220;
+  --brand-soft: rgba(107, 142, 224, 0.16);
   --side: #0f172a;
   --side-ink: #e2e8f0;
   --side-muted: #94a3b8;
   --side-item: #1e293b;
   --side-line: #1e293b;
-  /* semantic category colours */
   --c-traffic: #60a5fa;
   --c-page: #a78bfa;
   --c-offer: #fb923c;
-  --c-action: #2dd4bf;
+  --c-action: #9db4ee;
   --c-logic: #fbbf24;
-  --c-goal: #84cc16;
-  --c-note: #fde68a;
-  --cat-ink: #0b1220; /* icons on category colours */
-  --good: #22c55e;
+  --c-goal: #e59ac4;
+  --c-note: #d9cbb8;
+  --cat-ink: #0b1220;
+  --good: #7fb0e6;
   --bad: #f87171;
-  --neg: #fca5a5; /* negative money */
+  --neg: #fca5a5;
   --warn: #fbbf24;
   --edge: #64748b;
-  /* V2 semantics: orange = people lost (non-convert lines, key leak); amber = needs attention (health checks) */
-  --lost: #f97316;
+  --lost: #f5b942;
   --attention: #fbbf24;
-  /* categorical chart series, validated (lightness band, CVD separation, contrast) against #111827 */
-  --chart-1: #059669;
+  --chart-1: #6b8ee0;
   --chart-2: #ea580c;
-  --chart-3: #3b82f6;
-  --chart-4: #b45309;
-  --chart-5: #34d399; /* light Emerald: second series (profit, leads) */
-  --alt: var(--lost);
+  --chart-3: #a78bfa;
+  --chart-4: #fbbf24;
+  --chart-5: #4db3f0;
   --backdrop: rgba(2, 6, 23, 0.6);
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 6px 16px rgba(0, 0, 0, 0.25);
   color-scheme: dark;
-}
-:root[data-theme="light"] {
-  /* V2 Light theme (reference/CLAUDE_CODE_IMPLEMENTATION.md F13, V2-theme-tokens): only surfaces, borders and text swap.
-     Emerald, its hover/pressed colours, the category colours and the leak line colour are the same as Dark. */
-  --bg: #f4f6fa; /* canvas */
-  --dot: #d3dbe6;
-  --library: #ffffff; /* panel / library */
-  --chrome: #ffffff; /* top bar and blocks */
-  --panel: #ffffff;
-  --panel2: #e5eaf1; /* raised / hover */
-  --line: #c4cedb; /* border */
-  --ink: #0f172a; /* primary text 16.5:1 */
-  --muted: #55657b; /* secondary text 5.9:1 */
-  --brand: #10b981;
-  --brand-hover: #059669;
-  --brand-press: #047857;
-  --brand-light: #047857; /* emerald text on light surfaces 5.1:1 */
-  --brand-ink: #03241a; /* dark green text on the Emerald button 6.5:1 */
-  --brand-soft: #d1fae5;
-  --side: #ffffff;
-  --side-ink: #0f172a;
-  --side-muted: #55657b;
-  --side-item: #e5eaf1;
-  --side-line: #c4cedb;
-  --c-traffic: #60a5fa;
-  --c-page: #a78bfa;
-  --c-offer: #fb923c;
-  --c-action: #2dd4bf;
-  --c-logic: #fbbf24;
-  --c-goal: #84cc16;
-  --c-note: #fde68a;
-  --cat-ink: #0b1220;
-  --good: #15803d;
-  --bad: #b91c1c; /* red text (errors) 6.0:1 */
-  --neg: #b91c1c;
-  --warn: #b45309; /* amber text (checks) 4.6:1 */
-  --edge: #7b8aa0; /* strong border / dashes */
-  --lost: #c2410c; /* orange text (leaks) 4.8:1 */
-  --attention: #b45309;
-  /* categorical chart series, validated against #ffffff */
-  --chart-1: #047857;
-  --chart-2: #c2410c;
-  --chart-3: #2563eb;
-  --chart-4: #a16207;
-  --chart-5: #10b981;
-  --alt: #c2410c;
-  --backdrop: rgba(15, 23, 42, 0.45);
-  --shadow: 0 1px 2px rgba(15, 23, 42, 0.06), 0 6px 18px rgba(15, 23, 42, 0.08);
-  color-scheme: light;
 }
 
 @theme inline {
@@ -107,6 +105,7 @@
   --color-panel: var(--panel);
   --color-panel2: var(--panel2);
   --color-line: var(--line);
+  --color-edge: var(--edge);
   --color-ink: var(--ink);
   --color-muted: var(--muted);
   --color-brand: var(--brand);
@@ -621,14 +620,14 @@ button {
 :root {
   --st-muted: #cbd5e1;
   --st-blue: #93c5fd;
-  --st-good: #4ade80;
+  --st-good: #9fc3ea;
   --st-warn: #fcd34d;
   --st-bad: #fca5a5;
 }
 :root[data-theme="light"] {
   --st-muted: #334155;
   --st-blue: #1d4ed8;
-  --st-good: #166534;
+  --st-good: #1d5f9e;
   --st-warn: #92400e;
   --st-bad: #991b1b;
 }
@@ -2187,4 +2186,12 @@ dialog.fm-sheetdlg > .body {
     padding-left: 6px;
     padding-right: 6px;
   }
+}
+
+/* Ecosystem header in the editor is a thin bar above it (components/eco-header.tsx): the editor gives up its height, and the bar steps aside in presentation mode. */
+body:has(.eco-compact) .fm-editor {
+  height: calc(100dvh - 44px);
+}
+body:has(.fm-present) .eco-compact {
+  display: none;
 }

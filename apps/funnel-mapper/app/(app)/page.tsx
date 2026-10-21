@@ -18,7 +18,7 @@ import { requireUser } from "@/lib/supabase/server";
 export const metadata: Metadata = { title: "Dashboard" };
 
 const PIPE: Record<string, string> = {
-  active: "#22c55e",
+  active: "#1d5f9e",
   proposal: "#60a5fa",
   lead: "#94a3b8",
   paused: "#fbbf24",

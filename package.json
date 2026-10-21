@@ -22,7 +22,8 @@
     "dev": "node scripts/dev-server.mjs",
     "test:e2e:ui": "node scripts/e2e-ui.mjs",
     "build:web": "node scripts/build-web.mjs",
-    "check:fmp-copy": "node scripts/fmp-copy.mjs verify"
+    "check:fmp-copy": "node scripts/fmp-copy.mjs verify",
+    "dryrun:fmp": "node scripts/fmp-dryrun/run.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "0.3.10",

@@ -37,7 +37,7 @@ import { WaitField } from "./wait-field";
 type Tab = "actual" | "settings" | "page" | "pricing" | "style" | "notes";
 const SWATCHES = [
   "#A78BFA",
-  "#10B981",
+  "#173A8F",
   "#FB923C",
   "#60A5FA",
   "#2DD4BF",

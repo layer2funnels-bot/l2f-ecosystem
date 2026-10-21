@@ -2,8 +2,8 @@ import { STATUS_LABEL } from "@/lib/schemas";
 
 /** Status colours (V2): live and active are green, proposed blue, paused amber, everything finished or empty is grey. */
 const DOT: Record<string, string> = {
-  live: "#22c55e",
-  active: "#22c55e",
+  live: "#1d5f9e",
+  active: "#1d5f9e",
   proposed: "#60a5fa",
   proposal: "#60a5fa",
   draft: "#94a3b8",

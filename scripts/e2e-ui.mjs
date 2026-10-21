@@ -128,6 +128,12 @@ await tile('office').click(); await wait('Needs your attention');
 check('U14', 'Office Home: the eight section menu, Home current, designed empty states, owner/admin card with waiting invitations', (await page.locator('nav.nav a').allInnerTexts()).join() === 'Home,Planner,Projects,Funnels,Documents,Team,Apps,Admin' && (await page.locator('nav.nav a[aria-current=page]').innerText()) === 'Home'
   && (await page.locator('main').innerText()).includes('Nothing assigned to you.') && await page.getByText('For owners and admins').isVisible() && await page.getByText('0 invitations waiting').isVisible());
 await shot(page, 'c1-home');
+const hp = (await q("insert into projects (workspace_id,name) values ($1,'Quiz funnel rebuild') returning id", [L]))[0].id;
+await q("insert into project_tasks (workspace_id,project_id,title,assignee_id,due_on) values ($1,$2,'Edit quiz emails',$3,current_date + 3),($1,$2,'Late task',$3,current_date - 2)", [L, hp, uid]);
+await q("insert into planner_reviews (workspace_id,title,due_on) values ($1,'Q4 review', current_date + 2)", [L]);
+await visit(page, base + '/#/office'); await wait('Edit quiz emails');
+check('U14b', 'Office Home fills "My work", "Deadlines" and the review notice from Projects and Planner (overdue task flagged, project name shown, review coming up)', (await page.locator('main').innerText()).includes('Quiz funnel rebuild') && (await page.locator('main').innerText()).includes('Overdue') && await page.getByText('Coming up:').isVisible() && !(await page.locator('main').innerText()).includes('Nothing assigned to you.'));
+
 await page.locator('nav.nav a', { hasText: 'Planner' }).click(); await wait('Planner isn’t built yet');
 check('U15', 'A section whose screens are not built yet says so honestly instead of showing a fake page', (await page.locator('main').innerText()).includes('Go to Office Home'));
 await visit(page, base + '/#/office/nope'); await wait('We couldn’t find that');
@@ -206,7 +212,7 @@ await page.getByRole('button', { name: 'Go to Aurj Office Home' }).click(); awai
 await inMenu(page, 'Layer2Funnels'); await page.waitForFunction(() => document.querySelector('#org-switcher strong')?.textContent === 'Layer2Funnels'); await wait('Needs your attention');
 await q('delete from memberships where workspace_id = $1 and user_id = $2', [A, uid]);
 await inMenu(page, 'Aurj'); await wait('You’re not a member of Aurj.');
-check('E4', 'Outcome 4: switching to an organization you are no longer in changes nothing and says why, in words', (await page.locator('#org-switcher strong').innerText()) === 'Layer2Funnels' && (await theme()) === 'l2f' && (await page.locator('.notice').innerText()).includes('nothing has changed'));
+check('E4', 'Outcome 4: switching to an organization you are no longer in changes nothing and says why, in words', (await page.locator('#org-switcher strong').innerText()) === 'Layer2Funnels' && (await theme()) === 'l2f' && (await page.locator('.notice[role=alert]').innerText()).includes('nothing has changed'));
 await q("insert into memberships (workspace_id,user_id,kind,role) values ($1,$2,'staff','editor')", [A, uid]);
 // 5 the switch could not finish
 await page.route('**/api/org.switch', (r) => r.abort());
