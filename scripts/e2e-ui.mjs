@@ -64,6 +64,7 @@ await page.locator('.appnav a', { hasText: 'Avatars' }).click(); await wait('No 
 check('U8', 'Empty list is designed on purpose with a create action (owner)', await page.getByText('New avatar').first().isVisible());
 await shot('05-avatars-empty');
 await page.getByText('New avatar').first().click(); await wait('New avatar');
+await page.waitForSelector('#r-client');   // the form, not the button that opened it
 const scopeOptions = await page.locator('#r-client option').allInnerTexts();
 check('U8b', 'The "Belongs to" list offers live clients (from the Clients data layer) and never archived ones', scopeOptions.includes(`UI Client ${stamp}`) && !scopeOptions.some((o) => o.startsWith('Archived Client')));
 await page.fill('#r-name', 'Busy founder'); await page.fill('#r-pains', 'No time to follow up'); await page.click('button[type=submit]');

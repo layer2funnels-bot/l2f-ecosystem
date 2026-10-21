@@ -60,7 +60,7 @@ jobs:
         if: failure()
         with: { name: e2e-shots, path: e2e-shots, if-no-files-found: ignore }
       - if: always()
-        run: npx supabase stop --no-backup || true
+        run: supabase stop --no-backup || true
 
   # The unedited Funnel Mapper Pro code copy must keep building and passing its own checks (its database and browser suites
   # need their own Supabase stack and run on demand: see docs/FMP_COPY_REPORT.md). No environment files, no live project.
