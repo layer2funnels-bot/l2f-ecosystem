@@ -31,6 +31,7 @@ jobs:
       - run: npm run check:fmp-copy
       - run: DRIVERS=pglite,pg npm test
       - run: npm run drill:restore
+      - run: npm run dryrun:fmp
       - run: npm run test:mutation
 
   # Real browser + real Supabase Auth + our routes + Postgres, all on the runner (Supabase CLI local stack, Docker). No live project.
