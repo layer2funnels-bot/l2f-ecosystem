@@ -22,7 +22,8 @@ Status key: **Implemented+Tested** · **Prepared** (written, not run live) · **
 | Design tokens single source + contrast check | Implemented+Tested | `npm run check:tokens` |
 | CI pipeline | Prepared | `.github/workflows/ci.yml` (no remote yet) |
 | Nightly Supabase backup | Prepared | `scripts/backup-supabase.sh`, `backup.yml.disabled` |
-| Sign-in flows, API layer, storage, Launcher UI, rate limit (T16), log hygiene (T15) | Planned | Phase 5 |
+| API layer: typed operations, error contract, `x-org-id` on every request, rate limit (T16), safe logs (T15) | Implemented+Tested | api 32/32 (PGlite, real PG, Supabase local stack) |
+| Sign-in flows, storage, Launcher UI | Planned | Phase 5 |
 | New Supabase project, hosting, SMTP, Git remote | Blocked (owner) | §6 |
 
 ## 2. Repository
@@ -33,7 +34,10 @@ migrations/0003_integration_foundation.sql connections, external_refs, webhook_i
 migrations/0005_org_switching.sql          org_scope policies, app_pages, resolve_org_switch
 migrations/0004_authorization_foundation.sql permission catalog, access levels, groups, assignments, overrides, lifecycle
 seed/bootstrap.sql                        first owner + workspaces + FMP entry (run once, by owner)
-packages/core/errors.mjs                  one public error vocabulary (denied = not found)
+packages/core/errors.mjs                  one public error vocabulary (denied = not found; adds rate_limited 429, org_required 400)
+packages/core/api.mjs                     request pipeline: org header → identity → operation → input → rate limit → DB → public error
+packages/core/operations.mjs              typed operations (launcher.list, org.switch, access.effective, clients.list, invitation.create/accept)
+packages/core/validate.mjs, rate-limit.mjs, safe-log.mjs, pg-executor.mjs
 packages/ui/tokens.json → tokens.css      design tokens, generated
 test/lib.mjs, isolation.test.mjs, audit.test.mjs, errors.test.mjs, run.mjs
 scripts/check-secrets.sh, check-licences.mjs, build-tokens.mjs, mutation-check.mjs, restore-drill.mjs, backup-supabase.sh
@@ -87,3 +91,11 @@ npm run stack:stop
 ```
 Result 21 Oct: isolation 47/47, audit 63/63, authz 25/25, switch 23/23, errors 9/9 on the local stack. The default `postgres` user there is **not** a superuser, so the suites use `supabase_admin` (local demo password only). The restore drill needs `pg_dump` 17 on PATH (`/usr/lib/postgresql/17/bin`).
 The default demo keys printed by `supabase start` are public and local-only; never put them in a real environment.
+
+## 10. API layer (slice 0 backend)
+- A route handler calls `api.handle({ operation, input, auth: { userId, email }, headers })` and returns `{ status, body }`. `userId`/`email` come from a verified Supabase JWT (verification itself belongs to the route, not built here).
+- `x-org-id` is required on every request (`NO_ORG` = nil UUID only for `org.switch` and `invitation.accept`). It is set transaction-locally with the user's claims by `pg-executor.mjs`, so migration 0005's `org_scope` policy narrows every query. Operations never take an organization from their input.
+- New operation: add `defineOperation` in `operations.mjs` with a typed `input`, a rate-limit `class` (read 120/min, write 30/min, sensitive 5/min per person), and test it in `test/api.test.mjs`. All errors go through `toPublicError`.
+- Logs: only allowlisted fields (`safe-log.mjs`); no bodies, ids, emails, tokens or database text.
+- Limits are in memory (one free-tier server). A multi-instance deployment needs a shared store; the `take(key, class)` interface stays the same.
+- Not built: HTTP route files, JWT verification, CORS, the browser client wrapper (they depend on the hosting choice, which needs owner approval).

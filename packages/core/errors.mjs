@@ -6,6 +6,8 @@ export const NOT_FOUND = Object.freeze({ status: 404, code: 'not_found', message
 export const CONFLICT = Object.freeze({ status: 409, code: 'conflict', message: 'This was changed or already exists. Refresh and try again.' });
 export const INVALID = Object.freeze({ status: 422, code: 'invalid', message: 'Some details need fixing.' });
 export const UNAVAILABLE = Object.freeze({ status: 503, code: 'unavailable', message: 'The service is waking up or busy. Try again in a minute.' });
+export const RATE_LIMITED = Object.freeze({ status: 429, code: 'rate_limited', message: 'Too many requests. Wait a moment and try again.' });
+export const ORG_REQUIRED = Object.freeze({ status: 400, code: 'org_required', message: 'Choose an organization first.' });
 export const FAILED = Object.freeze({ status: 500, code: 'failed', message: 'Something went wrong. Nothing was changed.' });
 
 // 42501 RLS/permission denied · 23503 reference not found or in another workspace · P0002 invitation invalid
