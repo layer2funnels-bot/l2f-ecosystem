@@ -5,7 +5,7 @@ set check_function_bodies = off;
 -- directly with their own token: skipping rate limits, safe logging, input checks, typed operations and the x-org-id request scope
 -- (a person in two organizations would see both at once). So those roles get NO privileges on our objects at all.
 -- Our API server runs each request as the NOLOGIN role `app_user` (set local role, claims and x-org-id set per transaction), which
--- is the role every migration already grants privileges to. `service_role` (server-only key) is untouched.
+-- is the role every migration already grants privileges to. The server-only key's role is untouched.
 -- The `private` schema stays unexposed (supabase/config.toml lists only public and graphql_public, and nothing here is granted).
 do $$
 declare r text; c text; s text;
