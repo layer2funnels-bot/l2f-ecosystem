@@ -136,7 +136,7 @@ SUPABASE_URL=... SUPABASE_PUBLISHABLE_KEY=... node scripts/build-web.mjs   # bui
 - Tokens: stored in `localStorage` (static hosting has no server session). Defences: strict CSP (`_headers`), no `innerHTML` anywhere (tested), one refresh then "session ended". A future move to cookies is possible if the owner prefers; it changes `session.js`/`api.js` only.
 - `x-org-id`: every request sends it; the nil UUID means "no organization chosen yet" and works only for listing organizations, switching and accepting an invitation.
 - **Go-live additions beyond runbook §6** (all need owner approval): create the Pages project (build `node scripts/build-web.mjs`, output `dist/web`, flags in `wrangler.toml`), set encrypted variables `DATABASE_URL` (session pooler), `SUPABASE_JWKS_URL`, `SUPABASE_JWT_ISSUER`, rebuild with the live URL and publishable key, self-host the three fonts, set Auth redirect URLs to the Pages domain.
-- Funnel Mapper Pro: the Launcher shows it as a plain tile (own sign-in, new tab). No connection exists (FMP-2).
+- Funnel Mapper Pro is a regular app (FMP-1): normal tile, same tab, ecosystem header. Until moving it onto the ecosystem sign-in and database is approved (FMP-2), its data and sign-in stay its own.
 
 ## 13. Clients data layer (0008) rules of use
 - `clients` stays minimal and is readable by that client's own contact. Everything internal lives in **`client_profiles`** (business name, niche, contact details, status, stage, tags): no client policy exists on it, so a contact sees their client's name and nothing else (tested CT13, CA12).

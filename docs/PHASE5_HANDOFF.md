@@ -16,7 +16,7 @@ Prerequisites: `npm run test:all` green; runbook steps 1–3 in the manual done.
 - Invitation email → link → sign in or create account with the **same** email → joined. Mismatch: one plain line, no detail.
 - Signed in, no membership: "You don't have access to a workspace yet. Ask your admin for an invitation." No other data.
 - Account/profile, notifications centre, app-access editing in Team, global search: design before their slice.
-- FMP tile copy: "Funnel Mapper Pro · Opens in a new tab · own sign-in for now".
+- FMP tile: a normal tile, same tab, same header and switcher (design 03; FMP-1 clarification). The old "new tab / own sign-in" wording is retired.
 
 ## Acceptance
 All existing checks pass; every new table has allow + deny tests per role and a client test; six states per screen; errors only through `toPublicError`; tokens from `packages/ui/tokens.css`.
