@@ -4,6 +4,7 @@ export function h(tag, attrs = {}, ...children) {
   for (const [k, v] of Object.entries(attrs ?? {})) {
     if (v === false || v == null) continue;
     if (k === 'class') el.className = v;
+    else if (k === 'style') el.style.cssText = String(v);        // CSSOM, not the style attribute: the Content-Security-Policy forbids inline style attributes
     else if (k === 'dataset') Object.assign(el.dataset, v);
     else if (k.startsWith('on') && typeof v === 'function') el.addEventListener(k.slice(2).toLowerCase(), v);
     else if (k === 'value') el.value = v;
@@ -12,6 +13,8 @@ export function h(tag, attrs = {}, ...children) {
   for (const c of children.flat()) if (c != null && c !== false) el.append(c.nodeType ? c : document.createTextNode(String(c)));
   return el;
 }
+// replaceChildren(null) would print "null": this drops empty slots.
+export const put = (el, ...nodes) => { el.replaceChildren(...nodes.flat().filter((x) => x != null && x !== false)); return el; };
 export const clear = (el) => { while (el.firstChild) el.removeChild(el.firstChild); return el; };
 let live;
 // Screen-reader announcements (organization switches, saves, errors).

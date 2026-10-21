@@ -1,6 +1,6 @@
 // Negative control: re-introduce each audited defect and require the test suites to FAIL.
 // A suite that still passes against a broken policy would prove nothing.
-import { spawnSync } from 'node:child_process';
+import { spawn } from 'node:child_process';
 const mutations = {
   'F1 identity reads legacy claim only': `create or replace function private.current_user_id() returns uuid language sql stable set search_path='' as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;`,
   'F2 cross-workspace client link allowed': `alter table projects drop constraint projects_client_fk; alter table projects add foreign key (client_id) references clients(id);`,
@@ -31,19 +31,53 @@ const mutations = {
   'DA private schema exposed to the signed-in role': `grant usage on schema private to authenticated;`,
   'PS permissions list ignores the decision (offers every client)': `create or replace function public.my_permissions() returns table (permission_key text, scope text, client_id uuid, project_id uuid) language sql stable security definer set search_path='' as $$ select p.key, 'client'::text, c.id, null::uuid from public.permissions p cross join public.clients c where 'client' = any (p.scopes) and private.is_staff(c.workspace_id) $$; grant execute on function public.my_permissions() to app_user;`,
   'PS permissions list shows hidden scope (organization-wide for everyone)': `create or replace function public.my_permissions() returns table (permission_key text, scope text, client_id uuid, project_id uuid) language sql stable security definer set search_path='' as $$ select p.key, 'workspace'::text, null::uuid, null::uuid from public.permissions p where private.is_staff(coalesce(nullif(private.request_org(),'')::uuid, '00000000-0000-0000-0000-000000000000')) $$; grant execute on function public.my_permissions() to app_user;`,
+  'PJ guard removed: the client of a task comes from the caller': `drop trigger project_tasks_guard on project_tasks;`,
+  'PJ client contact can read time entries': `create policy time_entries_leak on time_entries for select using (private.client_of(workspace_id, client_id));`,
+  'PJ everyone with the app sees all time': `create policy time_entries_all on time_entries for select using (private.can_use_app(workspace_id, 'projects'));`,
+  'PJ timer start time trusted from the caller': `drop trigger time_entries_guard on time_entries;`,
+  'PJ archive-before-delete removed on tasks': `drop trigger project_tasks_refuse_delete on project_tasks;`,
+  'PJ organization scope removed on tasks': `drop policy org_scope on project_tasks;`,
+  'DR admins can read personal spaces': `create policy files_leak on files for select using (space = 'personal' and private.has_permission(workspace_id, 'drive.file.delete_any'));`,
+  'DR everyone with Drive reads client files': `create policy files_leak2 on files for select using (private.has_permission(workspace_id, 'drive.file.view'));`,
+  'DR protected SOPs editable by anyone who may edit': `create or replace function private.can_write_file(ws uuid, p_space text, p_client uuid, p_owner uuid, p_uploaded_by uuid, p_protected boolean) returns boolean language sql stable security definer set search_path='' as $$ select private.has_permission(ws, 'drive.file.edit') $$;`,
+  'DR break-glass leaves no log and no notice': `create or replace function public.drive_break_glass_open(p_owner uuid, p_reason text) returns table (id uuid, name text, kind text, folder_id uuid, mime_type text, size_bytes bigint, current_version int, updated_at timestamptz, archived_at timestamptz, storage_path text, body text) language sql security definer set search_path='' as $$ select f.id, f.name, f.kind, f.folder_id, f.mime_type, f.size_bytes, f.current_version, f.updated_at, f.archived_at, null::text, null::text from public.files f where f.space = 'personal' and f.owner_id = p_owner and private.has_permission(f.workspace_id, 'drive.personal.break_glass') $$;`,
+  'DR share links can last forever': `alter table drive_share_links drop constraint drive_share_links_check;`,
+  'DR versions can be rewritten': `grant update, delete on public.file_versions to app_user;`,
+  'DR storage path and space rules removed': `drop trigger files_guard on files;`,
+  'DR trash step removed on files': `drop trigger files_refuse_delete on files;`,
+  'PL measure client taken from the caller': `drop trigger planner_measures_guard on planner_measures;`,
+  'PL recorded value time trusted from the caller': `drop trigger planner_values_guard on planner_measure_values;`,
+  'PL history can be edited and removed': `grant update, delete on public.planner_measure_values to app_user;`,
+  'PL objectives readable by anyone with the app': `create policy planner_objectives_all on planner_objectives for select using (private.can_use_app(workspace_id, 'planner'));`,
+  'PL tasks linkable without seeing them': `drop policy planner_links_insert on planner_objective_tasks; create policy planner_links_insert on planner_objective_tasks for insert with check (private.has_permission(workspace_id, 'planner.objective.edit'));`,
+  'PL organization scope removed on objectives': `drop policy org_scope on planner_objectives;`,
+  'PL review client taken from the caller': `drop trigger planner_reviews_guard on planner_reviews;`,
+  'PL objective with work can be deleted': `drop trigger planner_objectives_in_use on planner_objectives;`,
   'SH last-owner guard removed': `drop trigger memberships_last_owner on public.memberships;`,
   'SH member admin skips the owner and role checks': `create or replace function private.member_target(p_user uuid, p_new_role text) returns uuid language plpgsql stable security definer set search_path='' as $$ begin return private.request_org()::uuid; end $$;`,
   'SH invitation preview ignores whose e-mail it was sent to': `create or replace function public.invitation_preview(p_token text) returns table (org_name text, org_slug text, kind text, role text, inviter_name text, email text) language sql stable security definer set search_path='' as $$ select w.name, w.slug, i.kind, i.role, 'x', i.email from public.invitations i join public.workspaces w on w.id = i.workspace_id where i.token_hash = encode(sha256(convert_to(coalesce(p_token,''),'UTF8')),'hex') $$; grant execute on function public.invitation_preview(text) to app_user;`,
 };
-const SUITES = ['isolation', 'audit', 'authz', 'switch', 'api', 'funnels', 'funnels-api', 'clients', 'direct-access', 'permissions-scope', 'shell-admin'];
-let ok = true;
-for (const [name, sql] of Object.entries(mutations)) {
-  const fails = SUITES.map((n) => `test/${n}.test.mjs`).map(f => {
-    const r = spawnSync(process.execPath, [f], { env: { ...process.env, MUTATION_SQL: sql }, encoding: 'utf8' });
-    return { n: (r.stdout.match(/^FAIL/gm) || []).length, status: r.status };
-  });
-  const caught = fails.some(f => f.status !== 0 && f.n > 0);
-  ok &&= caught;
-  console.log(`${caught ? 'CAUGHT ' : 'MISSED '} ${name}  (failing checks: ${SUITES.map((n, i) => `${n} ${fails[i].n}`).join(', ')})`);
+const SUITES = ['isolation', 'audit', 'authz', 'switch', 'api', 'funnels', 'funnels-api', 'clients', 'direct-access', 'permissions-scope', 'shell-admin', 'projects', 'drive', 'planner'];
+// A mutation is caught as soon as one suite fails, so each mutation tries the suite most likely to catch it first (by its name prefix) and
+// stops at the first failure; several mutations run at once. A mutation nobody catches still runs every suite.
+const FIRST = { PJ: 'projects', DR: 'drive', PL: 'planner', CL: 'clients', FN: 'funnels', DA: 'direct-access', PS: 'permissions-scope', SH: 'shell-admin', SW: 'switch', AZ: 'authz' };
+const run = (suite, sql) => new Promise((done) => {
+  const p = spawn(process.execPath, [`test/${suite}.test.mjs`], { env: { ...process.env, MUTATION_SQL: sql } });
+  let out = ''; p.stdout.on('data', (d) => { out += d; }); p.on('close', (status) => done({ n: (out.match(/^FAIL/gm) || []).length, status }));
+});
+async function check(name, sql) {
+  const first = FIRST[name.split(' ')[0]];
+  const order = first ? [first, ...SUITES.filter((s) => s !== first)] : SUITES;
+  for (const s of order) { const r = await run(s, sql); if (r.status !== 0 && r.n > 0) return { name, caught: true, by: s, n: r.n }; }
+  return { name, caught: false };
 }
+const queue = Object.entries(mutations); const done = []; let ok = true;
+await Promise.all(Array.from({ length: Number(process.env.MUTATION_JOBS || 3) }, async () => {
+  while (queue.length) {
+    const [name, sql] = queue.shift(); const r = await check(name, sql);
+    ok &&= r.caught; done.push(r);
+    console.log(`${r.caught ? 'CAUGHT ' : 'MISSED '} ${name}${r.caught ? `  (by ${r.by}: ${r.n} failing check${r.n > 1 ? 's' : ''})` : '  (no suite failed)'}`);
+  }
+}));
+console.log(`\n${done.filter((d) => d.caught).length}/${done.length} mutations caught`);
 process.exit(ok ? 0 : 1);

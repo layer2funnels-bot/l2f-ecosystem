@@ -29,7 +29,7 @@ await asUser(U);
 check('RS7', 'Browser roles cannot call it or read the table', (await errCode(() => db.query("select * from private.rate_limit_take('k','write',5,60)"))) === '42501' && (await errCode(() => db.query('select * from private.api_rate_limits'))) === '42501');
 await asSuper();
 await db.query("insert into private.api_rate_limits (key, cls, window_start, hits) values ('u:old','read', now() - interval '3 hours', 1)");
-for (let i = 0; i < 400; i++) await db.query("select * from private.rate_limit_take('u:x','read',1000,60)");
+for (let i = 0; i < 1500; i++) await db.query("select * from private.rate_limit_take('u:x','read',1000,60)");   // the tidy-up runs on about 1 call in 100: 1500 calls make a miss practically impossible
 check('RS8', 'Expired counters tidy themselves up (no scheduler needed)', (await rows("select 1 from private.api_rate_limits where key='u:old'")).length === 0);
 
 // ---- tiered behaviour

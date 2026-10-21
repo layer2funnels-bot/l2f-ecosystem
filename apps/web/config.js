@@ -4,5 +4,5 @@ window.L2F_CONFIG = {
   supabaseUrl: 'http://127.0.0.1:54321',
   publishableKey: 'sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH',
   googleEnabled: false,
-  showNeedsDesign: true,
+  showDesignStatus: false,
 };

@@ -35,7 +35,7 @@ await db.query("insert into app_grants (workspace_id,user_id,app_key) values ($1
 const PR_VIS = id(), PR_INT = id(), F_VIS = id(), F_INT = id();
 await db.query("insert into projects (id,workspace_id,client_id,name,client_visible) values ($1,$3,$4,'Visible',true),($2,$3,$4,'Internal',false)", [PR_VIS, PR_INT, L2F, CL_A]);
 await db.query(`insert into files (id,workspace_id,client_id,uploaded_by,storage_path,client_visible) values
-  ($1,$3,$4,$5,$6,true),($2,$3,$4,$5,$7,false)`, [F_VIS, F_INT, L2F, CL_A, U.ED, `${L2F}/deliverable.pdf`, `${L2F}/internal-pricing.pdf`]);
+  ($1,$3,$4,$5,$6,true),($2,$3,$4,$5,$7,false)`, [F_VIS, F_INT, L2F, CL_A, U.ED, `${L2F}/clients/${CL_A}/deliverable.pdf`, `${L2F}/clients/${CL_A}/internal-pricing.pdf`]);
 
 // ---------------- F1 identity in both claim formats ----------------
 await asUser(U.ED, { format: 'claims' });
@@ -81,7 +81,7 @@ const publicExec = await rows(`select p.oid::regprocedure::text f from pg_proc p
   where n.nspname in ('public','private') and has_function_privilege('public', p.oid, 'execute')`);
 check('F4b', 'No public or private function is executable by PUBLIC', publicExec.length === 0, publicExec.map(r => r.f).join(', '));
 const apiFns = (await rows(`select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' order by 1`)).map(r => r.proname);
-check('F4c', 'Only the intended RPCs exist in the API schema', JSON.stringify(apiFns) === JSON.stringify(['accept_invitation', 'create_invitation', 'effective_access', 'invitation_cancel', 'invitation_decline', 'invitation_preview', 'launcher_apps', 'launcher_catalog', 'member_remove', 'member_set_role', 'member_set_status', 'members_list', 'my_organizations', 'my_permissions', 'profile_touch', 'resolve_org_switch']), apiFns.join(','));
+check('F4c', 'Only the intended RPCs exist in the API schema', JSON.stringify(apiFns) === JSON.stringify(['accept_invitation', 'create_invitation', 'drive_break_glass_open', 'drive_link_resolve', 'effective_access', 'invitation_cancel', 'invitation_decline', 'invitation_preview', 'launcher_apps', 'launcher_catalog', 'member_remove', 'member_set_role', 'member_set_status', 'members_list', 'my_organizations', 'my_permissions', 'profile_touch', 'resolve_org_switch']), apiFns.join(','));
 const unsafe = await rows(`select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
   where n.nspname in ('public','private') and (p.proconfig is null or not exists (select 1 from unnest(p.proconfig) c where c like 'search_path=%'))`);
 check('F4d', 'Every function pins its search_path', unsafe.length === 0, unsafe.map(r => r.proname).join(','));

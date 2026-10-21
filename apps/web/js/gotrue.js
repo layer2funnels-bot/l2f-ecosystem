@@ -13,7 +13,8 @@ export function createAuthClient({ baseUrl, publishableKey, fetchImpl = (...a) =
   return {
     signIn: (email, password) => call('/token?grant_type=password', { body: { email, password } }),
     // with "confirm email" on, data.access_token is absent and the person must open the e-mail link first
-    signUp: (email, password) => call(`/signup${rt}`, { body: { email, password } }),
+    signUp: (email, password, name) => call(`/signup${rt}`, { body: { email, password, ...(name ? { data: { full_name: name } } : {}) } }),
+    resend: (email) => call(`/resend${rt}`, { body: { type: 'signup', email } }),
     refresh: (refresh_token) => call('/token?grant_type=refresh_token', { body: { refresh_token } }),
     recover: (email) => call(`/recover${rt}`, { body: { email } }),
     setPassword: (token, password) => call('/user', { method: 'PUT', token, body: { password } }),
@@ -21,5 +22,5 @@ export function createAuthClient({ baseUrl, publishableKey, fetchImpl = (...a) =
     googleUrl: () => `${url('/authorize')}?provider=google${redirectTo ? `&redirect_to=${encodeURIComponent(redirectTo)}` : ''}`,
   };
 }
-export const MIN_PASSWORD = 12;
+export const MIN_PASSWORD = 10;
 export const isEmail = (v) => /^[^\s@]{1,64}@[^\s@]{1,255}\.[^\s@]{2,}$/.test(v);

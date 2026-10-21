@@ -19,8 +19,8 @@ export const LOCAL_ENV = {
   SUPABASE_JWT_ISSUER: 'http://127.0.0.1:54321/auth/v1',
 };
 
-export async function startDevServer({ port = 8788, env = { ...LOCAL_ENV, ...process.env }, sink } = {}) {
-  const server = createServer(env, sink ? { sink } : undefined);
+export async function startDevServer({ port = 8788, env = { ...LOCAL_ENV, ...process.env }, sink, limits } = {}) {
+  const server = createServer(env, { ...(sink ? { sink } : {}), ...(limits ? { limits } : {}) });
   const http_ = http.createServer(async (req, res) => {
     try {
       const url = new URL(req.url, `http://${req.headers.host}`);

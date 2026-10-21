@@ -8,7 +8,7 @@ export function createSession({ storage, now = () => Date.now() }) {
   return {
     // GoTrue session body -> stored form
     set(body) {
-      mem = { access: body.access_token, refresh: body.refresh_token, expiresAt: body.expires_at ? body.expires_at * 1000 : now() + (body.expires_in ?? 3600) * 1000, email: body.user?.email ?? mem?.email ?? null, userId: body.user?.id ?? mem?.userId ?? null };
+      mem = { access: body.access_token, refresh: body.refresh_token, expiresAt: body.expires_at ? body.expires_at * 1000 : now() + (body.expires_in ?? 3600) * 1000, email: body.user?.email ?? mem?.email ?? null, userId: body.user?.id ?? mem?.userId ?? null, name: body.user?.user_metadata?.full_name ?? mem?.name ?? null };
       write(mem); return mem;
     },
     get: () => mem,
