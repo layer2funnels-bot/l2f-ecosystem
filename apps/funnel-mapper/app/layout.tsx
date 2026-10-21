@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, DM_Sans, JetBrains_Mono } from "next/font/google";
-import { cookies } from "next/headers";
 import "./globals.css";
 
 const bricolage = Bricolage_Grotesque({ variable: "--font-bricolage", subsets: ["latin"], weight: ["500", "700", "800"] });
@@ -16,17 +15,10 @@ export const metadata: Metadata = {
 };
 export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover" };
 
-// Applies the saved theme before paint to avoid a light/dark flash (the cookie below covers the server render).
-const themeScript = `try{var t=localStorage.getItem('fm-theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}`;
-
-export default async function RootLayout({ children }: LayoutProps<"/">) {
-  // Dark is the default; Light only when the person chose it (cookie mirrors their saved preference).
-  const theme = (await cookies()).get("fm-theme")?.value === "light" ? "light" : "dark";
+// Light is the only look offered in the ecosystem copy (design 08): no saved preference is read, so nothing can flip it back to dark.
+export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" data-theme={theme} className={`${bricolage.variable} ${dmSans.variable} ${mono.variable}`} suppressHydrationWarning>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-      </head>
+    <html lang="en" data-theme="light" className={`${bricolage.variable} ${dmSans.variable} ${mono.variable}`}>
       <body className="antialiased">{children}</body>
     </html>
   );

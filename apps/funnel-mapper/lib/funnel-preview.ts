@@ -146,7 +146,7 @@ export function previewModel(rawGraph: unknown, rawSettings: unknown, w: number,
       return { id: n.id, family: v.family, color: T.color ?? T.cat, name: n.name, ...box(n), wireframe: v.wireframe, price: v.family === "offer" };
     }),
     edges,
-    frames: frames.map((f) => ({ x: f.x, y: f.y, w: f.w ?? 400, h: f.h ?? 240, color: String(f.p.color ?? "#10B981") })),
+    frames: frames.map((f) => ({ x: f.x, y: f.y, w: f.w ?? 400, h: f.h ?? 240, color: String(f.p.color ?? "#173A8F") })),
     leakId,
   };
 }

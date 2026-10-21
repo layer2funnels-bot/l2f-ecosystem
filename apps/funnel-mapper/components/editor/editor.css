@@ -3726,15 +3726,15 @@ dialog.fm-sharedlg {
 
 /* ---------- Simulate (lib/simulate.ts): baseline vs now, drawn on the map ---------- */
 :root {
-  --sim-up: #34d399;
+  --sim-up: #7fb0e6;
   --sim-down: #f87171;
-  --sim-up-bg: rgba(16, 185, 129, 0.16);
+  --sim-up-bg: rgba(23, 58, 143, 0.16);
   --sim-down-bg: rgba(248, 113, 113, 0.16);
 }
 :root[data-theme="light"] {
-  --sim-up: #047857;
+  --sim-up: #1d5f9e;
   --sim-down: #b91c1c;
-  --sim-up-bg: #d1fae5;
+  --sim-up-bg: #e4edf7;
   --sim-down-bg: #fee2e2;
 }
 .fm-simbtn[aria-pressed="true"] {
@@ -5191,7 +5191,7 @@ dialog.fm-sharedlg {
 }
 .fm-sb-s:focus-within {
   border-color: var(--brand);
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+  box-shadow: 0 0 0 3px rgba(23, 58, 143, 0.15);
 }
 .fm-sb-s input {
   flex: 1;
@@ -5475,8 +5475,8 @@ dialog.fm-sharedlg {
   border-radius: 18%;
 }
 .fm-sys.wdg {
-  background: rgba(16, 185, 129, 0.14);
-  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.35);
+  background: rgba(23, 58, 143, 0.14);
+  box-shadow: 0 0 0 1px rgba(23, 58, 143, 0.35);
 }
 .fm-sys .gl {
   display: grid;
@@ -5512,7 +5512,7 @@ dialog.fm-sharedlg {
   background: #fbbf24;
 }
 .fm-mwc i:nth-child(3) {
-  background: #34d399;
+  background: #4d7fe0;
 }
 .fm-mw svg {
   display: block;
@@ -5604,8 +5604,8 @@ dialog.fm-sharedlg {
   font-size: 13px;
 }
 .fm-top .btn.tidy {
-  border: 1px solid rgba(16, 185, 129, 0.4);
-  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(23, 58, 143, 0.4);
+  background: rgba(23, 58, 143, 0.1);
   color: var(--brand-light);
 }
 .fm-top .fm-edit-tools {
@@ -5817,10 +5817,10 @@ dialog.fm-sharedlg {
 }
 .fm-node.sel {
   border-color: var(--brand);
-  box-shadow: 0 0 0 1px var(--brand), 0 0 0 5px rgba(16, 185, 129, 0.16);
+  box-shadow: 0 0 0 1px var(--brand), 0 0 0 5px rgba(23, 58, 143, 0.16);
 }
 .fm-node.sel.multi {
-  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.7);
+  box-shadow: 0 0 0 1px rgba(23, 58, 143, 0.7);
 }
 .fm-node:hover:not(.sel) {
   border-color: #475569;
@@ -5902,7 +5902,7 @@ dialog.fm-sharedlg {
   background: #fbbf24;
 }
 .pgo-chrome i:nth-child(3) {
-  background: #34d399;
+  background: #4d7fe0;
 }
 .pgo-page {
   position: relative;
@@ -7547,7 +7547,7 @@ dialog.fm-exportdlg {
   }
 }
 :root[data-theme="light"] .fm-saved-retry {
-  color: #047857;
+  color: #173a8f;
 }
 
 /* tablet header: the funnel name gives way before the scenario pill does (the pill used to be clipped to "Basel") */
@@ -7918,8 +7918,8 @@ dialog.fm-exportdlg {
   gap: 12px;
   min-height: 40px;
   padding: 0 16px;
-  border-bottom: 1px solid rgba(16, 185, 129, 0.35);
-  background: rgba(16, 185, 129, 0.12);
+  border-bottom: 1px solid rgba(23, 58, 143, 0.35);
+  background: rgba(23, 58, 143, 0.12);
   font-size: 13px;
   color: var(--muted);
 }
@@ -7954,7 +7954,7 @@ dialog.fm-exportdlg {
 :root[data-theme="light"] .fm-banner-back,
 :root[data-theme="light"] .fm-plan-new,
 :root[data-theme="light"] .fm-plan-act[aria-pressed="true"] {
-  color: #047857;
+  color: #173a8f;
 }
 /* the calendar */
 .fm-range {
@@ -8062,7 +8062,7 @@ dialog.fm-exportdlg {
   background: var(--panel2);
 }
 .fm-cal-d.in {
-  background: rgba(16, 185, 129, 0.2);
+  background: rgba(23, 58, 143, 0.2);
 }
 .fm-cal-d.end {
   background: var(--brand);
@@ -8378,7 +8378,7 @@ dialog.fm-exportdlg {
   }
 }
 :root[data-theme="light"] .fm-sbx-res {
-  background: rgba(16, 185, 129, 0.1);
+  background: rgba(23, 58, 143, 0.1);
 }
 @media (max-width: 767px) {
   /* on a phone the settings box is the bottom sheet; the full panel sheet waits behind it */
@@ -8781,17 +8781,17 @@ dialog.fm-exportdlg {
 }
 .fm-blk.sel .fm-pbody,
 .fm-blk.sel .fm-form:not(.art) {
-  box-shadow: 0 0 0 2px var(--brand), 0 0 0 8px rgba(16, 185, 129, 0.16);
+  box-shadow: 0 0 0 2px var(--brand), 0 0 0 8px rgba(23, 58, 143, 0.16);
 }
 .fm-blk.sel .fm-form.art {
   box-shadow: none;
 }
 .fm-blk.sel .fm-form.art .fm-art {
-  filter: drop-shadow(0 0 1px var(--brand)) drop-shadow(0 0 1px var(--brand)) drop-shadow(0 0 6px rgba(16, 185, 129, 0.5));
+  filter: drop-shadow(0 0 1px var(--brand)) drop-shadow(0 0 1px var(--brand)) drop-shadow(0 0 6px rgba(23, 58, 143, 0.5));
 }
 .fm-blk.sel.multi .fm-pbody,
 .fm-blk.sel.multi .fm-form:not(.art) {
-  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.7);
+  box-shadow: 0 0 0 2px rgba(23, 58, 143, 0.7);
 }
 .fm-blk.warn .fm-pbody,
 .fm-blk.warn .fm-form:not(.art) {
