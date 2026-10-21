@@ -7,7 +7,7 @@
   "scripts": {
     "test": "node test/run.mjs",
     "test:pg": "DRIVERS=pg node test/run.mjs",
-    "test:all": "DRIVERS=pglite,pg node test/run.mjs && node scripts/restore-drill.mjs && node scripts/mutation-check.mjs",
+    "test:all": "DRIVERS=pglite,pg node test/run.mjs && node scripts/restore-drill.mjs && node scripts/fmp-dryrun/run.mjs > /dev/null && node scripts/mutation-check.mjs",
     "test:mutation": "node scripts/mutation-check.mjs",
     "drill:restore": "node scripts/restore-drill.mjs",
     "check:secrets": "bash scripts/check-secrets.sh",

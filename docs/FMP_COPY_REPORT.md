@@ -36,3 +36,16 @@ The failures present on both sides are identical in both trees, so they are not 
 
 ## Licence notes for the copy's dependencies (information, before any reshaping or deploy)
 Outside the ecosystem allowlist: `MPL-2.0` (build and test tools: lightningcss, axe-core), `LGPL-3.0-or-later` (the `sharp` image library's native libvips binaries), `EPL-2.0 OR GPL-3.0-or-later` (elkjs, the auto-layout engine; EPL-2.0 is the usable side), `CC-BY-4.0` (caniuse-lite data), and combined permissive licences (pako, victory-vendor). FMP already ships these today. They need a review entry in `docs/DECISIONS.md` before the copy joins the ecosystem build.
+
+## Reshape step 1 (look only): gate result (21 Oct 2026)
+What changed: colours (light default, ecosystem blues, Emerald removed from the interface), the header (Launcher button, organization, search, create actions, profile, four-item menu, phone bottom bar, compact in the editor), no theme switch. Canvas, maths, reports, sign-in and data access are untouched. Every changed file is in `docs/FMP_CHANGES.md`; `node scripts/fmp-copy.mjs verify` passes (20 changed, 3 deleted, 1 added, 0 unrecorded). The tag `fmp-copy-pristine` still holds the untouched copy.
+
+| Check | Result |
+|---|---|
+| Unit tests, lint, build, typecheck | pass (same counts as before: 279 unit tests, 0 lint errors) |
+| FMP database tests, on FMP's own local stack | **55 / 55** |
+| Browser subset `privacy` + `team` + `workspaces` (30 tests incl. setup) | 28 pass, 2 fail |
+
+The two failures: (1) `workspaces.spec.ts:84` (private sign-up link) needs the sign-up code variable, the same failure as on the original and on the pristine copy. (2) `workspaces.spec.ts:210` (panel collapse) measures the canvas width straight after opening; the details panel opens a moment later (width 1100 at first, 1072 after the library closes), so the test's expected width is wrong when it measures early. This test already failed once on the original and passed on re-run (see above). It failed 3 of 3 times here, so the header change may have shifted the timing; a width log of the same steps shows both panels collapse correctly (canvas 1356 wide with both closed). No behaviour defect was found, but this is **not** proof of identical timing; the nightly job (task 8) will tell. Privacy (12/12) and team (6/6), the two access suites, pass.
+
+Left for step 2 (not looked at yet): export palettes and chart colours (exporters, report charts) still use the old colours on purpose, so exports stay identical until fidelity is checked; line labels, node stripes and the real organization switcher wait for the move onto the ecosystem sign-in.
