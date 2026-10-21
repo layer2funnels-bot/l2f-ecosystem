@@ -60,7 +60,7 @@ await db.query(`insert into files (id, workspace_id, client_id, uploaded_by, sto
   [F_E1, L2F, U.E1, `${L2F}/e1.pdf`,
    F_E2, U.E2, `${L2F}/e2.pdf`,
    F_AUR, AUR, U.AE, `${AUR}/aur.pdf`,
-   F_CLIENT, CL_A, `${L2F}/acme-deliverable.pdf`]);
+   F_CLIENT, CL_A, `${L2F}/clients/${CL_A}/acme-deliverable.pdf`]);
 await db.query('update files set client_visible = true where id = $1', [F_CLIENT]);
 const BB = id();
 await db.query("insert into brand_base_answers (id, workspace_id, client_id, section, question, answer) values ($1,$2,$3,'Offer','Core promise','...')", [BB, L2F, CL_A]);
@@ -119,7 +119,7 @@ check('D6b', 'Admin can read Brand Base answers', (await rows('select id from br
 // ---- D2 file deletion ----
 await asUser(U.E1);
 check('D2c', 'Editor cannot delete another editor\'s file', (await affected('delete from files where id = $1', [F_E2])) === 0);
-check('D2d', 'Editor can delete their own upload', (await affected('delete from files where id = $1', [F_E1])) === 1);
+check('D2d', 'Editor can delete their own upload, after moving it to the trash (archive before delete, migration 0014)', (await errCode(() => db.query('delete from files where id = $1', [F_E1]))) === 'P0001' && (await affected('update files set archived_at = now() where id = $1', [F_E1])) === 1 && (await affected('delete from files where id = $1', [F_E1])) === 1);
 
 // ---- D4 approvals ----
 await asUser(U.E1);

@@ -18,7 +18,7 @@ for (const u of [U.ED, U.ED2, U.VW]) for (const app of ['clients', 'projects', '
 const CA = id(), CB = id(), PA = id(), FB = id();
 await db.query("insert into clients (id,workspace_id,name) values ($1,$3,'Client A'),($2,$3,'Client B')", [CA, CB, L]);
 await db.query("insert into projects (id,workspace_id,client_id,name) values ($1,$2,$3,'A funnel')", [PA, L, CA]);
-await db.query("insert into files (id,workspace_id,client_id,uploaded_by,storage_path) values ($1,$2,$3,$4,$5)", [FB, L, CB, U.ADM, `${L}/b.pdf`]);
+await db.query("insert into files (id,workspace_id,client_id,uploaded_by,storage_path) values ($1,$2,$3,$4,$5)", [FB, L, CB, U.ADM, `${L}/clients/${CB}/b.pdf`]);
 const lvl = async (name, ws = L) => (await rows('select id from access_levels where workspace_id=$1 and name=$2', [ws, name]))[0].id;
 const visible = async (t) => (await rows(`select id from ${t}`)).map(r => r.id).sort();
 

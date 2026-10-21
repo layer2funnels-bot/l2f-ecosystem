@@ -151,6 +151,46 @@ check('E36', 'Projects: the other organization header cannot see the project', r
 const directP = await Promise.all(['projects', 'project_tasks', 'task_checklist_items', 'time_entries'].map((t) => fetch(`http://127.0.0.1:54321/rest/v1/${t}?select=id`, { headers: { apikey: KEY, authorization: `Bearer ${owner.token}` } }).then(async (x) => ({ t, status: x.status, rows: x.ok ? (await x.json()).length : 0 }))));
 check('E37', 'SECURITY: the Data API shows no project, task, checklist or time row to a signed-in owner (only our API can)', directP.every((d) => d.status >= 400 || d.rows === 0), JSON.stringify(directP));
 
+// ---- Drive data layer through real tokens (migration 0014)
+r = await post('drive.folders.create', { space: 'shared', name: `E2E Brand ${stamp}` });
+const df = r.body.data?.[0];
+check('E38', 'Drive: an owner creates a folder and a first-party document with two versions through the real stack', r.status === 200 && df?.space === 'shared'
+  && (r = await post('drive.files.create', { space: 'shared', folder: df.id, name: 'E2E SOP', kind: 'document', body: 'v1 text' })).status === 200
+  && (await post('drive.files.versions.add', { id: r.body.data[0].id, body: 'v2 text' })).body.data[0].current_version === 2);
+const dd = r.body.data?.[0];
+r = await post('drive.sops.protect', { id: dd.id, protected: true, sop_key: `e2e_${stamp % 100000}` });
+check('E39', 'Drive: an owner protects the document as an SOP; the invited editor (no change rights) cannot edit it and reads it as not found', r.status === 200 && (await post('drive.files.update', { id: dd.id, name: 'hacked' }, { token: guest.token })).status === 404
+  && (await post('drive.sops.list', {}, { token: guest.token })).body.data.some((x) => x.id === dd.id));
+r = await post('drive.files.create', { space: 'personal', name: 'private.md', kind: 'document', body: 'e2e personal text' }, { token: guest.token });
+const pf = r.body.data?.[0];
+check('E40', 'Drive: the invited editor keeps a personal document; the organization owner cannot read or list it', r.status === 200 && pf?.space === 'personal' && (await post('drive.files.get', { id: pf.id })).status === 404 && (await post('drive.files.list', { space: 'personal' })).body.data.length === 0);
+r = await post('drive.personal.open', { owner: guest.id, reason: 'Checking a handover document' });
+check('E41', 'Drive: break-glass needs a reason; with one the owner sees the file and the person gets a notice naming who looked', r.status === 200 && r.body.data.some((x) => x.id === pf.id && x.body === 'e2e personal text')
+  && (await post('drive.notices.list', { unseen: true }, { token: guest.token })).body.data.some((n) => n.reason === 'Checking a handover document'));
+r = await post('drive.links.create', { file: (await post('drive.files.create', { space: 'shared', name: 'Public note', kind: 'document', body: 'public text' })).body.data[0].id, days: 2 });
+const linkTok = r.body.data?.[0]?.token;
+const resolved = (await admin.query('select * from public.drive_link_resolve($1)', [linkTok])).rows;
+check('E42', 'Drive: a share link returns its secret once and the database resolves exactly that file (not the SOP, not personal files)', r.status === 200 && linkTok?.length >= 40 && resolved.length === 1 && resolved[0].body === 'public text');
+const directD = await Promise.all(['files', 'drive_folders', 'file_versions', 'drive_share_links', 'drive_break_glass', 'drive_notices'].map((t) => fetch(`http://127.0.0.1:54321/rest/v1/${t}?select=id`, { headers: { apikey: KEY, authorization: `Bearer ${owner.token}` } }).then(async (x) => ({ t, status: x.status, rows: x.ok ? (await x.json()).length : 0 }))));
+check('E43', 'SECURITY: the Data API shows no file, folder, version, link, notice or break-glass row to a signed-in owner', directD.every((d) => d.status >= 400 || d.rows === 0), JSON.stringify(directD));
+
+// ---- Planner data layer through real tokens (migration 0015)
+r = await post('planner.objectives.create', { title: `E2E objective ${stamp}`, status: 'active', health: 'on_track' });
+const ob = r.body.data?.[0];
+check('E44', 'Planner: an owner creates an objective and a measure through the real stack', r.status === 200 && ob?.measures === 0
+  && (r = await post('planner.measures.create', { objective: ob.id, name: 'Leads', target_value: 100 })).status === 200);
+const ms = r.body.data?.[0];
+r = await post('planner.measures.record', { id: ms.id, value: 40, note: 'e2e' });
+check('E45', 'Planner: recording a value moves progress to 40% and the objective average follows', r.status === 200 && r.body.data[0].progress === 0.4 && Math.abs((await post('planner.objectives.get', { id: ob.id })).body.data[0].progress - 0.4) < 1e-9);
+r = await post('planner.links.add', { objective: ob.id, task: tk.id });
+check('E46', 'Planner: a Projects task is linked to the objective and listed with its project name', r.status === 200 && (await post('planner.links.list', { objective: ob.id })).body.data.some((x) => x.task_id === tk.id && x.project_name === pj.name));
+r = await post('planner.objectives.get', { id: ob.id }, { token: guest.token });
+check('E47', 'Planner: the invited editor reads and edits the objective (Planner is team-wide by default for editors; Funnels and Projects need a level)', r.status === 200 && (await post('planner.objectives.update', { id: ob.id, title: `E2E objective ${stamp} (edited)` }, { token: guest.token })).status === 200);
+r = await post('planner.overview', { days: 14 });
+check('E48', 'Planner: the overview counts the active objective', r.status === 200 && r.body.data[0].by_status.active >= 1);
+const directPl = await Promise.all(['planner_objectives', 'planner_measures', 'planner_measure_values', 'planner_objective_tasks', 'planner_reviews'].map((t) => fetch(`http://127.0.0.1:54321/rest/v1/${t}?select=*`, { headers: { apikey: KEY, authorization: `Bearer ${owner.token}` } }).then(async (x) => ({ t, status: x.status, rows: x.ok ? (await x.json()).length : 0 }))));
+check('E49', 'SECURITY: the Data API shows no planner row to a signed-in owner', directPl.every((d) => d.status >= 400 || d.rows === 0), JSON.stringify(directPl));
+
 await s.close(); await admin.end();
 for (const x of results) console.log(`${x.ok ? 'PASS' : 'FAIL'}  ${x.id.padEnd(4)} ${x.n}${x.ok ? '' : `  [${x.d}]`}`);
 const p = results.filter((x) => x.ok).length; console.log(`\n${p}/${results.length} checks passed`); process.exit(p === results.length ? 0 : 1);

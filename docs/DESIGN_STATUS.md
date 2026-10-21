@@ -47,7 +47,10 @@ A "Needs design" badge may show in development builds only (`SHOW_DESIGN_STATUS`
 | Clients: SOPs & Tools |  | Designed | 09-clients | Data layer and API built and tested (migration 0008); no screens |  |
 | Clients: Settings |  | Designed | 09-clients | Data layer and API built and tested (migration 0008); no screens |  |
 | Funnel Strategies: list, create (blank or template), document editor, linked assets, Funnel Mapper Pro link states | | Needs design | 06-funnels.md (requirements update, 22 Oct 2026) | Not built. Awaiting owner review of the new design; the map link, status model and editor technology are open questions in the spec | Do not build until approved |
-| Projects, Drive, Planner, Form Builder, Value Ladder, Social Planner, Whiteboard, Layer 2 Agents, Client Portal |  | Needs design |  | Not built | Designed one app at a time |
+| Projects (list, project, tasks, time, My work) |  | Needs design |  | Data layer and API built and tested (migration 0013); no screens | Office Home blocks can use `my.work` and `projects.deadlines` |
+| Drive (shared, personal, SOPs, trash, versions, links) |  | Needs design |  | Data layer and API built and tested (migration 0014); storage prepared, not switched on; no screens | Client files stay in Clients |
+| Planner (objectives, measures, reviews, links) |  | Needs design |  | Data layer and API built and tested (migration 0015); no screens |  |
+| Form Builder, Value Ladder, Social Planner, Whiteboard, Layer 2 Agents, Client Portal |  | Needs design |  | Not built | Designed one app at a time |
 
 ## How to read "Current build"
 Status is about the **design**; "Current build" is what exists in the repository. The provisional screens written before the designs arrived were replaced on 21 Oct 2026; every screen marked *Verified* was built to its design, had its in-screen note removed, and passed the phone, tablet and desktop width checks, the keyboard checks and the reduced-motion check in `scripts/e2e-ui.mjs`. Under the rule in `docs/design/10-shell-patterns.md` §A a status badge shows only in development builds (`showDesignStatus` in `config.js`, set by `SHOW_DESIGN_STATUS=true` at build time); production never renders it. Screens with no design yet (Clients, Launcher at 13+ apps, client-scoped views, other apps) use the shared states, not a placeholder note.

@@ -63,11 +63,15 @@ await asUser(U.AOWN);
 check('PJ9', 'Another organization sees none of it and cannot write into this one', (await rows('select id from projects where workspace_id=$1', [L])).length === 0
   && (await errCode(() => db.query("insert into project_tasks (workspace_id,project_id,title) values ($1,$2,'x')", [L, P1]))) !== 'no-error');
 
+await asSuper();
+const TA = (await db.query("insert into project_tasks (workspace_id,project_id,title) values ($1,$2,'Aurj task') returning id", [A, PA])).rows[0].id;
+await db.query("insert into time_entries (workspace_id,project_id,user_id,started_at,ended_at) values ($1,$2,$3,now() - interval '2 hours', now() - interval '1 hour')", [A, PA, U.BOTH]);
 await asUser(U.BOTH, { org: A });
-const bothA = (await rows('select id from projects')).map((r) => r.id).join();
+const bothA = { p: (await rows('select id from projects')).map((r) => r.id).join(), t: (await rows('select id from project_tasks')).map((r) => r.id).join(), e: (await rows('select id from time_entries')).length };
 await asUser(U.BOTH, { org: L });
-check('PJ10', 'A person in two organizations sees only the organization the request names (x-org-id), for projects, tasks and time', bothA === PA && (await rows('select id from projects')).length >= 3 && !(await rows('select id from projects')).some((r) => r.id === PA)
-  && await (async () => { await asUser(U.BOTH, { org: A }); return (await rows('select id from project_tasks')).length === 0 && (await rows('select id from time_entries')).length === 0; })());
+const bothL = { p: (await rows('select id from projects')).map((r) => r.id), t: (await rows('select id from project_tasks')).map((r) => r.id), e: (await rows('select id from time_entries')).length };
+check('PJ10', 'A person in two organizations sees only the organization the request names (x-org-id), for projects, tasks and time',
+  bothA.p === PA && bothA.t === TA && bothA.e === 1 && bothL.p.length >= 3 && !bothL.p.includes(PA) && !bothL.t.includes(TA) && bothL.e === 0);
 
 // ---- B. tasks
 await asSuper(); await db.query("update workspace_apps set enabled=true where workspace_id=$1 and app_key='portal'", [L]);   // the client's contact sees shared work only while the Portal is on
