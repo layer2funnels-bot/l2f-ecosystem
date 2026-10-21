@@ -35,14 +35,19 @@ if (cmd === 'manifest') {
   // (2) The working copy may now differ from the tag (reshaping is approved), but every difference must be recorded in
   // docs/FMP_CHANGES.md (path in backticks), and the ledger may not name files that did not change.
   const m = JSON.parse(readFileSync(manifestPath, 'utf8'));
-  const TAG = 'fmp-copy-pristine';
+  // The tag is the primary reference. If the remote refused to carry it (tag pushes can be blocked), the manifest records the exact
+  // pristine commit, which is immutable history, so the check works either way.
+  let TAG = 'fmp-copy-pristine';
   let ok = true; const say = (pass, msg) => { ok &&= pass; console.log(`${pass ? 'PASS' : 'FAIL'} ${msg}`); };
   const gitShow = (f) => execFileSync('git', ['-C', root, 'show', `${TAG}:apps/funnel-mapper/${f}`], { maxBuffer: 1 << 28, stdio: ['ignore', 'pipe', 'ignore'] });
-  try { execFileSync('git', ['-C', root, 'rev-parse', '--verify', `${TAG}^{commit}`], { stdio: 'ignore' }); }
-  catch { console.log(`FAIL tag ${TAG} not found (CI must fetch tags: actions/checkout fetch-depth: 0)`); process.exit(1); }
+  const has = (ref) => { try { execFileSync('git', ['-C', root, 'rev-parse', '--verify', `${ref}^{commit}`], { stdio: 'ignore' }); return true; } catch { return false; } };
+  if (!has(TAG)) {
+    if (m.pristineCommit && has(m.pristineCommit)) { console.log(`NOTE tag ${TAG} is not in this checkout; using the pristine commit ${m.pristineCommit.slice(0, 7)} recorded in the manifest`); TAG = m.pristineCommit; }
+    else { console.log(`FAIL neither tag ${TAG} nor the recorded pristine commit exists (CI must fetch full history: actions/checkout fetch-depth: 0)`); process.exit(1); }
+  }
   const badTag = [];
   for (const [f, h] of Object.entries(m.files)) { try { if (sha(gitShow(f)) !== h) badTag.push(f); } catch { badTag.push(`${f} (missing in tag)`); } }
-  say(!badTag.length, `tag ${TAG} still equals the pristine manifest: ${Object.keys(m.files).length} files, ${badTag.length} different`);
+  say(!badTag.length, `pristine reference (${TAG.length > 20 ? TAG.slice(0, 7) : TAG}) still equals the pristine manifest: ${Object.keys(m.files).length} files, ${badTag.length} different`);
   for (const f of badTag.slice(0, 10)) console.log(`  tag differs: ${f}`);
 
   const have = walk(copy).map((p) => relative(copy, p)).filter((p) => !isGenerated(p));
