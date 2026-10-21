@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Design-freeze report</title><script src="./support.js"></script></head>
+<body><x-dc><helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&amp;family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&amp;display=swap">
+<style>
+body{margin:0;background:#070B14}*{box-sizing:border-box}
+.app{font-family:'DM Sans',system-ui,sans-serif;color:#CBD5E1;background:#0B1220;width:1440px;position:relative;font-size:13.5px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.doc{position:absolute;left:120px;width:1200px;top:48px}
+h1,h2,h3{font-family:'Bricolage Grotesque','DM Sans',sans-serif;letter-spacing:-.01em;color:#F8FAFC;font-weight:600}
+h1{font-size:30px;margin:0 0 14px}h2{font-size:21px;margin:38px 0 14px;padding-top:22px;border-top:1px solid #1E293B;color:#10B981}
+p{margin:0 0 12px}strong{color:#F1F5F9;font-weight:600}em{color:#94A3B8}
+table{width:100%;border-collapse:collapse;margin:6px 0 18px;font-size:12.5px}
+th{text-align:left;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:#94A3B8;font-weight:600;padding:8px 10px;border-bottom:1px solid #334155}
+td{padding:9px 10px;border-bottom:1px solid #1E293B;vertical-align:top}
+ul,ol{margin:0 0 14px;padding-left:20px}li{margin-bottom:6px}
+li.cb{list-style:none;margin-left:-20px;padding-left:28px;position:relative}.bx{position:absolute;left:0;top:4px;width:14px;height:14px;border:1.5px solid #475569;border-radius:4px}
+li.done .bx{background:#10B981;border-color:#10B981}
+</style></helmet>
+<div class="app" style="height:3110px"><div class="doc"><h1>Funnel Mapper Pro — Final design-freeze report</h1>
+<p><strong>Verdict: not frozen.</strong> One P0 remains and it is outside my reach: <strong>the block library cannot be reconciled without the authoritative block registry</strong> (see section B). Everything else the owner decided has been applied, and the final consistency review is complete.</p>
+<h2>A. Owner decisions applied</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Decision</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Name of the layout button</td>
+<td><strong>Tidy up</strong> (owner prefers it; reverted from "Auto-arrange"). Icon is a layout tree, not a sparkle.</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Merge Expected into Baseline</td>
+<td>One row, <strong>Baseline (current map)</strong>; top bar "Scenario: Baseline". No "Expected" remains.</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Whole people</td>
+<td>Applied; exact value on hover.</td>
+</tr>
+<tr>
+<td>4</td>
+<td>LTV on every relevant figure</td>
+<td>Rule and nine-surface table drawn on <strong>Data trust</strong>.</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Actuals: typed and CSV</td>
+<td>Equal tabs; full CSV import flow drawn (file, match columns, check, import).</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Keep AI Calling</td>
+<td>Present in Blocks sidebar, Editor sidebar and Library.</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Traffic never hidden</td>
+<td>Traffic is first on every KPI strip (1440, 1280, 1024, 768, phone). Leads, Customers and ROAS move to More, in that order. Every strip measured to fit.</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Reconcile library</td>
+<td><strong>Blocked</strong> (section B). Nothing was invented.</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Dark default; <strong>Light added next to it</strong> (owner update)</td>
+<td>Appearance offers Dark and Light. Dark is unchanged (62 existing boards verified byte-identical). Light is drawn for Editor, Home, Client and Funnels, with a tokens board and calculated contrast.</td>
+</tr>
+<tr>
+<td>—</td>
+<td>Four ports</td>
+<td>Recommended and applied: four plain ports on every page and offer, hidden until hover, selection or connecting; line meaning chosen on the line. Reasoning: loops and vertical layouts need any side; hiding at rest keeps the map calm.</td>
+</tr>
+<tr>
+<td>—</td>
+<td>Trash</td>
+<td>No time limit, no auto-delete.</td>
+</tr>
+<tr>
+<td>—</td>
+<td>Hover preview</td>
+<td>Only the thumbnail opens it; it opens below the block (then above, right, left) and never covers the next step or the hovered block's ports. Removed from the default Editor so the map is calm.</td>
+</tr>
+</tbody>
+</table>
+<h2>B. Remaining P0 (blocks the freeze)</h2>
+<ol>
+<li><strong>Library reconciliation.</strong> I do not have the block registry. Please send <strong>one file or export that defines the library items</strong> (the registry the app renders the sidebar from: id, name, category, family, icon), plus the <strong>three Communities blocks</strong> I have not seen. Until then the library board is labelled as the design inventory (170 blocks, 6 widgets, counted from the tiles) and the app must read the real count live.</li>
+</ol>
+<h2>C. Remaining P1 (not blocking)</h2>
+<ul>
+<li><code>V2-responsive-checks</code> and its three phone mockups have not been reviewed by design. They pass the automated checks (no clipping, no overflow) but I have not read them in detail.</li>
+<li>Template drawings are built from the owner's written flows; the Funnelytics and Russell originals were not available to me. Please check each against its original.</li>
+<li>Long node names ("WhatsApp follow-up") truncate with an ellipsis on the canvas; widen the text area or allow two lines when building.</li>
+<li>Print-friendly (light paper) PDF style is offered but not drawn.</li>
+<li>Brand logos are placeholders; use licensed vector marks in production.</li>
+<li>Light theme is drawn on four key screens plus the token table; every other screen should be checked in Light as it is built. Dark muted text measures 3.9 : 1 (left alone, as requested).</li>
+<li>The earlier Verified audit, Design-freeze review and V2 change-log boards are history; this report supersedes them.</li>
+</ul>
+<h2>D. Final consistency review</h2>
+<p>All <strong>63 boards</strong> were rendered in a headless browser and measured. After fixes: no board has content outside its frame except by intent (the canvas world inside a clipping viewport, scrolling sidebar lists, and intentional ellipsis). Fixed in this pass: Library board height (152px of content was cut), Export preview row width, Home table width, Traffic on four strips, one leftover "Expected", the Home date picker, and the ports and hover behaviour. Structural integrity (balanced markup, one component per board) is clean on every board. Wording scan across the file: no "Tidy up", "Health · N checks", "Expected", Y/N ports or light-theme option remains.</p>
+<h2>E. Five brains to UX surfaces (unchanged, intelligence-ready only)</h2>
+<table>
+<thead>
+<tr>
+<th>Brain</th>
+<th>Surfaces</th>
+<th>Built now</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Funnel</td>
+<td>Canvas ring, Model checks, Biggest leak, block Analytics, Reports, Goals, Scenarios</td>
+<td><strong>Finding component</strong> drawn; goal row with hidden Risk and Forecast slots; leak ring on previews</td>
+</tr>
+<tr>
+<td>Market</td>
+<td>Funnel setup fields, traffic benchmark column, forecast assumptions</td>
+<td>Nothing visible</td>
+</tr>
+<tr>
+<td>Visual</td>
+<td>Page window, hover preview, page inspector section</td>
+<td>Window, preview, capture built</td>
+</tr>
+<tr>
+<td>Product</td>
+<td>Internal admin only</td>
+<td>Command registry specified</td>
+</tr>
+<tr>
+<td>Improvement</td>
+<td>Inform, Suggest, Request approval</td>
+<td>Approval dialog reserved, not drawn</td>
+</tr>
+</tbody>
+</table>
+<h2>F. Explicitly left for the future</h2>
+<p>No chat, "Ask" buttons or AI badges; no Intelligence Center; no recommendation, finding or benchmark data; no market research; no visual scoring; no auto-fix; no notification centre; no light-theme work beyond the four screens and tokens shown (the rest follow the same mapping).</p>
+<h2>G. Freeze checklist</h2>
+<ul>
+<li class="cb done"><span class="bx"></span>Money period on every figure; LTV rule on every surface</li>
+<li class="cb done"><span class="bx"></span>Whole people, exact on hover</li>
+<li class="cb done"><span class="bx"></span>One baseline; scenario in the top bar</li>
+<li class="cb done"><span class="bx"></span>Model checks separate from performance and freshness</li>
+<li class="cb done"><span class="bx"></span>Plan, Forecast, Actual distinguishable</li>
+<li class="cb done"><span class="bx"></span>Live funnel preview on every funnel card</li>
+<li class="cb done"><span class="bx"></span>Four ports, hover preview that covers nothing</li>
+<li class="cb done"><span class="bx"></span>Traffic always visible on the KPI strip</li>
+<li class="cb done"><span class="bx"></span>Dark theme unchanged and default; Light theme added next to it, contrast calculated</li>
+<li class="cb done"><span class="bx"></span>Typed and CSV actuals; Trash; template form and inner-map templates; 13 templates</li>
+<li class="cb done"><span class="bx"></span>States, New client, PDF export preview, simulation, zoom levels, Finding component</li>
+<li class="cb done"><span class="bx"></span>Phone touch targets 44px; all 63 boards measured</li>
+<li class="cb"><span class="bx"></span>Library reconciled to the authoritative registry (<strong>needs the owner's file</strong>)</li>
+<li class="cb"><span class="bx"></span>Responsive checks board reviewed in detail</li>
+<li class="cb"><span class="bx"></span>Template flows confirmed against the originals</li>
+</ul>
+<h2>H. What I still need from the owner</h2>
+<ol>
+<li>The block registry file or export (section B).</li>
+<li>Who may delete forever or empty Trash (proposed: Owner and Admin only).</li>
+<li>Confirmation of the 13 template drawings against the originals.</li>
+<li>Whether "Expected" exists as a real saved scenario in the live app.</li>
+</ol></div></div></x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":3110}}'>
+class Component extends DCLogic { renderVals() { return {}; } }
+</script></body></html>

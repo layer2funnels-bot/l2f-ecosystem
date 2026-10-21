@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Wait / Delay</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&amp;family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#070B14}
+*{box-sizing:border-box}
+.app{font-family:'DM Sans',system-ui,sans-serif;color:#E2E8F0;background:#0B1220;width:1440px;position:relative;font-size:13px;line-height:1.35;-webkit-font-smoothing:antialiased;font-feature-settings:'tnum' 1}
+.disp{font-family:'Bricolage Grotesque','DM Sans',sans-serif;letter-spacing:-.01em}
+h2.t{margin:0;font-size:26px;font-weight:600;color:#F8FAFC}
+p.lead{margin:4px 0 0;color:#94A3B8;font-size:13.5px;max-width:980px}
+.station{position:absolute}
+.cap{display:flex;align-items:center;gap:8px;margin:0 0 10px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#94A3B8;font-weight:600}
+.cv{position:relative;border:1px solid #1E293B;border-radius:14px;background-color:#0B1220;background-image:radial-gradient(rgba(148,163,184,.14) 1px,transparent 1.2px);background-size:22px 22px;overflow:hidden}
+/* wait node (message/action family = capsule) */
+.node{width:196px;background:#111827;border:1px solid #2A3648;border-radius:24px;padding:10px;position:relative}
+.node.sel{border-color:#10B981;box-shadow:0 0 0 1px #10B981,0 0 0 5px rgba(16,185,129,.16)}
+.nh{display:flex;align-items:center;gap:8px;padding-right:12px}
+.ni{width:26px;height:26px;border-radius:13px;display:grid;place-items:center;flex:none;background:rgba(45,212,191,.15);color:#2DD4BF}
+.nt{display:flex;flex-direction:column;min-width:0;flex:1}
+.nt b{font-weight:600;font-size:13px;color:#F1F5F9}.nt span{font-size:11px;color:#94A3B8}
+.st{width:7px;height:7px;border-radius:50%;position:absolute;right:12px;top:13px}.st.live{background:#22C55E}.st.plan{border:1.5px solid #64748B}
+.nm{margin-top:9px;padding-top:8px;border-top:1px dashed #1E293B;font-size:11.5px;color:#94A3B8}.nm strong{color:#E2E8F0}
+.port{position:absolute;width:10px;height:10px;border-radius:50%;background:#0B1220;border:1.5px solid #64748B}.port.pr{right:-6px;top:50%;margin-top:-5px}.port.pl{left:-6px;top:50%;margin-top:-5px}
+.node.sel .port{border-color:#10B981}
+/* library tile */
+.litile{display:flex;align-items:center;gap:10px;height:34px;padding:0 8px;border-radius:999px;background:#0B1220;border:1px solid #1E293B;width:200px}
+.litile .t{width:24px;height:24px;border-radius:12px;background:rgba(45,212,191,.15);color:#2DD4BF;display:grid;place-items:center;flex:none}
+.litile b{font-size:13px;color:#E2E8F0;font-weight:500}
+.litile .x{margin-left:auto;color:#64748B;font-size:11px}
+/* inspector */
+.insp{width:320px;background:#111827;border:1px solid #273449;border-radius:12px;overflow:hidden}
+.ih{padding:14px 16px 12px}
+.eyebrow{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:#94A3B8;font-weight:600;display:inline-flex;align-items:center;gap:5px}
+.back{color:#94A3B8}
+.ititle{display:flex;align-items:center;gap:10px;margin-top:7px}
+.ititle h3{margin:0;font-family:'Bricolage Grotesque',sans-serif;font-size:18px;font-weight:600;color:#F8FAFC}
+.isub{font-size:12px;color:#94A3B8;margin-top:4px;display:flex;align-items:center;gap:7px}
+.pill{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 9px;border-radius:999px;border:1px solid #334155;font-size:11px;color:#CBD5E1}
+.pill .d{width:6px;height:6px;border-radius:50%;background:#22C55E}
+.tabs{display:flex;gap:2px;padding:0 12px;border-bottom:1px solid #1E293B}
+.tabs button{border:0;background:transparent;color:#94A3B8;font-size:13px;font-weight:500;padding:10px 8px;position:relative;cursor:pointer}
+.tabs button.on{color:#F1F5F9}
+.tabs button.on::after{content:'';position:absolute;left:6px;right:6px;bottom:-1px;height:2px;background:#10B981;border-radius:2px}
+.tabs button[disabled]{color:#475569}
+.sec{padding:14px 16px}
+.f{margin-bottom:14px}
+.f label{display:block;font-size:12px;color:#CBD5E1;font-weight:500;margin-bottom:6px}
+.dur{display:flex;gap:8px}
+.numin{width:96px;height:36px;background:#0B1220;border:1px solid #334155;border-radius:8px;color:#F1F5F9;padding:0 10px;font-family:'Bricolage Grotesque',sans-serif;font-size:17px;font-weight:600;display:flex;align-items:center}
+.numin.foc{border-color:#10B981;box-shadow:0 0 0 3px rgba(16,185,129,.15)}
+.numin.err{border-color:#FCA5A5}
+.seg{flex:1;display:flex;background:#0B1220;border:1px solid #273449;border-radius:8px;padding:2px;gap:2px}
+.seg button{flex:1;border:0;background:transparent;color:#94A3B8;height:30px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer}
+.seg button.on{background:#1E293B;color:#F1F5F9;box-shadow:0 0 0 1px #334155 inset}
+.help{font-size:11.5px;color:#94A3B8;margin-top:8px;line-height:1.45}
+.err{font-size:11.5px;color:#FCA5A5;margin-top:7px;display:flex;align-items:center;gap:6px}
+.prev{display:flex;align-items:center;gap:8px;margin-top:4px;padding:10px 12px;background:#0B1220;border:1px solid #1E293B;border-radius:9px;color:#CBD5E1;font-size:12.5px}
+.prev .t{width:22px;height:22px;border-radius:11px;background:rgba(45,212,191,.15);color:#2DD4BF;display:grid;place-items:center;flex:none}
+.note{background:#0F172A;border:1px solid #1E293B;border-radius:12px;padding:14px 16px;color:#94A3B8;font-size:12.5px;line-height:1.5}
+.note b{color:#E2E8F0}
+.saved{display:inline-flex;align-items:center;gap:6px;color:#4ADE80;font-size:11.5px;font-weight:600}
+kbd{font-family:'JetBrains Mono',monospace;font-size:10px;color:#94A3B8;border:1px solid #334155;border-radius:3px;padding:0 3px;background:#0B1220}
+</style>
+</helmet>
+<div class="app" style="height:960px">
+  <div style="position:absolute;left:62px;top:38px;right:62px">
+    <h2 class="t disp">Wait / Delay</h2>
+    <p class="lead">A time delay in the flow. It lives in the Messages &amp; actions family (capsule shape, clock icon) and reads as a pause at a glance — "Wait 2 days". Duration + unit are set in the inspector. It's math-neutral: people pass through, totals don't change.</p>
+  </div>
+
+  <!-- LEFT: library + canvas object -->
+  <div class="station" style="left:62px;top:150px;width:300px">
+    <div class="cap">In the library</div>
+    <div class="litile"><span class="t"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z M12 6v6l4 2"></path></svg></span><b>Wait / Delay</b><span class="x">Actions</span></div>
+
+    <div class="cap" style="margin-top:28px">On the canvas</div>
+    <div class="cv" style="height:280px">
+      <div class="node" style="position:absolute;left:24px;top:36px">
+        <div class="nh"><span class="ni"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z M12 6v6l4 2"></path></svg></span><div class="nt"><b>Wait 2 days</b><span>Delay</span></div><span class="st live"></span></div>
+        <div class="nm"><strong>381</strong> waiting</div>
+        <span class="port pl"></span><span class="port pr"></span>
+      </div>
+      <div style="position:absolute;left:24px;top:40px;color:#64748B;font-size:11px;transform:translateY(-22px)">Default</div>
+      <div class="node sel" style="position:absolute;left:24px;top:168px">
+        <div class="nh"><span class="ni"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z M12 6v6l4 2"></path></svg></span><div class="nt"><b>Wait 2 days</b><span>Delay</span></div><span class="st live"></span></div>
+        <div class="nm"><strong>381</strong> waiting</div>
+        <span class="port pl"></span><span class="port pr"></span>
+      </div>
+      <div style="position:absolute;left:24px;top:172px;color:#6EE7B7;font-size:11px;transform:translateY(-22px)">Selected</div>
+    </div>
+  </div>
+
+  <!-- MIDDLE: inspector -->
+  <div class="station" style="left:398px;top:150px;width:320px">
+    <div class="cap">Inspector · editing</div>
+    <div class="insp">
+      <div class="ih">
+        <button class="eyebrow back"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg> Funnel</button>
+        <div class="ititle"><h3>Wait 2 days</h3></div>
+        <div class="isub"><span class="pill">Delay</span><span class="pill"><span class="d"></span> Live</span></div>
+      </div>
+      <div class="tabs"><button class="on">Details</button><button>Style</button><button>Plan</button><button disabled="" title="Delays carry no numbers">Analytics</button></div>
+      <div class="sec">
+        <div class="f">
+          <label>Duration</label>
+          <div class="dur"><div class="numin foc">2</div><div class="seg"><button>Min</button><button>Hrs</button><button class="on">Days</button><button>Wks</button></div></div>
+          <div class="help">People pause here for this long before moving to the next step.</div>
+        </div>
+        <div class="f" style="margin-bottom:0">
+          <label>Reads on canvas as</label>
+          <div class="prev"><span class="t"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z M12 6v6l4 2"></path></svg></span>Wait 2 days</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: states -->
+  <div class="station" style="left:754px;top:150px;width:300px">
+    <div class="cap">Field states</div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div>
+        <div style="font-size:11.5px;color:#94A3B8;margin-bottom:6px">Default (just added)</div>
+        <div class="dur"><div class="numin">1</div><div class="seg"><button>Min</button><button>Hrs</button><button class="on">Days</button><button>Wks</button></div></div>
+      </div>
+      <div>
+        <div style="font-size:11.5px;color:#94A3B8;margin-bottom:6px">Editing (focus)</div>
+        <div class="dur"><div class="numin foc">2</div><div class="seg"><button>Min</button><button class="on">Hrs</button><button>Days</button><button>Wks</button></div></div>
+      </div>
+      <div>
+        <div style="font-size:11.5px;color:#94A3B8;margin-bottom:6px">Saved</div>
+        <div class="dur"><div class="numin">30</div><div class="seg"><button class="on">Min</button><button>Hrs</button><button>Days</button><button>Wks</button></div></div>
+        <div class="saved" style="margin-top:7px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg> Saved</div>
+      </div>
+      <div>
+        <div style="font-size:11.5px;color:#94A3B8;margin-bottom:6px">Invalid</div>
+        <div class="dur"><div class="numin err">0</div><div class="seg"><button>Min</button><button>Hrs</button><button class="on">Days</button><button>Wks</button></div></div>
+        <div class="err"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v4 M12 16h.01"></path></svg> Enter a duration of 1 or more.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NOTE -->
+  <div class="station" style="left:1090px;top:150px;width:288px">
+    <div class="cap">Behaviour</div>
+    <div class="note">
+      <p style="margin:0 0 9px"><b>Math-neutral.</b> Everyone who arrives leaves — a delay never adds or removes people, so it doesn't change any total, rate or forecast.</p>
+      <p style="margin:0 0 9px"><b>Units:</b> minutes, hours, days, weeks. The canvas label and subtitle update live from duration + unit ("Wait 30 min", "Wait 2 days", "Wait 3 wks").</p>
+      <p style="margin:0"><b>Family:</b> same capsule and dashed metric rule as Email / SMS, so sequences read as one timeline — but the clock icon marks it instantly as a pause.</p>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":960}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

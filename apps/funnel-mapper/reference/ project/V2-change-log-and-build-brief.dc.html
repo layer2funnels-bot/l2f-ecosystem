@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>V2 change log and build brief</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&amp;family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#070B14}
+*{box-sizing:border-box}
+a{color:#34D399}a:hover{color:#6EE7B7}
+.app{font-family:'DM Sans',system-ui,sans-serif;color:#E2E8F0;background:#0B1220;width:1440px;position:relative;font-size:13px;line-height:1.4;-webkit-font-smoothing:antialiased;font-feature-settings:'tnum' 1;overflow:hidden}
+.disp{font-family:'Bricolage Grotesque','DM Sans',sans-serif;letter-spacing:-.01em}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace}
+button{font:inherit;color:inherit;cursor:pointer}
+input,select{font:inherit;color:inherit}
+h1,h2,h3,h4,h5,p{margin:0}
+.top{height:48px;display:flex;align-items:center;gap:12px;padding:0 12px;background:#111827;border-bottom:1px solid #1E293B;position:relative;z-index:5}
+.logo{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:#10B981;color:#04281C;flex:none}
+.sp{flex:1}
+.btn{height:32px;padding:0 12px;border-radius:8px;border:1px solid #334155;background:transparent;color:#E2E8F0;font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+.btn:hover{background:#1E293B}
+.btn.pri{background:#10B981;border-color:#10B981;color:#04281C;font-weight:600}
+.btn.pri:hover{background:#34D399}
+.btn.dng{background:#DC2626;border-color:#DC2626;color:#fff;font-weight:600}
+.btn.off{opacity:.45;cursor:not-allowed}
+.btn.sm{height:28px;padding:0 10px;font-size:12px}
+.ib{width:32px;height:32px;border:0;background:transparent;border-radius:7px;color:#94A3B8;display:inline-grid;place-items:center}
+.ib:hover{background:#1E293B;color:#E2E8F0}
+.seg{display:inline-flex;background:#0B1220;border:1px solid #273449;border-radius:8px;padding:2px;gap:2px}
+.seg button{border:0;background:transparent;color:#94A3B8;height:26px;padding:0 12px;border-radius:6px;font-size:12.5px;font-weight:500}
+.seg button.on{background:#1E293B;color:#F1F5F9;box-shadow:0 0 0 1px #334155 inset}
+.chip{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 10px;border:1px solid #334155;background:#0B1220;border-radius:8px;color:#E2E8F0;font-size:12.5px}
+.chip.on{border-color:#10B981;box-shadow:0 0 0 3px rgba(16,185,129,.15)}
+.pill{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 9px;border-radius:999px;border:1px solid #334155;font-size:11px;color:#CBD5E1;white-space:nowrap}
+.pill.g{border-color:rgba(16,185,129,.5);color:#6EE7B7;background:rgba(16,185,129,.08)}
+.pill.a{border-color:rgba(245,158,11,.5);color:#FCD34D;background:rgba(245,158,11,.08)}
+.pill.r{border-color:rgba(248,113,113,.5);color:#FCA5A5;background:rgba(248,113,113,.08)}
+.pill.b{border-color:rgba(96,165,250,.5);color:#93C5FD;background:rgba(96,165,250,.08)}
+.newtag{display:inline-flex;align-items:center;height:18px;padding:0 7px;border-radius:999px;background:#10B981;color:#04281C;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.eyebrow{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:#94A3B8;font-weight:600}
+.muted{color:#94A3B8}
+.body{display:flex;min-height:0}
+.lrail{width:56px;flex:none;background:#0F172A;border-right:1px solid #1E293B;display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:4px}
+.ri{width:40px;height:40px;border-radius:9px;border:0;background:transparent;color:#94A3B8;display:grid;place-items:center;position:relative}
+.ri.on{background:#1E293B;color:#34D399}
+.ri .dot{position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:#10B981;border:2px solid #0F172A}
+.lpanel{width:320px;flex:none;background:#111827;border-right:1px solid #1E293B;display:flex;flex-direction:column;min-height:0}
+.ph{display:flex;align-items:center;gap:8px;padding:14px 16px 10px}
+.ph h3{font-family:'Bricolage Grotesque',sans-serif;font-size:17px;font-weight:600;color:#F8FAFC}
+.cv{flex:1;position:relative;overflow:hidden;background-color:#0B1220;background-image:radial-gradient(rgba(148,163,184,.14) 1px,transparent 1.2px);background-size:22px 22px}
+.rpanel{width:340px;flex:none;background:#111827;border-left:1px solid #1E293B;display:flex;flex-direction:column;min-height:0}
+.rrail{width:56px;flex:none;background:#111827;border-left:1px solid #1E293B;display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:4px}
+.inp{height:36px;width:100%;background:#0B1220;border:1px solid #334155;border-radius:8px;color:#F1F5F9;padding:0 11px;font-size:13px}
+.inp::placeholder{color:#64748B}
+.inp.foc{border-color:#10B981;box-shadow:0 0 0 3px rgba(16,185,129,.15)}
+label.fl{display:block;font-size:12px;color:#CBD5E1;font-weight:500;margin-bottom:6px}
+.opt{color:#94A3B8;font-weight:400;margin-left:6px;font-size:11.5px}
+.node{position:absolute;background:#111827;border:1px solid #2A3648;border-radius:10px;padding:8px 10px;display:flex;align-items:center;gap:8px}
+.node .k{width:22px;height:22px;border-radius:6px;flex:none}
+.node b{font-size:12px;font-weight:600;color:#F1F5F9;display:block;line-height:1.2}
+.node span.s{font-size:10.5px;color:#94A3B8;display:block}
+.node.sel{border-color:#10B981;box-shadow:0 0 0 1px #10B981,0 0 0 5px rgba(16,185,129,.16)}
+.ln{position:absolute;background:#3B82F6}
+.lnd{position:absolute;border-color:#3B82F6;border-style:dashed;border-width:0}
+.ah{position:absolute;width:0;height:0}
+.pt{position:absolute;width:11px;height:11px;border-radius:50%;background:#0B1220;border:2px solid #10B981}
+.ep{position:absolute;background:#111827;border:1px solid #334155;border-radius:6px;padding:2px 7px;font-size:10.5px;color:#E2E8F0;white-space:nowrap}
+.ep.am{border-color:rgba(245,158,11,.6);color:#FCD34D}
+.card{background:#111827;border:1px solid #273449;border-radius:12px}
+.note{background:#0F172A;border:1px solid #1E293B;border-radius:12px;padding:14px 16px;color:#94A3B8;font-size:12.5px;line-height:1.5}
+.note b{color:#E2E8F0}
+.hd{padding:28px 40px 20px;border-bottom:1px solid #1E293B}
+.hd h2{font-family:'Bricolage Grotesque',sans-serif;font-size:28px;font-weight:600;color:#F8FAFC}
+.hd p{margin-top:6px;color:#94A3B8;font-size:14px;max-width:1000px}
+.cap{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#94A3B8;font-weight:600;margin:0 0 10px;display:flex;align-items:center;gap:8px}
+.ovl{position:absolute;left:0;right:0;top:0;bottom:0;background:rgba(3,7,18,.66)}
+.modal{position:absolute;background:#111827;border:1px solid #334155;border-radius:16px;box-shadow:0 24px 80px rgba(0,0,0,.55)}
+.mh{padding:20px 24px 4px}
+.mh h3{font-family:'Bricolage Grotesque',sans-serif;font-size:21px;font-weight:600;color:#F8FAFC}
+.mh p{margin-top:6px;color:#94A3B8;font-size:13px}
+.mf{display:flex;align-items:center;gap:10px;padding:16px 24px;border-top:1px solid #1E293B}
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{text-align:left;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:#94A3B8;font-weight:600;padding:10px 14px;border-bottom:1px solid #1E293B}
+.tbl td{padding:12px 14px;border-bottom:1px solid #1E293B;font-size:13px;color:#E2E8F0}
+.tbl td.n,.tbl th.n{text-align:right}
+.cal{width:252px}
+.cal h5{text-align:center;font-size:13px;font-weight:600;color:#F1F5F9;margin-bottom:8px}
+.cg{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
+.cg i{font-style:normal;height:32px;display:grid;place-items:center;font-size:12.5px;color:#E2E8F0;border-radius:6px}
+.cg i.h{height:22px;font-size:11px;color:#94A3B8;font-weight:600}
+.cg i.o{color:#475569}
+.cg i.r{background:rgba(16,185,129,.16);border-radius:0}
+.cg i.s{background:#10B981;color:#04281C;font-weight:700}
+</style>
+</helmet>
+<div class="app" style="height:2300px"><div class="hd"><h2>V2 change log and Claude Code brief</h2><p>What changed in this round, which artboard shows it, and what the app needs built. Items marked <b style="color:#6EE7B7">New feature</b> do not exist in the current app and must be implemented.</p></div><div style="padding:24px 40px"><div class="card"><table class="tbl"><thead><tr><th style="width:36px">#</th><th style="width:300px">Change</th><th style="width:300px">Shown on artboard</th><th>Status</th></tr></thead><tbody><tr><td class="mono muted">1</td><td><b style="font-weight:600">Plain-language funnel math on canvas, left and right panels</b></td><td class="muted">Math made plain</td><td><span class="pill ">Designed</span></td></tr><tr><td class="mono muted">2</td><td><b style="font-weight:600">Template customize form, all fields optional</b></td><td class="muted">Template customize form</td><td><span class="pill g">New feature</span></td></tr><tr><td class="mono muted">3</td><td><b style="font-weight:600">Collapsible right panel</b></td><td class="muted">Collapsible panels and four ports</td><td><span class="pill ">Designed</span></td></tr><tr><td class="mono muted">4</td><td><b style="font-weight:600">Templates inside the map, 13 templates with your names and order</b></td><td class="muted">Templates inside the map, Template structures</td><td><span class="pill g">New feature</span></td></tr><tr><td class="mono muted">5</td><td><b style="font-weight:600">Month-to-month data, calendar view, Model and Actual</b></td><td class="muted">Date range and actual numbers, Month-to-month data entry</td><td><span class="pill g">New feature</span></td></tr><tr><td class="mono muted">6</td><td><b style="font-weight:600">Four ports on every block, Yes / No / Skip set on the line</b></td><td class="muted">Collapsible panels and four ports</td><td><span class="pill ">Designed</span></td></tr><tr><td class="mono muted">7</td><td><b style="font-weight:600">Block count is live, no hand-typed number</b></td><td class="muted">Block Master Library</td><td><span class="pill ">Designed</span></td></tr><tr><td class="mono muted">8</td><td><b style="font-weight:600">URL import for pages, every image under 100 KB</b></td><td class="muted">Images under 100 KB, Page URL &rarr; thumbnail</td><td><span class="pill g">New feature</span></td></tr><tr><td class="mono muted">9</td><td><b style="font-weight:600">Home range: any months across any years</b></td><td class="muted">Home with date range</td><td><span class="pill g">New feature</span></td></tr><tr><td class="mono muted">10</td><td><b style="font-weight:600">&ldquo;Pick up where you left off&rdquo; kept on Home</b></td><td class="muted">Home with date range</td><td><span class="pill ">Kept</span></td></tr><tr><td class="mono muted">12</td><td><b style="font-weight:600">Confirmation before deleting a client or funnel</b></td><td class="muted">Delete confirmation</td><td><span class="pill g">New feature</span></td></tr><tr><td class="mono muted">13</td><td><b style="font-weight:600">Trash with 30-day auto-delete</b></td><td class="muted">Trash</td><td><span class="pill g">New feature</span></td></tr><tr><td class="mono muted">14</td><td><b style="font-weight:600">Page preview only on the thumbnail</b></td><td class="muted">Page block hover preview</td><td><span class="pill ">Designed</span></td></tr><tr><td class="mono muted">15</td><td><b style="font-weight:600">Laptop, tablet and phone checks</b></td><td class="muted">Responsive checks</td><td><span class="pill ">Designed</span></td></tr></tbody></table></div></div><div style="padding:0 40px 40px"><h3 class="disp" style="font-size:22px;color:#F8FAFC;margin-bottom:14px">Build brief for Claude Code</h3><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px"><div class="note"><b style="font-size:14px">Templates inside the map (#4) and the form (#2)</b><br><span style="display:block;margin-top:6px">New feature. This does not exist in the app yet. Add a TEMPLATES array with the 13 templates exactly as on the Template structures artboard (names, order, nodes, lines, dashed paths). Add insertTemplate(id, options) that places the group at the center of the current view inside a labelled frame and never moves existing blocks. Add a modal that returns the funnel name and a name and URL per page; all fields optional. The same form opens from the Templates page and from the map.</span></div><div class="note"><b style="font-size:14px">Month-to-month data and calendar (#5)</b><br><span style="display:block;margin-top:6px">New feature. This does not exist in the app yet. Add a funnel_actuals table: funnel_id, node_id, period_type (month or week), period_start, visitors, conversions, revenue, spend. Add a date-range picker (presets Today, This month, Last 30 days, Custom range) and a Model / Actual toggle. In Actual mode the map shows summed actuals for the chosen dates. Add the data-entry grid with Monthly and Weekly views, paste from sheet and CSV import. Reuse lib/funnel-math.ts for every derived number.</span></div><div class="note"><b style="font-size:14px">URL import and image limit (#8)</b><br><span style="display:block;margin-top:6px">New feature. This does not exist in the app yet. A server route takes a page URL and returns a screenshot thumbnail; block private IP ranges and localhost, add a timeout and a rate limit. Compress every image to under 100 KB before it is stored: resize, convert to WebP, lower quality step by step. If it still will not fit, reject it with a plain message and store nothing. This covers thumbnails, screenshots, logos and custom icons. No image above 100 KB may exist anywhere.</span></div><div class="note"><b style="font-size:14px">Home date range (#9)</b><br><span style="display:block;margin-top:6px">New feature. This does not exist in the app yet. Build one shared range picker (presets, from and to month and year, month grid) used by Home and the editor. Dashboard totals aggregate by the chosen range. Show planned revenue and MRR as one row per currency, never added together.</span></div><div class="note"><b style="font-size:14px">Trash and delete confirmation (#12, #13)</b><br><span style="display:block;margin-top:6px">New feature. This does not exist in the app yet. Soft delete with a deleted_at column on clients and funnels. Deleting a client soft-deletes its funnels in the same action. Add the Trash page with Restore, Delete forever and Empty trash, plus a scheduled job that removes items after 30 days. Funnel delete uses a plain confirm; client delete asks for the typed name.</span></div><div class="note"><b style="font-size:14px">Smaller changes</b><br><span style="display:block;margin-top:6px">Right panel collapse with the ] key and left with [ (state remembered per user). Four ports per block with line types chosen on the line. Block count read from the block list length, never typed. Page thumbnail preview listens on the thumbnail element only. Plain-language edge labels and a formula line under every number in the inspector.</span></div></div></div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":2300}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

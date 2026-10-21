@@ -1,0 +1,677 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "Blocks-and-lines.dc.html": {
+      "h": 1000,
+      "title": "Blocks & lines",
+      "w": 1440,
+      "x": 0,
+      "y": 3980
+    },
+    "Blocks-sidebar.dc.html": {
+      "h": 1960,
+      "title": "Blocks sidebar",
+      "w": 1440,
+      "x": 7600,
+      "y": 12600
+    },
+    "Change-page-type.dc.html": {
+      "h": 1000,
+      "title": "Change page type",
+      "w": 1440,
+      "x": 3040,
+      "y": 11200
+    },
+    "Client-products.dc.html": {
+      "h": 900,
+      "title": "Client · products",
+      "w": 1440,
+      "x": 4560,
+      "y": 5340
+    },
+    "Client.dc.html": {
+      "h": 1000,
+      "title": "Client · funnels",
+      "w": 1440,
+      "x": 3040,
+      "y": 5340
+    },
+    "Clients.dc.html": {
+      "h": 900,
+      "title": "Clients + new client",
+      "w": 1440,
+      "x": 1520,
+      "y": 5340
+    },
+    "Connection-quick-add.dc.html": {
+      "h": 1000,
+      "title": "Connection → Quick Add",
+      "w": 1440,
+      "x": 0,
+      "y": 11200
+    },
+    "Context-menus.dc.html": {
+      "h": 900,
+      "title": "Right-click menus",
+      "w": 1440,
+      "x": 3040,
+      "y": 1300
+    },
+    "Data-trust.dc.html": {
+      "h": 2260,
+      "title": "Data trust",
+      "w": 1440,
+      "x": 21280,
+      "y": 12680
+    },
+    "Design-freeze-report.dc.html": {
+      "h": 3110,
+      "title": "Design-freeze report",
+      "w": 1440,
+      "x": 28880,
+      "y": 12680
+    },
+    "Design-freeze-review.dc.html": {
+      "h": 6934,
+      "title": "Design-freeze review (superseded)",
+      "w": 1440,
+      "x": 4560,
+      "y": 12600
+    },
+    "Editor-block.dc.html": {
+      "h": 900,
+      "title": "Editor · one block selected",
+      "w": 1440,
+      "x": 3040,
+      "y": 0
+    },
+    "Editor-connection.dc.html": {
+      "h": 900,
+      "title": "Editor · connection selected",
+      "w": 1440,
+      "x": 1520,
+      "y": 1300
+    },
+    "Editor-default.dc.html": {
+      "h": 900,
+      "title": "Editor · nothing selected",
+      "w": 1440,
+      "x": 1520,
+      "y": 0
+    },
+    "Editor-selection-style.dc.html": {
+      "h": 900,
+      "title": "Editor · multi-select + styling",
+      "w": 1440,
+      "x": 0,
+      "y": 1300
+    },
+    "Export-preview.dc.html": {
+      "h": 1090,
+      "title": "Export preview",
+      "w": 1440,
+      "x": 25840,
+      "y": 12680
+    },
+    "Funnel-tools.dc.html": {
+      "h": 900,
+      "title": "Inspector scopes",
+      "w": 1440,
+      "x": 1520,
+      "y": 2600
+    },
+    "Funnels.dc.html": {
+      "h": 900,
+      "title": "All funnels",
+      "w": 1440,
+      "x": 0,
+      "y": 6700
+    },
+    "Home.dc.html": {
+      "h": 1060,
+      "title": "Home",
+      "w": 1440,
+      "x": 0,
+      "y": 5340
+    },
+    "Library-169.dc.html": {
+      "h": 2592,
+      "title": "Block Master Library",
+      "w": 1440,
+      "x": 1520,
+      "y": 12680
+    },
+    "Live-funnel-preview.dc.html": {
+      "h": 2780,
+      "title": "Live funnel preview",
+      "w": 1440,
+      "x": 12160,
+      "y": 12680
+    },
+    "Main.dc.html": {
+      "h": 900,
+      "title": "Concept",
+      "w": 1440,
+      "x": 0,
+      "y": 0
+    },
+    "New-client.dc.html": {
+      "h": 1450,
+      "title": "New client",
+      "w": 1440,
+      "x": 27360,
+      "y": 12680
+    },
+    "Object-system.dc.html": {
+      "h": 1560,
+      "title": "Object system — funnel-native",
+      "w": 1440,
+      "x": 0,
+      "y": 12600
+    },
+    "Page-block-thumbnails.dc.html": {
+      "h": 3560,
+      "title": "Page block — custom thumbnails",
+      "w": 1440,
+      "x": 6080,
+      "y": 12600
+    },
+    "Page-thumbnail.dc.html": {
+      "h": 1080,
+      "title": "Page URL → thumbnail",
+      "w": 1440,
+      "x": 1520,
+      "y": 11200
+    },
+    "Pages-all.dc.html": {
+      "h": 2330,
+      "title": "Page & offer objects",
+      "w": 1440,
+      "x": 3040,
+      "y": 12600
+    },
+    "Performance-map.dc.html": {
+      "h": 900,
+      "title": "Performance map",
+      "w": 1440,
+      "x": 0,
+      "y": 2600
+    },
+    "Present.dc.html": {
+      "h": 900,
+      "title": "Presentation",
+      "w": 1440,
+      "x": 3040,
+      "y": 8060
+    },
+    "R-editor-1024.dc.html": {
+      "h": 768,
+      "title": "Editor · 1024",
+      "w": 1024,
+      "x": 1360,
+      "y": 9620
+    },
+    "R-editor-1280.dc.html": {
+      "h": 800,
+      "title": "Editor · 1280",
+      "w": 1280,
+      "x": 0,
+      "y": 9620
+    },
+    "R-editor-768.dc.html": {
+      "h": 1024,
+      "title": "Editor · 768 tablet",
+      "w": 768,
+      "x": 2464,
+      "y": 9620
+    },
+    "R-phone-editor.dc.html": {
+      "h": 900,
+      "title": "Phone · editor",
+      "w": 880,
+      "x": 3312,
+      "y": 9620
+    },
+    "R-phone-pages.dc.html": {
+      "h": 900,
+      "title": "Phone · home + clients",
+      "w": 880,
+      "x": 4272,
+      "y": 9620
+    },
+    "R-phone-reports-share.dc.html": {
+      "h": 900,
+      "title": "Phone · reports + share",
+      "w": 880,
+      "x": 5232,
+      "y": 9620
+    },
+    "Reports.dc.html": {
+      "h": 1060,
+      "title": "Reports · overview",
+      "w": 1440,
+      "x": 1520,
+      "y": 6700
+    },
+    "Settings.dc.html": {
+      "h": 900,
+      "title": "Settings · team",
+      "w": 1440,
+      "x": 4560,
+      "y": 6700
+    },
+    "Share.dc.html": {
+      "h": 900,
+      "title": "Share with client",
+      "w": 1440,
+      "x": 0,
+      "y": 8060
+    },
+    "Shared-view.dc.html": {
+      "h": 900,
+      "title": "Client’s shared view",
+      "w": 1440,
+      "x": 1520,
+      "y": 8060
+    },
+    "Simulation-spec.dc.html": {
+      "h": 4242,
+      "title": "Simulation spec (for Claude Code)",
+      "w": 1440,
+      "x": 9120,
+      "y": 12600
+    },
+    "Simulation.dc.html": {
+      "h": 980,
+      "title": "Simulation",
+      "w": 1440,
+      "x": 24320,
+      "y": 12680
+    },
+    "States.dc.html": {
+      "h": 1380,
+      "title": "States",
+      "w": 1440,
+      "x": 22800,
+      "y": 12680
+    },
+    "Templates.dc.html": {
+      "h": 900,
+      "title": "Templates",
+      "w": 1440,
+      "x": 3040,
+      "y": 6700
+    },
+    "V2-actuals-entry.dc.html": {
+      "h": 820,
+      "title": "Month-to-month data entry",
+      "w": 1440,
+      "x": 1520,
+      "y": 21600
+    },
+    "V2-appearance.dc.html": {
+      "h": 760,
+      "title": "Appearance (Dark and Light)",
+      "w": 1440,
+      "x": 33440,
+      "y": 12680
+    },
+    "V2-change-log-and-build-brief.dc.html": {
+      "h": 2300,
+      "title": "V2 change log (first round)",
+      "w": 1440,
+      "x": 1520,
+      "y": 24800
+    },
+    "V2-collapse-and-ports.dc.html": {
+      "h": 1170,
+      "title": "Collapsible panels and four ports",
+      "w": 1440,
+      "x": 4560,
+      "y": 20200
+    },
+    "V2-delete-confirm.dc.html": {
+      "h": 780,
+      "title": "Delete confirmation",
+      "w": 1440,
+      "x": 4560,
+      "y": 21600
+    },
+    "V2-finding-component.dc.html": {
+      "h": 960,
+      "title": "Finding component",
+      "w": 1440,
+      "x": 31920,
+      "y": 12680
+    },
+    "V2-home-date-range.dc.html": {
+      "h": 1060,
+      "title": "Home with date range",
+      "w": 1440,
+      "x": 3040,
+      "y": 21600
+    },
+    "V2-hover-preview.dc.html": {
+      "h": 1470,
+      "title": "Page block hover preview",
+      "w": 1440,
+      "x": 1520,
+      "y": 23100
+    },
+    "V2-image-limit.dc.html": {
+      "h": 640,
+      "title": "Images under 100 KB",
+      "w": 1440,
+      "x": 3040,
+      "y": 23100
+    },
+    "V2-math-explainer.dc.html": {
+      "h": 1000,
+      "title": "Math made plain",
+      "w": 1440,
+      "x": 0,
+      "y": 29777
+    },
+    "V2-month-calendar.dc.html": {
+      "h": 2050,
+      "title": "Date range and actual numbers",
+      "w": 1440,
+      "x": 0,
+      "y": 20650
+    },
+    "V2-responsive-checks.dc.html": {
+      "h": 1560,
+      "title": "Responsive checks",
+      "w": 1440,
+      "x": 4560,
+      "y": 23100
+    },
+    "V2-template-form.dc.html": {
+      "h": 1020,
+      "title": "Template customize form",
+      "w": 1440,
+      "x": 1520,
+      "y": 20200
+    },
+    "V2-template-structures.dc.html": {
+      "h": 4917,
+      "title": "The 13 templates, step by step",
+      "w": 1440,
+      "x": 0,
+      "y": 24800
+    },
+    "V2-templates-in-canvas.dc.html": {
+      "h": 1090,
+      "title": "Templates inside the map",
+      "w": 1440,
+      "x": 3040,
+      "y": 20200
+    },
+    "V2-trash.dc.html": {
+      "h": 860,
+      "title": "Trash",
+      "w": 1440,
+      "x": 0,
+      "y": 23100
+    },
+    "V2-zoom-levels.dc.html": {
+      "h": 860,
+      "title": "Canvas zoom levels",
+      "w": 1440,
+      "x": 30400,
+      "y": 12680
+    },
+    "Verified-audit.dc.html": {
+      "h": 5728,
+      "title": "Verified audit (superseded)",
+      "w": 1440,
+      "x": 10640,
+      "y": 12600
+    },
+    "Wait-delay.dc.html": {
+      "h": 960,
+      "title": "Wait / Delay",
+      "w": 1440,
+      "x": 4560,
+      "y": 11200
+    },
+    "Widgets.dc.html": {
+      "h": 1000,
+      "title": "Widgets + Trends",
+      "w": 1440,
+      "x": 3040,
+      "y": 2600
+    },
+    "Light-editor.dc.html": {
+      "h": 900,
+      "title": "Light · Editor",
+      "w": 1440,
+      "x": 34960,
+      "y": 12680
+    },
+    "Light-home.dc.html": {
+      "h": 1060,
+      "title": "Light · Home",
+      "w": 1440,
+      "x": 36480,
+      "y": 12680
+    },
+    "Light-client.dc.html": {
+      "h": 1000,
+      "title": "Light · Client",
+      "w": 1440,
+      "x": 38000,
+      "y": 12680
+    },
+    "Light-funnels.dc.html": {
+      "h": 900,
+      "title": "Light · Funnels",
+      "w": 1440,
+      "x": 39520,
+      "y": 12680
+    },
+    "V2-theme-tokens.dc.html": {
+      "h": 1420,
+      "title": "Theme tokens (Dark and Light)",
+      "w": 1440,
+      "x": 41040,
+      "y": 12680
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-10-03T10:56:34.222Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas"
+  },
+  "notes": {
+    "r1": {
+      "kind": "title1",
+      "maxW": 4480,
+      "text": "Concept and the editor at rest",
+      "w": 240,
+      "x": 0,
+      "y": -260
+    },
+    "r10": {
+      "kind": "title1",
+      "maxW": 4480,
+      "text": "Funnel-native object system · block master library",
+      "w": 240,
+      "x": 0,
+      "y": 12340
+    },
+    "r11": {
+      "kind": "title1",
+      "maxW": 6000,
+      "text": "V2 changes: math, templates, actuals, home range",
+      "w": 240,
+      "x": 0,
+      "y": 19900
+    },
+    "r12": {
+      "kind": "title1",
+      "maxW": 6000,
+      "text": "Actuals, home range, delete and Trash",
+      "w": 240,
+      "x": 0,
+      "y": 21300
+    },
+    "r13": {
+      "kind": "title1",
+      "maxW": 6000,
+      "text": "Trash, hover rule, image limit, responsive",
+      "w": 240,
+      "x": 0,
+      "y": 22800
+    },
+    "r14": {
+      "kind": "title1",
+      "maxW": 6000,
+      "text": "Template structures and build brief",
+      "w": 240,
+      "x": 0,
+      "y": 24500
+    },
+    "r2": {
+      "kind": "title1",
+      "maxW": 4480,
+      "text": "Selection system: block, many, line, right-click",
+      "w": 240,
+      "x": 0,
+      "y": 1040
+    },
+    "r3": {
+      "kind": "title1",
+      "maxW": 4480,
+      "text": "Performance, funnel tools, widgets",
+      "w": 240,
+      "x": 0,
+      "y": 2340
+    },
+    "r4": {
+      "color": "gray",
+      "kind": "title1",
+      "maxW": 4480,
+      "text": "Blocks, lines and object families",
+      "w": 240,
+      "x": 249,
+      "y": 3992
+    },
+    "r5": {
+      "kind": "title1",
+      "maxW": 6000,
+      "text": "Home, clients and products",
+      "w": 240,
+      "x": 0,
+      "y": 5080
+    },
+    "r6": {
+      "kind": "title1",
+      "maxW": 6000,
+      "text": "Funnels, reports, templates, settings",
+      "w": 240,
+      "x": 0,
+      "y": 6440
+    },
+    "r7": {
+      "kind": "title1",
+      "maxW": 4480,
+      "text": "Sharing and presenting",
+      "w": 240,
+      "x": 0,
+      "y": 7800
+    },
+    "r8": {
+      "kind": "title1",
+      "maxW": 6200,
+      "text": "Responsive: 1280, 1024, 768, phone",
+      "w": 240,
+      "x": 0,
+      "y": 9360
+    },
+    "r9": {
+      "kind": "title1",
+      "maxW": 6200,
+      "text": "Functional interactions: quick-add, page thumbnail, change type, wait",
+      "w": 240,
+      "x": 0,
+      "y": 10940
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "Editor-default.dc.html",
+    "Editor-block.dc.html",
+    "Editor-selection-style.dc.html",
+    "Editor-connection.dc.html",
+    "Context-menus.dc.html",
+    "Performance-map.dc.html",
+    "Funnel-tools.dc.html",
+    "Widgets.dc.html",
+    "Blocks-and-lines.dc.html",
+    "Home.dc.html",
+    "Clients.dc.html",
+    "Client.dc.html",
+    "Client-products.dc.html",
+    "Funnels.dc.html",
+    "Reports.dc.html",
+    "Templates.dc.html",
+    "Settings.dc.html",
+    "Share.dc.html",
+    "Shared-view.dc.html",
+    "Present.dc.html",
+    "Object-system.dc.html",
+    "R-editor-1280.dc.html",
+    "R-editor-1024.dc.html",
+    "R-editor-768.dc.html",
+    "R-phone-editor.dc.html",
+    "R-phone-pages.dc.html",
+    "R-phone-reports-share.dc.html",
+    "Connection-quick-add.dc.html",
+    "Page-thumbnail.dc.html",
+    "Change-page-type.dc.html",
+    "Wait-delay.dc.html",
+    "Library-169.dc.html",
+    "Pages-all.dc.html",
+    "Design-freeze-review.dc.html",
+    "Page-block-thumbnails.dc.html",
+    "Blocks-sidebar.dc.html",
+    "Simulation-spec.dc.html",
+    "Verified-audit.dc.html",
+    "Live-funnel-preview.dc.html",
+    "V2-math-explainer.dc.html",
+    "V2-template-form.dc.html",
+    "V2-templates-in-canvas.dc.html",
+    "V2-collapse-and-ports.dc.html",
+    "V2-month-calendar.dc.html",
+    "V2-actuals-entry.dc.html",
+    "V2-home-date-range.dc.html",
+    "V2-delete-confirm.dc.html",
+    "V2-trash.dc.html",
+    "V2-hover-preview.dc.html",
+    "V2-image-limit.dc.html",
+    "V2-responsive-checks.dc.html",
+    "V2-template-structures.dc.html",
+    "V2-change-log-and-build-brief.dc.html",
+    "Data-trust.dc.html",
+    "States.dc.html",
+    "Simulation.dc.html",
+    "Export-preview.dc.html",
+    "New-client.dc.html",
+    "Design-freeze-report.dc.html",
+    "V2-zoom-levels.dc.html",
+    "V2-finding-component.dc.html",
+    "V2-appearance.dc.html",
+    "Light-editor.dc.html",
+    "Light-home.dc.html",
+    "Light-client.dc.html",
+    "Light-funnels.dc.html",
+    "V2-theme-tokens.dc.html"
+  ],
+  "pages": [],
+  "title": "Funnel Mapper Pro — Redesign v2"
+}

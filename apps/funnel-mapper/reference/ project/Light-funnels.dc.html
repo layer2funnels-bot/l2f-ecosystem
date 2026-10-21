@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Light · Funnels</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&amp;family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#E9EEF5}
+a{color:#059669}a:hover{color:#047857}
+*{box-sizing:border-box}
+.app{font-family:'DM Sans',system-ui,sans-serif;color:#1E293B;background:#F4F6FA;width:100%;height:900px;display:grid;grid-template-rows:48px 1fr;overflow:hidden;font-size:13px;line-height:1.35;-webkit-font-smoothing:antialiased;font-feature-settings:'tnum' 1}
+.disp{font-family:'Bricolage Grotesque','DM Sans',sans-serif;letter-spacing:-.01em}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace}
+button{font:inherit;color:inherit;cursor:pointer}
+/* ---------- top bar */
+.top{display:flex;align-items:center;gap:12px;padding:0 10px 0 8px;background:#FFFFFF;border-bottom:1px solid #E5EAF1;min-width:0}
+.logo{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;background:#10B981;color:#04281C;flex:none}
+.crumbs{display:flex;align-items:center;gap:2px;min-width:0;font-size:13px}
+.crumbs a{color:#55657B;text-decoration:none;padding:4px 6px;border-radius:6px}
+.crumbs .sep{color:#7B8AA0}
+.cbtn{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 8px;border:0;background:transparent;border-radius:7px;color:#1E293B;font-weight:600}
+.cbtn:hover{background:#E5EAF1}
+.scen{display:inline-flex;align-items:center;gap:7px;height:26px;padding:0 9px 0 8px;border:1px solid #C4CEDB;background:#F4F6FA;border-radius:999px;color:#334155;font-size:12px;margin-left:6px}
+.scen i{width:7px;height:7px;border-radius:50%;background:#10B981;display:block}
+.saved{display:inline-flex;align-items:center;gap:6px;color:#55657B;font-size:12px;margin-left:8px;white-space:nowrap}
+.saved i{width:6px;height:6px;border-radius:50%;background:#22C55E;display:block}
+.spacer{flex:1}
+.seg{display:inline-flex;background:#F4F6FA;border:1px solid #D3DBE6;border-radius:8px;padding:2px;gap:2px}
+.seg button{border:0;background:transparent;color:#55657B;height:26px;padding:0 12px;border-radius:6px;font-size:12.5px;font-weight:500;display:inline-flex;align-items:center;gap:6px}
+.seg button.on{background:#E5EAF1;color:#0F172A;box-shadow:0 0 0 1px #C4CEDB inset}
+.seg.full{display:flex}.seg.full button{flex:1;justify-content:center}
+.ib{width:32px;height:32px;border:0;background:transparent;border-radius:7px;color:#55657B;display:inline-grid;place-items:center}
+.ib:hover{background:#E5EAF1;color:#1E293B}
+.vr{width:1px;height:20px;background:#D3DBE6}
+.btn{height:32px;padding:0 12px;border-radius:8px;border:1px solid #C4CEDB;background:transparent;color:#1E293B;font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+.btn.tidy{border-color:rgba(16,185,129,.4);background:rgba(16,185,129,.1);color:#047857}
+.btn.pri{background:#10B981;border-color:#10B981;color:#03241A;font-weight:600}
+.btn.sm{height:28px;padding:0 10px;font-size:12px;border-radius:7px}
+.av{width:28px;height:28px;border-radius:50%;background:#E5EAF1;border:1px solid #C4CEDB;display:grid;place-items:center;font-size:11px;font-weight:700;color:#334155}
+kbd{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#55657B;border:1px solid #C4CEDB;border-bottom-width:2px;border-radius:4px;padding:0 4px;line-height:15px;background:#F4F6FA}
+/* ---------- body grid */
+.body{display:grid;min-height:0}
+.rail{background:#FFFFFF;border-right:1px solid #E5EAF1;display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:4px}
+.rail .ib.on{background:rgba(16,185,129,.12);color:#059669}
+.rail .grow{flex:1}
+/* ---------- library */
+.lib{background:#FFFFFF;border-right:1px solid #E5EAF1;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.lib-h{padding:12px 12px 8px}
+.srch{display:flex;align-items:center;gap:8px;height:34px;padding:0 8px 0 10px;background:#F4F6FA;border:1px solid #D3DBE6;border-radius:8px;color:#55657B}
+.srch input{flex:1;min-width:0;background:transparent;border:0;color:#1E293B;font:inherit;font-size:13px;outline:none}
+.chips{display:flex;flex-wrap:wrap;gap:4px;padding:10px 12px 6px}
+.chip{height:24px;padding:0 8px;border-radius:6px;border:1px solid #D3DBE6;background:transparent;color:#55657B;font-size:11.5px;display:inline-flex;align-items:center;gap:5px}
+.chip i{width:6px;height:6px;border-radius:2px;display:block}
+.chip.on{background:#E5EAF1;color:#1E293B;border-color:#C4CEDB}
+.lsec{padding:6px 8px 4px}
+.lsec h5{margin:6px 6px 4px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#55657B;font-weight:600;display:flex;justify-content:space-between;align-items:center}
+.lsec h5 span{letter-spacing:0;text-transform:none;font-weight:500;color:#5B6B82}
+.li{display:flex;align-items:center;gap:10px;height:32px;padding:0 6px;border-radius:7px;color:#334155;font-size:13px;width:100%;border:0;background:transparent;text-align:left}
+.li:hover,.li.h{background:#E5EAF1}
+.li .t{width:24px;height:24px;border-radius:6px;display:grid;place-items:center;flex:none}
+.li .x{margin-left:auto;color:#5B6B82;font-size:11px}
+/* ---------- canvas */
+.cvcol{display:grid;grid-template-rows:1fr 44px;min-width:0;min-height:0;container-type:inline-size}
+@container (max-width:1000px){.kpi .unit{display:none}.kpi .k{padding:0 10px}.kpi .more .t{display:none}.kpi .chk{margin-right:6px}}
+.cv{position:relative;overflow:hidden;background-color:#F4F6FA;background-image:radial-gradient(rgba(148,163,184,.16) 1px,transparent 1.2px);background-size:24px 24px}
+.world{position:absolute;transform-origin:0 0;width:1400px;height:720px}
+.edges{position:absolute;left:0;top:0;overflow:visible}
+.fl{position:absolute;background:#E5EAF1;border:1px solid #C4CEDB;border-radius:10px;box-shadow:0 10px 30px rgba(15,23,42,.14)}
+.flat{position:absolute;background:rgba(255,255,255,.92);border:1px solid #D3DBE6;border-radius:10px}
+.tb{display:flex;align-items:center;gap:2px;padding:4px;height:38px}
+.tb button{height:28px;min-width:28px;border:0;background:transparent;color:#334155;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:0 6px;font-size:12px;white-space:nowrap}
+.tb button:hover,.tb button.h{background:#D3DBE6;color:#0B1220}
+.tb button.on{background:rgba(16,185,129,.14);color:#047857}
+.tb .d{width:1px;height:18px;background:#C4CEDB;margin:0 4px;flex:none}
+.tb .lbl{font-size:12px;color:#55657B;padding:0 6px 0 6px;white-space:nowrap}
+.sw{width:14px;height:14px;border-radius:4px;display:block;box-shadow:0 0 0 1px rgba(15,23,42,.15) inset}
+/* ---------- nodes */
+.node{position:absolute;width:196px;background:#FFFFFF;border:1px solid #D3DBE6;border-radius:10px;padding:10px}
+.nh{display:flex;align-items:center;gap:8px;padding-right:12px}
+.ni{width:26px;height:26px;border-radius:7px;display:grid;place-items:center;flex:none}
+.nt{display:flex;flex-direction:column;min-width:0;flex:1}
+.nt b{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#0F172A}
+.nt span{font-size:11px;color:#55657B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.st{width:7px;height:7px;border-radius:50%;flex:none;display:block}
+.node .st{position:absolute;right:10px;top:12px}
+.st.live{background:#22C55E}.st.plan{border:1.5px solid #5B6B82}.st.prog{background:#FBBF24}
+.nm{margin-top:9px;padding-top:8px;border-top:1px solid #E5EAF1;display:flex;align-items:baseline;gap:5px;font-size:11.5px;color:#55657B;white-space:nowrap}
+.nm strong{color:#1E293B;font-weight:600}
+.nm .r{margin-left:auto}
+.perf .nm{flex-wrap:wrap}
+.big{font-family:'Bricolage Grotesque',sans-serif;font-size:19px;font-weight:600;color:#0B1220;letter-spacing:-.01em}
+.bar{width:100%;height:3px;background:#E5EAF1;border-radius:2px;margin-top:7px;overflow:hidden}
+.bar i{display:block;height:100%;background:#059669;border-radius:2px}
+.bar.warn i{background:#F97316}
+.wfw{margin:-2px -2px 8px;height:30px;border-radius:6px;background:#F4F6FA;border:1px solid #E5EAF1;overflow:hidden}
+.wfw .wf{display:block}
+.price{position:absolute;top:-10px;left:12px;height:20px;padding:0 7px;border-radius:5px;border:1px solid;background:#F4F6FA;font-size:10.5px;font-weight:700;display:inline-flex;align-items:center;white-space:nowrap;z-index:1}
+.fam-logic{background:repeating-linear-gradient(135deg,#FFFFFF 0 10px,#F1F5F9 10px 20px)}
+.fam-message .nm,.fam-source .nm{border-top-style:dashed}
+.node.sel{border-color:#10B981;box-shadow:0 0 0 1px #10B981,0 0 0 5px rgba(16,185,129,.16)}
+.node.msel{border-color:#10B981;box-shadow:0 0 0 1px rgba(16,185,129,.7)}
+.node.hov{border-color:#7B8AA0;background:#EEF2F7}
+.node.leak{border-color:rgba(249,115,22,.65);box-shadow:0 0 0 4px rgba(249,115,22,.12)}
+.node.dim{opacity:.35}
+.port{position:absolute;width:10px;height:10px;border-radius:50%;background:#F4F6FA;border:1.5px solid #5B6B82}
+.pr{right:-6px;top:50%;margin-top:-5px}
+.pb{bottom:-6px;left:50%;margin-left:-5px}
+.node.sel .port,.node.hov .port{border-color:#10B981}
+.plab{position:absolute;font-size:9.5px;font-weight:700;letter-spacing:.04em;color:#55657B;text-transform:uppercase}
+.badge{position:absolute;top:-10px;right:10px;height:20px;padding:0 7px;border-radius:999px;font-size:10.5px;font-weight:600;display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.badge.leak{background:#FFEDD5;color:#C2410C;border:1px solid rgba(249,115,22,.5)}
+.badge.warn{background:#FEF3C7;color:#B45309;border:1px solid rgba(251,191,36,.45)}
+.badge.lock{background:#E5EAF1;color:#334155;border:1px solid #C4CEDB}
+.frame{position:absolute;border:1px dashed rgba(148,163,184,.35);background:rgba(148,163,184,.025);border-radius:14px}
+.ft{position:absolute;top:-26px;left:2px;display:flex;align-items:center;gap:8px;font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:#55657B;font-weight:600;white-space:nowrap}
+.ft em{font-style:normal;letter-spacing:0;text-transform:none;font-weight:500;color:#334155;font-size:12px}
+.sticky{position:absolute;width:196px;background:#FDE68A;color:#713F12;border-radius:4px;padding:10px 12px;font-size:12px;line-height:1.4;box-shadow:0 2px 0 rgba(15,23,42,.14)}
+.el{position:absolute;transform:translate(-50%,-50%);background:#F4F6FA;border:1px solid #C4CEDB;border-radius:6px;padding:1px 6px;font-size:10.5px;color:#334155;white-space:nowrap;font-weight:500}
+.el.no{color:#C2410C;border-color:rgba(249,115,22,.5)}
+.el.yes{color:#047857;border-color:rgba(16,185,129,.45)}
+.el.sel{border-color:#10B981;color:#ECFDF5;background:#047857}
+.selbox{position:absolute;border:1px solid #10B981;border-radius:4px;background:rgba(16,185,129,.04)}
+.hd{position:absolute;width:8px;height:8px;background:#F4F6FA;border:1.5px solid #10B981;border-radius:2px}
+/* ---------- kpi strip */
+.kpi{display:flex;align-items:center;gap:0;padding:0 8px 0 8px;background:#FFFFFF;border-top:1px solid #E5EAF1;min-width:0;overflow:hidden}
+.chk{height:28px;padding:0 10px;border-radius:7px;border:1px solid rgba(251,191,36,.35);background:rgba(251,191,36,.08);color:#B45309;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:6px;margin-right:12px;white-space:nowrap}
+.k{display:flex;align-items:baseline;gap:7px;padding:0 14px;border-left:1px solid #E5EAF1;white-space:nowrap}
+.k span{font-size:11px;color:#55657B}
+.k b{font-family:'Bricolage Grotesque',sans-serif;font-size:15px;font-weight:600;color:#0F172A}
+.k b.pos{color:#15803D}
+.more{margin-left:6px;height:28px;padding:0 9px;border-radius:7px;border:0;background:transparent;color:#55657B;font-size:12px;display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.unit{margin-left:auto;font-size:11.5px;color:#55657B;white-space:nowrap;padding-left:10px}
+/* ---------- inspector */
+.insp{background:#FFFFFF;border-left:1px solid #E5EAF1;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.ih{padding:14px 16px 12px}
+.eyebrow{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:#55657B;font-weight:600}
+.ititle{display:flex;align-items:center;gap:10px;margin-top:6px}
+.ititle h3{margin:0;font-family:'Bricolage Grotesque',sans-serif;font-size:18px;font-weight:600;letter-spacing:-.01em;color:#0B1220;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.isub{font-size:12px;color:#55657B;margin-top:3px}
+.back{display:inline-flex;align-items:center;gap:4px;border:0;background:transparent;color:#55657B;font-size:12px;padding:2px 4px 2px 0}
+.tabs{display:flex;gap:2px;padding:0 12px;border-bottom:1px solid #E5EAF1}
+.tabs button{border:0;background:transparent;color:#55657B;font-size:13px;font-weight:500;padding:10px 8px;position:relative;display:inline-flex;align-items:center;gap:5px}
+.tabs button.on{color:#0F172A}
+.tabs button.on::after{content:'';position:absolute;left:6px;right:6px;bottom:-1px;height:2px;background:#10B981;border-radius:2px}
+.tabs button[disabled]{color:#7B8AA0;cursor:not-allowed}
+.tabs .n{font-size:10.5px;color:#55657B;background:#E5EAF1;border-radius:999px;padding:0 5px;line-height:16px}
+.subnav{display:flex;gap:2px;padding:10px 12px 2px;flex-wrap:nowrap}
+.sn{height:26px;white-space:nowrap;padding:0 6px;border-radius:6px;border:0;background:transparent;color:#55657B;font-size:12.5px;display:inline-flex;align-items:center;gap:6px}
+.sn.on{background:#E5EAF1;color:#0F172A}
+.iscroll{flex:1;min-height:0;overflow:hidden}
+.sec{padding:14px 16px;border-top:1px solid #E5EAF1}
+.sec:first-child{border-top:0}
+.sh{display:flex;align-items:center;justify-content:space-between;margin:0 0 10px}
+.sh h4{margin:0;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:#55657B;font-weight:600}
+.sh .a{font-size:12px;color:#059669;border:0;background:transparent;padding:0}
+.f{margin-bottom:12px}
+.f label{display:block;font-size:12px;color:#334155;font-weight:500;margin-bottom:6px}
+.in{height:34px;width:100%;background:#F4F6FA;border:1px solid #C4CEDB;border-radius:8px;color:#0F172A;padding:0 10px;font:inherit;font-size:13px}
+.in.sm{height:30px;font-size:12.5px}
+.inw{width:100%;display:flex;align-items:center;background:#F4F6FA;border:1px solid #C4CEDB;border-radius:8px;height:34px;padding:0 10px;gap:8px;color:#55657B;font-size:12.5px}
+.inw input{flex:1;min-width:0;background:transparent;border:0;color:#0F172A;font:inherit;font-size:13px;outline:none}
+.help{font-size:11.5px;color:#55657B;margin-top:6px;line-height:1.45}
+.row{display:flex;align-items:center;gap:8px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.g2>*,.g3>*{min-width:0}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat span{display:block;font-size:11px;color:#55657B}
+.stat b{font-family:'Bricolage Grotesque',sans-serif;font-size:20px;font-weight:600;color:#0B1220}
+.split{display:flex;height:6px;border-radius:3px;overflow:hidden;gap:2px;margin:10px 0 0}
+.chkrow{display:flex;align-items:flex-start;gap:9px;padding:8px 8px;border-radius:7px;width:100%;border:0;background:transparent;text-align:left;color:#1E293B;font-size:12.5px;line-height:1.4}
+.chkrow:hover,.chkrow.h{background:#EEF2F7}
+.chkrow .dot{width:6px;height:6px;border-radius:50%;background:#FBBF24;margin-top:6px;flex:none}
+.chkrow .go{margin-left:auto;color:#5B6B82;flex:none;margin-top:1px}
+.mrow{display:flex;justify-content:space-between;align-items:baseline;padding:7px 0;border-bottom:1px solid #EEF2F7;font-size:13px}
+.mrow:last-child{border-bottom:0}
+.mrow span{color:#55657B}
+.mrow b{font-weight:600;color:#0F172A}
+.pill .st{position:static}
+.pill{white-space:nowrap;display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 9px;border-radius:999px;border:1px solid #C4CEDB;font-size:11.5px;color:#334155;background:transparent}
+.adv{display:flex;align-items:center;justify-content:space-between;width:100%;border:0;background:transparent;color:#334155;font-size:12.5px;font-weight:500;padding:0}
+.toast{position:absolute;display:flex;align-items:center;gap:10px;padding:0 6px 0 12px;height:38px;background:#E5EAF1;border:1px solid #C4CEDB;border-radius:10px;font-size:12.5px;box-shadow:0 10px 30px rgba(15,23,42,.14);white-space:nowrap}
+.toast b{color:#0F172A;font-weight:600}
+.mm{position:absolute;width:176px;height:108px;padding:8px}
+.mm i{position:absolute;height:6px;border-radius:2px;display:block}
+.mmv{position:absolute;border:1.5px solid #10B981;border-radius:3px}
+.sw-row{display:flex;gap:6px;align-items:center}
+.swc{width:22px;height:22px;border-radius:6px;border:0;padding:0;box-shadow:0 0 0 1px rgba(15,23,42,.12) inset}
+.swc.on{box-shadow:0 0 0 2px #FFFFFF,0 0 0 3.5px #10B981}
+
+.shell{font-family:'DM Sans',system-ui,sans-serif;color:#1E293B;background:#F4F6FA;width:100%;display:grid;grid-template-columns:232px 1fr;overflow:hidden;font-size:13px;line-height:1.4;-webkit-font-smoothing:antialiased;font-feature-settings:'tnum' 1}
+.side{background:#FFFFFF;border-right:1px solid #E5EAF1;padding:14px 12px;display:flex;flex-direction:column;gap:2px;min-height:0}
+.wsb{display:flex;align-items:center;gap:10px;width:100%;height:44px;padding:0 8px;border:0;border-radius:9px;background:transparent;text-align:left;margin-bottom:14px}
+.wsb:hover{background:#E5EAF1}
+.wsb .wl{width:28px;height:28px;border-radius:7px;background:#0B1220;display:grid;place-items:center;flex:none;color:#15803D}
+.wsb b{display:block;font-size:13.5px;font-weight:600;color:#0F172A}
+.wsb span{display:block;font-size:11.5px;color:#55657B}
+.nv{display:flex;align-items:center;gap:10px;height:34px;padding:0 10px;border-radius:8px;color:#55657B;text-decoration:none;font-size:13.5px;font-weight:500}
+.nv:hover{background:#EEF2F7;color:#1E293B}
+.nv.on{background:#E5EAF1;color:#0F172A}
+.nv .c{margin-left:auto;font-size:11.5px;color:#55657B}
+.navh{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:#5B6B82;font-weight:600;padding:16px 10px 6px}
+.mainc{min-width:0;display:flex;flex-direction:column;min-height:0}
+.mtop{height:56px;display:flex;align-items:center;gap:10px;padding:0 32px;border-bottom:1px solid #E5EAF1;flex:none}
+.cmd{display:flex;align-items:center;gap:10px;height:34px;width:380px;padding:0 10px;border:1px solid #D3DBE6;border-radius:9px;background:#FFFFFF;color:#55657B;font-size:13px}
+.pg{padding:28px 40px 40px;min-height:0}
+.pg div{min-width:0}
+.thumb.fluid{width:100%;height:auto}
+.h1{font-family:'Bricolage Grotesque',sans-serif;font-size:30px;font-weight:600;letter-spacing:-.02em;color:#0B1220;margin:0}
+.lede{color:#55657B;font-size:14px;margin:6px 0 0}
+.kgrid{display:grid;gap:0;border-top:1px solid #E5EAF1;border-bottom:1px solid #E5EAF1}
+.kc{padding:18px 20px 18px 0;border-right:1px solid #E5EAF1}
+.kc:last-child{border-right:0}
+.kc+.kc{padding-left:20px}
+.kc span{display:block;font-size:12px;color:#55657B}
+.kc b{display:block;font-family:'Bricolage Grotesque',sans-serif;font-size:30px;font-weight:600;color:#0B1220;letter-spacing:-.02em;margin-top:4px}
+.kc em{display:block;font-style:normal;font-size:12px;color:#55657B;margin-top:2px}
+.h2{font-family:'Bricolage Grotesque',sans-serif;font-size:17px;font-weight:600;color:#0F172A;margin:0}
+.secth{display:flex;align-items:baseline;justify-content:space-between;margin:0 0 12px}
+.secth a{font-size:12.5px;text-decoration:none}
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#55657B;font-weight:600;text-align:left;padding:0 12px 10px;border-bottom:1px solid #E5EAF1;white-space:nowrap}
+.tbl td{padding:11px 12px;border-bottom:1px solid #EEF2F7;font-size:13px;color:#334155;white-space:nowrap}
+.tbl td.n,.tbl th.n{text-align:right}
+.tbl tr.h td{background:#F1F5F9}
+.tbl td b{color:#0F172A;font-weight:600}
+.stp{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:#334155}
+.stp i{width:7px;height:7px;border-radius:50%;display:block}
+.card{background:#FFFFFF;border:1px solid #E5EAF1;border-radius:12px}
+.thumb{display:block;border-radius:9px;background:#F4F6FA;border:1px solid #E5EAF1;overflow:hidden}
+.av2{width:36px;height:36px;border-radius:9px;display:grid;place-items:center;font-weight:700;font-size:14px;flex:none}
+.tag{font-size:11.5px;color:#55657B;border:1px solid #D3DBE6;border-radius:6px;padding:1px 7px}
+.tgl{width:34px;height:20px;border-radius:999px;background:#C4CEDB;position:relative;display:block;flex:none;border:0;padding:0}
+.tgl i{position:absolute;left:2px;top:2px;width:16px;height:16px;border-radius:50%;background:#1E293B;display:block}
+.tgl.on{background:#10B981}.tgl.on i{left:auto;right:2px;background:#fff}
+.ptabs{display:flex;gap:4px;border-bottom:1px solid #E5EAF1}
+.ptabs button{border:0;background:transparent;color:#55657B;font-size:13.5px;font-weight:500;padding:12px 10px;position:relative}
+.ptabs button.on{color:#0F172A}
+.ptabs button.on::after{content:'';position:absolute;left:8px;right:8px;bottom:-1px;height:2px;background:#10B981;border-radius:2px}
+
+/* live funnel preview */
+.pv{position:relative}
+.pvc{position:absolute;left:8px;bottom:8px;font-size:10.5px;color:#334155;background:rgba(255,255,255,.82);border:1px solid #E5EAF1;border-radius:6px;padding:1px 7px;line-height:16px}
+.pvo{position:absolute;right:8px;bottom:8px;font-size:11px;font-weight:600;color:#047857;background:rgba(255,255,255,.92);border:1px solid rgba(16,185,129,.4);border-radius:6px;padding:2px 9px;line-height:16px;opacity:0}
+a:hover .pvo,.card:hover .pvo{opacity:1}
+
+/* data trust: labels */
+.ppl{cursor:help}
+.pgo-r small,.nm .r small{font-size:10px;font-weight:500;color:#55657B;margin-left:3px;letter-spacing:0;font-family:'DM Sans',sans-serif}
+.tg{display:inline-flex;align-items:center;height:18px;padding:0 7px;border-radius:5px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border:1px solid;vertical-align:middle;white-space:nowrap;line-height:1}
+.tg.plan{color:#334155;border-color:#7B8AA0;background:transparent}
+.tg.fc{color:#047857;border:1px dashed rgba(52,211,153,.75);background:transparent}
+.tg.ac{color:#03241A;background:#10B981;border-color:#10B981}
+</style>
+</helmet>
+<div class="shell" style="height:900px"><aside class="side" aria-label="Main navigation">
+<button class="wsb"><span class="wl"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#15803D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z M21 21l-4.3-4.3"></path></svg></span><span style="flex:1;min-width:0"><b>Layer2Funnels</b><span>Team workspace</span></span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#55657B" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
+<a href="#" class="nv"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4z M8 2v16 M16 6v16"></path></svg>Home<span class="c"></span></a><a href="#" class="nv"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2 M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z M23 21v-2a4 4 0 0 0-3-3.9 M16 3.1a4 4 0 0 1 0 7.8"></path></svg>Clients<span class="c">4</span></a><a href="#" class="nv on"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h18l-7 8.5V19l-4 2v-8.5z"></path></svg>Funnels<span class="c">11</span></a><a href="#" class="nv"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l10 5-10 5L2 7z M2 17l10 5 10-5 M2 12l10 5 10-5"></path></svg>Templates<span class="c"></span></a>
+<a href="#" class="nv"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18 M8 6V4h8v2 M19 6l-1 14H6L5 6"></path></svg>Trash<span class="c">3</span></a> <div class="navh">Pinned clients</div>
+<a href="#" class="nv" style="font-size:13px"><span style="width:16px;display:grid;place-items:center"><i style="width:7px;height:7px;border-radius:50%;background:#22C55E;display:block"></i></span>Sam Carter</a><a href="#" class="nv" style="font-size:13px"><span style="width:16px;display:grid;place-items:center"><i style="width:7px;height:7px;border-radius:50%;background:#22C55E;display:block"></i></span>Priya Nair</a><a href="#" class="nv" style="font-size:13px"><span style="width:16px;display:grid;place-items:center"><i style="width:7px;height:7px;border-radius:50%;background:#60A5FA;display:block"></i></span>Marcus Lee</a>
+<span style="flex:1"></span>
+<a href="#" class="nv"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21v-7 M4 10V3 M12 21v-9 M12 8V3 M20 21v-5 M20 12V3 M1 14h6 M9 8h6 M17 16h6"></path></svg>Settings</a>
+<a href="#" class="nv"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3 M12 17h.01"></path></svg>Help &amp; shortcuts<span class="c"><kbd>?</kbd></span></a>
+<div style="display:flex;align-items:center;gap:10px;padding:10px 8px 0;margin-top:8px;border-top:1px solid #E5EAF1">
+<span class="av">DO</span><span style="flex:1;min-width:0"><b style="display:block;font-size:13px;font-weight:600">Demo Owner</b><span style="display:block;font-size:11.5px;color:#55657B">Owner</span></span>
+<button class="ib" aria-label="Theme"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"></path></svg></button></div>
+</aside><div class="mainc"><div class="mtop"><label class="cmd"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z M21 21l-4.3-4.3"></path></svg><input aria-label="Search" placeholder="Search clients, funnels, templates…" style="flex:1;background:transparent;border:0;color:#1E293B;font:inherit;outline:none"><kbd>⌘K</kbd></label>
+<span class="spacer"></span><button class="btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14 M5 12h14"></path></svg>New client</button><button class="btn pri"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#03241A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14 M5 12h14"></path></svg>New funnel</button></div><div class="pg"><h1 class="h1">Funnels</h1><p class="lede" style="margin-bottom:22px">Every map across your clients. Numbers are per month for each funnel’s selected scenario.</p>
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:18px"><button class="chip on" style="height:30px;padding:0 11px;font-size:12.5px">All 11</button><button class="chip" style="height:30px;padding:0 11px;font-size:12.5px">Live 4</button><button class="chip" style="height:30px;padding:0 11px;font-size:12.5px">Proposed 2</button><button class="chip" style="height:30px;padding:0 11px;font-size:12.5px">Draft 4</button><button class="chip" style="height:30px;padding:0 11px;font-size:12.5px">Archived 1</button><span class="spacer"></span><button class="btn sm">Client <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button><button class="btn sm">Needs attention</button><button class="btn sm">Recently updated <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button></div>
+<table class="tbl"><thead><tr><th>Funnel</th><th>Client</th><th>Status</th><th>Scenario</th><th class="n">Revenue / mo</th><th class="n">Profit / mo</th><th class="n">ROAS</th><th class="n">Model checks</th><th class="n">Updated</th></tr></thead><tbody><tr class="h"><td><div class="row" style="gap:12px"><svg class="thumb" width="72" height="40" viewBox="0 0 72 40" role="img" aria-label="Map of PT tripwire funnel: 8 blocks, 7 connections"><defs><pattern id="dpfu07240" width="12" height="12" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r=".8" fill="#E5EAF1"/></pattern></defs><rect width="72" height="40" fill="url(#dpfu07240)"/><g transform="translate(2.18 6.27) scale(0.0505)"><rect x="36" y="72" width="244" height="280" rx="14" fill="rgba(148,163,184,.05)" stroke="#C4CEDB" stroke-width="2" stroke-dasharray="10 8"/><rect x="306" y="72" width="998" height="400" rx="14" fill="rgba(148,163,184,.05)" stroke="#C4CEDB" stroke-width="2" stroke-dasharray="10 8"/></g><path d="M15.1 13.7 C17.0 13.7 17.0 17.7 18.8 17.7" fill="none" stroke="#5B6B82" stroke-width="2.90" stroke-linecap="round"/><path d="M18.8 17.7 l-7.7 -3.9 l0 7.7 z" fill="#5B6B82"/><path d="M15.1 19.8 C17.0 19.8 17.0 17.7 18.8 17.7" fill="none" stroke="#5B6B82" stroke-width="1.86" stroke-linecap="round"/><path d="M18.8 17.7 l-4.9 -2.5 l0 4.9 z" fill="#5B6B82"/><path d="M28.7 17.7 C30.2 17.7 29.9 17.7 31.5 17.7" fill="none" stroke="#5B6B82" stroke-width="2.42" stroke-linecap="round"/><path d="M31.5 17.7 l-6.4 -3.2 l0 6.4 z" fill="#5B6B82"/><path d="M41.4 17.7 C42.9 17.7 42.6 17.7 44.1 17.7" fill="none" stroke="#5B6B82" stroke-width="1.55" stroke-linecap="round"/><path d="M44.1 17.7 l-4.5 -2.2 l0 4.5 z" fill="#5B6B82"/><path d="M54.0 17.7 C55.5 17.7 55.2 17.7 56.7 17.7" fill="none" stroke="#5B6B82" stroke-width="1.40" stroke-linecap="round"/><path d="M56.7 17.7 l-4.5 -2.2 l0 4.5 z" fill="#5B6B82"/><path d="M36.4 20.5 C36.4 24.0 40.0 25.8 44.1 25.8" fill="none" stroke="#F97316" stroke-width="2.37" stroke-linecap="round" stroke-dasharray="4.0 3.0"/><path d="M44.1 25.8 l-6.3 -3.2 l0 6.3 z" fill="#F97316"/><path d="M54.0 25.8 C55.5 25.8 55.2 25.8 56.7 25.8" fill="none" stroke="#5B6B82" stroke-width="1.94" stroke-linecap="round"/><path d="M56.7 25.8 l-5.2 -2.6 l0 5.2 z" fill="#5B6B82"/><g transform="translate(2.18 6.27) scale(0.0505)"><g transform="translate(60.00 110.00)"><rect width="196" height="74" rx="37" fill="#60A5FA" opacity=".92"/></g><g transform="translate(60.00 232.00)"><rect width="196" height="74" rx="37" fill="#60A5FA" opacity=".92"/></g><g transform="translate(330.00 170.00)"><rect width="196" height="112" rx="14" fill="#A78BFA" opacity=".92"/><rect x="10" y="10" width="72" height="72" rx="6" fill="#0B1220"/></g><g transform="translate(580.00 170.00)"><rect width="196" height="112" rx="14" fill="#FB923C" opacity=".92"/><rect x="10" y="10" width="72" height="72" rx="6" fill="#0B1220"/></g><g transform="translate(830.00 189.00)"><rect width="196" height="74" rx="37" fill="#FBBF24" opacity=".92"/></g><g transform="translate(1080.00 170.00)"><rect width="196" height="112" rx="14" fill="#FB923C" opacity=".92"/><rect x="10" y="10" width="72" height="72" rx="6" fill="#0B1220"/></g><g transform="translate(830.00 349.00)"><rect width="196" height="74" rx="37" fill="#2DD4BF" opacity=".92"/></g><g transform="translate(1080.00 330.00)"><rect width="196" height="112" rx="14" fill="#FB923C" opacity=".92"/><rect x="10" y="10" width="72" height="72" rx="6" fill="#0B1220"/></g></g></svg><b>PT tripwire funnel</b></div></td><td>Sam Carter</td><td><span class="stp"><i style="background:#22C55E"></i>Live</span></td><td style="color:#55657B">Baseline</td><td class="n">$7,485</td><td class="n" style="color:#15803D">$6,825</td><td class="n">11.34x</td><td class="n"><span style="color:#B45309;display:inline-flex;gap:4px;align-items:center" title="Model checks: 4 to fix"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z M12 9v4 M12 17h.01"></path></svg>4 to fix</span></td><td class="n" style="color:#55657B">just now</td></tr><tr><td><div class="row" style="gap:12px"><svg class="thumb" width="72" height="40" viewBox="0 0 72 40" role="img" aria-label="Map of Webinar funnel: 7 blocks, 6 connections"><defs><pattern id="dpfu17240" width="12" height="12" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r=".8" fill="#E5EAF1"/></pattern></defs><rect width="72" height="40" fill="url(#dpfu17240)"/><g transform="translate(0.84 2.32) scale(0.0526)"></g><path d="M14.3 14.8 C16.3 14.8 16.3 14.7 18.2 14.7" fill="none" stroke="#5B6B82" stroke-width="2.90" stroke-linecap="round"/><path d="M18.2 14.7 l-7.7 -3.9 l0 7.7 z" fill="#5B6B82"/><path d="M28.5 14.7 C30.1 14.7 29.8 14.7 31.4 14.7" fill="none" stroke="#5B6B82" stroke-width="2.24" stroke-linecap="round"/><path d="M31.4 14.7 l-6.0 -3.0 l0 6.0 z" fill="#5B6B82"/><path d="M41.7 14.7 C43.3 14.7 42.9 14.7 44.5 14.7" fill="none" stroke="#5B6B82" stroke-width="1.74" stroke-linecap="round"/><path d="M44.5 14.7 l-4.6 -2.3 l0 4.6 z" fill="#5B6B82"/><path d="M54.8 14.7 C56.4 14.7 56.1 14.7 57.7 14.7" fill="none" stroke="#5B6B82" stroke-width="1.46" stroke-linecap="round"/><path d="M57.7 14.7 l-4.5 -2.2 l0 4.5 z" fill="#5B6B82"/><path d="M36.5 17.7 C36.5 22.8 40.3 25.3 44.5 25.3" fill="none" stroke="#F97316" stroke-width="2.09" stroke-linecap="round" stroke-dasharray="4.0 3.0"/><path d="M44.5 25.3 l-5.6 -2.8 l0 5.6 z" fill="#F97316"/><path d="M54.8 25.3 C56.4 25.3 56.1 25.3 57.7 25.3" fill="none" stroke="#5B6B82" stroke-width="1.91" stroke-linecap="round"/><path d="M57.7 25.3 l-5.1 -2.5 l0 5.1 z" fill="#5B6B82"/><g transform="translate(0.84 2.32) scale(0.0526)"><g transform="translate(60.00 200.00)"><rect width="196" height="74" rx="37" fill="#60A5FA" opacity=".92"/></g><g transform="translate(330.00 180.00)"><rect width="196" height="112" rx="14" fill="#A78BFA" opacity=".92"/><rect x="10" y="10" width="72" height="72" rx="6" fill="#0B1220"/></g><g transform="translate(580.00 180.00)"><rect width="196" height="112" rx="14" fill="#A78BFA" opacity=".92"/><rect x="10" y="10" width="72" height="72" rx="6" fill="#0B1220"/></g><g transform="translate(830.00 180.00)"><rect width="196" height="112" rx="14" fill="#FB923C" opacity=".92"/><rect x="10" y="10" width="72" height="72" rx="6" fill="#0B1220"/></g><g transform="translate(1080.00 180.00)"><rect width="196" height="112" rx="14" fill="#A78BFA" opacity=".92"/><rect x="10" y="10" width="72" height="72" rx="6" fill="#0B1220"/></g><g transform="translate(830.00 400.00)"><rect width="196" height="74" rx="37" fill="#2DD4BF" opacity=".92"/></g><g transform="translate(1080.00 380.00)"><rect width="196" height="112" rx="14" fill="#A78BFA" opacity=".92"/><rect x="10" y="10" width="72" height="72" rx="6" fill="#0B1220"/></g></g></svg><b>Webinar funnel</b></div></td><td>Priya Nair</td><td><span class="stp"><i style="background:#22C55E"></i>Live</span></td><td style="color:#55657B">Baseline</td><td class="n">£13,132</td><td class="n" style="color:#15803D">£11,332</td><td class="n">7.3x</td><td class="n"><span style="color:#15803D" title="Model checks: all clear"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2 M9 2h6v4H9z M9 14l2 2 4-4"></path></svg>All clear</span></td><td class="n" style="color:#55657B">9 h ago</td></tr><tr><td><div class="row" style="gap:12px"><svg class="thumb" width="72" height="40" viewBox="0 0 72 40" role="img" aria-label="Map of Application → call: 7 blocks, 6 connections"><defs><pattern id="dpfu27240" width="12" height="12" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r=".8" fill="#E5EAF1"/></pattern></defs><rect width="72" height="40" fill="url(#dpfu27240)"/><g transform="translate(1.38 7.47) scale(0.0437)"></g><path d="M12.6 16.5 C14.2 16.5 14.2 16.5 15.8 16.5" fill="none" stroke="#5B6B82" stroke-width="2.90" stroke-linecap="round"/><path d="M15.8 16.5 l-7.7 -3.9 l0 7.7 z" fill="#5B6B82"/><path d="M24.3 16.5 C25.7 16.5 25.4 16.5 26.7 16.5" fill="none" stroke="#5B6B82" stroke-width="2.18" stroke-linecap="round"/><path d="M26.7 16.5 l-5.8 -2.9 l0 5.8 z" fill="#5B6B82"/><path d="M35.3 16.5 C36.6 16.5 36.3 16.5 37.6 16.5" fill="none" stroke="#5B6B82" stroke-width="1.82" stroke-linecap="round"/><path d="M37.6 16.5 l-4.8 -2.4 l0 4.8 z" fill="#5B6B82"/><path d="M46.2 16.5 C47.5 16.5 47.2 16.5 48.5 16.5" fill="none" stroke="#5B6B82" stroke-width="1.67" stroke-linecap="round"/><path d="M48.5 16.5 l-4.5 -2.2 l0 4.5 z" fill="#5B6B82"/><path d="M31.0 18.9 C31.0 22.6 34.1 24.4 37.6 24.4" fill="none" stroke="#F97316" stroke-width="1.96" stroke-linecap="round" stroke-dasharray="4.0 3.0"/><path d="M37.6 24.4 l-5.2 -2.6 l0 5.2 z" fill="#F97316"/><path d="M57.1 16.5 C58.4 16.5 58.1 16.5 59.4 16.5" fill="none" stroke="#5B6B82" stroke-width="1.64" stroke-linecap="round"/><path d="M59.4 16.5 l-4.5 -2.2 l0 4.5 z" fill="#5B6B82"/><g transform="translate(1.38 7.47) scale(0.0437)"><g transform="translate(60.00 170.00)"><rect width="196" height="74" rx="37" fill="#60A5FA" opacity=".92"/></g><g transform="translate(330.00 150.00)"><rect width="196" height="112" rx="14" fill="#A78BFA" opacity=".92"/><rect x="10" y="10" width="72" height="72" rx="6" fill="#0B1220"/></g><g transform="translate(580.00 150.00)"><rect width="196" height="112" rx="14" fill="#A78BFA" opacity=".92"/><rect x="10" y="10" width="72" height="72" rx="6" fill="#0B1220"/></g><g transform="translate(830.00 150.00)"><rect width="196" height="112" rx="14" fill="#A78BFA" opacity=".92"/><rect x="10" y="10" width="72" height="72" rx="6" fill="#0B1220"/></g><g transform="translate(1080.00 150.00)"><rect width="196" height="112" rx="14" fill="#A78BFA" opacity=".92"/><rect x="10" y="10" width="72" height="72" rx="6" fill="#0B1220"/></g><g transform="translate(830.00 350.00)"><rect width="196" height="74" rx="37" fill="#2DD4BF" opacity=".92"/></g><g transform="translate(1330.00 169.00)"><rect width="196" height="74" rx="37" fill="#84CC16" opacity=".92"/></g></g></svg><b>Application → call</b></div></td><td>Marcus Lee</td><td><span class="stp"><i style="background:#60A5FA"></i>Proposed</span></td><td style="color:#55657B">Best case</td><td class="n">$3,544</td><td class="n" style="color:#15803D">$671</td><td class="n">1.48x</td><td class="n"><span style="color:#B45309;display:inline-flex;gap:4px;align-items:center" title="Model checks: 1 to fix"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z M12 9v4 M12 17h.01"></path></svg>1 to fix</span></td><td class="n" style="color:#55657B">9 h ago</td></tr><tr><td><div class="row" style="gap:12px"><svg class="thumb" width="72" height="40" viewBox="0 0 72 40" role="img" aria-label="Map of PT tripwire funnel: 8 blocks, 7 connections"><defs><pattern id="dpfu37240" width="12" height="12" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r=".8" fill="#E5EAF1"/></pattern></defs><rect width="72" height="40" fill="url(#dpfu37240)"/><g transform="translate(2.18 6.27) scale(0.0505)"><rect x="36" y="72" width="244" height="280" rx="14" fill="rgba(148,163,184,.05)" stroke="#C4CEDB" stroke-width="2" stroke-dasharray="10 8"/><rect x="306" y="72" width="998" height="400" rx="14" fill="rgba(148,163,184,.05)" stroke="#C4CEDB" stroke-width="2" stroke-dasharray="10 8"/></g><path d="M15.1 13.7 C17.0 13.7 17.0 17.7 18.8 17.7" fill="none" stroke="#5B6B82" stroke-width="2.90" stroke-linecap="round"/><path d="M18.8 17.7 l-7.7 -3.9 l0 7.7 z" fill="#5B6B82"/><path d="M15.1 19.8 C17.0 19.8 17.0 17.7 18.8 17.7" fill="none" stroke="#5B6B82" stroke-width="1.86" stroke-linecap="round"/><path d="M18.8 17.7 l-4.9 -2.5 l0 4.9 z" fill="#5B6B82"/><path d="M28.7 17.7 C30.2 17.7 29.9 17.7 31.5 17.7" fill="none" stroke="#5B6B82" stroke-width="2.42" stroke-linecap="round"/><path d="M31.5 17.7 l-6.4 -3.2 l0 6.4 z" fill="#5B6B82"/><path d="M41.4 17.7 C42.9 17.7 42.6 17.7 44.1 17.7" fill="none" stroke="#5B6B82" stroke-width="1.55" stroke-linecap="round"/><path d="M44.1 17.7 l-4.5 -2.2 l0 4.5 z" fill="#5B6B82"/><path d="M54.0 17.7 C55.5 17.7 55.2 17.7 56.7 17.7" fill="none" stroke="#5B6B82" stroke-width="1.40" stroke-linecap="round"/><path d="M56.7 17.7 l-4.5 -2.2 l0 4.5 z" fill="#5B6B82"/><path d="M36.4 20.5 C36.4 24.0 40.0 25.8 44.1 25.8" fill="none" stroke="#F97316" stroke-width="2.37" stroke-linecap="round" stroke-dasharray="4.0 3.0"/><path d="M44.1 25.8 l-6.3 -3.2 l0 6.3 z" fill="#F97316"/><path d="M54.0 25.8 C55.5 25.8 55.2 25.8 56.7 25.8" fill="none" stroke="#5B6B82" stroke-width="1.94" stroke-linecap="round"/><path d="M56.7 25.8 l-5.2 -2.6 l0 5.2 z" fill="#5B6B82"/><g transform="translate(2.18 6.27) scale(0.0505)"><g transform="translate(60.00 110.00)"><rect width="196" height="74" rx="37" fill="#60A5FA" opacity=".92"/></g><g transform="translate(60.00 232.00)"><rect width="196" height="74" rx="37" fill="#60A5FA" opacity=".92"/></g><g transform="translate(330.00 170.00)"><rect width="196" height="112" rx="14" fill="#A78BFA" opacity=".92"/><rect x="10" y="10" width="72" height="72" rx="6" fill="#0B1220"/></g><g transform="translate(580.00 170.00)"><rect width="196" height="112" rx="14" fill="#FB923C" opacity=".92"/><rect x="10" y="10" width="72" height="72" rx="6" fill="#0B1220"/></g><g transform="translate(830.00 189.00)"><rect width="196" height="74" rx="37" fill="#FBBF24" opacity=".92"/></g><g transform="translate(1080.00 170.00)"><rect width="196" height="112" rx="14" fill="#FB923C" opacity=".92"/><rect x="10" y="10" width="72" height="72" rx="6" fill="#0B1220"/></g><g transform="translate(830.00 349.00)"><rect width="196" height="74" rx="37" fill="#2DD4BF" opacity=".92"/></g><g transform="translate(1080.00 330.00)"><rect width="196" height="112" rx="14" fill="#FB923C" opacity=".92"/><rect x="10" y="10" width="72" height="72" rx="6" fill="#0B1220"/></g></g></svg><b>PT tripwire (copy)</b></div></td><td>Sam Carter</td><td><span class="stp"><i style="background:#22C55E"></i>Live</span></td><td style="color:#55657B">Baseline</td><td class="n">$55,765</td><td class="n" style="color:#15803D">$51,614</td><td class="n">13.43x</td><td class="n"><span style="color:#15803D" title="Model checks: all clear"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2 M9 2h6v4H9z M9 14l2 2 4-4"></path></svg>All clear</span></td><td class="n" style="color:#55657B">9 h ago</td></tr><tr><td><div class="row" style="gap:12px"><svg class="thumb" width="72" height="40" viewBox="0 0 72 40" role="img" aria-label="Map of Subscription + A/B test: 6 blocks, 6 connections"><defs><pattern id="dpfu47240" width="12" height="12" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r=".8" fill="#E5EAF1"/></pattern></defs><rect width="72" height="40" fill="url(#dpfu47240)"/><g transform="translate(0.84 6.79) scale(0.0526)"></g><path d="M14.3 19.3 C16.3 19.3 16.3 19.2 18.2 19.2" fill="none" stroke="#5B6B82" stroke-width="2.90" stroke-linecap="round"/><path d="M18.2 19.2 l-7.7 -3.9 l0 7.7 z" fill="#5B6B82"/><path d="M28.5 19.2 C30.1 19.2 29.8 19.2 31.4 19.2" fill="none" stroke="#5B6B82" stroke-width="1.82" stroke-linecap="round"/><path d="M31.4 19.2 l-4.8 -2.4 l0 4.8 z" fill="#5B6B82"/><path d="M41.7 19.2 C43.3 19.2 42.9 14.5 44.5 14.5" fill="none" stroke="#5B6B82" stroke-width="1.64" stroke-linecap="round"/><path d="M44.5 14.5 l-4.5 -2.2 l0 4.5 z" fill="#5B6B82"/><path d="M41.7 19.2 C43.3 19.2 42.9 25.0 44.5 25.0" fill="none" stroke="#5B6B82" stroke-width="1.64" stroke-linecap="round"/><path d="M44.5 25.0 l-4.5 -2.2 l0 4.5 z" fill="#5B6B82"/><path d="M54.8 14.5 C56.4 14.5 56.1 19.7 57.7 19.7" fill="none" stroke="#5B6B82" stroke-width="1.42" stroke-linecap="round"/><path d="M57.7 19.7 l-4.5 -2.2 l0 4.5 z" fill="#5B6B82"/><path d="M54.8 25.0 C56.4 25.0 56.1 19.7 57.7 19.7" fill="none" stroke="#5B6B82" stroke-width="1.42" stroke-linecap="round"/><path d="M57.7 19.7 l-4.5 -2.2 l0 4.5 z" fill="#5B6B82"/><g transform="translate(0.84 6.79) scale(0.0526)"><g transform="translate(60.00 200.00)"><rect width="196" height="74" rx="37" fill="#60A5FA" opacity=".92"/></g><g transform="translate(330.00 180.00)"><rect width="196" height="112" rx="14" fill="#A78BFA" opacity=".92"/><rect x="10" y="10" width="72" height="72" rx="6" fill="#0B1220"/></g><g transform="translate(580.00 199.00)"><rect width="196" height="74" rx="37" fill="#FBBF24" opacity=".92"/></g><g transform="translate(830.00 90.00)"><rect width="196" height="112" rx="14" fill="#FB923C" opacity=".92"/><rect x="10" y="10" width="72" height="72" rx="6" fill="#0B1220"/></g><g transform="translate(830.00 290.00)"><rect width="196" height="112" rx="14" fill="#FB923C" opacity=".92"/><rect x="10" y="10" width="72" height="72" rx="6" fill="#0B1220"/></g><g transform="translate(1080.00 190.00)"><rect width="196" height="112" rx="14" fill="#A78BFA" opacity=".92"/><rect x="10" y="10" width="72" height="72" rx="6" fill="#0B1220"/></g></g></svg><b>Subscription + A/B test</b></div></td><td>Ayesha Khan</td><td><span class="stp"><i style="background:#55657B"></i>Draft</span></td><td style="color:#55657B">Baseline</td><td class="n">AED 702</td><td class="n" style="color:#B91C1C">−AED 198</td><td class="n">0.78x</td><td class="n"><span style="color:#B45309;display:inline-flex;gap:4px;align-items:center" title="Model checks: 2 to fix"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z M12 9v4 M12 17h.01"></path></svg>2 to fix</span></td><td class="n" style="color:#55657B">9 h ago</td></tr><tr><td><div class="row" style="gap:12px"><svg class="thumb" width="72" height="40" viewBox="0 0 72 40" role="img" aria-label="Map of Quiz → coaching: 6 blocks, 5 connections"><defs><pattern id="dpfu57240" width="12" height="12" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r=".8" fill="#E5EAF1"/></pattern></defs><rect width="72" height="40" fill="url(#dpfu57240)"/><g transform="translate(0.02 1.38) scale(0.0663)"></g><path d="M17.0 13.8 C19.4 13.8 19.4 13.7 21.9 13.7" fill="none" stroke="#5B6B82" stroke-width="2.90" stroke-linecap="round"/><path d="M21.9 13.7 l-7.7 -3.9 l0 7.7 z" fill="#5B6B82"/><path d="M34.9 13.7 C36.9 13.7 36.5 13.7 38.5 13.7" fill="none" stroke="#5B6B82" stroke-width="2.26" stroke-linecap="round"/><path d="M38.5 13.7 l-6.0 -3.0 l0 6.0 z" fill="#5B6B82"/><path d="M51.4 13.7 C53.4 13.7 53.0 13.7 55.0 13.7" fill="none" stroke="#5B6B82" stroke-width="1.64" stroke-linecap="round"/><path d="M55.0 13.7 l-4.5 -2.2 l0 4.5 z" fill="#5B6B82"/><path d="M28.4 17.4 C28.4 23.0 33.1 25.7 38.5 25.7" fill="none" stroke="#F97316" stroke-width="2.53" stroke-linecap="round" stroke-dasharray="4.0 3.0"/><path d="M38.5 25.7 l-6.7 -3.4 l0 6.7 z" fill="#F97316"/><path d="M51.4 25.7 C53.4 25.7 53.0 25.6 55.0 25.6" fill="none" stroke="#5B6B82" stroke-width="1.89" stroke-linecap="round"/><path d="M55.0 25.6 l-5.0 -2.5 l0 5.0 z" fill="#5B6B82"/><g transform="translate(0.02 1.38) scale(0.0663)"><g transform="translate(60.00 150.00)"><rect width="196" height="74" rx="37" fill="#60A5FA" opacity=".92"/></g><g transform="translate(330.00 130.00)"><rect width="196" height="112" rx="14" fill="#A78BFA" opacity=".92"/><rect x="10" y="10" width="72" height="72" rx="6" fill="#0B1220"/></g><g transform="translate(580.00 130.00)"><rect width="196" height="112" rx="14" fill="#FB923C" opacity=".92"/><rect x="10" y="10" width="72" height="72" rx="6" fill="#0B1220"/></g><g transform="translate(830.00 130.00)"><rect width="196" height="112" rx="14" fill="#A78BFA" opacity=".92"/><rect x="10" y="10" width="72" height="72" rx="6" fill="#0B1220"/></g><g transform="translate(580.00 330.00)"><rect width="196" height="74" rx="37" fill="#2DD4BF" opacity=".92"/></g><g transform="translate(830.00 310.00)"><rect width="196" height="112" rx="14" fill="#FB923C" opacity=".92"/><rect x="10" y="10" width="72" height="72" rx="6" fill="#0B1220"/></g></g></svg><b>Quiz → coaching</b></div></td><td>Sam Carter</td><td><span class="stp"><i style="background:#55657B"></i>Draft</span></td><td style="color:#55657B">Baseline</td><td class="n">$2,140</td><td class="n" style="color:#15803D">$1,480</td><td class="n">3.2x</td><td class="n"><span style="color:#B45309;display:inline-flex;gap:4px;align-items:center" title="Model checks: 1 to fix"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z M12 9v4 M12 17h.01"></path></svg>1 to fix</span></td><td class="n" style="color:#55657B">9 h ago</td></tr><tr><td><div class="row" style="gap:12px"><svg class="thumb" width="72" height="40" viewBox="0 0 72 40" role="img" aria-label="Map of Webinar funnel: 7 blocks, 6 connections"><defs><pattern id="dpfu67240" width="12" height="12" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r=".8" fill="#E5EAF1"/></pattern></defs><rect width="72" height="40" fill="url(#dpfu67240)"/><g transform="translate(0.84 2.32) scale(0.0526)"></g><path d="M14.3 14.8 C16.3 14.8 16.3 14.7 18.2 14.7" fill="none" stroke="#5B6B82" stroke-width="2.90" stroke-linecap="round"/><path d="M18.2 14.7 l-7.7 -3.9 l0 7.7 z" fill="#5B6B82"/><path d="M28.5 14.7 C30.1 14.7 29.8 14.7 31.4 14.7" fill="none" stroke="#5B6B82" stroke-width="2.24" stroke-linecap="round"/><path d="M31.4 14.7 l-6.0 -3.0 l0 6.0 z" fill="#5B6B82"/><path d="M41.7 14.7 C43.3 14.7 42.9 14.7 44.5 14.7" fill="none" stroke="#5B6B82" stroke-width="1.74" stroke-linecap="round"/><path d="M44.5 14.7 l-4.6 -2.3 l0 4.6 z" fill="#5B6B82"/><path d="M54.8 14.7 C56.4 14.7 56.1 14.7 57.7 14.7" fill="none" stroke="#5B6B82" stroke-width="1.46" stroke-linecap="round"/><path d="M57.7 14.7 l-4.5 -2.2 l0 4.5 z" fill="#5B6B82"/><path d="M36.5 17.7 C36.5 22.8 40.3 25.3 44.5 25.3" fill="none" stroke="#F97316" stroke-width="2.09" stroke-linecap="round" stroke-dasharray="4.0 3.0"/><path d="M44.5 25.3 l-5.6 -2.8 l0 5.6 z" fill="#F97316"/><path d="M54.8 25.3 C56.4 25.3 56.1 25.3 57.7 25.3" fill="none" stroke="#5B6B82" stroke-width="1.91" stroke-linecap="round"/><path d="M57.7 25.3 l-5.1 -2.5 l0 5.1 z" fill="#5B6B82"/><g transform="translate(0.84 2.32) scale(0.0526)"><g transform="translate(60.00 200.00)"><rect width="196" height="74" rx="37" fill="#60A5FA" opacity=".92"/></g><g transform="translate(330.00 180.00)"><rect width="196" height="112" rx="14" fill="#A78BFA" opacity=".92"/><rect x="10" y="10" width="72" height="72" rx="6" fill="#0B1220"/></g><g transform="translate(580.00 180.00)"><rect width="196" height="112" rx="14" fill="#A78BFA" opacity=".92"/><rect x="10" y="10" width="72" height="72" rx="6" fill="#0B1220"/></g><g transform="translate(830.00 180.00)"><rect width="196" height="112" rx="14" fill="#FB923C" opacity=".92"/><rect x="10" y="10" width="72" height="72" rx="6" fill="#0B1220"/></g><g transform="translate(1080.00 180.00)"><rect width="196" height="112" rx="14" fill="#A78BFA" opacity=".92"/><rect x="10" y="10" width="72" height="72" rx="6" fill="#0B1220"/></g><g transform="translate(830.00 400.00)"><rect width="196" height="74" rx="37" fill="#2DD4BF" opacity=".92"/></g><g transform="translate(1080.00 380.00)"><rect width="196" height="112" rx="14" fill="#A78BFA" opacity=".92"/><rect x="10" y="10" width="72" height="72" rx="6" fill="#0B1220"/></g></g></svg><b>Webinar funnel</b></div></td><td>Ayesha Khan</td><td><span class="stp"><i style="background:#55657B"></i>Draft</span></td><td style="color:#55657B">Baseline</td><td class="n">AED 13,132</td><td class="n" style="color:#15803D">AED 11,332</td><td class="n">7.3x</td><td class="n"><span style="color:#15803D" title="Model checks: all clear"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2 M9 2h6v4H9z M9 14l2 2 4-4"></path></svg>All clear</span></td><td class="n" style="color:#55657B">9 h ago</td></tr></tbody></table></div></div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Simulation spec</title><script src="./support.js"></script></head>
+<body><x-dc><helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&amp;family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&amp;family=JetBrains+Mono:wght@500&amp;display=swap">
+<style>
+body{margin:0;background:#070B14}*{box-sizing:border-box}
+.app{font-family:'DM Sans',system-ui,sans-serif;color:#CBD5E1;background:#0B1220;width:1440px;position:relative;font-size:13.5px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.doc{position:absolute;left:120px;width:1200px;top:48px}
+h1,h2,h3{font-family:'Bricolage Grotesque','DM Sans',sans-serif;letter-spacing:-.01em;color:#F8FAFC;font-weight:600}
+h1{font-size:30px;margin:0 0 14px}h2{font-size:21px;margin:40px 0 14px;padding-top:22px;border-top:1px solid #1E293B;color:#10B981}h3{font-size:16px;margin:24px 0 10px}
+p{margin:0 0 12px}strong{color:#F1F5F9;font-weight:600}
+code{font-family:'JetBrains Mono',monospace;font-size:12px;background:#0F172A;border:1px solid #1E293B;border-radius:4px;padding:0 5px;color:#E2E8F0}
+kbd{font-family:'JetBrains Mono',monospace;font-size:11px;color:#E2E8F0;border:1px solid #334155;border-bottom-width:2px;border-radius:4px;padding:0 4px;background:#0F172A}
+table{width:100%;border-collapse:collapse;margin:6px 0 18px;font-size:12.5px}
+th{text-align:left;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:#94A3B8;font-weight:600;padding:8px 10px;border-bottom:1px solid #334155}
+td{padding:9px 10px;border-bottom:1px solid #1E293B;vertical-align:top}
+ul,ol{margin:0 0 14px;padding-left:20px}li{margin-bottom:6px}
+li.cb{list-style:none;margin-left:-20px;padding-left:28px;position:relative}.bx{position:absolute;left:0;top:4px;width:14px;height:14px;border:1.5px solid #475569;border-radius:4px}
+hr{border:0;border-top:1px solid #1E293B;margin:24px 0}em{color:#94A3B8}
+</style></helmet>
+<div class="app" style="height:4242px"><div class="doc"><h1>Simulation — what it should look like (instructions for Claude Code)</h1>
+<p><strong>Read first.</strong> Simulation is a <strong>way of showing</strong> the numbers the funnel engine already produces. It must <strong>never create numbers of its own</strong>. Every figure on screen comes from the same engine as the map, the KPI strip, Reports and the PDF. The animation is illustration only. Do not change any maths or business logic to build this.</p>
+<p>Design references in this package: <code>Funnel-tools.dc.html</code> (<em>Simulate › What-if</em> and <em>Simulate › Scenarios</em>), <code>Performance-map.dc.html</code>, <code>Blocks-and-lines.dc.html</code> (connection styles), <code>Page-block-thumbnails.dc.html</code> (page object, hover peek), <code>Present.dc.html</code>, <code>Shared-view.dc.html</code>.</p>
+<hr />
+<h2>1. What the user is doing</h2>
+<p>The user asks one question: <strong>"If I change this, what happens to the funnel?"</strong> Simulation must answer it in three places at once:</p>
+<ol>
+<li><strong>The map</strong>: people visibly flowing, and where they leave.</li>
+<li><strong>The KPI strip</strong>: before → after for the headline numbers.</li>
+<li><strong>The inspector</strong>: the assumption being changed, with its baseline value.</li>
+</ol>
+<p>If a user can't tell <strong>what changed, against what, and by how much</strong> within five seconds, the screen is wrong.</p>
+<h2>2. Entering and leaving</h2>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Behaviour</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Enter</td>
+<td>The funnel panel's <strong>Simulate</strong> tab, or the top-bar <strong>Simulate</strong> toggle, or the <kbd>S</kbd> key.</td>
+</tr>
+<tr>
+<td>On enter</td>
+<td>The canvas switches to the Performance layer automatically. A slim <strong>simulation bar</strong> appears at the top of the canvas (see 3). Panels stay where they are.</td>
+</tr>
+<tr>
+<td>Leave</td>
+<td>Toggle off, <kbd>S</kbd>, or <kbd>Esc</kbd> with nothing selected. The previous layer is restored. Unsaved what-if changes ask once: <em>Keep as a scenario / Discard</em>.</td>
+</tr>
+<tr>
+<td>Label</td>
+<td>Call it <strong>Simulate</strong>, not "Sim On". The toggle shows its state with an emerald fill and the word, never with colour alone.</td>
+</tr>
+</tbody>
+</table>
+<h2>3. The simulation bar (top of canvas, 40px, <code>#111827</code>, bottom border <code>#1E293B</code>)</h2>
+<p>Left to right:</p>
+<ul>
+<li><strong>Scenario chip</strong>: <code>Scenario: Best case</code> with a dropdown. Never identify a scenario by date or time.</li>
+<li><strong>"vs" chip</strong>: <code>vs Baseline (current map)</code>. Changeable to any other scenario.</li>
+<li><strong>Changed list</strong>: <code>2 changes · Traffic +25% · Fitness quiz 45% → 50%</code>. Clicking it opens the list. Clicking an item selects that block.</li>
+<li><strong>Period</strong>: segmented <code>Day · Week · Month · Year</code> (default Month).</li>
+<li><strong>Playback</strong>: ▶ / ❚❚ (<kbd>Space</kbd>), speed <code>1× · 2× · 4×</code>.</li>
+<li><strong>Reset to baseline</strong> (text button) and <strong>Save as scenario</strong> (primary, only when there are unsaved changes).</li>
+</ul>
+<h2>4. The map while simulating</h2>
+<p><strong>Connections</strong>
+- Thickness is proportional to people per selected period: minimum 1.5px, maximum 10px, square-root scale so a small branch never disappears.
+- <strong>Converted</strong> paths are solid emerald <code>#10B981</code> and leave the object's <strong>Y</strong> port.
+- <strong>Leak</strong> paths are dashed orange <code>#F97316</code> (6/5 dash) and leave the <strong>N</strong> port.
+- <strong>Skip / no-data</strong> paths are dotted slate.
+- The meaning is carried by colour, dash, port position and label together, never by colour alone.
+- Labels sit on the path: people for the period (<code>1,035</code>), and on leak paths a minus sign: <code>−1,265 / mo</code>.</p>
+<p><strong>Flow dots (the animation)</strong>
+- Small dots travel along each path in the direction of flow: 4px emerald on converted paths, 4px orange on leak paths.
+- Density is proportional to volume. Cap at one dot per 24px of path and <strong>300 dots on screen in total</strong>. Speed is the same on every path, so speed never implies a rate.
+- Pause automatically when the tab is hidden or while the user drags or pans.
+- <strong>Reduced motion:</strong> no dots at all. The thickness and labels carry everything.
+- Over 150 blocks: dots are off by default, with a hint to turn them on.</p>
+<p><strong>Objects</strong>
+- Objects show the same two numbers as on the map (people in → people through, then the headline result). There is no new layout.
+- <strong>Changed by this scenario:</strong> an amber <code>Δ</code> chip on the object's top-right corner. Hovering shows <code>Conversion 45% → 50% · Best case</code>.
+- <strong>Biggest leak:</strong> the existing leak treatment (orange ring) stays visible during simulation.
+- <strong>Page objects</strong> keep their screenshot window and the hover peek.</p>
+<p><strong>Numbers</strong>
+- <strong>People:</strong> see section 7.
+- <strong>Money:</strong> always carries its period (<code>$7,485 / mo</code>) and, when relevant, its basis (<code>first payment</code> or <code>lifetime value</code>), matching the funnel's <em>Count revenue as</em> setting.
+- <strong>Deltas:</strong> a sign, an arrow and a colour, for example <code>▲ +$749 / mo</code> in emerald and <code>▼ −120 / mo</code> in orange. Never colour alone.</p>
+<h2>5. The KPI strip while simulating</h2>
+<p>Each KPI shows <strong>scenario value</strong>, a small <strong>baseline value</strong> underneath (<code>was $6,825</code>), and a <strong>delta chip</strong>. The strip header reads <code>Best case vs Baseline · per month · USD</code>. <em>+6 more</em> expands the same way.</p>
+<h2>6. What-if on a selected block</h2>
+<p>When a block is selected in Simulate, the inspector shows that block's assumptions as rows:</p>
+<ul>
+<li><strong>Label + current value field + slider</strong>: for example Conversion <code>50%</code> with a slider from 0 to 100.</li>
+<li><strong>Baseline marker</strong>: a small tick on the slider at the baseline value, and <code>baseline 45%</code> under the field.</li>
+<li>Editing recomputes immediately (debounce 150ms). The map, KPI strip and delta chips update together.</li>
+<li>The row shows <code>Reset</code> when it differs from baseline.</li>
+<li>At the bottom: <strong>Save as scenario</strong>. If the change came from the funnel's <em>Biggest leak</em> card, the scenario is named after it (for example <em>Fitness quiz +5 pts</em>). The user can rename it.</li>
+</ul>
+<h2>7. Fractional people (decision needed — default proposed)</h2>
+<p>The engine models averages, so it produces values like <code>82.8</code> buyers. Showing a fraction of a person reads as an error to most people.</p>
+<ul>
+<li><strong>Default display:</strong> round to whole people everywhere in the UI (<code>83 buy</code>, <code>Customers 129</code>).</li>
+<li><strong>Exact value:</strong> on hover or in the inspector: <code>82.8 (modelled average)</code>.</li>
+<li><strong>Values under 10:</strong> show one decimal with <em>avg</em> (<code>4.6 avg / day</code>) so small daily rates don't round to 0.</li>
+<li><strong>Money and percentages:</strong> calculated from the exact values, never from the rounded ones.</li>
+</ul>
+<h2>8. Comparing scenarios</h2>
+<ul>
+<li><strong>Scenario list</strong> (<em>Simulate › Scenarios</em>):</li>
+<li><strong>Baseline</strong> is always the current map and is called <em>Baseline (current map)</em>. There is no second scenario called "Expected — same as map": either remove it or make it a real, different set of assumptions.</li>
+<li>Each scenario row shows its assumptions in words (<code>−20% traffic · −10% conversion</code>), never a timestamp.</li>
+<li><strong>Compare side by side:</strong> opens Reports › Scenario comparison with the two scenarios as columns and a delta column. Rows are Traffic, Leads, Customers, Revenue, Profit, ROAS, MRR. Deltas use the same chip as the KPI strip.</li>
+<li><strong>Optional, phase 2:</strong> a split map (two synced canvases). Not needed for v1.</li>
+</ul>
+<h2>9. Walk-through (for presenting)</h2>
+<p>A <strong>Walk-through</strong> button on the simulation bar steps through the funnel one stage at a time (<kbd>→</kbd> / <kbd>←</kbd>). The current step is highlighted, the others are dimmed to 35%, and a caption appears beside the step: <code>Fitness quiz · 2,300 arrive · 1,035 continue · 55% leave</code>. Present mode and Shared view reuse this.</p>
+<h2>10. States</h2>
+<table>
+<thead>
+<tr>
+<th>State</th>
+<th>What the user sees</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>No traffic source</td>
+<td>The canvas is dimmed, with one message: <em>Add a traffic source to simulate</em> and an <strong>Add source</strong> button that opens the blocks sidebar on Traffic sources.</td>
+</tr>
+<tr>
+<td>Model checks failing</td>
+<td>Simulation still runs. An amber line in the bar: <em>2 issues may affect these numbers · View</em>. It opens Model › Checks.</td>
+</tr>
+<tr>
+<td>Computing</td>
+<td>Under 200ms: nothing changes visually. Over 200ms: a 2px progress line under the simulation bar. Numbers never flicker to zero.</td>
+</tr>
+<tr>
+<td>Unsaved changes</td>
+<td>A dot on <em>Save as scenario</em>. Leaving asks once.</td>
+</tr>
+<tr>
+<td>Viewer role / Shared view</td>
+<td>Can play, change period and switch between shared scenarios. Cannot edit assumptions. What-if rows are read-only, with <em>Ask the owner to edit</em>.</td>
+</tr>
+<tr>
+<td>Offline</td>
+<td>Simulation keeps working from the last loaded model. Saving a scenario waits and says <em>Will save when you're back online</em>.</td>
+</tr>
+</tbody>
+</table>
+<h2>11. Responsive</h2>
+<table>
+<thead>
+<tr>
+<th>Width</th>
+<th>Layout</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1280 and above</td>
+<td>As specified.</td>
+</tr>
+<tr>
+<td>1024 / 768</td>
+<td>The simulation bar wraps the <em>Changed</em> list into a chip. The inspector becomes a drawer.</td>
+</tr>
+<tr>
+<td>Phone (390–430)</td>
+<td>Simulation is <strong>view-only</strong>: play, period and scenario switch in a bottom sheet. No dot animation; thickness only. What-if editing opens a full-height sheet for one block at a time. All touch targets are 44px or more.</td>
+</tr>
+</tbody>
+</table>
+<h2>12. Accessibility and performance</h2>
+<ul>
+<li>60fps target, using <code>requestAnimationFrame</code>.</li>
+<li>Every change of state is announced (<code>Scenario Best case: revenue up $749 per month</code>).</li>
+<li>Keyboard: <kbd>S</kbd> toggles simulate, <kbd>Space</kbd> plays or pauses, <kbd>Esc</kbd> leaves. Every control is reachable.</li>
+<li>Contrast is at least 4.5:1 on all numbers.</li>
+</ul>
+<h2>13. Acceptance checklist</h2>
+<ul>
+<li class="cb"><span class="bx"></span>No number in Simulate differs from the same number in Reports or the PDF for the same scenario and period.</li>
+<li class="cb"><span class="bx"></span>Turning animation off (or reduced motion) loses no information.</li>
+<li class="cb"><span class="bx"></span>Baseline, active scenario and the changed assumptions are visible without opening anything.</li>
+<li class="cb"><span class="bx"></span>Every delta has a sign and an arrow, as well as colour.</li>
+<li class="cb"><span class="bx"></span>Every money figure states its period, and its basis where the funnel uses lifetime value.</li>
+<li class="cb"><span class="bx"></span>People are whole numbers in the UI, with exact values on hover (or the rule the owner chooses in section 7).</li>
+<li class="cb"><span class="bx"></span>Leaving simulate never loses work without asking once.</li>
+<li class="cb"><span class="bx"></span>Phone is view-only and usable with one thumb.</li>
+<li class="cb"><span class="bx"></span>No random or probabilistic simulation (Monte Carlo) unless the owner asks for it. The engine is deterministic.</li>
+</ul></div></div></x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":4242}}'>
+class Component extends DCLogic { renderVals() { return {}; } }
+</script></body></html>

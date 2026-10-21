@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Month-to-month data entry</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&amp;family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#070B14}
+*{box-sizing:border-box}
+a{color:#34D399}a:hover{color:#6EE7B7}
+.app{font-family:'DM Sans',system-ui,sans-serif;color:#E2E8F0;background:#0B1220;width:1440px;position:relative;font-size:13px;line-height:1.4;-webkit-font-smoothing:antialiased;font-feature-settings:'tnum' 1;overflow:hidden}
+.disp{font-family:'Bricolage Grotesque','DM Sans',sans-serif;letter-spacing:-.01em}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace}
+button{font:inherit;color:inherit;cursor:pointer}
+input,select{font:inherit;color:inherit}
+h1,h2,h3,h4,h5,p{margin:0}
+.top{height:48px;display:flex;align-items:center;gap:12px;padding:0 12px;background:#111827;border-bottom:1px solid #1E293B;position:relative;z-index:5}
+.logo{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:#10B981;color:#04281C;flex:none}
+.sp{flex:1}
+.btn{height:32px;padding:0 12px;border-radius:8px;border:1px solid #334155;background:transparent;color:#E2E8F0;font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+.btn:hover{background:#1E293B}
+.btn.pri{background:#10B981;border-color:#10B981;color:#04281C;font-weight:600}
+.btn.pri:hover{background:#34D399}
+.btn.dng{background:#DC2626;border-color:#DC2626;color:#fff;font-weight:600}
+.btn.off{opacity:.45;cursor:not-allowed}
+.btn.sm{height:28px;padding:0 10px;font-size:12px}
+.ib{width:32px;height:32px;border:0;background:transparent;border-radius:7px;color:#94A3B8;display:inline-grid;place-items:center}
+.ib:hover{background:#1E293B;color:#E2E8F0}
+.seg{display:inline-flex;background:#0B1220;border:1px solid #273449;border-radius:8px;padding:2px;gap:2px}
+.seg button{border:0;background:transparent;color:#94A3B8;height:26px;padding:0 12px;border-radius:6px;font-size:12.5px;font-weight:500}
+.seg button.on{background:#1E293B;color:#F1F5F9;box-shadow:0 0 0 1px #334155 inset}
+.chip{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 10px;border:1px solid #334155;background:#0B1220;border-radius:8px;color:#E2E8F0;font-size:12.5px}
+.chip.on{border-color:#10B981;box-shadow:0 0 0 3px rgba(16,185,129,.15)}
+.pill{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 9px;border-radius:999px;border:1px solid #334155;font-size:11px;color:#CBD5E1;white-space:nowrap}
+.pill.g{border-color:rgba(16,185,129,.5);color:#6EE7B7;background:rgba(16,185,129,.08)}
+.pill.a{border-color:rgba(245,158,11,.5);color:#FCD34D;background:rgba(245,158,11,.08)}
+.pill.r{border-color:rgba(248,113,113,.5);color:#FCA5A5;background:rgba(248,113,113,.08)}
+.pill.b{border-color:rgba(96,165,250,.5);color:#93C5FD;background:rgba(96,165,250,.08)}
+.newtag{display:inline-flex;align-items:center;height:18px;padding:0 7px;border-radius:999px;background:#10B981;color:#04281C;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.eyebrow{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:#94A3B8;font-weight:600}
+.muted{color:#94A3B8}
+.body{display:flex;min-height:0}
+.lrail{width:56px;flex:none;background:#0F172A;border-right:1px solid #1E293B;display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:4px}
+.ri{width:40px;height:40px;border-radius:9px;border:0;background:transparent;color:#94A3B8;display:grid;place-items:center;position:relative}
+.ri.on{background:#1E293B;color:#34D399}
+.ri .dot{position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:#10B981;border:2px solid #0F172A}
+.lpanel{width:320px;flex:none;background:#111827;border-right:1px solid #1E293B;display:flex;flex-direction:column;min-height:0}
+.ph{display:flex;align-items:center;gap:8px;padding:14px 16px 10px}
+.ph h3{font-family:'Bricolage Grotesque',sans-serif;font-size:17px;font-weight:600;color:#F8FAFC}
+.cv{flex:1;position:relative;overflow:hidden;background-color:#0B1220;background-image:radial-gradient(rgba(148,163,184,.14) 1px,transparent 1.2px);background-size:22px 22px}
+.rpanel{width:340px;flex:none;background:#111827;border-left:1px solid #1E293B;display:flex;flex-direction:column;min-height:0}
+.rrail{width:56px;flex:none;background:#111827;border-left:1px solid #1E293B;display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:4px}
+.inp{height:36px;width:100%;background:#0B1220;border:1px solid #334155;border-radius:8px;color:#F1F5F9;padding:0 11px;font-size:13px}
+.inp::placeholder{color:#64748B}
+.inp.foc{border-color:#10B981;box-shadow:0 0 0 3px rgba(16,185,129,.15)}
+label.fl{display:block;font-size:12px;color:#CBD5E1;font-weight:500;margin-bottom:6px}
+.opt{color:#94A3B8;font-weight:400;margin-left:6px;font-size:11.5px}
+.node{position:absolute;background:#111827;border:1px solid #2A3648;border-radius:10px;padding:8px 10px;display:flex;align-items:center;gap:8px}
+.node .k{width:22px;height:22px;border-radius:6px;flex:none}
+.node b{font-size:12px;font-weight:600;color:#F1F5F9;display:block;line-height:1.2}
+.node span.s{font-size:10.5px;color:#94A3B8;display:block}
+.node.sel{border-color:#10B981;box-shadow:0 0 0 1px #10B981,0 0 0 5px rgba(16,185,129,.16)}
+.ln{position:absolute;background:#3B82F6}
+.lnd{position:absolute;border-color:#3B82F6;border-style:dashed;border-width:0}
+.ah{position:absolute;width:0;height:0}
+.pt{position:absolute;width:11px;height:11px;border-radius:50%;background:#0B1220;border:2px solid #10B981}
+.ep{position:absolute;background:#111827;border:1px solid #334155;border-radius:6px;padding:2px 7px;font-size:10.5px;color:#E2E8F0;white-space:nowrap}
+.ep.am{border-color:rgba(245,158,11,.6);color:#FCD34D}
+.card{background:#111827;border:1px solid #273449;border-radius:12px}
+.note{background:#0F172A;border:1px solid #1E293B;border-radius:12px;padding:14px 16px;color:#94A3B8;font-size:12.5px;line-height:1.5}
+.note b{color:#E2E8F0}
+.hd{padding:28px 40px 20px;border-bottom:1px solid #1E293B}
+.hd h2{font-family:'Bricolage Grotesque',sans-serif;font-size:28px;font-weight:600;color:#F8FAFC}
+.hd p{margin-top:6px;color:#94A3B8;font-size:14px;max-width:1000px}
+.cap{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#94A3B8;font-weight:600;margin:0 0 10px;display:flex;align-items:center;gap:8px}
+.ovl{position:absolute;left:0;right:0;top:0;bottom:0;background:rgba(3,7,18,.66)}
+.modal{position:absolute;background:#111827;border:1px solid #334155;border-radius:16px;box-shadow:0 24px 80px rgba(0,0,0,.55)}
+.mh{padding:20px 24px 4px}
+.mh h3{font-family:'Bricolage Grotesque',sans-serif;font-size:21px;font-weight:600;color:#F8FAFC}
+.mh p{margin-top:6px;color:#94A3B8;font-size:13px}
+.mf{display:flex;align-items:center;gap:10px;padding:16px 24px;border-top:1px solid #1E293B}
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{text-align:left;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:#94A3B8;font-weight:600;padding:10px 14px;border-bottom:1px solid #1E293B}
+.tbl td{padding:12px 14px;border-bottom:1px solid #1E293B;font-size:13px;color:#E2E8F0}
+.tbl td.n,.tbl th.n{text-align:right}
+.cal{width:252px}
+.cal h5{text-align:center;font-size:13px;font-weight:600;color:#F1F5F9;margin-bottom:8px}
+.cg{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
+.cg i{font-style:normal;height:32px;display:grid;place-items:center;font-size:12.5px;color:#E2E8F0;border-radius:6px}
+.cg i.h{height:22px;font-size:11px;color:#94A3B8;font-weight:600}
+.cg i.o{color:#475569}
+.cg i.r{background:rgba(16,185,129,.16);border-radius:0}
+.cg i.s{background:#10B981;color:#04281C;font-weight:700}
+</style>
+</helmet>
+<div class="app" style="height:820px"><div class="top"><div class="logo"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#04281C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16l-6 8v6l-4-2v-4z"></path></svg></div><button class="ib" aria-label="Back to funnels"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></button><b class="disp" style="font-size:15px;color:#F8FAFC">Webinar funnel</b><span class="pill">Live</span><div style="width:12px"></div><div class="seg"><button class="on">Map</button><button>Reports</button></div><div class="sp"></div><span class="muted" style="font-size:12px;display:inline-flex;align-items:center;gap:6px"><i style="width:6px;height:6px;border-radius:50%;background:#22C55E;display:block"></i>Saved</span><span class="chip" style="height:28px"></span></div><div class="body" style="height:772px"><div style="width:260px;flex:none;border-right:1px solid #1E293B;padding:20px 16px;background:#0F172A"><div class="eyebrow" style="margin-bottom:10px">Funnel</div><div class="chip" style="width:100%;justify-content:space-between">Webinar funnel<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></div><div class="eyebrow" style="margin:22px 0 10px">Months</div><div style="display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;background:transparent;font-size:13px"><i style="width:8px;height:8px;border-radius:50%;background:#10B981;display:block"></i>Jul 2026</div><div style="display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;background:transparent;font-size:13px"><i style="width:8px;height:8px;border-radius:50%;background:#10B981;display:block"></i>Aug 2026</div><div style="display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;background:transparent;font-size:13px"><i style="width:8px;height:8px;border-radius:50%;background:#10B981;display:block"></i>Sep 2026</div><div style="display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;background:#1E293B;font-size:13px"><i style="width:8px;height:8px;border-radius:50%;background:#10B981;display:block"></i>Oct 2026<span class="pill a" style="margin-left:auto;height:18px;font-size:10px">In progress</span></div><div style="display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;background:transparent;font-size:13px"><i style="width:8px;height:8px;border-radius:50%;background:transparent;display:block"></i>Nov 2026</div><div style="display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;background:transparent;font-size:13px"><i style="width:8px;height:8px;border-radius:50%;background:transparent;display:block"></i>Dec 2026</div></div><div style="flex:1;padding:24px 28px"><div style="display:flex;align-items:center;gap:12px;margin-bottom:6px"><h3 class="disp" style="font-size:22px;color:#F8FAFC;font-weight:600">Month-to-month data</h3><span class="newtag">New</span><div class="sp"></div><div class="seg"><button class="on">Monthly</button><button>Weekly</button></div><button class="btn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h9l4 4v12H6zM14 4v5h5"></path></svg> Paste from sheet</button><button class="btn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V5M7 10l5-5 5 5M5 19h14"></path></svg> Import CSV</button></div><p class="muted" style="margin:0 0 18px;font-size:13px;max-width:760px">Type the real numbers for each step. Pick Weekly to enter week by week. Whatever you enter shows on the map in Actual mode, and the calendar fills with dots.</p><table class="tbl"><thead><tr><th>Step</th><th class="n">Aug 2026</th><th class="n">Sep 2026</th><th class="n">Oct 2026</th><th class="n">Nov 2026</th></tr></thead><tbody><tr><td><b style="font-weight:600">Webinar Opt-in</b> <span class="muted" style="font-size:11.5px">people</span></td><td class="n"><label class="fl" for="c-Web-0" style="display:none">Webinar Opt-in Aug 2026</label><input id="c-Web-0" class="inp mono" style="width:110px;text-align:right;height:32px" value="3,480"></td><td class="n"><label class="fl" for="c-Web-1" style="display:none">Webinar Opt-in Sep 2026</label><input id="c-Web-1" class="inp mono" style="width:110px;text-align:right;height:32px" value="3,905"></td><td class="n"><label class="fl" for="c-Web-2" style="display:none">Webinar Opt-in Oct 2026</label><input id="c-Web-2" class="inp mono" style="width:110px;text-align:right;height:32px" value="4,120"></td><td class="n"><span style="display:inline-block;width:110px;height:32px;border:1px dashed #334155;border-radius:7px;vertical-align:middle"></span></td></tr><tr><td><b style="font-weight:600">Form Completed</b> <span class="muted" style="font-size:11.5px">people</span></td><td class="n"><label class="fl" for="c-For-0" style="display:none">Form Completed Aug 2026</label><input id="c-For-0" class="inp mono" style="width:110px;text-align:right;height:32px" value="1,601"></td><td class="n"><label class="fl" for="c-For-1" style="display:none">Form Completed Sep 2026</label><input id="c-For-1" class="inp mono" style="width:110px;text-align:right;height:32px" value="1,796"></td><td class="n"><label class="fl" for="c-For-2" style="display:none">Form Completed Oct 2026</label><input id="c-For-2" class="inp mono" style="width:110px;text-align:right;height:32px" value="1,894"></td><td class="n"><span style="display:inline-block;width:110px;height:32px;border:1px dashed #334155;border-radius:7px;vertical-align:middle"></span></td></tr><tr><td><b style="font-weight:600">Registration Thank You</b> <span class="muted" style="font-size:11.5px">people</span></td><td class="n"><label class="fl" for="c-Reg-0" style="display:none">Registration Thank You Aug 2026</label><input id="c-Reg-0" class="inp mono" style="width:110px;text-align:right;height:32px" value="1,601"></td><td class="n"><label class="fl" for="c-Reg-1" style="display:none">Registration Thank You Sep 2026</label><input id="c-Reg-1" class="inp mono" style="width:110px;text-align:right;height:32px" value="1,796"></td><td class="n"><label class="fl" for="c-Reg-2" style="display:none">Registration Thank You Oct 2026</label><input id="c-Reg-2" class="inp mono" style="width:110px;text-align:right;height:32px" value="1,894"></td><td class="n"><span style="display:inline-block;width:110px;height:32px;border:1px dashed #334155;border-radius:7px;vertical-align:middle"></span></td></tr><tr><td><b style="font-weight:600">Webinar Live</b> <span class="muted" style="font-size:11.5px">people</span></td><td class="n"><label class="fl" for="c-Web-0" style="display:none">Webinar Live Aug 2026</label><input id="c-Web-0" class="inp mono" style="width:110px;text-align:right;height:32px" value="640"></td><td class="n"><label class="fl" for="c-Web-1" style="display:none">Webinar Live Sep 2026</label><input id="c-Web-1" class="inp mono" style="width:110px;text-align:right;height:32px" value="712"></td><td class="n"><label class="fl" for="c-Web-2" style="display:none">Webinar Live Oct 2026</label><input id="c-Web-2" class="inp mono" style="width:110px;text-align:right;height:32px" value="761"></td><td class="n"><span style="display:inline-block;width:110px;height:32px;border:1px dashed #334155;border-radius:7px;vertical-align:middle"></span></td></tr><tr><td><b style="font-weight:600">Webinar Replay</b> <span class="muted" style="font-size:11.5px">people</span></td><td class="n"><label class="fl" for="c-Web-0" style="display:none">Webinar Replay Aug 2026</label><input id="c-Web-0" class="inp mono" style="width:110px;text-align:right;height:32px" value="288"></td><td class="n"><label class="fl" for="c-Web-1" style="display:none">Webinar Replay Sep 2026</label><input id="c-Web-1" class="inp mono" style="width:110px;text-align:right;height:32px" value="331"></td><td class="n"><label class="fl" for="c-Web-2" style="display:none">Webinar Replay Oct 2026</label><input id="c-Web-2" class="inp mono" style="width:110px;text-align:right;height:32px" value="356"></td><td class="n"><span style="display:inline-block;width:110px;height:32px;border:1px dashed #334155;border-radius:7px;vertical-align:middle"></span></td></tr><tr><td><b style="font-weight:600">Ad spend</b> <span class="muted" style="font-size:11.5px">$</span></td><td class="n"><label class="fl" for="c-Ad -0" style="display:none">Ad spend Aug 2026</label><input id="c-Ad -0" class="inp mono" style="width:110px;text-align:right;height:32px" value="$4,200"></td><td class="n"><label class="fl" for="c-Ad -1" style="display:none">Ad spend Sep 2026</label><input id="c-Ad -1" class="inp mono" style="width:110px;text-align:right;height:32px" value="$4,600"></td><td class="n"><label class="fl" for="c-Ad -2" style="display:none">Ad spend Oct 2026</label><input id="c-Ad -2" class="inp mono" style="width:110px;text-align:right;height:32px" value="$4,850"></td><td class="n"><span style="display:inline-block;width:110px;height:32px;border:1px dashed #334155;border-radius:7px;vertical-align:middle"></span></td></tr><tr><td><b style="font-weight:600">Revenue</b> <span class="muted" style="font-size:11.5px">$</span></td><td class="n"><label class="fl" for="c-Rev-0" style="display:none">Revenue Aug 2026</label><input id="c-Rev-0" class="inp mono" style="width:110px;text-align:right;height:32px" value="$11,800"></td><td class="n"><label class="fl" for="c-Rev-1" style="display:none">Revenue Sep 2026</label><input id="c-Rev-1" class="inp mono" style="width:110px;text-align:right;height:32px" value="$13,950"></td><td class="n"><label class="fl" for="c-Rev-2" style="display:none">Revenue Oct 2026</label><input id="c-Rev-2" class="inp mono foc" style="width:110px;text-align:right;height:32px" value="$15,200"></td><td class="n"><span style="display:inline-block;width:110px;height:32px;border:1px dashed #334155;border-radius:7px;vertical-align:middle"></span></td></tr></tbody></table><div style="display:flex;align-items:center;gap:10px;margin-top:16px;color:#94A3B8;font-size:12px"><i style="width:6px;height:6px;border-radius:50%;background:#22C55E;display:block"></i>All changes saved. Sample numbers shown for layout only.</div></div></div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":820}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Connection → Quick Add</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&amp;family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#070B14}
+*{box-sizing:border-box}
+.app{font-family:'DM Sans',system-ui,sans-serif;color:#E2E8F0;background:#0B1220;width:1440px;position:relative;font-size:13px;line-height:1.35;-webkit-font-smoothing:antialiased;font-feature-settings:'tnum' 1}
+.disp{font-family:'Bricolage Grotesque','DM Sans',sans-serif;letter-spacing:-.01em}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace}
+h2.t{margin:0;font-size:26px;font-weight:600;color:#F8FAFC}
+p.lead{margin:4px 0 0;color:#94A3B8;font-size:13.5px;max-width:900px}
+.cap{display:flex;align-items:center;gap:8px;margin:0 0 10px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#94A3B8;font-weight:600}
+.cap i{width:18px;height:18px;border-radius:50%;background:#1E293B;border:1px solid #334155;color:#CBD5E1;display:grid;place-items:center;font-size:10.5px;font-weight:700;letter-spacing:0;font-family:'JetBrains Mono',monospace}
+.station{position:absolute}
+.cv{position:relative;border:1px solid #1E293B;border-radius:14px;background-color:#0B1220;background-image:radial-gradient(rgba(148,163,184,.14) 1px,transparent 1.2px);background-size:22px 22px;overflow:hidden}
+/* nodes */
+.node{position:absolute;width:196px;background:#111827;border:1px solid #2A3648;border-radius:10px;padding:10px}
+.nh{display:flex;align-items:center;gap:8px;padding-right:12px}
+.ni{width:26px;height:26px;border-radius:7px;display:grid;place-items:center;flex:none}
+.nt{display:flex;flex-direction:column;min-width:0;flex:1}
+.nt b{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#F1F5F9}
+.nt span{font-size:11px;color:#94A3B8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.st{width:7px;height:7px;border-radius:50%;flex:none;display:block;position:absolute;right:10px;top:12px}
+.st.live{background:#22C55E}.st.plan{border:1.5px solid #64748B}.st.prog{background:#FBBF24}
+.nm{margin-top:9px;padding-top:8px;border-top:1px solid #1E293B;display:flex;align-items:baseline;gap:5px;font-size:11.5px;color:#94A3B8;white-space:nowrap}
+.nm strong{color:#E2E8F0;font-weight:600}.nm .r{margin-left:auto}
+.wfw{margin:-2px -2px 8px;height:30px;border-radius:6px;background:#0B1220;border:1px solid #1E293B;overflow:hidden}
+.price{position:absolute;top:-10px;left:12px;height:20px;padding:0 7px;border-radius:5px;border:1px solid;background:#0B1220;font-size:10.5px;font-weight:700;display:inline-flex;align-items:center;white-space:nowrap;z-index:1}
+.fam-source{border-radius:26px 10px 10px 26px}
+.fam-message{border-radius:24px}
+.fam-logic{border-radius:4px;background:repeating-linear-gradient(135deg,#111827 0 10px,#131B2B 10px 20px)}
+.node.sel{border-color:#10B981;box-shadow:0 0 0 1px #10B981,0 0 0 5px rgba(16,185,129,.16)}
+.node.dim{opacity:.4}
+.port{position:absolute;width:11px;height:11px;border-radius:50%;background:#0B1220;border:1.5px solid #64748B;z-index:2}
+.port.pr{right:-6px;top:50%;margin-top:-5px}
+.port.pl{left:-6px;top:50%;margin-top:-5px}
+.port.drag{border-color:#10B981;background:#10B981;box-shadow:0 0 0 4px rgba(16,185,129,.2)}
+.ghost{position:absolute;width:12px;height:12px;border-radius:50%;border:1.5px dashed #10B981;background:rgba(16,185,129,.1)}
+/* quick add popover */
+.pop{position:absolute;width:244px;background:#1E293B;border:1px solid #334155;border-radius:12px;box-shadow:0 18px 44px rgba(0,0,0,.5);padding:8px;z-index:5}
+.pop .srch{display:flex;align-items:center;gap:8px;height:32px;padding:0 9px;background:#0B1220;border:1px solid #334155;border-radius:8px;color:#94A3B8;font-size:12.5px;margin-bottom:6px}
+.pop h6{margin:8px 6px 3px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#64748B;font-weight:600}
+.opt{display:flex;align-items:center;gap:10px;width:100%;border:0;background:transparent;color:#E2E8F0;height:34px;padding:0 7px;border-radius:7px;text-align:left;font:inherit;font-size:13px}
+.opt:hover,.opt.h{background:#0B1220}
+.opt.h{box-shadow:0 0 0 1px #334155 inset}
+.opt .t{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;flex:none}
+.opt .t.src{border-radius:11px 4px 4px 11px}.opt .t.cap2{border-radius:11px}.opt .t.sq{border-radius:4px}
+.opt .k{margin-left:auto;color:#64748B;font-size:10.5px}
+.toast{position:absolute;display:flex;align-items:center;gap:12px;padding:0 8px 0 13px;height:38px;background:#1E293B;border:1px solid #334155;border-radius:10px;font-size:12.5px;box-shadow:0 10px 30px rgba(0,0,0,.45);white-space:nowrap;z-index:6}
+.toast b{color:#F1F5F9;font-weight:600}
+.toast .u{height:26px;padding:0 10px;border-radius:7px;border:1px solid #334155;background:#0B1220;color:#CBD5E1;font-size:12px;font-weight:600}
+.toast .ok{width:20px;height:20px;border-radius:50%;background:rgba(34,197,94,.15);color:#4ADE80;display:grid;place-items:center;flex:none}
+kbd{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#94A3B8;border:1px solid #334155;border-bottom-width:2px;border-radius:4px;padding:0 4px;line-height:15px;background:#0B1220}
+.note{background:#0F172A;border:1px solid #1E293B;border-radius:12px;padding:16px 18px}
+.note h4{margin:0 0 10px;font-size:13px;color:#F1F5F9;font-weight:600}
+.erow{display:flex;gap:11px;align-items:flex-start;padding:9px 0;border-top:1px solid #1A2437}
+.erow:first-of-type{border-top:0}
+.erow .ic{width:24px;height:24px;border-radius:7px;flex:none;display:grid;place-items:center;background:#111827;border:1px solid #273449}
+.erow b{color:#E2E8F0;font-weight:600;font-size:12.5px}
+.erow p{margin:2px 0 0;color:#94A3B8;font-size:12px;line-height:1.45}
+
+/* ===== Page / Offer object (funnel-native) ===== */
+.node.fam-page,.node.fam-offer{height:112px;padding:0;overflow:visible}
+.pgo{display:flex;flex-direction:column;height:100%;border-radius:inherit;overflow:hidden}
+.pgo-top{display:flex;gap:10px;flex:1;min-height:0;padding:7px 10px 0 8px}
+.pgo-win{width:68px;height:76px;flex:none;border-radius:5px;overflow:hidden;background:#F4F6FA;border:1px solid #475569;box-shadow:0 2px 6px rgba(0,0,0,.4);box-sizing:border-box}
+.pgo-chrome{height:9px;background:#E3E8F0;display:flex;align-items:center;gap:2px;padding:0 4px;border-bottom:1px solid #D4DAE6;box-sizing:border-box}
+.pgo-chrome i{width:3px;height:3px;border-radius:50%;display:block;background:#AEB7C6}
+.pgo-chrome i:nth-child(1){background:#F87171}.pgo-chrome i:nth-child(2){background:#FBBF24}.pgo-chrome i:nth-child(3){background:#34D399}
+.pgo-win svg{display:block}
+.pgo-info{min-width:0;flex:1;display:flex;flex-direction:column;justify-content:space-between;padding:1px 0 5px}
+.pgo-title{font-size:13px;font-weight:600;color:#F1F5F9;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
+.pgo-m{display:flex;flex-direction:column;gap:1px;min-width:0}
+.pgo-l{font-size:10.5px;color:#94A3B8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pgo-l strong{color:#E2E8F0;font-weight:600}
+.pgo-r{font-family:'Bricolage Grotesque',sans-serif;font-size:15px;font-weight:600;color:#F1F5F9;line-height:1.15;letter-spacing:-.01em}
+.pgo-cap{height:22px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 10px 0 8px;background:#0B1220;border-top:1px solid #1E293B}
+.pgo-ty{display:flex;align-items:center;gap:6px;font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;white-space:nowrap;min-width:0}
+.pgo-ic{width:14px;height:14px;border-radius:4px;display:grid;place-items:center;color:#fff;flex:none}
+.pgo-ic svg{width:9px;height:9px}
+.node .pgo-cap .st{position:static;flex:none}
+.node.fam-page .port,.node.fam-offer .port{width:16px;height:16px;border:2px solid #0B1220;display:grid;place-items:center;font-size:8.5px;font-weight:800;line-height:1;color:#03241A;z-index:3;box-sizing:border-box}
+.node.fam-page .port.pr,.node.fam-offer .port.pr{right:-9px;left:auto;top:50%;margin-top:-8px;background:#10B981}
+.node.fam-page .port.pr::after,.node.fam-offer .port.pr::after{content:"Y"}
+.node.fam-page .port.pb,.node.fam-offer .port.pb{left:50%;margin-left:-8px;bottom:-9px;top:auto;background:#F97316}
+.node.fam-page .port.pb::after,.node.fam-offer .port.pb::after{content:"N"}
+.node.fam-page .port.pl,.node.fam-offer .port.pl{left:-7px;top:50%;margin-top:-6px;width:12px;height:12px;background:#0B1220;border:2px solid #64748B}
+
+/* four neutral ports: the line is chosen when you connect, not by the port */
+.node.fam-page .port,.node.fam-offer .port{width:12px!important;height:12px!important;border:2px solid #64748B!important;background:#0B1220!important;font-size:0!important;box-sizing:border-box;display:block}
+.node.fam-page .port::after,.node.fam-offer .port::after{content:none!important}
+.node.fam-page .port.pr,.node.fam-offer .port.pr{right:-7px;left:auto;top:50%;margin-top:-6px}
+.node.fam-page .port.pl,.node.fam-offer .port.pl{left:-7px;top:50%;margin-top:-6px}
+.node.fam-page .port.pb,.node.fam-offer .port.pb{left:50%;margin-left:-6px;bottom:-7px;top:auto}
+.node.fam-page::before,.node.fam-offer::before{content:"";position:absolute;left:50%;top:-7px;margin-left:-6px;width:12px;height:12px;border-radius:50%;background:#0B1220;border:2px solid #64748B;box-sizing:border-box;z-index:3}
+
+/* ports appear on hover, selection or while connecting; a calm map at rest */
+.node.fam-page .port,.node.fam-offer .port,.node.fam-page::before,.node.fam-offer::before{opacity:0;transition:opacity .12s}
+.node.fam-page:hover .port,.node.fam-offer:hover .port,.node.fam-page.sel .port,.node.fam-offer.sel .port,.node.fam-page.hov .port,.node.fam-offer.hov .port,.node.fam-page.msel .port,.node.fam-offer.msel .port,.node.on-port .port,
+.node.fam-page:hover::before,.node.fam-offer:hover::before,.node.fam-page.sel::before,.node.fam-offer.sel::before,.node.fam-page.hov::before,.node.fam-offer.hov::before,.node.fam-page.msel::before,.node.fam-offer.msel::before,.node.on-port::before{opacity:1}
+</style>
+</helmet>
+<div class="app" style="height:1000px">
+  <div style="position:absolute;left:62px;top:38px;right:62px">
+    <h2 class="t disp">Connection → empty space → Quick Add</h2>
+    <p class="lead">Drag a connection off any open port and release on empty canvas. A contextual Quick Add opens at the release point; choosing a block creates it there and completes the connection in one move. Undo, autosave and connection semantics are unchanged.</p>
+  </div>
+
+  <!-- STATION 1 -->
+  <div class="station" style="left:62px;top:150px;width:300px">
+    <div class="cap"><i>1</i> Drag from an open port</div>
+    <div class="cv" style="height:220px">
+      <div class="node fam-page" style="left:20px;top:54px"><div class="pgo"><div class="pgo-top"><div class="pgo-win"><div class="pgo-chrome"><i></i><i></i><i></i></div><svg width="66" height="65" viewBox="0 0 66 65" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><rect width="66" height="65" fill="#F4F6FA"/><rect x="8" y="7" width="50" height="4" rx="1.5" fill="#334155"/><rect x="14" y="14" width="38" height="2.5" rx="1.2" fill="#AEB7C6"/><rect x="9" y="24" width="48" height="9" rx="2" fill="#fff" stroke="#CBD5E1" stroke-width="1"/><rect x="9" y="37" width="48" height="9" rx="2" fill="#fff" stroke="#CBD5E1" stroke-width="1"/><rect x="9" y="50" width="48" height="9" rx="2" fill="#8B5CF6"/></svg></div><div class="pgo-info"><div class="pgo-title">Opt-in page</div><div class="pgo-m"><span class="pgo-l">2,400 → <strong>960</strong></span><div class="pgo-r">40%</div></div></div></div><div class="pgo-cap"><span class="pgo-ty" style="color:#A78BFA"><span class="pgo-ic" style="background:#A78BFA"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6"></path></svg></span>Opt-in page</span><span class="st live"></span></div></div><span class="port pr drag"></span></div>
+      <svg style="position:absolute;left:0;top:0;overflow:visible" width="300" height="220"><path d="M216 110 C 242 110, 244 96, 270 96" fill="none" stroke="#10B981" stroke-width="2.5" stroke-dasharray="5 4" stroke-linecap="round"></path></svg>
+      <span class="ghost" style="left:264px;top:90px"></span>
+    </div>
+  </div>
+
+  <!-- STATION 2 -->
+  <div class="station" style="left:398px;top:150px;width:340px">
+    <div class="cap"><i>2</i> Release → Quick Add opens at the point</div>
+    <div class="cv" style="height:430px">
+      <div class="node fam-page dim" style="left:0px;top:20px;transform:scale(.6);transform-origin:0 0"><div class="pgo"><div class="pgo-top"><div class="pgo-win"><div class="pgo-chrome"><i></i><i></i><i></i></div><svg width="66" height="65" viewBox="0 0 66 65" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><rect width="66" height="65" fill="#F4F6FA"/><rect x="8" y="7" width="50" height="4" rx="1.5" fill="#334155"/><rect x="14" y="14" width="38" height="2.5" rx="1.2" fill="#AEB7C6"/><rect x="9" y="24" width="48" height="9" rx="2" fill="#fff" stroke="#CBD5E1" stroke-width="1"/><rect x="9" y="37" width="48" height="9" rx="2" fill="#fff" stroke="#CBD5E1" stroke-width="1"/><rect x="9" y="50" width="48" height="9" rx="2" fill="#8B5CF6"/></svg></div><div class="pgo-info"><div class="pgo-title">Opt-in page</div><div class="pgo-m"><span class="pgo-l"></span></div></div></div><div class="pgo-cap"><span class="pgo-ty" style="color:#A78BFA"><span class="pgo-ic" style="background:#A78BFA"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6"></path></svg></span>Opt-in page</span></div></div><span class="port pr drag"></span></div>
+      <svg style="position:absolute;left:0;top:0;overflow:visible" width="340" height="430"><path d="M118 54 C 121 54, 118 66, 122 66" fill="none" stroke="#10B981" stroke-width="2.5" stroke-dasharray="5 4" stroke-linecap="round"></path></svg>
+      <div class="pop" style="left:120px;top:60px;width:206px">
+        <div class="srch"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M21 21l-4.3-4.3"></path></svg>Add next step…</div>
+        <h6>Pages</h6>
+        <button class="opt h"><span class="t" style="background:rgba(167,139,250,.15);color:#A78BFA"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6"></path></svg></span>Sales page<span class="k">↵</span></button>
+        <button class="opt"><span class="t" style="background:rgba(167,139,250,.15);color:#A78BFA"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5z M1 5h15v14H1z"></path></svg></span>VSL page</button>
+        <h6>Offers</h6>
+        <button class="opt"><span class="t" style="background:rgba(251,146,60,.15);color:#FB923C"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z M3 6h18 M16 10a4 4 0 0 1-8 0"></path></svg></span>Checkout</button>
+        <h6>Actions</h6>
+        <button class="opt"><span class="t cap2" style="background:rgba(45,212,191,.15);color:#2DD4BF"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z M4 6l8 7 8-7"></path></svg></span>Email</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATION 3 -->
+  <div class="station" style="left:774px;top:150px;width:300px">
+    <div class="cap"><i>3</i> Hover a choice</div>
+    <div class="cv" style="height:220px">
+      <div class="pop" style="left:28px;top:20px;width:206px;box-shadow:none;position:relative">
+        <button class="opt" style="pointer-events:none"><span class="t" style="background:rgba(167,139,250,.15);color:#A78BFA"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6"></path></svg></span>Opt-in page</button>
+        <button class="opt h" style="pointer-events:none"><span class="t" style="background:rgba(167,139,250,.15);color:#A78BFA"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6"></path></svg></span>Sales page<span class="k">↵ add</span></button>
+        <button class="opt" style="pointer-events:none"><span class="t" style="background:rgba(167,139,250,.15);color:#A78BFA"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5z M1 5h15v14H1z"></path></svg></span>VSL page</button>
+      </div>
+      <div style="position:absolute;left:28px;bottom:14px;right:16px;color:#64748B;font-size:11.5px">↑↓ to move · <kbd>↵</kbd> to add · <kbd>Esc</kbd> cancels</div>
+    </div>
+  </div>
+
+  <!-- STATION 4 -->
+  <div class="station" style="left:1110px;top:150px;width:300px">
+    <div class="cap"><i>4</i> Created + edge completed</div>
+    <div class="cv" style="height:220px">
+      <div class="node fam-page dim" style="left:0px;top:76px;transform:scale(.6);transform-origin:0 0"><div class="pgo"><div class="pgo-top"><div class="pgo-win"><div class="pgo-chrome"><i></i><i></i><i></i></div><svg width="66" height="65" viewBox="0 0 66 65" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><rect width="66" height="65" fill="#F4F6FA"/><rect x="8" y="7" width="50" height="4" rx="1.5" fill="#334155"/><rect x="14" y="14" width="38" height="2.5" rx="1.2" fill="#AEB7C6"/><rect x="9" y="24" width="48" height="9" rx="2" fill="#fff" stroke="#CBD5E1" stroke-width="1"/><rect x="9" y="37" width="48" height="9" rx="2" fill="#fff" stroke="#CBD5E1" stroke-width="1"/><rect x="9" y="50" width="48" height="9" rx="2" fill="#8B5CF6"/></svg></div><div class="pgo-info"><div class="pgo-title">Opt-in</div><div class="pgo-m"><span class="pgo-l"></span></div></div></div><div class="pgo-cap"><span class="pgo-ty" style="color:#A78BFA"><span class="pgo-ic" style="background:#A78BFA"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6"></path></svg></span>Opt-in page</span></div></div></div>
+      <svg style="position:absolute;left:0;top:0;overflow:visible" width="300" height="220"><path d="M118 110 C 150 110, 150 110, 176 110" fill="none" stroke="#34D399" stroke-width="2.5" stroke-linecap="round"></path><path d="M172 106l6 4-6 4" fill="none" stroke="#34D399" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      <div class="node fam-page sel" style="left:176px;top:76px;transform:scale(.6);transform-origin:0 0"><div class="pgo"><div class="pgo-top"><div class="pgo-win"><div class="pgo-chrome"><i></i><i></i><i></i></div><svg width="66" height="65" viewBox="0 0 66 65" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><rect width="66" height="65" fill="#F4F6FA"/><rect x="6" y="5" width="54" height="21" rx="2" fill="#D9DFEA"/><path d="M6 26 L21.12 14.450000000000001 L33.0 20.119999999999997 L43.8 11.3 L60 26 Z" fill="#C3CBD9"/><circle cx="16.8" cy="10.25" r="2.6" fill="#AEB7C6"/><rect x="8" y="30" width="40" height="4" rx="1.5" fill="#334155"/><rect x="8" y="37" width="50" height="2.5" rx="1.2" fill="#AEB7C6"/><rect x="8" y="42" width="44" height="2.5" rx="1.2" fill="#AEB7C6"/><rect x="8" y="50" width="28" height="9" rx="2" fill="#8B5CF6"/></svg></div><div class="pgo-info"><div class="pgo-title">Sales page</div><div class="pgo-m"><span class="pgo-l"></span></div></div></div><div class="pgo-cap"><span class="pgo-ty" style="color:#A78BFA"><span class="pgo-ic" style="background:#A78BFA"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6"></path></svg></span>Sales page</span></div></div></div>
+      <div class="toast" style="left:20px;bottom:16px;height:34px"><span class="ok"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg></span>Added <b>Sales page</b><span class="u">Undo <kbd style="border-color:#475569">⌘Z</kbd></span></div>
+    </div>
+  </div>
+
+  <!-- Edge cases column -->
+  <div class="station" style="left:398px;top:640px;width:676px">
+    <div class="cap">Endpoint &amp; edge cases</div>
+    <div class="note">
+      <div class="erow"><span class="ic" style="color:#94A3B8"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18 M6 6l12 12"></path></svg></span><div><b>Cancel</b><p><kbd>Esc</kbd> or click away closes Quick Add and discards the dragged connection. No node is created, nothing is autosaved.</p></div></div>
+      <div class="erow"><span class="ic" style="color:#FDBA74"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4 M12 17h.01 M10.3 3.9L2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg></span><div><b>Invalid target</b><p>If the dragged port can only connect to specific families, unsupported options dim in the list and the connector tip turns amber — the release still opens Quick Add, but only valid blocks can be chosen.</p></div></div>
+      <div class="erow"><span class="ic" style="color:#6EE7B7"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6 M3 13a9 9 0 1 0 2.6-6.4L3 9"></path></svg></span><div><b>Undo / redo &amp; autosave</b><p>Creating via Quick Add is one atomic action: a single <kbd>⌘Z</kbd> removes both the new block and the new edge. Autosave fires once, after the block lands.</p></div></div>
+      <div class="erow"><span class="ic" style="color:#60A5FA"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V4h16v3 M9 20h6 M12 4v16"></path></svg></span><div><b>Release on an existing block</b><p>Dropping the connector onto a block's open input port connects to it directly and skips Quick Add — the existing drag-to-connect behaviour, unchanged.</p></div></div>
+    </div>
+  </div>
+
+  <!-- Spec note -->
+  <div class="station" style="left:1110px;top:640px;width:300px">
+    <div class="cap">Build notes</div>
+    <div class="note" style="font-size:12.5px;color:#94A3B8;line-height:1.55">
+      <p style="margin:0 0 8px">Reuses the library's search + family grouping; the Quick Add list is the library, filtered to blocks valid from the source port.</p>
+      <p style="margin:0 0 8px">Recents and the client's Pinned products appear first, above the family sections, exactly as in the left library.</p>
+      <p style="margin:0">New block spawns at the release point already connected; selection and inspector move to it so the user keeps editing without a second click.</p>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

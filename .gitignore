@@ -5,3 +5,4 @@ node_modules/
 *.age
 e2e-shots/
 dist/
+!apps/funnel-mapper/.env.example

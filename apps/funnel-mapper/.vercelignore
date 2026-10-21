@@ -1,0 +1,12 @@
+# Never upload local secrets or build/test output to Vercel
+.env*
+!.env.example
+.next
+node_modules
+test-results
+playwright-report
+.scratch
+.deploy
+tests/e2e/.auth
+supabase/.temp
+supabase/.branches

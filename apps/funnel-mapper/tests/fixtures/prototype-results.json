@@ -1,0 +1,4715 @@
+{
+ "tripwire": {
+  "name": "PT tripwire funnel",
+  "variants": {
+   "default": {
+    "settings": {
+     "key": "default",
+     "basis": "first",
+     "fixed": 0,
+     "whatif": {
+      "traffic": 1,
+      "conv": 1
+     }
+    },
+    "totals": {
+     "traffic": 2300,
+     "paidTraffic": 2300,
+     "spend": 660,
+     "actCost": 0,
+     "leads": 1035,
+     "cust": 128.50560000000002,
+     "orders": 157.4856,
+     "rev": 7485.161399999999,
+     "cash": 7485.161399999999,
+     "ltv": 23422.7124,
+     "cogs": 0,
+     "mrr": 3187.5101999999997,
+     "goals": 0,
+     "calls": 0,
+     "subs": 28.98,
+     "fixed": 0,
+     "costs": 660,
+     "profit": 6825.161399999999,
+     "aov": 58.24774484536081,
+     "cpa": 5.13596294636187,
+     "cpl": 0.6376811594202898,
+     "roas": 11.341153636363634,
+     "epc": 3.2544179999999994,
+     "conv": 0.055872000000000005,
+     "cpc": 0.28695652173913044,
+     "roi": 10.341153636363634,
+     "ltvc": 182.2699742268041,
+     "beroas": 1
+    },
+    "nodes": [
+     {
+      "type": "frame",
+      "name": "Get attention",
+      "inflow": 0,
+      "out": 0,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "frame",
+      "name": "Convert",
+      "inflow": 0,
+      "out": 0,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "igads",
+      "name": "Instagram ads",
+      "inflow": 0,
+      "out": 2000,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 600,
+      "mrr": 0
+     },
+     {
+      "type": "poster",
+      "name": "Gym poster QR",
+      "inflow": 0,
+      "out": 300,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 60,
+      "mrr": 0
+     },
+     {
+      "type": "quizp",
+      "name": "Fitness quiz",
+      "inflow": 2300,
+      "out": 1035,
+      "non": 1265,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "checkout",
+      "name": "6-Week Kickstart",
+      "inflow": 1035,
+      "out": 82.8,
+      "non": 952.2,
+      "rev": 3063.6,
+      "cash": 3063.6,
+      "ltv": 3063.6,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "cond",
+      "name": "Joined coaching?",
+      "inflow": 82.8,
+      "out": 28.98,
+      "non": 53.81999999999999,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "sub",
+      "name": "Monthly coaching",
+      "inflow": 28.98,
+      "out": 28.98,
+      "non": 0,
+      "rev": 3187.5101999999997,
+      "cash": 3187.5101999999997,
+      "ltv": 19125.0612,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 3187.5101999999997
+     },
+     {
+      "type": "follow",
+      "name": "WhatsApp follow-up",
+      "inflow": 952.2,
+      "out": 380.88000000000005,
+      "non": 571.3199999999999,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "downsell",
+      "name": "Kickstart (£27 offer)",
+      "inflow": 380.88000000000005,
+      "out": 45.705600000000004,
+      "non": 335.17440000000005,
+      "rev": 1234.0512,
+      "cash": 1234.0512,
+      "ltv": 1234.0512,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "note",
+      "name": "Sticky note",
+      "inflow": 0,
+      "out": 0,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     }
+    ],
+    "flows": [
+     2000,
+     300,
+     1035,
+     82.8,
+     28.98,
+     952.2,
+     380.88000000000005
+    ],
+    "sources": [
+     {
+      "name": "Instagram ads",
+      "traffic": 2000,
+      "cust": 111.744,
+      "rev": 6508.835999999999,
+      "spend": 600
+     },
+     {
+      "name": "Gym poster QR",
+      "traffic": 300,
+      "cust": 16.7616,
+      "rev": 976.3254000000001,
+      "spend": 60
+     }
+    ],
+    "warnings": [
+     "Condition “Joined coaching?” is missing its No path."
+    ]
+   },
+   "ltv": {
+    "settings": {
+     "key": "ltv",
+     "basis": "ltv",
+     "fixed": 0,
+     "whatif": {
+      "traffic": 1,
+      "conv": 1
+     }
+    },
+    "totals": {
+     "traffic": 2300,
+     "paidTraffic": 2300,
+     "spend": 660,
+     "actCost": 0,
+     "leads": 1035,
+     "cust": 128.50560000000002,
+     "orders": 157.4856,
+     "rev": 23422.7124,
+     "cash": 7485.161399999999,
+     "ltv": 23422.7124,
+     "cogs": 0,
+     "mrr": 3187.5101999999997,
+     "goals": 0,
+     "calls": 0,
+     "subs": 28.98,
+     "fixed": 0,
+     "costs": 660,
+     "profit": 22762.7124,
+     "aov": 182.2699742268041,
+     "cpa": 5.13596294636187,
+     "cpl": 0.6376811594202898,
+     "roas": 35.488958181818184,
+     "epc": 10.183788,
+     "conv": 0.055872000000000005,
+     "cpc": 0.28695652173913044,
+     "roi": 34.488958181818184,
+     "ltvc": 182.2699742268041,
+     "beroas": 1
+    },
+    "nodes": [
+     {
+      "type": "frame",
+      "name": "Get attention",
+      "inflow": 0,
+      "out": 0,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "frame",
+      "name": "Convert",
+      "inflow": 0,
+      "out": 0,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "igads",
+      "name": "Instagram ads",
+      "inflow": 0,
+      "out": 2000,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 600,
+      "mrr": 0
+     },
+     {
+      "type": "poster",
+      "name": "Gym poster QR",
+      "inflow": 0,
+      "out": 300,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 60,
+      "mrr": 0
+     },
+     {
+      "type": "quizp",
+      "name": "Fitness quiz",
+      "inflow": 2300,
+      "out": 1035,
+      "non": 1265,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "checkout",
+      "name": "6-Week Kickstart",
+      "inflow": 1035,
+      "out": 82.8,
+      "non": 952.2,
+      "rev": 3063.6,
+      "cash": 3063.6,
+      "ltv": 3063.6,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "cond",
+      "name": "Joined coaching?",
+      "inflow": 82.8,
+      "out": 28.98,
+      "non": 53.81999999999999,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "sub",
+      "name": "Monthly coaching",
+      "inflow": 28.98,
+      "out": 28.98,
+      "non": 0,
+      "rev": 19125.0612,
+      "cash": 3187.5101999999997,
+      "ltv": 19125.0612,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 3187.5101999999997
+     },
+     {
+      "type": "follow",
+      "name": "WhatsApp follow-up",
+      "inflow": 952.2,
+      "out": 380.88000000000005,
+      "non": 571.3199999999999,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "downsell",
+      "name": "Kickstart (£27 offer)",
+      "inflow": 380.88000000000005,
+      "out": 45.705600000000004,
+      "non": 335.17440000000005,
+      "rev": 1234.0512,
+      "cash": 1234.0512,
+      "ltv": 1234.0512,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "note",
+      "name": "Sticky note",
+      "inflow": 0,
+      "out": 0,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     }
+    ],
+    "flows": [
+     2000,
+     300,
+     1035,
+     82.8,
+     28.98,
+     952.2,
+     380.88000000000005
+    ],
+    "sources": [
+     {
+      "name": "Instagram ads",
+      "traffic": 2000,
+      "cust": 111.744,
+      "rev": 20367.575999999997,
+      "spend": 600
+     },
+     {
+      "name": "Gym poster QR",
+      "traffic": 300,
+      "cust": 16.7616,
+      "rev": 3055.1364,
+      "spend": 60
+     }
+    ],
+    "warnings": [
+     "Condition “Joined coaching?” is missing its No path."
+    ]
+   },
+   "fixed-whatif": {
+    "settings": {
+     "key": "fixed-whatif",
+     "basis": "first",
+     "fixed": 750,
+     "whatif": {
+      "traffic": 1.5,
+      "conv": 0.8
+     }
+    },
+    "totals": {
+     "traffic": 3450,
+     "paidTraffic": 3450,
+     "spend": 990,
+     "actCost": 0,
+     "leads": 1242,
+     "cust": 115.20036864,
+     "orders": 137.45700864,
+     "rev": 6353.29778688,
+     "cash": 6353.29778688,
+     "ltv": 18593.33695488,
+     "cogs": 0,
+     "mrr": 2448.0078336,
+     "goals": 0,
+     "calls": 0,
+     "subs": 22.25664,
+     "fixed": 750,
+     "costs": 1740,
+     "profit": 4613.29778688,
+     "aov": 55.14997792007066,
+     "cpa": 8.593722500088,
+     "cpl": 0.7971014492753623,
+     "roas": 6.417472512,
+     "epc": 1.8415355904,
+     "conv": 0.0333914112,
+     "cpc": 0.28695652173913044,
+     "roi": 2.6513205671724136,
+     "ltvc": 161.39997792007065,
+     "beroas": 1.7575757575757576
+    },
+    "nodes": [
+     {
+      "type": "frame",
+      "name": "Get attention",
+      "inflow": 0,
+      "out": 0,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "frame",
+      "name": "Convert",
+      "inflow": 0,
+      "out": 0,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "igads",
+      "name": "Instagram ads",
+      "inflow": 0,
+      "out": 3000,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 900,
+      "mrr": 0
+     },
+     {
+      "type": "poster",
+      "name": "Gym poster QR",
+      "inflow": 0,
+      "out": 450,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 90,
+      "mrr": 0
+     },
+     {
+      "type": "quizp",
+      "name": "Fitness quiz",
+      "inflow": 3450,
+      "out": 1242,
+      "non": 2208,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "checkout",
+      "name": "6-Week Kickstart",
+      "inflow": 1242,
+      "out": 79.488,
+      "non": 1162.512,
+      "rev": 2941.056,
+      "cash": 2941.056,
+      "ltv": 2941.056,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "cond",
+      "name": "Joined coaching?",
+      "inflow": 79.488,
+      "out": 27.8208,
+      "non": 51.6672,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "sub",
+      "name": "Monthly coaching",
+      "inflow": 27.8208,
+      "out": 22.25664,
+      "non": 5.5641599999999976,
+      "rev": 2448.0078336,
+      "cash": 2448.0078336,
+      "ltv": 14688.0470016,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 2448.0078336
+     },
+     {
+      "type": "follow",
+      "name": "WhatsApp follow-up",
+      "inflow": 1162.512,
+      "out": 372.00383999999997,
+      "non": 790.50816,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "downsell",
+      "name": "Kickstart (£27 offer)",
+      "inflow": 372.00383999999997,
+      "out": 35.71236864,
+      "non": 336.29147135999995,
+      "rev": 964.23395328,
+      "cash": 964.23395328,
+      "ltv": 964.23395328,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "note",
+      "name": "Sticky note",
+      "inflow": 0,
+      "out": 0,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     }
+    ],
+    "flows": [
+     3000,
+     450,
+     1242,
+     79.488,
+     27.8208,
+     1162.512,
+     372.00383999999997
+    ],
+    "sources": [
+     {
+      "name": "Instagram ads",
+      "traffic": 3000,
+      "cust": 100.17423360000001,
+      "rev": 5524.6067712,
+      "spend": 900
+     },
+     {
+      "name": "Gym poster QR",
+      "traffic": 450,
+      "cust": 15.026135040000002,
+      "rev": 828.69101568,
+      "spend": 90
+     }
+    ],
+    "warnings": [
+     "Condition “Joined coaching?” is missing its No path."
+    ]
+   },
+   "ltv-whatif": {
+    "settings": {
+     "key": "ltv-whatif",
+     "basis": "ltv",
+     "fixed": 200,
+     "whatif": {
+      "traffic": 0.5,
+      "conv": 1.75
+     }
+    },
+    "totals": {
+     "traffic": 1150,
+     "paidTraffic": 1150,
+     "spend": 330,
+     "actCost": 0,
+     "leads": 905.625,
+     "cust": 241.2766125,
+     "orders": 285.6522375,
+     "rev": 37067.5935,
+     "cash": 12663.21853125,
+     "ltv": 37067.5935,
+     "cogs": 0,
+     "mrr": 4880.87499375,
+     "goals": 0,
+     "calls": 0,
+     "subs": 44.375625,
+     "fixed": 200,
+     "costs": 530,
+     "profit": 36537.5935,
+     "aov": 153.63110877561746,
+     "cpa": 1.3677247727439807,
+     "cpl": 0.36438923395445133,
+     "roas": 112.32604090909092,
+     "epc": 32.232690000000005,
+     "conv": 0.20980574999999999,
+     "cpc": 0.28695652173913044,
+     "roi": 68.93885566037736,
+     "ltvc": 153.63110877561746,
+     "beroas": 1.606060606060606
+    },
+    "nodes": [
+     {
+      "type": "frame",
+      "name": "Get attention",
+      "inflow": 0,
+      "out": 0,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "frame",
+      "name": "Convert",
+      "inflow": 0,
+      "out": 0,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "igads",
+      "name": "Instagram ads",
+      "inflow": 0,
+      "out": 1000,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 300,
+      "mrr": 0
+     },
+     {
+      "type": "poster",
+      "name": "Gym poster QR",
+      "inflow": 0,
+      "out": 150,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 30,
+      "mrr": 0
+     },
+     {
+      "type": "quizp",
+      "name": "Fitness quiz",
+      "inflow": 1150,
+      "out": 905.625,
+      "non": 244.375,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "checkout",
+      "name": "6-Week Kickstart",
+      "inflow": 905.625,
+      "out": 126.78750000000001,
+      "non": 778.8375,
+      "rev": 4691.137500000001,
+      "cash": 4691.137500000001,
+      "ltv": 4691.137500000001,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "cond",
+      "name": "Joined coaching?",
+      "inflow": 126.7875,
+      "out": 44.375625,
+      "non": 82.411875,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "sub",
+      "name": "Monthly coaching",
+      "inflow": 44.375625,
+      "out": 44.375625,
+      "non": 0,
+      "rev": 29285.2499625,
+      "cash": 4880.87499375,
+      "ltv": 29285.2499625,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 4880.87499375
+     },
+     {
+      "type": "follow",
+      "name": "WhatsApp follow-up",
+      "inflow": 778.8375,
+      "out": 545.18625,
+      "non": 233.65125,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "downsell",
+      "name": "Kickstart (£27 offer)",
+      "inflow": 545.18625,
+      "out": 114.48911249999999,
+      "non": 430.6971375,
+      "rev": 3091.2060374999996,
+      "cash": 3091.2060374999996,
+      "ltv": 3091.2060374999996,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "note",
+      "name": "Sticky note",
+      "inflow": 0,
+      "out": 0,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     }
+    ],
+    "flows": [
+     1000,
+     150,
+     905.625,
+     126.7875,
+     44.375625,
+     778.8375,
+     545.18625
+    ],
+    "sources": [
+     {
+      "name": "Instagram ads",
+      "traffic": 1000,
+      "cust": 209.80575,
+      "rev": 32232.69,
+      "spend": 300
+     },
+     {
+      "name": "Gym poster QR",
+      "traffic": 150,
+      "cust": 31.470862500000003,
+      "rev": 4834.903499999999,
+      "spend": 30
+     }
+    ],
+    "warnings": [
+     "Condition “Joined coaching?” is missing its No path."
+    ]
+   }
+  },
+  "tidy": [
+   {
+    "x": 47,
+    "y": 33,
+    "w": 270,
+    "h": 334
+   },
+   {
+    "x": 377,
+    "y": 110,
+    "w": 1260,
+    "h": 334
+   },
+   {
+    "x": 77,
+    "y": 77,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 77,
+    "y": 231,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 407,
+    "y": 154,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 737,
+    "y": 154,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 1089,
+    "y": 154,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 1397,
+    "y": 154,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 1067,
+    "y": 308,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 1397,
+    "y": 308,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 1397,
+    "y": 434,
+    "w": null,
+    "h": null
+   }
+  ],
+  "scrambled": [
+   {
+    "x": 0,
+    "y": 0
+   },
+   {
+    "x": 137,
+    "y": 251
+   },
+   {
+    "x": 274,
+    "y": 502
+   },
+   {
+    "x": 411,
+    "y": 53
+   },
+   {
+    "x": 548,
+    "y": 304
+   },
+   {
+    "x": 685,
+    "y": 555
+   },
+   {
+    "x": 822,
+    "y": 106
+   },
+   {
+    "x": 59,
+    "y": 357
+   },
+   {
+    "x": 196,
+    "y": 608
+   },
+   {
+    "x": 333,
+    "y": 159
+   },
+   {
+    "x": 470,
+    "y": 410
+   }
+  ],
+  "tidyScrambled": [
+   {
+    "x": 1367,
+    "y": 110,
+    "w": 270,
+    "h": 180
+   },
+   {
+    "x": 47,
+    "y": 110,
+    "w": 1590,
+    "h": 334
+   },
+   {
+    "x": 77,
+    "y": 231,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 77,
+    "y": 77,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 407,
+    "y": 154,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 737,
+    "y": 154,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 1089,
+    "y": 154,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 1397,
+    "y": 154,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 1067,
+    "y": 308,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 1397,
+    "y": 308,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 117,
+    "y": 351,
+    "w": null,
+    "h": null
+   }
+  ]
+ },
+ "quiz": {
+  "name": "Quiz → trial funnel",
+  "variants": {
+   "default": {
+    "settings": {
+     "key": "default",
+     "basis": "first",
+     "fixed": 0,
+     "whatif": {
+      "traffic": 1,
+      "conv": 1
+     }
+    },
+    "totals": {
+     "traffic": 2500,
+     "paidTraffic": 1000,
+     "spend": 450,
+     "actCost": 0,
+     "leads": 1000,
+     "cust": 89.10000000000001,
+     "orders": 239.1,
+     "rev": 6032.1089999999995,
+     "cash": 6032.1089999999995,
+     "ltv": 29650.647,
+     "cogs": 0,
+     "mrr": 6032.1089999999995,
+     "goals": 0,
+     "calls": 54,
+     "subs": 89.10000000000001,
+     "fixed": 0,
+     "costs": 450,
+     "profit": 5582.1089999999995,
+     "aov": 67.7004377104377,
+     "cpa": 5.05050505050505,
+     "cpl": 0.45,
+     "roas": 13.404686666666665,
+     "epc": 2.4128436,
+     "conv": 0.035640000000000005,
+     "cpc": 0.45,
+     "roi": 12.404686666666665,
+     "ltvc": 332.7794276094276,
+     "beroas": 1
+    },
+    "nodes": [
+     {
+      "type": "igorg",
+      "name": "Instagram traffic",
+      "inflow": 0,
+      "out": 1500,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "fbads",
+      "name": "Facebook ads",
+      "inflow": 0,
+      "out": 1000,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 450,
+      "mrr": 0
+     },
+     {
+      "type": "quizp",
+      "name": "Quiz funnel",
+      "inflow": 2500,
+      "out": 1000,
+      "non": 1500,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "trial",
+      "name": "7-day free trial",
+      "inflow": 1000,
+      "out": 150,
+      "non": 850,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "cond",
+      "name": "Converted to paid?",
+      "inflow": 150,
+      "out": 60,
+      "non": 90,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "sub",
+      "name": "Paid membership",
+      "inflow": 60,
+      "out": 60,
+      "non": 0,
+      "rev": 4199.4,
+      "cash": 4199.4,
+      "ltv": 20997,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 4199.4
+     },
+     {
+      "type": "call",
+      "name": "Free call",
+      "inflow": 90,
+      "out": 54,
+      "non": 36,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "cond",
+      "name": "Joined after call?",
+      "inflow": 54,
+      "out": 18.9,
+      "non": 35.1,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "sub",
+      "name": "Membership (after call)",
+      "inflow": 18.9,
+      "out": 18.9,
+      "non": 0,
+      "rev": 1322.8109999999997,
+      "cash": 1322.8109999999997,
+      "ltv": 6614.054999999999,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 1322.8109999999997
+     },
+     {
+      "type": "seq",
+      "name": "Follow-up emails",
+      "inflow": 850,
+      "out": 170,
+      "non": 680,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "sub",
+      "name": "Discounted membership",
+      "inflow": 170,
+      "out": 10.2,
+      "non": 159.8,
+      "rev": 509.89799999999997,
+      "cash": 509.89799999999997,
+      "ltv": 2039.5919999999999,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 509.89799999999997
+     }
+    ],
+    "flows": [
+     1500,
+     1000,
+     1000,
+     150,
+     60,
+     90,
+     54,
+     18.9,
+     850,
+     170
+    ],
+    "sources": [
+     {
+      "name": "Instagram traffic",
+      "traffic": 1500,
+      "cust": 53.46,
+      "rev": 3619.2653999999998,
+      "spend": 0
+     },
+     {
+      "name": "Facebook ads",
+      "traffic": 1000,
+      "cust": 35.64,
+      "rev": 2412.8436,
+      "spend": 450
+     }
+    ],
+    "warnings": [
+     "Condition “Joined after call?” is missing its No path."
+    ]
+   },
+   "ltv": {
+    "settings": {
+     "key": "ltv",
+     "basis": "ltv",
+     "fixed": 0,
+     "whatif": {
+      "traffic": 1,
+      "conv": 1
+     }
+    },
+    "totals": {
+     "traffic": 2500,
+     "paidTraffic": 1000,
+     "spend": 450,
+     "actCost": 0,
+     "leads": 1000,
+     "cust": 89.10000000000001,
+     "orders": 239.1,
+     "rev": 29650.647,
+     "cash": 6032.1089999999995,
+     "ltv": 29650.647,
+     "cogs": 0,
+     "mrr": 6032.1089999999995,
+     "goals": 0,
+     "calls": 54,
+     "subs": 89.10000000000001,
+     "fixed": 0,
+     "costs": 450,
+     "profit": 29200.647,
+     "aov": 332.7794276094276,
+     "cpa": 5.05050505050505,
+     "cpl": 0.45,
+     "roas": 65.89032666666667,
+     "epc": 11.8602588,
+     "conv": 0.035640000000000005,
+     "cpc": 0.45,
+     "roi": 64.89032666666667,
+     "ltvc": 332.7794276094276,
+     "beroas": 1
+    },
+    "nodes": [
+     {
+      "type": "igorg",
+      "name": "Instagram traffic",
+      "inflow": 0,
+      "out": 1500,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "fbads",
+      "name": "Facebook ads",
+      "inflow": 0,
+      "out": 1000,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 450,
+      "mrr": 0
+     },
+     {
+      "type": "quizp",
+      "name": "Quiz funnel",
+      "inflow": 2500,
+      "out": 1000,
+      "non": 1500,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "trial",
+      "name": "7-day free trial",
+      "inflow": 1000,
+      "out": 150,
+      "non": 850,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "cond",
+      "name": "Converted to paid?",
+      "inflow": 150,
+      "out": 60,
+      "non": 90,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "sub",
+      "name": "Paid membership",
+      "inflow": 60,
+      "out": 60,
+      "non": 0,
+      "rev": 20997,
+      "cash": 4199.4,
+      "ltv": 20997,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 4199.4
+     },
+     {
+      "type": "call",
+      "name": "Free call",
+      "inflow": 90,
+      "out": 54,
+      "non": 36,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "cond",
+      "name": "Joined after call?",
+      "inflow": 54,
+      "out": 18.9,
+      "non": 35.1,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "sub",
+      "name": "Membership (after call)",
+      "inflow": 18.9,
+      "out": 18.9,
+      "non": 0,
+      "rev": 6614.054999999999,
+      "cash": 1322.8109999999997,
+      "ltv": 6614.054999999999,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 1322.8109999999997
+     },
+     {
+      "type": "seq",
+      "name": "Follow-up emails",
+      "inflow": 850,
+      "out": 170,
+      "non": 680,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "sub",
+      "name": "Discounted membership",
+      "inflow": 170,
+      "out": 10.2,
+      "non": 159.8,
+      "rev": 2039.5919999999999,
+      "cash": 509.89799999999997,
+      "ltv": 2039.5919999999999,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 509.89799999999997
+     }
+    ],
+    "flows": [
+     1500,
+     1000,
+     1000,
+     150,
+     60,
+     90,
+     54,
+     18.9,
+     850,
+     170
+    ],
+    "sources": [
+     {
+      "name": "Instagram traffic",
+      "traffic": 1500,
+      "cust": 53.46,
+      "rev": 17790.388199999998,
+      "spend": 0
+     },
+     {
+      "name": "Facebook ads",
+      "traffic": 1000,
+      "cust": 35.64,
+      "rev": 11860.2588,
+      "spend": 450
+     }
+    ],
+    "warnings": [
+     "Condition “Joined after call?” is missing its No path."
+    ]
+   },
+   "fixed-whatif": {
+    "settings": {
+     "key": "fixed-whatif",
+     "basis": "first",
+     "fixed": 750,
+     "whatif": {
+      "traffic": 1.5,
+      "conv": 0.8
+     }
+    },
+    "totals": {
+     "traffic": 3750,
+     "paidTraffic": 1500,
+     "spend": 675,
+     "actCost": 0,
+     "leads": 1200,
+     "cust": 65.80224000000001,
+     "orders": 209.80224,
+     "rev": 4443.2971776,
+     "cash": 4443.2971776,
+     "ltv": 21811.0629888,
+     "cogs": 0,
+     "mrr": 4443.2971776,
+     "goals": 0,
+     "calls": 41.472,
+     "subs": 65.80224000000001,
+     "fixed": 750,
+     "costs": 1425,
+     "profit": 3018.2971776000004,
+     "aov": 67.52501400560223,
+     "cpa": 10.258009453781511,
+     "cpl": 0.5625,
+     "roas": 6.5826624853333335,
+     "epc": 1.18487924736,
+     "conv": 0.017547264000000003,
+     "cpc": 0.45,
+     "roi": 2.118103282526316,
+     "ltvc": 331.46383753501397,
+     "beroas": 2.111111111111111
+    },
+    "nodes": [
+     {
+      "type": "igorg",
+      "name": "Instagram traffic",
+      "inflow": 0,
+      "out": 2250,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "fbads",
+      "name": "Facebook ads",
+      "inflow": 0,
+      "out": 1500,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 675,
+      "mrr": 0
+     },
+     {
+      "type": "quizp",
+      "name": "Quiz funnel",
+      "inflow": 3750,
+      "out": 1200,
+      "non": 2550,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "trial",
+      "name": "7-day free trial",
+      "inflow": 1200,
+      "out": 144,
+      "non": 1056,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "cond",
+      "name": "Converted to paid?",
+      "inflow": 144,
+      "out": 57.6,
+      "non": 86.4,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "sub",
+      "name": "Paid membership",
+      "inflow": 57.6,
+      "out": 46.080000000000005,
+      "non": 11.519999999999996,
+      "rev": 3225.1392,
+      "cash": 3225.1392,
+      "ltv": 16125.696000000002,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 3225.1392
+     },
+     {
+      "type": "call",
+      "name": "Free call",
+      "inflow": 86.4,
+      "out": 41.472,
+      "non": 44.928000000000004,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "cond",
+      "name": "Joined after call?",
+      "inflow": 41.472,
+      "out": 14.5152,
+      "non": 26.9568,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "sub",
+      "name": "Membership (after call)",
+      "inflow": 14.5152,
+      "out": 11.612160000000001,
+      "non": 2.903039999999999,
+      "rev": 812.7350784,
+      "cash": 812.7350784,
+      "ltv": 4063.675392,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 812.7350784
+     },
+     {
+      "type": "seq",
+      "name": "Follow-up emails",
+      "inflow": 1056,
+      "out": 168.96,
+      "non": 887.04,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "sub",
+      "name": "Discounted membership",
+      "inflow": 168.96,
+      "out": 8.110080000000002,
+      "non": 160.84992,
+      "rev": 405.4228992000001,
+      "cash": 405.4228992000001,
+      "ltv": 1621.6915968000003,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 405.4228992000001
+     }
+    ],
+    "flows": [
+     2250,
+     1500,
+     1200,
+     144,
+     57.6,
+     86.4,
+     41.472,
+     14.5152,
+     1056,
+     168.96
+    ],
+    "sources": [
+     {
+      "name": "Instagram traffic",
+      "traffic": 2250,
+      "cust": 39.481344,
+      "rev": 2665.9783065600004,
+      "spend": 0
+     },
+     {
+      "name": "Facebook ads",
+      "traffic": 1500,
+      "cust": 26.320895999999998,
+      "rev": 1777.3188710399997,
+      "spend": 675
+     }
+    ],
+    "warnings": [
+     "Condition “Joined after call?” is missing its No path."
+    ]
+   },
+   "ltv-whatif": {
+    "settings": {
+     "key": "ltv-whatif",
+     "basis": "ltv",
+     "fixed": 200,
+     "whatif": {
+      "traffic": 0.5,
+      "conv": 1.75
+     }
+    },
+    "totals": {
+     "traffic": 1250,
+     "paidTraffic": 500,
+     "spend": 225,
+     "actCost": 0,
+     "leads": 875,
+     "cust": 163.824609375,
+     "orders": 393.512109375,
+     "rev": 53773.374046875,
+     "cash": 10991.779722656249,
+     "ltv": 53773.374046875,
+     "cogs": 0,
+     "mrr": 10991.779722656249,
+     "goals": 0,
+     "calls": 137.8125,
+     "subs": 163.824609375,
+     "fixed": 200,
+     "costs": 425,
+     "profit": 53348.374046875,
+     "aov": 328.2374623203645,
+     "cpa": 1.373420030472757,
+     "cpl": 0.2571428571428571,
+     "roas": 238.99277354166665,
+     "epc": 43.018699237499995,
+     "conv": 0.1310596875,
+     "cpc": 0.45,
+     "roi": 125.52558599264705,
+     "ltvc": 328.2374623203645,
+     "beroas": 1.8888888888888888
+    },
+    "nodes": [
+     {
+      "type": "igorg",
+      "name": "Instagram traffic",
+      "inflow": 0,
+      "out": 750,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "fbads",
+      "name": "Facebook ads",
+      "inflow": 0,
+      "out": 500,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 225,
+      "mrr": 0
+     },
+     {
+      "type": "quizp",
+      "name": "Quiz funnel",
+      "inflow": 1250,
+      "out": 875,
+      "non": 375,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "trial",
+      "name": "7-day free trial",
+      "inflow": 875,
+      "out": 229.6875,
+      "non": 645.3125,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "cond",
+      "name": "Converted to paid?",
+      "inflow": 229.6875,
+      "out": 91.875,
+      "non": 137.8125,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "sub",
+      "name": "Paid membership",
+      "inflow": 91.875,
+      "out": 91.875,
+      "non": 0,
+      "rev": 32151.65625,
+      "cash": 6430.331249999999,
+      "ltv": 32151.65625,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 6430.331249999999
+     },
+     {
+      "type": "call",
+      "name": "Free call",
+      "inflow": 137.8125,
+      "out": 137.8125,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "cond",
+      "name": "Joined after call?",
+      "inflow": 137.8125,
+      "out": 48.234375,
+      "non": 89.578125,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "sub",
+      "name": "Membership (after call)",
+      "inflow": 48.234375,
+      "out": 48.234375,
+      "non": 0,
+      "rev": 16879.61953125,
+      "cash": 3375.9239062499996,
+      "ltv": 16879.61953125,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 3375.9239062499996
+     },
+     {
+      "type": "seq",
+      "name": "Follow-up emails",
+      "inflow": 645.3125,
+      "out": 225.85937499999997,
+      "non": 419.453125,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "sub",
+      "name": "Discounted membership",
+      "inflow": 225.85937499999997,
+      "out": 23.715234374999998,
+      "non": 202.14414062499998,
+      "rev": 4742.098265625,
+      "cash": 1185.52456640625,
+      "ltv": 4742.098265625,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 1185.52456640625
+     }
+    ],
+    "flows": [
+     750,
+     500,
+     875,
+     229.6875,
+     91.875,
+     137.8125,
+     137.8125,
+     48.234375,
+     645.3125,
+     225.85937499999997
+    ],
+    "sources": [
+     {
+      "name": "Instagram traffic",
+      "traffic": 750,
+      "cust": 98.294765625,
+      "rev": 32264.024428124998,
+      "spend": 0
+     },
+     {
+      "name": "Facebook ads",
+      "traffic": 500,
+      "cust": 65.52984375,
+      "rev": 21509.34961875,
+      "spend": 225
+     }
+    ],
+    "warnings": [
+     "Condition “Joined after call?” is missing its No path."
+    ]
+   }
+  },
+  "tidy": [
+   {
+    "x": 77,
+    "y": 77,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 77,
+    "y": 231,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 407,
+    "y": 154,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 737,
+    "y": 154,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 1089,
+    "y": 154,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 1397,
+    "y": 110,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 1397,
+    "y": 253,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 1749,
+    "y": 253,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 2057,
+    "y": 253,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 1067,
+    "y": 308,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 1397,
+    "y": 407,
+    "w": null,
+    "h": null
+   }
+  ],
+  "scrambled": [
+   {
+    "x": 0,
+    "y": 0
+   },
+   {
+    "x": 137,
+    "y": 251
+   },
+   {
+    "x": 274,
+    "y": 502
+   },
+   {
+    "x": 411,
+    "y": 53
+   },
+   {
+    "x": 548,
+    "y": 304
+   },
+   {
+    "x": 685,
+    "y": 555
+   },
+   {
+    "x": 822,
+    "y": 106
+   },
+   {
+    "x": 59,
+    "y": 357
+   },
+   {
+    "x": 196,
+    "y": 608
+   },
+   {
+    "x": 333,
+    "y": 159
+   },
+   {
+    "x": 470,
+    "y": 410
+   }
+  ],
+  "tidyScrambled": [
+   {
+    "x": 77,
+    "y": 77,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 77,
+    "y": 231,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 407,
+    "y": 154,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 737,
+    "y": 154,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 1089,
+    "y": 154,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 1397,
+    "y": 110,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 1397,
+    "y": 253,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 1749,
+    "y": 253,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 2057,
+    "y": 253,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 1067,
+    "y": 308,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 1397,
+    "y": 407,
+    "w": null,
+    "h": null
+   }
+  ]
+ },
+ "webinar": {
+  "name": "Webinar funnel",
+  "variants": {
+   "default": {
+    "settings": {
+     "key": "default",
+     "basis": "first",
+     "fixed": 0,
+     "whatif": {
+      "traffic": 1,
+      "conv": 1
+     }
+    },
+    "totals": {
+     "traffic": 2400,
+     "paidTraffic": 2400,
+     "spend": 1800,
+     "actCost": 0,
+     "leads": 720,
+     "cust": 12.096000000000002,
+     "orders": 17.5392,
+     "rev": 13132.022400000002,
+     "cash": 13132.022400000002,
+     "ltv": 13132.022400000002,
+     "cogs": 0,
+     "mrr": 0,
+     "goals": 0,
+     "calls": 0,
+     "subs": 0,
+     "fixed": 0,
+     "costs": 1800,
+     "profit": 11332.022400000002,
+     "aov": 1085.6499999999999,
+     "cpa": 148.8095238095238,
+     "cpl": 2.5,
+     "roas": 7.295568000000001,
+     "epc": 5.471676,
+     "conv": 0.005040000000000001,
+     "cpc": 0.75,
+     "roi": 6.295568000000001,
+     "ltvc": 1085.6499999999999,
+     "beroas": 1
+    },
+    "nodes": [
+     {
+      "type": "fbads",
+      "name": "Facebook ads",
+      "inflow": 0,
+      "out": 2400,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 1800,
+      "mrr": 0
+     },
+     {
+      "type": "optin",
+      "name": "Webinar registration",
+      "inflow": 2400,
+      "out": 720,
+      "non": 1680,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "thanks",
+      "name": "Thank-you page",
+      "inflow": 720,
+      "out": 720,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "seq",
+      "name": "Reminder emails",
+      "inflow": 720,
+      "out": 396.00000000000006,
+      "non": 323.99999999999994,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "webinar",
+      "name": "Live webinar",
+      "inflow": 396.00000000000006,
+      "out": 118.80000000000001,
+      "non": 277.20000000000005,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "checkout",
+      "name": "Program checkout",
+      "inflow": 151.20000000000002,
+      "out": 12.096000000000002,
+      "non": 139.104,
+      "rev": 12059.712000000001,
+      "cash": 12059.712000000001,
+      "ltv": 12059.712000000001,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "bump",
+      "name": "Workbook bump",
+      "inflow": 12.096000000000002,
+      "out": 3.6288000000000005,
+      "non": 8.467200000000002,
+      "rev": 170.55360000000002,
+      "cash": 170.55360000000002,
+      "ltv": 170.55360000000002,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "upsell",
+      "name": "VIP upgrade",
+      "inflow": 12.096000000000002,
+      "out": 1.8144000000000002,
+      "non": 10.281600000000001,
+      "rev": 901.7568000000001,
+      "cash": 901.7568000000001,
+      "ltv": 901.7568000000001,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "replay",
+      "name": "Replay",
+      "inflow": 323.99999999999994,
+      "out": 32.4,
+      "non": 291.59999999999997,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     }
+    ],
+    "flows": [
+     2400,
+     720,
+     720,
+     396.00000000000006,
+     118.80000000000001,
+     12.096000000000002,
+     12.096000000000002,
+     323.99999999999994,
+     32.4
+    ],
+    "sources": [
+     {
+      "name": "Facebook ads",
+      "traffic": 2400,
+      "cust": 12.096000000000002,
+      "rev": 13132.022400000002,
+      "spend": 1800
+     }
+    ],
+    "warnings": []
+   },
+   "ltv": {
+    "settings": {
+     "key": "ltv",
+     "basis": "ltv",
+     "fixed": 0,
+     "whatif": {
+      "traffic": 1,
+      "conv": 1
+     }
+    },
+    "totals": {
+     "traffic": 2400,
+     "paidTraffic": 2400,
+     "spend": 1800,
+     "actCost": 0,
+     "leads": 720,
+     "cust": 12.096000000000002,
+     "orders": 17.5392,
+     "rev": 13132.022400000002,
+     "cash": 13132.022400000002,
+     "ltv": 13132.022400000002,
+     "cogs": 0,
+     "mrr": 0,
+     "goals": 0,
+     "calls": 0,
+     "subs": 0,
+     "fixed": 0,
+     "costs": 1800,
+     "profit": 11332.022400000002,
+     "aov": 1085.6499999999999,
+     "cpa": 148.8095238095238,
+     "cpl": 2.5,
+     "roas": 7.295568000000001,
+     "epc": 5.471676,
+     "conv": 0.005040000000000001,
+     "cpc": 0.75,
+     "roi": 6.295568000000001,
+     "ltvc": 1085.6499999999999,
+     "beroas": 1
+    },
+    "nodes": [
+     {
+      "type": "fbads",
+      "name": "Facebook ads",
+      "inflow": 0,
+      "out": 2400,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 1800,
+      "mrr": 0
+     },
+     {
+      "type": "optin",
+      "name": "Webinar registration",
+      "inflow": 2400,
+      "out": 720,
+      "non": 1680,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "thanks",
+      "name": "Thank-you page",
+      "inflow": 720,
+      "out": 720,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "seq",
+      "name": "Reminder emails",
+      "inflow": 720,
+      "out": 396.00000000000006,
+      "non": 323.99999999999994,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "webinar",
+      "name": "Live webinar",
+      "inflow": 396.00000000000006,
+      "out": 118.80000000000001,
+      "non": 277.20000000000005,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "checkout",
+      "name": "Program checkout",
+      "inflow": 151.20000000000002,
+      "out": 12.096000000000002,
+      "non": 139.104,
+      "rev": 12059.712000000001,
+      "cash": 12059.712000000001,
+      "ltv": 12059.712000000001,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "bump",
+      "name": "Workbook bump",
+      "inflow": 12.096000000000002,
+      "out": 3.6288000000000005,
+      "non": 8.467200000000002,
+      "rev": 170.55360000000002,
+      "cash": 170.55360000000002,
+      "ltv": 170.55360000000002,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "upsell",
+      "name": "VIP upgrade",
+      "inflow": 12.096000000000002,
+      "out": 1.8144000000000002,
+      "non": 10.281600000000001,
+      "rev": 901.7568000000001,
+      "cash": 901.7568000000001,
+      "ltv": 901.7568000000001,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "replay",
+      "name": "Replay",
+      "inflow": 323.99999999999994,
+      "out": 32.4,
+      "non": 291.59999999999997,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     }
+    ],
+    "flows": [
+     2400,
+     720,
+     720,
+     396.00000000000006,
+     118.80000000000001,
+     12.096000000000002,
+     12.096000000000002,
+     323.99999999999994,
+     32.4
+    ],
+    "sources": [
+     {
+      "name": "Facebook ads",
+      "traffic": 2400,
+      "cust": 12.096000000000002,
+      "rev": 13132.022400000002,
+      "spend": 1800
+     }
+    ],
+    "warnings": []
+   },
+   "fixed-whatif": {
+    "settings": {
+     "key": "fixed-whatif",
+     "basis": "first",
+     "fixed": 750,
+     "whatif": {
+      "traffic": 1.5,
+      "conv": 0.8
+     }
+    },
+    "totals": {
+     "traffic": 3600,
+     "paidTraffic": 3600,
+     "spend": 2700,
+     "actCost": 0,
+     "leads": 864,
+     "cust": 8.316518400000001,
+     "orders": 11.310465024,
+     "rev": 8881.376329728002,
+     "cash": 8881.376329728002,
+     "ltv": 8881.376329728002,
+     "cogs": 0,
+     "mrr": 0,
+     "goals": 0,
+     "calls": 0,
+     "subs": 0,
+     "fixed": 750,
+     "costs": 3450,
+     "profit": 5431.376329728002,
+     "aov": 1067.92,
+     "cpa": 324.65508643617017,
+     "cpl": 3.125,
+     "roas": 3.289398640640001,
+     "epc": 2.4670489804800004,
+     "conv": 0.0023101440000000005,
+     "cpc": 0.75,
+     "roi": 1.574311979631305,
+     "ltvc": 1067.92,
+     "beroas": 1.2777777777777777
+    },
+    "nodes": [
+     {
+      "type": "fbads",
+      "name": "Facebook ads",
+      "inflow": 0,
+      "out": 3600,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 2700,
+      "mrr": 0
+     },
+     {
+      "type": "optin",
+      "name": "Webinar registration",
+      "inflow": 3600,
+      "out": 864,
+      "non": 2736,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "thanks",
+      "name": "Thank-you page",
+      "inflow": 864,
+      "out": 691.2,
+      "non": 172.79999999999995,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "seq",
+      "name": "Reminder emails",
+      "inflow": 864,
+      "out": 380.16,
+      "non": 483.84,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "webinar",
+      "name": "Live webinar",
+      "inflow": 380.16,
+      "out": 91.2384,
+      "non": 288.9216,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "checkout",
+      "name": "Program checkout",
+      "inflow": 129.9456,
+      "out": 8.316518400000001,
+      "non": 121.6290816,
+      "rev": 8291.568844800002,
+      "cash": 8291.568844800002,
+      "ltv": 8291.568844800002,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "bump",
+      "name": "Workbook bump",
+      "inflow": 8.316518400000001,
+      "out": 1.9959644160000003,
+      "non": 6.320553984000001,
+      "rev": 93.81032755200002,
+      "cash": 93.81032755200002,
+      "ltv": 93.81032755200002,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "upsell",
+      "name": "VIP upgrade",
+      "inflow": 8.316518400000001,
+      "out": 0.9979822080000001,
+      "non": 7.318536192000002,
+      "rev": 495.9971573760001,
+      "cash": 495.9971573760001,
+      "ltv": 495.9971573760001,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "replay",
+      "name": "Replay",
+      "inflow": 483.84,
+      "out": 38.7072,
+      "non": 445.1328,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     }
+    ],
+    "flows": [
+     3600,
+     864,
+     864,
+     380.16,
+     91.2384,
+     8.316518400000001,
+     8.316518400000001,
+     483.84,
+     38.7072
+    ],
+    "sources": [
+     {
+      "name": "Facebook ads",
+      "traffic": 3600,
+      "cust": 8.316518400000001,
+      "rev": 8881.376329728002,
+      "spend": 2700
+     }
+    ],
+    "warnings": []
+   },
+   "ltv-whatif": {
+    "settings": {
+     "key": "ltv-whatif",
+     "basis": "ltv",
+     "fixed": 200,
+     "whatif": {
+      "traffic": 0.5,
+      "conv": 1.75
+     }
+    },
+    "totals": {
+     "traffic": 1200,
+     "paidTraffic": 1200,
+     "spend": 900,
+     "actCost": 0,
+     "leads": 630,
+     "cust": 45.147375000000004,
+     "orders": 80.70093281250001,
+     "rev": 52015.983764062505,
+     "cash": 52015.983764062505,
+     "ltv": 52015.983764062505,
+     "cogs": 0,
+     "mrr": 0,
+     "goals": 0,
+     "calls": 0,
+     "subs": 0,
+     "fixed": 200,
+     "costs": 1100,
+     "profit": 50915.983764062505,
+     "aov": 1152.1375,
+     "cpa": 19.93471381226483,
+     "cpl": 1.4285714285714286,
+     "roas": 57.79553751562501,
+     "epc": 43.34665313671876,
+     "conv": 0.037622812500000005,
+     "cpc": 0.75,
+     "roi": 46.28725796732955,
+     "ltvc": 1152.1375,
+     "beroas": 1.2222222222222223
+    },
+    "nodes": [
+     {
+      "type": "fbads",
+      "name": "Facebook ads",
+      "inflow": 0,
+      "out": 1200,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 900,
+      "mrr": 0
+     },
+     {
+      "type": "optin",
+      "name": "Webinar registration",
+      "inflow": 1200,
+      "out": 630,
+      "non": 570,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "thanks",
+      "name": "Thank-you page",
+      "inflow": 630,
+      "out": 630,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "seq",
+      "name": "Reminder emails",
+      "inflow": 630,
+      "out": 606.375,
+      "non": 23.625,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "webinar",
+      "name": "Live webinar",
+      "inflow": 606.375,
+      "out": 318.346875,
+      "non": 288.028125,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "checkout",
+      "name": "Program checkout",
+      "inflow": 322.48125,
+      "out": 45.147375000000004,
+      "non": 277.333875,
+      "rev": 45011.932875000006,
+      "cash": 45011.932875000006,
+      "ltv": 45011.932875000006,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "bump",
+      "name": "Workbook bump",
+      "inflow": 45.147375000000004,
+      "out": 23.702371875000004,
+      "non": 21.445003125,
+      "rev": 1114.0114781250002,
+      "cash": 1114.0114781250002,
+      "ltv": 1114.0114781250002,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "upsell",
+      "name": "VIP upgrade",
+      "inflow": 45.147375000000004,
+      "out": 11.851185937500002,
+      "non": 33.296189062500005,
+      "rev": 5890.039410937501,
+      "cash": 5890.039410937501,
+      "ltv": 5890.039410937501,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "replay",
+      "name": "Replay",
+      "inflow": 23.625,
+      "out": 4.1343749999999995,
+      "non": 19.490625,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     }
+    ],
+    "flows": [
+     1200,
+     630,
+     630,
+     606.375,
+     318.346875,
+     45.147375000000004,
+     45.147375000000004,
+     23.625,
+     4.1343749999999995
+    ],
+    "sources": [
+     {
+      "name": "Facebook ads",
+      "traffic": 1200,
+      "cust": 45.147375000000004,
+      "rev": 52015.983764062505,
+      "spend": 900
+     }
+    ],
+    "warnings": []
+   }
+  },
+  "tidy": [
+   {
+    "x": 77,
+    "y": 154,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 407,
+    "y": 154,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 737,
+    "y": 77,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 737,
+    "y": 231,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 1067,
+    "y": 231,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 1397,
+    "y": 308,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 1727,
+    "y": 231,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 1727,
+    "y": 385,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 1067,
+    "y": 385,
+    "w": null,
+    "h": null
+   }
+  ],
+  "scrambled": [
+   {
+    "x": 0,
+    "y": 0
+   },
+   {
+    "x": 137,
+    "y": 251
+   },
+   {
+    "x": 274,
+    "y": 502
+   },
+   {
+    "x": 411,
+    "y": 53
+   },
+   {
+    "x": 548,
+    "y": 304
+   },
+   {
+    "x": 685,
+    "y": 555
+   },
+   {
+    "x": 822,
+    "y": 106
+   },
+   {
+    "x": 59,
+    "y": 357
+   },
+   {
+    "x": 196,
+    "y": 608
+   }
+  ],
+  "tidyScrambled": [
+   {
+    "x": 77,
+    "y": 154,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 407,
+    "y": 154,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 737,
+    "y": 77,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 737,
+    "y": 231,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 1067,
+    "y": 231,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 1397,
+    "y": 308,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 1727,
+    "y": 231,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 1727,
+    "y": 385,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 1067,
+    "y": 385,
+    "w": null,
+    "h": null
+   }
+  ],
+  "exportTotals": {
+   "rev": 10797.254327923203,
+   "profit": 8387.254327923203,
+   "cust": 10.027307520000003,
+   "spend": 2160
+  }
+ },
+ "call": {
+  "name": "Application → call funnel",
+  "variants": {
+   "default": {
+    "settings": {
+     "key": "default",
+     "basis": "first",
+     "fixed": 0,
+     "whatif": {
+      "traffic": 1,
+      "conv": 1
+     }
+    },
+    "totals": {
+     "traffic": 600,
+     "paidTraffic": 600,
+     "spend": 2400,
+     "actCost": 472.49999999999994,
+     "leads": 72.9,
+     "cust": 3.54375,
+     "orders": 3.54375,
+     "rev": 3543.75,
+     "cash": 3543.75,
+     "ltv": 10631.25,
+     "cogs": 0,
+     "mrr": 0,
+     "goals": 0,
+     "calls": 14.174999999999999,
+     "subs": 0,
+     "fixed": 0,
+     "costs": 2872.5,
+     "profit": 671.25,
+     "aov": 1000,
+     "cpa": 677.2486772486773,
+     "cpl": 32.92181069958848,
+     "roas": 1.4765625,
+     "epc": 5.90625,
+     "conv": 0.00590625,
+     "cpc": 4,
+     "roi": 0.23368146214099217,
+     "ltvc": 3000,
+     "beroas": 1.196875
+    },
+    "nodes": [
+     {
+      "type": "liads",
+      "name": "LinkedIn ads",
+      "inflow": 0,
+      "out": 600,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 2400,
+      "mrr": 0
+     },
+     {
+      "type": "vsl",
+      "name": "VSL page",
+      "inflow": 600,
+      "out": 90,
+      "non": 510,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "apply",
+      "name": "Application",
+      "inflow": 90,
+      "out": 54,
+      "non": 36,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "cond",
+      "name": "Qualified?",
+      "inflow": 54,
+      "out": 27,
+      "non": 27,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "booking",
+      "name": "Booking calendar",
+      "inflow": 27,
+      "out": 18.9,
+      "non": 8.100000000000001,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "call",
+      "name": "Strategy call",
+      "inflow": 18.9,
+      "out": 14.174999999999999,
+      "non": 4.725,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 472.49999999999994,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "cond",
+      "name": "Closed?",
+      "inflow": 14.175,
+      "out": 3.54375,
+      "non": 10.631250000000001,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "plan",
+      "name": "Coaching (3 payments)",
+      "inflow": 3.54375,
+      "out": 3.54375,
+      "non": 0,
+      "rev": 3543.75,
+      "cash": 3543.75,
+      "ltv": 10631.25,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "delivery",
+      "name": "Free guide",
+      "inflow": 27,
+      "out": 27,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     }
+    ],
+    "flows": [
+     600,
+     90,
+     54,
+     27,
+     18.9,
+     14.175,
+     3.54375,
+     27
+    ],
+    "sources": [
+     {
+      "name": "LinkedIn ads",
+      "traffic": 600,
+      "cust": 3.54375,
+      "rev": 3543.75,
+      "spend": 2400
+     }
+    ],
+    "warnings": [
+     "Condition “Closed?” is missing its No path."
+    ]
+   },
+   "ltv": {
+    "settings": {
+     "key": "ltv",
+     "basis": "ltv",
+     "fixed": 0,
+     "whatif": {
+      "traffic": 1,
+      "conv": 1
+     }
+    },
+    "totals": {
+     "traffic": 600,
+     "paidTraffic": 600,
+     "spend": 2400,
+     "actCost": 472.49999999999994,
+     "leads": 72.9,
+     "cust": 3.54375,
+     "orders": 3.54375,
+     "rev": 10631.25,
+     "cash": 3543.75,
+     "ltv": 10631.25,
+     "cogs": 0,
+     "mrr": 0,
+     "goals": 0,
+     "calls": 14.174999999999999,
+     "subs": 0,
+     "fixed": 0,
+     "costs": 2872.5,
+     "profit": 7758.75,
+     "aov": 3000,
+     "cpa": 677.2486772486773,
+     "cpl": 32.92181069958848,
+     "roas": 4.4296875,
+     "epc": 17.71875,
+     "conv": 0.00590625,
+     "cpc": 4,
+     "roi": 2.7010443864229763,
+     "ltvc": 3000,
+     "beroas": 1.196875
+    },
+    "nodes": [
+     {
+      "type": "liads",
+      "name": "LinkedIn ads",
+      "inflow": 0,
+      "out": 600,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 2400,
+      "mrr": 0
+     },
+     {
+      "type": "vsl",
+      "name": "VSL page",
+      "inflow": 600,
+      "out": 90,
+      "non": 510,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "apply",
+      "name": "Application",
+      "inflow": 90,
+      "out": 54,
+      "non": 36,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "cond",
+      "name": "Qualified?",
+      "inflow": 54,
+      "out": 27,
+      "non": 27,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "booking",
+      "name": "Booking calendar",
+      "inflow": 27,
+      "out": 18.9,
+      "non": 8.100000000000001,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "call",
+      "name": "Strategy call",
+      "inflow": 18.9,
+      "out": 14.174999999999999,
+      "non": 4.725,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 472.49999999999994,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "cond",
+      "name": "Closed?",
+      "inflow": 14.175,
+      "out": 3.54375,
+      "non": 10.631250000000001,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "plan",
+      "name": "Coaching (3 payments)",
+      "inflow": 3.54375,
+      "out": 3.54375,
+      "non": 0,
+      "rev": 10631.25,
+      "cash": 3543.75,
+      "ltv": 10631.25,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "delivery",
+      "name": "Free guide",
+      "inflow": 27,
+      "out": 27,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     }
+    ],
+    "flows": [
+     600,
+     90,
+     54,
+     27,
+     18.9,
+     14.175,
+     3.54375,
+     27
+    ],
+    "sources": [
+     {
+      "name": "LinkedIn ads",
+      "traffic": 600,
+      "cust": 3.54375,
+      "rev": 10631.25,
+      "spend": 2400
+     }
+    ],
+    "warnings": [
+     "Condition “Closed?” is missing its No path."
+    ]
+   },
+   "fixed-whatif": {
+    "settings": {
+     "key": "fixed-whatif",
+     "basis": "first",
+     "fixed": 750,
+     "whatif": {
+      "traffic": 1.5,
+      "conv": 0.8
+     }
+    },
+    "totals": {
+     "traffic": 900,
+     "paidTraffic": 900,
+     "spend": 3600,
+     "actCost": 362.88000000000005,
+     "leads": 66.3552,
+     "cust": 1.7418240000000003,
+     "orders": 1.7418240000000003,
+     "rev": 1741.8240000000003,
+     "cash": 1741.8240000000003,
+     "ltv": 5225.472000000001,
+     "cogs": 0,
+     "mrr": 0,
+     "goals": 0,
+     "calls": 8.70912,
+     "subs": 0,
+     "fixed": 750,
+     "costs": 4712.88,
+     "profit": -2971.0559999999996,
+     "aov": 1000,
+     "cpa": 2066.7989417989415,
+     "cpl": 54.25347222222223,
+     "roas": 0.4838400000000001,
+     "epc": 1.9353600000000004,
+     "conv": 0.0019353600000000003,
+     "cpc": 4,
+     "roi": -0.6304119773896215,
+     "ltvc": 3000,
+     "beroas": 1.3091333333333333
+    },
+    "nodes": [
+     {
+      "type": "liads",
+      "name": "LinkedIn ads",
+      "inflow": 0,
+      "out": 900,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 3600,
+      "mrr": 0
+     },
+     {
+      "type": "vsl",
+      "name": "VSL page",
+      "inflow": 900,
+      "out": 108,
+      "non": 792,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "apply",
+      "name": "Application",
+      "inflow": 108,
+      "out": 51.839999999999996,
+      "non": 56.160000000000004,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "cond",
+      "name": "Qualified?",
+      "inflow": 51.84,
+      "out": 25.92,
+      "non": 25.92,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "booking",
+      "name": "Booking calendar",
+      "inflow": 25.92,
+      "out": 14.515200000000002,
+      "non": 11.4048,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "call",
+      "name": "Strategy call",
+      "inflow": 14.515200000000002,
+      "out": 8.70912,
+      "non": 5.8060800000000015,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 362.88000000000005,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "cond",
+      "name": "Closed?",
+      "inflow": 8.70912,
+      "out": 2.17728,
+      "non": 6.531840000000001,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "plan",
+      "name": "Coaching (3 payments)",
+      "inflow": 2.17728,
+      "out": 1.7418240000000003,
+      "non": 0.43545599999999984,
+      "rev": 1741.8240000000003,
+      "cash": 1741.8240000000003,
+      "ltv": 5225.472000000001,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "delivery",
+      "name": "Free guide",
+      "inflow": 25.92,
+      "out": 20.736000000000004,
+      "non": 5.1839999999999975,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     }
+    ],
+    "flows": [
+     900,
+     108,
+     51.84,
+     25.92,
+     14.515200000000002,
+     8.70912,
+     2.17728,
+     25.92
+    ],
+    "sources": [
+     {
+      "name": "LinkedIn ads",
+      "traffic": 900,
+      "cust": 1.7418240000000003,
+      "rev": 1741.8240000000003,
+      "spend": 3600
+     }
+    ],
+    "warnings": [
+     "Condition “Closed?” is missing its No path."
+    ]
+   },
+   "ltv-whatif": {
+    "settings": {
+     "key": "ltv-whatif",
+     "basis": "ltv",
+     "fixed": 200,
+     "whatif": {
+      "traffic": 0.5,
+      "conv": 1.75
+     }
+    },
+    "totals": {
+     "traffic": 300,
+     "paidTraffic": 300,
+     "spend": 1200,
+     "actCost": 984.375,
+     "leads": 118.125,
+     "cust": 9.84375,
+     "orders": 9.84375,
+     "rev": 29531.25,
+     "cash": 9843.75,
+     "ltv": 29531.25,
+     "cogs": 0,
+     "mrr": 0,
+     "goals": 0,
+     "calls": 39.375,
+     "subs": 0,
+     "fixed": 200,
+     "costs": 2384.375,
+     "profit": 27146.875,
+     "aov": 3000,
+     "cpa": 121.9047619047619,
+     "cpl": 10.158730158730158,
+     "roas": 24.609375,
+     "epc": 98.4375,
+     "conv": 0.0328125,
+     "cpc": 4,
+     "roi": 11.385321100917432,
+     "ltvc": 3000,
+     "beroas": 1.9869791666666667
+    },
+    "nodes": [
+     {
+      "type": "liads",
+      "name": "LinkedIn ads",
+      "inflow": 0,
+      "out": 300,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 1200,
+      "mrr": 0
+     },
+     {
+      "type": "vsl",
+      "name": "VSL page",
+      "inflow": 300,
+      "out": 78.75,
+      "non": 221.25,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "apply",
+      "name": "Application",
+      "inflow": 78.75,
+      "out": 78.75,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "cond",
+      "name": "Qualified?",
+      "inflow": 78.75,
+      "out": 39.375,
+      "non": 39.375,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "booking",
+      "name": "Booking calendar",
+      "inflow": 39.375,
+      "out": 39.375,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "call",
+      "name": "Strategy call",
+      "inflow": 39.375,
+      "out": 39.375,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 984.375,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "cond",
+      "name": "Closed?",
+      "inflow": 39.375,
+      "out": 9.84375,
+      "non": 29.53125,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "plan",
+      "name": "Coaching (3 payments)",
+      "inflow": 9.84375,
+      "out": 9.84375,
+      "non": 0,
+      "rev": 29531.25,
+      "cash": 9843.75,
+      "ltv": 29531.25,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "delivery",
+      "name": "Free guide",
+      "inflow": 39.375,
+      "out": 39.375,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     }
+    ],
+    "flows": [
+     300,
+     78.75,
+     78.75,
+     39.375,
+     39.375,
+     39.375,
+     9.84375,
+     39.375
+    ],
+    "sources": [
+     {
+      "name": "LinkedIn ads",
+      "traffic": 300,
+      "cust": 9.84375,
+      "rev": 29531.25,
+      "spend": 1200
+     }
+    ],
+    "warnings": [
+     "Condition “Closed?” is missing its No path."
+    ]
+   }
+  },
+  "tidy": [
+   {
+    "x": 77,
+    "y": 77,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 407,
+    "y": 77,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 737,
+    "y": 77,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 1089,
+    "y": 77,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 1397,
+    "y": 77,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 1727,
+    "y": 77,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 2079,
+    "y": 77,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 2387,
+    "y": 77,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 1397,
+    "y": 231,
+    "w": null,
+    "h": null
+   }
+  ],
+  "scrambled": [
+   {
+    "x": 0,
+    "y": 0
+   },
+   {
+    "x": 137,
+    "y": 251
+   },
+   {
+    "x": 274,
+    "y": 502
+   },
+   {
+    "x": 411,
+    "y": 53
+   },
+   {
+    "x": 548,
+    "y": 304
+   },
+   {
+    "x": 685,
+    "y": 555
+   },
+   {
+    "x": 822,
+    "y": 106
+   },
+   {
+    "x": 59,
+    "y": 357
+   },
+   {
+    "x": 196,
+    "y": 608
+   }
+  ],
+  "tidyScrambled": [
+   {
+    "x": 77,
+    "y": 77,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 407,
+    "y": 77,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 737,
+    "y": 77,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 1089,
+    "y": 77,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 1397,
+    "y": 77,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 1727,
+    "y": 77,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 2079,
+    "y": 77,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 2387,
+    "y": 77,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 1397,
+    "y": 231,
+    "w": null,
+    "h": null
+   }
+  ]
+ },
+ "sub": {
+  "name": "Subscription + A/B test",
+  "variants": {
+   "default": {
+    "settings": {
+     "key": "default",
+     "basis": "first",
+     "fixed": 0,
+     "whatif": {
+      "traffic": 1,
+      "conv": 1
+     }
+    },
+    "totals": {
+     "traffic": 1500,
+     "paidTraffic": 1500,
+     "spend": 900,
+     "actCost": 0,
+     "leads": 0,
+     "cust": 47.25,
+     "orders": 54.3375,
+     "rev": 701.6624999999999,
+     "cash": 701.6624999999999,
+     "ltv": 6367.8825,
+     "cogs": 0,
+     "mrr": 708.2775,
+     "goals": 0,
+     "calls": 0,
+     "subs": 47.25,
+     "fixed": 0,
+     "costs": 900,
+     "profit": -198.3375000000001,
+     "aov": 14.849999999999998,
+     "cpa": 19.047619047619047,
+     "cpl": "Infinity",
+     "roas": 0.7796249999999999,
+     "epc": 0.46777499999999994,
+     "conv": 0.0315,
+     "cpc": 0.6,
+     "roi": -0.2203750000000001,
+     "ltvc": 134.76999999999998,
+     "beroas": 1
+    },
+    "nodes": [
+     {
+      "type": "ttads",
+      "name": "TikTok ads",
+      "inflow": 0,
+      "out": 1500,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 900,
+      "mrr": 0
+     },
+     {
+      "type": "split",
+      "name": "Landing page test",
+      "inflow": 1500,
+      "out": 750,
+      "non": 750,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "landing",
+      "name": "Page A: video",
+      "inflow": 750,
+      "out": 90,
+      "non": 660,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "landing",
+      "name": "Page B: long copy",
+      "inflow": 750,
+      "out": 67.5,
+      "non": 682.5,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "sub",
+      "name": "App subscription",
+      "inflow": 157.5,
+      "out": 47.25,
+      "non": 110.25,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 5666.22,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 708.2775
+     },
+     {
+      "type": "upsell",
+      "name": "Switch to yearly",
+      "inflow": 47.25,
+      "out": 7.0874999999999995,
+      "non": 40.1625,
+      "rev": 701.6624999999999,
+      "cash": 701.6624999999999,
+      "ltv": 701.6624999999999,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     }
+    ],
+    "flows": [
+     1500,
+     750,
+     750,
+     90,
+     67.5,
+     47.25
+    ],
+    "sources": [
+     {
+      "name": "TikTok ads",
+      "traffic": 1500,
+      "cust": 47.25,
+      "rev": 701.6624999999999,
+      "spend": 900
+     }
+    ],
+    "warnings": []
+   },
+   "ltv": {
+    "settings": {
+     "key": "ltv",
+     "basis": "ltv",
+     "fixed": 0,
+     "whatif": {
+      "traffic": 1,
+      "conv": 1
+     }
+    },
+    "totals": {
+     "traffic": 1500,
+     "paidTraffic": 1500,
+     "spend": 900,
+     "actCost": 0,
+     "leads": 0,
+     "cust": 47.25,
+     "orders": 54.3375,
+     "rev": 6367.8825,
+     "cash": 701.6624999999999,
+     "ltv": 6367.8825,
+     "cogs": 0,
+     "mrr": 708.2775,
+     "goals": 0,
+     "calls": 0,
+     "subs": 47.25,
+     "fixed": 0,
+     "costs": 900,
+     "profit": 5467.8825,
+     "aov": 134.76999999999998,
+     "cpa": 19.047619047619047,
+     "cpl": "Infinity",
+     "roas": 7.075425,
+     "epc": 4.245255,
+     "conv": 0.0315,
+     "cpc": 0.6,
+     "roi": 6.075425,
+     "ltvc": 134.76999999999998,
+     "beroas": 1
+    },
+    "nodes": [
+     {
+      "type": "ttads",
+      "name": "TikTok ads",
+      "inflow": 0,
+      "out": 1500,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 900,
+      "mrr": 0
+     },
+     {
+      "type": "split",
+      "name": "Landing page test",
+      "inflow": 1500,
+      "out": 750,
+      "non": 750,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "landing",
+      "name": "Page A: video",
+      "inflow": 750,
+      "out": 90,
+      "non": 660,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "landing",
+      "name": "Page B: long copy",
+      "inflow": 750,
+      "out": 67.5,
+      "non": 682.5,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "sub",
+      "name": "App subscription",
+      "inflow": 157.5,
+      "out": 47.25,
+      "non": 110.25,
+      "rev": 5666.22,
+      "cash": 0,
+      "ltv": 5666.22,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 708.2775
+     },
+     {
+      "type": "upsell",
+      "name": "Switch to yearly",
+      "inflow": 47.25,
+      "out": 7.0874999999999995,
+      "non": 40.1625,
+      "rev": 701.6624999999999,
+      "cash": 701.6624999999999,
+      "ltv": 701.6624999999999,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     }
+    ],
+    "flows": [
+     1500,
+     750,
+     750,
+     90,
+     67.5,
+     47.25
+    ],
+    "sources": [
+     {
+      "name": "TikTok ads",
+      "traffic": 1500,
+      "cust": 47.25,
+      "rev": 6367.8825,
+      "spend": 900
+     }
+    ],
+    "warnings": []
+   },
+   "fixed-whatif": {
+    "settings": {
+     "key": "fixed-whatif",
+     "basis": "first",
+     "fixed": 750,
+     "whatif": {
+      "traffic": 1.5,
+      "conv": 0.8
+     }
+    },
+    "totals": {
+     "traffic": 2250,
+     "paidTraffic": 2250,
+     "spend": 1350,
+     "actCost": 0,
+     "leads": 0,
+     "cust": 45.36000000000001,
+     "orders": 50.803200000000004,
+     "rev": 538.8768000000001,
+     "cash": 538.8768000000001,
+     "ltv": 5978.448000000001,
+     "cogs": 0,
+     "mrr": 679.9464000000002,
+     "goals": 0,
+     "calls": 0,
+     "subs": 45.36000000000001,
+     "fixed": 750,
+     "costs": 2100,
+     "profit": -1561.1232,
+     "aov": 11.88,
+     "cpa": 29.76190476190476,
+     "cpl": "Infinity",
+     "roas": 0.3991680000000001,
+     "epc": 0.23950080000000004,
+     "conv": 0.020160000000000004,
+     "cpc": 0.6,
+     "roi": -0.743392,
+     "ltvc": 131.8,
+     "beroas": 1.5555555555555556
+    },
+    "nodes": [
+     {
+      "type": "ttads",
+      "name": "TikTok ads",
+      "inflow": 0,
+      "out": 2250,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 1350,
+      "mrr": 0
+     },
+     {
+      "type": "split",
+      "name": "Landing page test",
+      "inflow": 2250,
+      "out": 1125,
+      "non": 1125,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "landing",
+      "name": "Page A: video",
+      "inflow": 1125,
+      "out": 108.00000000000001,
+      "non": 1017,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "landing",
+      "name": "Page B: long copy",
+      "inflow": 1125,
+      "out": 81.00000000000001,
+      "non": 1044,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "sub",
+      "name": "App subscription",
+      "inflow": 189.00000000000003,
+      "out": 45.36000000000001,
+      "non": 143.64000000000001,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 5439.571200000001,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 679.9464000000002
+     },
+     {
+      "type": "upsell",
+      "name": "Switch to yearly",
+      "inflow": 45.36000000000001,
+      "out": 5.443200000000001,
+      "non": 39.91680000000001,
+      "rev": 538.8768000000001,
+      "cash": 538.8768000000001,
+      "ltv": 538.8768000000001,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     }
+    ],
+    "flows": [
+     2250,
+     1125,
+     1125,
+     108.00000000000001,
+     81.00000000000001,
+     45.36000000000001
+    ],
+    "sources": [
+     {
+      "name": "TikTok ads",
+      "traffic": 2250,
+      "cust": 45.36000000000001,
+      "rev": 538.8768000000001,
+      "spend": 1350
+     }
+    ],
+    "warnings": []
+   },
+   "ltv-whatif": {
+    "settings": {
+     "key": "ltv-whatif",
+     "basis": "ltv",
+     "fixed": 200,
+     "whatif": {
+      "traffic": 0.5,
+      "conv": 1.75
+     }
+    },
+    "totals": {
+     "traffic": 750,
+     "paidTraffic": 750,
+     "spend": 450,
+     "actCost": 0,
+     "leads": 0,
+     "cust": 72.3515625,
+     "orders": 91.34384765625,
+     "rev": 10556.635605468751,
+     "cash": 1880.2362304687501,
+     "ltv": 10556.635605468751,
+     "cogs": 0,
+     "mrr": 1084.549921875,
+     "goals": 0,
+     "calls": 0,
+     "subs": 72.3515625,
+     "fixed": 200,
+     "costs": 650,
+     "profit": 9906.635605468751,
+     "aov": 145.90750000000003,
+     "cpa": 6.219630709426628,
+     "cpl": "Infinity",
+     "roas": 23.459190234375004,
+     "epc": 14.075514140625002,
+     "conv": 0.09646875,
+     "cpc": 0.6,
+     "roi": 15.24097785456731,
+     "ltvc": 145.90750000000003,
+     "beroas": 1.4444444444444444
+    },
+    "nodes": [
+     {
+      "type": "ttads",
+      "name": "TikTok ads",
+      "inflow": 0,
+      "out": 750,
+      "non": 0,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 450,
+      "mrr": 0
+     },
+     {
+      "type": "split",
+      "name": "Landing page test",
+      "inflow": 750,
+      "out": 375,
+      "non": 375,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "landing",
+      "name": "Page A: video",
+      "inflow": 375,
+      "out": 78.75,
+      "non": 296.25,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "landing",
+      "name": "Page B: long copy",
+      "inflow": 375,
+      "out": 59.0625,
+      "non": 315.9375,
+      "rev": 0,
+      "cash": 0,
+      "ltv": 0,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     },
+     {
+      "type": "sub",
+      "name": "App subscription",
+      "inflow": 137.8125,
+      "out": 72.3515625,
+      "non": 65.4609375,
+      "rev": 8676.399375,
+      "cash": 0,
+      "ltv": 8676.399375,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 1084.549921875
+     },
+     {
+      "type": "upsell",
+      "name": "Switch to yearly",
+      "inflow": 72.3515625,
+      "out": 18.992285156250002,
+      "non": 53.359277343749994,
+      "rev": 1880.2362304687501,
+      "cash": 1880.2362304687501,
+      "ltv": 1880.2362304687501,
+      "cogs": 0,
+      "cost": 0,
+      "spend": 0,
+      "mrr": 0
+     }
+    ],
+    "flows": [
+     750,
+     375,
+     375,
+     78.75,
+     59.0625,
+     72.3515625
+    ],
+    "sources": [
+     {
+      "name": "TikTok ads",
+      "traffic": 750,
+      "cust": 72.3515625,
+      "rev": 10556.635605468751,
+      "spend": 450
+     }
+    ],
+    "warnings": []
+   }
+  },
+  "tidy": [
+   {
+    "x": 77,
+    "y": 77,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 429,
+    "y": 77,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 737,
+    "y": 77,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 737,
+    "y": 231,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 1067,
+    "y": 154,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 1397,
+    "y": 154,
+    "w": null,
+    "h": null
+   }
+  ],
+  "scrambled": [
+   {
+    "x": 0,
+    "y": 0
+   },
+   {
+    "x": 137,
+    "y": 251
+   },
+   {
+    "x": 274,
+    "y": 502
+   },
+   {
+    "x": 411,
+    "y": 53
+   },
+   {
+    "x": 548,
+    "y": 304
+   },
+   {
+    "x": 685,
+    "y": 555
+   }
+  ],
+  "tidyScrambled": [
+   {
+    "x": 77,
+    "y": 77,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 429,
+    "y": 77,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 737,
+    "y": 77,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 737,
+    "y": 231,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 1067,
+    "y": 154,
+    "w": null,
+    "h": null
+   },
+   {
+    "x": 1397,
+    "y": 154,
+    "w": null,
+    "h": null
+   }
+  ]
+ }
+}

@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Design-freeze review</title><script src="./support.js"></script></head>
+<body><x-dc><helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&amp;family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&amp;family=JetBrains+Mono:wght@500&amp;display=swap">
+<style>
+body{margin:0;background:#070B14}*{box-sizing:border-box}
+.app{font-family:'DM Sans',system-ui,sans-serif;color:#CBD5E1;background:#0B1220;width:1440px;position:relative;font-size:13.5px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.doc{position:absolute;left:170px;width:1100px;top:48px}
+h1,h2,h3{font-family:'Bricolage Grotesque','DM Sans',sans-serif;letter-spacing:-.01em;color:#F8FAFC;font-weight:600}
+h1{font-size:30px;margin:0 0 14px}
+h2{font-size:21px;margin:44px 0 14px;padding-top:22px;border-top:1px solid #1E293B;color:#10B981}
+h3{font-size:16px;margin:26px 0 10px}
+p{margin:0 0 12px}strong{color:#F1F5F9;font-weight:600}
+code{font-family:'JetBrains Mono',monospace;font-size:12px;background:#0F172A;border:1px solid #1E293B;border-radius:4px;padding:0 5px;color:#E2E8F0}
+table{width:100%;border-collapse:collapse;margin:6px 0 18px;font-size:12.5px}
+th{text-align:left;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:#94A3B8;font-weight:600;padding:8px 10px;border-bottom:1px solid #334155}
+td{padding:9px 10px;border-bottom:1px solid #1E293B;vertical-align:top}
+tr:hover td{background:#0F172A}
+ul,ol{margin:0 0 14px;padding-left:20px}li{margin-bottom:6px}
+li.cb{list-style:none;margin-left:-20px;padding-left:28px;position:relative}
+.bx{position:absolute;left:0;top:4px;width:14px;height:14px;border:1.5px solid #475569;border-radius:4px}
+em{color:#94A3B8}
+</style></helmet>
+<div class="app" style="height:6934px"><div class="doc"><h1>Funnel Mapper Pro — Design-Freeze Review</h1>
+<p><strong>Verdict: not frozen yet.</strong> The page and offer object, the library structure and the object states are now in a state that can be frozen. Five P0 items still block the freeze. None of them needs new maths, a new architecture, or any intelligence feature.</p>
+<p><strong>How this was reviewed.</strong> A structural audit of all 34 boards (markup, tokens, counts, coverage) plus the changes made in this pass. <strong>Nothing was checked by screenshot</strong>, because no browser was available in this environment. A visual pass in a real browser is itself a P0 item (G-1).</p>
+<h2>0. Branding decision (recorded)</h2>
+<p>The current branding is kept. Nothing in the brief overrides it.</p>
+<ul>
+<li><strong>Colour (locked, unchanged):</strong> Emerald <code>#10B981</code> / <code>#059669</code> / <code>#047857</code> / <code>#34D399</code>, success <code>#22C55E</code>, canvas <code>#0B1220</code>, library <code>#0F172A</code>, chrome <code>#111827</code>, panels <code>#1E293B</code>, borders <code>#334155</code>, text <code>#E2E8F0</code> / <code>#94A3B8</code>.</li>
+<li><strong>Categories:</strong> Traffic <code>#60A5FA</code>, Pages <code>#A78BFA</code>, Offers <code>#FB923C</code>, Actions <code>#2DD4BF</code>, Logic <code>#FBBF24</code>, Goals <code>#84CC16</code>, Notes <code>#FDE68A</code>.</li>
+<li><strong>Typography:</strong> <strong>Bricolage Grotesque</strong> for titles and numbers, <strong>DM Sans</strong> for UI text, <strong>JetBrains Mono</strong> for technical text. Inter and Instrument Serif are not used on any board (0 declarations) and the product has no editorial hero surface that would need a serif.</li>
+<li><strong>Correction to the master brief, section 2:</strong> replace the typography lines with <em>"Bricolage Grotesque (titles, numbers), DM Sans (UI), JetBrains Mono (technical text)."</em></li>
+<li><strong>Semantic colour rule:</strong> emerald means continue/success, orange means leak/No path, amber means warning, red is reserved for invalid structure. The new Y and N ports follow it.</li>
+</ul>
+<h2>1. What changed in this pass</h2>
+<table>
+<thead>
+<tr>
+<th>Area</th>
+<th>Change</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Page and offer object</td>
+<td>Redesigned from a generic card into a funnel object: a browser window of the page, name, two numbers, a dark type caption, and Y / N ports. <strong>61 nodes on 15 boards</strong> now use it, at one size (196 × 112), so every connection line still meets the object centre.</td>
+</tr>
+<tr>
+<td>New board: Page and offer objects</td>
+<td>Annotated anatomy, all <strong>19 page types and 14 offer types</strong> at true size, and the <strong>9-state set</strong> (default, hover, selected, multi-selected, locked, warning, error, missing data, loading).</td>
+</tr>
+<tr>
+<td>Library</td>
+<td>Added <strong>Communities, AI Calling, AI Automation</strong> from your app screenshots (21 blocks). Pages and offers use the same window thumbnail as the canvas. Every category carries a status against your app.</td>
+</tr>
+<tr>
+<td>Object system, Page-thumbnail</td>
+<td>Both rebuilt on the same object. The captured screenshot fills the object's page window.</td>
+</tr>
+</tbody>
+</table>
+<h2>A. Final visual audit</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Area</th>
+<th>Finding</th>
+<th>Priority</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A-1</td>
+<td>Page object</td>
+<td>Was a generic icon-and-strip card that read as an app builder. Now identifiable as a page before reading its label. One definition everywhere.</td>
+<td>Done</td>
+</tr>
+<tr>
+<td>A-2</td>
+<td>Zoom levels</td>
+<td>The type caption is 9.5px and the result number 15px. Both are unreadable below roughly 50% zoom, and no level-of-detail rule exists. Rule to adopt: at 75% and above show everything; 40–75% show window, name, result; below 40% show the window only.</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>A-3</td>
+<td>Other families</td>
+<td>Sources, messages, logic, goals and notes are consistent with each other and with the library tiles, but only pages have the 9-state matrix. The same matrix must be drawn for the other families. It is mechanical, because the state rules are shared.</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>A-4</td>
+<td>Library accuracy</td>
+<td>Categories where your app's counts differ from this list: Actions (app 3 vs 19 here), Logic (app 3 vs 15), Visual Elements (app 1 vs Notes 14), Email &amp; Communication (12 vs 12, names unverified), Communities (11 vs 8 captured). Traffic, Offers, Sales &amp; CRM are not in your screenshots. The block count cannot be certified until the block definitions are reconciled.</td>
+<td><strong>P0</strong></td>
+</tr>
+<tr>
+<td>A-5</td>
+<td>In-app library panel</td>
+<td>The master board is a specification sheet. The panel your app shows is an accordion of categories with counts, search and recents. The editor board only shows 12 rows. The full accordion needs designing so the library works at 170+ blocks.</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>A-6</td>
+<td>Brand marks</td>
+<td>Brand icons are colour plus a simplified glyph, not licensed logos. Production should use a licensed set (for example Simple Icons) and follow each brand's guidelines. Community platforms with no confirmed brand colour deliberately use the teal family colour.</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>A-7</td>
+<td>Small text</td>
+<td>Many secondary labels are 10.5–11px. Captions at 9.5px are acceptable as uppercase labels. Set a floor of 11px for all other secondary text.</td>
+<td>P2</td>
+</tr>
+<tr>
+<td>A-8</td>
+<td>Connections</td>
+<td>The connection board covers solid, dashed, curved, straight, elbow, labels, skip, no-thanks and retarget. The <strong>invalid</strong> connection state exists only on the quick-add board and must be added to the connection board.</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>A-9</td>
+<td>Legacy skins</td>
+<td>No old tinted-icon nodes remain on any board. Old strip nodes survive only as the intentional "removed → reverts" state.</td>
+<td>Done</td>
+</tr>
+<tr>
+<td>A-10</td>
+<td>Verification</td>
+<td>None of this pass was verified by screenshot.</td>
+<td><strong>P0</strong></td>
+</tr>
+</tbody>
+</table>
+<h2>B. Final UX audit</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Area</th>
+<th>Finding</th>
+<th>Priority</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>B-1</td>
+<td>Navigation</td>
+<td>Home exposes All funnels, Clients and Settings. Templates and Reports exist as boards, but a global entry for them could not be confirmed from the markup.</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>B-2</td>
+<td>Panel vs Reports</td>
+<td>The funnel panel has 8 tabs and Reports has 12 sections, and several overlap (forecast, scenarios, goals, costs). Rule: the panel gives quick numbers and always ends in <em>Open full report →</em>. Reports hold the analysis.</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>B-3</td>
+<td>Reports</td>
+<td>All 12 sections exist (forecast appears under a shorter title). Today they answer <em>what happened</em> and, through Key leak, <em>where</em>. There is no consistent answer to <em>why</em>, <em>impact</em> or <em>what next</em>. Do not add charts. Give every section the same three-row header: <strong>Result · Reason · Where</strong>, with <em>Show on map</em> links.</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>B-4</td>
+<td>Goals</td>
+<td>Target and required numbers exist. The vocabulary for <strong>gap, projected outcome and risk</strong> does not appear on any board. A goal row needs slots for target, current, gap, progress, required, projected and risk. The risk slot stays hidden until real data exists.</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>B-5</td>
+<td>Forecast</td>
+<td>Inputs exist (months, traffic growth). There is no assumptions summary and no variance. The forecast needs a visible "based on" line so explanations can attach later.</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>B-6</td>
+<td><strong>Actuals</strong></td>
+<td>Period-based actual data exists in the product, but <strong>no board designs it</strong>. "Actual", "variance" and "period" are missing from the design. Proposal: three fixed tags (<strong>Plan</strong> outlined, <strong>Forecast</strong> dashed, <strong>Actual</strong> solid), a period picker (week, month, custom) with <em>Compare to</em>, and a variance chip coloured only by direction. No new maths.</td>
+<td><strong>P0</strong></td>
+</tr>
+<tr>
+<td>B-7</td>
+<td>First-use and empty states</td>
+<td><strong>No board</strong> shows a first-use state. "Empty" appears on only 3 boards and none is product-level. Needed: empty canvas, no funnels, no clients, report with no data.</td>
+<td><strong>P0</strong></td>
+</tr>
+<tr>
+<td>B-8</td>
+<td>Other states</td>
+<td>Loading appears on 2 boards, error on 2, permission on 3 (Settings, Blocks and lines, and the locked state on the objects board). There is no viewer-role editor state and no report-level error or missing-data state.</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>B-9</td>
+<td>Command</td>
+<td>Quick Add exists. There is no command palette board. Define one registry of actions with scope (global, funnel, selection) so Quick Add is its first provider.</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>B-10</td>
+<td>Sharing, presentation</td>
+<td>Share, Shared view and Present all use the new object. Presentation reads as intentional, not as an editor with controls hidden.</td>
+<td>Done</td>
+</tr>
+<tr>
+<td>B-11</td>
+<td>Exports</td>
+<td>No board shows an exported PDF or PNG. Exports must use the new object and the same type. An export preview board (PDF cover, map page, KPI page) is needed to confirm that.</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>B-12</td>
+<td>Responsive</td>
+<td>1536: not designed (1440 is the nearest, and behaviour above it is fluid). 1280, 1024, 768 and 390 are designed. <strong>430 and 414 are not separate</strong>. Treat 390–430 as one class and verify both ends.</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>B-13</td>
+<td>Touch targets</td>
+<td>In the phone editor, 21 controls are 34px tall and 6 are 28px. The minimum should be 44px.</td>
+<td><strong>P0</strong> (phone)</td>
+</tr>
+</tbody>
+</table>
+<h2>C. Funnel Intelligence UX map</h2>
+<table>
+<thead>
+<tr>
+<th>Brain</th>
+<th>Where it eventually appears</th>
+<th>What must exist now</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Funnel</strong></td>
+<td>Canvas (a marker on the object), Funnel health strip, block Analytics tab, Reports (Result · Reason · Where), Forecast, Goals (risk slot), Scenario comparison (explain a delta), What-if</td>
+<td>The <em>Finding</em> component, the object marker chip, the Reports header, the Goal row</td>
+</tr>
+<tr>
+<td><strong>Market</strong></td>
+<td>Funnel setup (country, niche, audience), Traffic planning (a benchmark column), Forecast assumptions</td>
+<td>Optional fields in funnel settings and a spare column in the traffic report. Nothing visible until data exists.</td>
+</tr>
+<tr>
+<td><strong>Visual</strong></td>
+<td>The page object's window, and the page inspector's Analytics tab (a collapsed <em>Page review</em> section)</td>
+<td>The captured screenshot in the window (built) and an empty-by-default section slot</td>
+</tr>
+<tr>
+<td><strong>Product</strong></td>
+<td>Internal only. A separate admin area, never in the client workspace.</td>
+<td>Stable object ids and named actions through the command registry, which also give clean usage signals</td>
+</tr>
+<tr>
+<td><strong>Improvement</strong></td>
+<td>The decision layer. Users only ever see <strong>Inform</strong>, <strong>Suggest</strong> and <strong>Request approval</strong>. The other outcomes (ignore, monitor, auto-fix, create task) are invisible.</td>
+<td>An approval dialog pattern with Undo, and History entries marked as system-made, distinct from user edits</td>
+</tr>
+</tbody>
+</table>
+<h2>D. Intelligence surface audit</h2>
+<table>
+<thead>
+<tr>
+<th>Surface</th>
+<th>Context or global</th>
+<th>Eventually shows</th>
+<th>User action</th>
+<th>Component needed now</th>
+<th>Blocks it today?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Canvas</td>
+<td>Contextual</td>
+<td>A finding marker on an object</td>
+<td>Open the finding</td>
+<td>Object marker chip (built: warning, error)</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Funnel health</td>
+<td>Contextual</td>
+<td>Ranked findings for this funnel</td>
+<td>Inspect step</td>
+<td><em>Finding</em> row, unified with "Check these" and "Key leak"</td>
+<td>Two separate styles today</td>
+</tr>
+<tr>
+<td>Selected block</td>
+<td>Contextual</td>
+<td>Evidence and impact for that step</td>
+<td>View numbers, run what-if</td>
+<td>An <strong>Insights</strong> slot at the top of the Analytics tab, collapsed when empty</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Analytics</td>
+<td>Contextual</td>
+<td>Why a number moved</td>
+<td>Show on map</td>
+<td>Number-to-object link</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Reports</td>
+<td>Contextual</td>
+<td>Reason and next step per section</td>
+<td>Show on map, run what-if</td>
+<td>Result · Reason · Where header</td>
+<td>Sections have no common header</td>
+</tr>
+<tr>
+<td>Forecast</td>
+<td>Contextual</td>
+<td>Assumptions, variance</td>
+<td>Change an assumption</td>
+<td>"Based on" line</td>
+<td>No assumptions summary</td>
+</tr>
+<tr>
+<td>Goals</td>
+<td>Contextual</td>
+<td>Risk, required change</td>
+<td>Open the gap</td>
+<td>Goal row with a risk slot</td>
+<td>Gap, projected and risk are not designed</td>
+</tr>
+<tr>
+<td>Scenario comparison</td>
+<td>Contextual</td>
+<td>What drove the difference</td>
+<td>Open a scenario</td>
+<td>Delta chips with a <em>why</em> link</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Page preview, thumbnail</td>
+<td>Contextual</td>
+<td>Visual findings</td>
+<td>Open page review</td>
+<td>The window (built) and a collapsed <em>Page review</em> slot</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Recommendations</td>
+<td>Global</td>
+<td>All suggestions</td>
+<td>Apply, dismiss</td>
+<td>Same <em>Finding</em> component in a list</td>
+<td>Nothing to list yet. Do not build.</td>
+</tr>
+<tr>
+<td>What-if</td>
+<td>Contextual</td>
+<td>Result of a change</td>
+<td>Save as scenario</td>
+<td>Reuse the existing scenario picker</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Notifications</td>
+<td>Global, only where justified</td>
+<td>A change that needs a decision</td>
+<td>Open</td>
+<td>None. Do not build.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Intelligence Center</td>
+<td>Global</td>
+<td>Overview, findings, history</td>
+<td>Browse</td>
+<td><strong>None now.</strong> See the decision below.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Command</td>
+<td>Global</td>
+<td>Verbs such as "find the biggest leak"</td>
+<td>Run</td>
+<td>The command registry (B-9)</td>
+<td>No registry yet</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Decision on a dedicated Intelligence area:</strong> do not build one. Findings are most useful where the numbers already are (canvas, reports, goals). A separate area would pull attention away from the canvas and add a place for the product to look unfinished. Reserve the route and one navigation slot, show neither until real findings exist, and add an <em>Intelligence</em> entry to the workspace navigation later without restructuring anything.</p>
+<h2>E. Components to design now</h2>
+<ol>
+<li><strong>Finding.</strong> Headline, evidence number, impact value, one to three actions, a severity (info, watch, risk). It replaces today's separate "Check these" box and "Key leak" callout, which are the same idea drawn twice. Built from existing parts, with no intelligence content.</li>
+<li><strong>Object marker.</strong> The corner chip on page objects (warning, error, locked) extended to any family and to a finding marker.</li>
+<li><strong>Insights slot.</strong> A region at the top of the Analytics tab that is collapsed and invisible when empty. No placeholder.</li>
+<li><strong>Result · Reason · Where header</strong> for every report section, with <em>Show on map</em>.</li>
+<li><strong>Goal row</strong> with target, current, gap, progress, required, projected and risk slots.</li>
+<li><strong>Plan / Forecast / Actual tags and the variance chip</strong> (B-6).</li>
+<li><strong>Command registry.</strong> One list of actions with scope and keyboard binding. Quick Add is the first provider.</li>
+<li><strong>Approval dialog with Undo, and system-made History entries.</strong></li>
+<li><strong>Data-driven tab list</strong> in the funnel panel, so a <em>Findings</em> tab can be added without redesigning the panel.</li>
+</ol>
+<h2>F. Do not build now</h2>
+<ul>
+<li>Any chat window, "Ask" button, robot icon or AI badge anywhere in the interface.</li>
+<li>A dedicated Intelligence Center, its overview, history or recommendation list.</li>
+<li>Recommendation, finding or benchmark <strong>data</strong> of any kind, including sample data on screen.</li>
+<li>Market benchmarks, country or niche research, trend views.</li>
+<li>Visual scoring of pages, or any automated reading of screenshots.</li>
+<li>Auto-fix, an approvals queue, task creation, a notification centre.</li>
+<li>Product Brain dashboards of any kind in the client workspace.</li>
+<li>Command verbs that imply analysis ("Explain this drop-off", "Check goal risk").</li>
+<li>"Coming soon" placeholders.</li>
+</ul>
+<h2>G. Design-freeze checklist and priorities</h2>
+<h3>P0 — must fix before freeze</h3>
+<ul>
+<li class="cb"><span class="bx"></span><strong>G-1</strong> Visual pass in a real browser: Editor, Performance map, Page and offer objects, Library, Object system. Look for 1–3px alignment issues and clipped text.</li>
+<li class="cb"><span class="bx"></span><strong>G-2</strong> Reconcile the library with the app's block definitions (A-4). Send the definitions file, or screenshots of the remaining categories and of the three Communities blocks below the fold.</li>
+<li class="cb"><span class="bx"></span><strong>G-3</strong> Design Actuals: tags, period picker, variance chip (B-6).</li>
+<li class="cb"><span class="bx"></span><strong>G-4</strong> Design first-use and empty states: canvas, funnels, clients, reports (B-7).</li>
+<li class="cb"><span class="bx"></span><strong>G-5</strong> Raise phone touch targets to 44px (B-13).</li>
+</ul>
+<h3>P1 — strongly recommended before freeze</h3>
+<ul>
+<li class="cb"><span class="bx"></span><strong>G-6</strong> Level-of-detail rule for page and offer objects (A-2).</li>
+<li class="cb"><span class="bx"></span><strong>G-7</strong> The 9-state matrix for the other families (A-3).</li>
+<li class="cb"><span class="bx"></span><strong>G-8</strong> The in-app library accordion with counts, search and recents (A-5).</li>
+<li class="cb"><span class="bx"></span><strong>G-9</strong> Add the invalid connection state to the connection board (A-8).</li>
+<li class="cb"><span class="bx"></span><strong>G-10</strong> Unify "Check these" and "Key leak" into the <em>Finding</em> component (D, E-1).</li>
+<li class="cb"><span class="bx"></span><strong>G-11</strong> Result · Reason · Where header on all report sections (B-3).</li>
+<li class="cb"><span class="bx"></span><strong>G-12</strong> Goal row and forecast "based on" line (B-4, B-5).</li>
+<li class="cb"><span class="bx"></span><strong>G-13</strong> Panel and Reports overlap rule (B-2) and the navigation entries for Templates and Reports (B-1).</li>
+<li class="cb"><span class="bx"></span><strong>G-14</strong> Command palette board (B-9).</li>
+<li class="cb"><span class="bx"></span><strong>G-15</strong> Export preview board (B-11).</li>
+<li class="cb"><span class="bx"></span><strong>G-16</strong> Viewer-role state, report-level error and missing-data states (B-8).</li>
+<li class="cb"><span class="bx"></span><strong>G-17</strong> Confirm 430 and 414 behaviour against 390 (B-12).</li>
+<li class="cb"><span class="bx"></span><strong>G-18</strong> Licensed brand marks for production (A-6).</li>
+</ul>
+<h3>P2 — future enhancement</h3>
+<ul>
+<li class="cb"><span class="bx"></span><strong>G-19</strong> Secondary text floor of 11px (A-7).</li>
+<li class="cb"><span class="bx"></span><strong>G-20</strong> Optional Market fields in funnel settings (C).</li>
+<li class="cb"><span class="bx"></span><strong>G-21</strong> Intelligence entry in workspace navigation, only when real findings exist (D).</li>
+<li class="cb"><span class="bx"></span><strong>G-22</strong> Approval dialog and system-made History entries, when the decision layer exists (C, E-8).</li>
+</ul>
+<h3>Current product first</h3>
+<p>Everything above P2 makes today's product complete on its own. No P0 or P1 item depends on the future intelligence layer.</p></div></div></x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":6934}}'>
+class Component extends DCLogic { renderVals() { return {}; } }
+</script></body></html>

@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Date range and actual numbers</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&amp;family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#070B14}
+*{box-sizing:border-box}
+a{color:#34D399}a:hover{color:#6EE7B7}
+.app{font-family:'DM Sans',system-ui,sans-serif;color:#E2E8F0;background:#0B1220;width:1440px;position:relative;font-size:13px;line-height:1.4;-webkit-font-smoothing:antialiased;font-feature-settings:'tnum' 1;overflow:hidden}
+.disp{font-family:'Bricolage Grotesque','DM Sans',sans-serif;letter-spacing:-.01em}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace}
+button{font:inherit;color:inherit;cursor:pointer}
+input,select{font:inherit;color:inherit}
+h1,h2,h3,h4,h5,p{margin:0}
+.top{height:48px;display:flex;align-items:center;gap:12px;padding:0 12px;background:#111827;border-bottom:1px solid #1E293B;position:relative;z-index:5}
+.logo{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:#10B981;color:#04281C;flex:none}
+.sp{flex:1}
+.btn{height:32px;padding:0 12px;border-radius:8px;border:1px solid #334155;background:transparent;color:#E2E8F0;font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+.btn:hover{background:#1E293B}
+.btn.pri{background:#10B981;border-color:#10B981;color:#04281C;font-weight:600}
+.btn.pri:hover{background:#34D399}
+.btn.dng{background:#DC2626;border-color:#DC2626;color:#fff;font-weight:600}
+.btn.off{opacity:.45;cursor:not-allowed}
+.btn.sm{height:28px;padding:0 10px;font-size:12px}
+.ib{width:32px;height:32px;border:0;background:transparent;border-radius:7px;color:#94A3B8;display:inline-grid;place-items:center}
+.ib:hover{background:#1E293B;color:#E2E8F0}
+.seg{display:inline-flex;background:#0B1220;border:1px solid #273449;border-radius:8px;padding:2px;gap:2px}
+.seg button{border:0;background:transparent;color:#94A3B8;height:26px;padding:0 12px;border-radius:6px;font-size:12.5px;font-weight:500}
+.seg button.on{background:#1E293B;color:#F1F5F9;box-shadow:0 0 0 1px #334155 inset}
+.chip{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 10px;border:1px solid #334155;background:#0B1220;border-radius:8px;color:#E2E8F0;font-size:12.5px}
+.chip.on{border-color:#10B981;box-shadow:0 0 0 3px rgba(16,185,129,.15)}
+.pill{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 9px;border-radius:999px;border:1px solid #334155;font-size:11px;color:#CBD5E1;white-space:nowrap}
+.pill.g{border-color:rgba(16,185,129,.5);color:#6EE7B7;background:rgba(16,185,129,.08)}
+.pill.a{border-color:rgba(245,158,11,.5);color:#FCD34D;background:rgba(245,158,11,.08)}
+.pill.r{border-color:rgba(248,113,113,.5);color:#FCA5A5;background:rgba(248,113,113,.08)}
+.pill.b{border-color:rgba(96,165,250,.5);color:#93C5FD;background:rgba(96,165,250,.08)}
+.newtag{display:inline-flex;align-items:center;height:18px;padding:0 7px;border-radius:999px;background:#10B981;color:#04281C;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.eyebrow{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:#94A3B8;font-weight:600}
+.muted{color:#94A3B8}
+.body{display:flex;min-height:0}
+.lrail{width:56px;flex:none;background:#0F172A;border-right:1px solid #1E293B;display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:4px}
+.ri{width:40px;height:40px;border-radius:9px;border:0;background:transparent;color:#94A3B8;display:grid;place-items:center;position:relative}
+.ri.on{background:#1E293B;color:#34D399}
+.ri .dot{position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:#10B981;border:2px solid #0F172A}
+.lpanel{width:320px;flex:none;background:#111827;border-right:1px solid #1E293B;display:flex;flex-direction:column;min-height:0}
+.ph{display:flex;align-items:center;gap:8px;padding:14px 16px 10px}
+.ph h3{font-family:'Bricolage Grotesque',sans-serif;font-size:17px;font-weight:600;color:#F8FAFC}
+.cv{flex:1;position:relative;overflow:hidden;background-color:#0B1220;background-image:radial-gradient(rgba(148,163,184,.14) 1px,transparent 1.2px);background-size:22px 22px}
+.rpanel{width:340px;flex:none;background:#111827;border-left:1px solid #1E293B;display:flex;flex-direction:column;min-height:0}
+.rrail{width:56px;flex:none;background:#111827;border-left:1px solid #1E293B;display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:4px}
+.inp{height:36px;width:100%;background:#0B1220;border:1px solid #334155;border-radius:8px;color:#F1F5F9;padding:0 11px;font-size:13px}
+.inp::placeholder{color:#64748B}
+.inp.foc{border-color:#10B981;box-shadow:0 0 0 3px rgba(16,185,129,.15)}
+label.fl{display:block;font-size:12px;color:#CBD5E1;font-weight:500;margin-bottom:6px}
+.opt{color:#94A3B8;font-weight:400;margin-left:6px;font-size:11.5px}
+.node{position:absolute;background:#111827;border:1px solid #2A3648;border-radius:10px;padding:8px 10px;display:flex;align-items:center;gap:8px}
+.node .k{width:22px;height:22px;border-radius:6px;flex:none}
+.node b{font-size:12px;font-weight:600;color:#F1F5F9;display:block;line-height:1.2}
+.node span.s{font-size:10.5px;color:#94A3B8;display:block}
+.node.sel{border-color:#10B981;box-shadow:0 0 0 1px #10B981,0 0 0 5px rgba(16,185,129,.16)}
+.ln{position:absolute;background:#3B82F6}
+.lnd{position:absolute;border-color:#3B82F6;border-style:dashed;border-width:0}
+.ah{position:absolute;width:0;height:0}
+.pt{position:absolute;width:11px;height:11px;border-radius:50%;background:#0B1220;border:2px solid #10B981}
+.ep{position:absolute;background:#111827;border:1px solid #334155;border-radius:6px;padding:2px 7px;font-size:10.5px;color:#E2E8F0;white-space:nowrap}
+.ep.am{border-color:rgba(245,158,11,.6);color:#FCD34D}
+.card{background:#111827;border:1px solid #273449;border-radius:12px}
+.note{background:#0F172A;border:1px solid #1E293B;border-radius:12px;padding:14px 16px;color:#94A3B8;font-size:12.5px;line-height:1.5}
+.note b{color:#E2E8F0}
+.hd{padding:28px 40px 20px;border-bottom:1px solid #1E293B}
+.hd h2{font-family:'Bricolage Grotesque',sans-serif;font-size:28px;font-weight:600;color:#F8FAFC}
+.hd p{margin-top:6px;color:#94A3B8;font-size:14px;max-width:1000px}
+.cap{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#94A3B8;font-weight:600;margin:0 0 10px;display:flex;align-items:center;gap:8px}
+.ovl{position:absolute;left:0;right:0;top:0;bottom:0;background:rgba(3,7,18,.66)}
+.modal{position:absolute;background:#111827;border:1px solid #334155;border-radius:16px;box-shadow:0 24px 80px rgba(0,0,0,.55)}
+.mh{padding:20px 24px 4px}
+.mh h3{font-family:'Bricolage Grotesque',sans-serif;font-size:21px;font-weight:600;color:#F8FAFC}
+.mh p{margin-top:6px;color:#94A3B8;font-size:13px}
+.mf{display:flex;align-items:center;gap:10px;padding:16px 24px;border-top:1px solid #1E293B}
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{text-align:left;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:#94A3B8;font-weight:600;padding:10px 14px;border-bottom:1px solid #1E293B}
+.tbl td{padding:12px 14px;border-bottom:1px solid #1E293B;font-size:13px;color:#E2E8F0}
+.tbl td.n,.tbl th.n{text-align:right}
+.cal{width:252px}
+.cal h5{text-align:center;font-size:13px;font-weight:600;color:#F1F5F9;margin-bottom:8px}
+.cg{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
+.cg i{font-style:normal;height:32px;display:grid;place-items:center;font-size:12.5px;color:#E2E8F0;border-radius:6px}
+.cg i.h{height:22px;font-size:11px;color:#94A3B8;font-weight:600}
+.cg i.o{color:#475569}
+.cg i.r{background:rgba(16,185,129,.16);border-radius:0}
+.cg i.s{background:#10B981;color:#04281C;font-weight:700}
+</style>
+</helmet>
+<div class="app" style="height:1100px"><div class="top"><div class="logo"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#04281C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16l-6 8v6l-4-2v-4z"></path></svg></div><button class="ib" aria-label="Back to funnels"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></button><b class="disp" style="font-size:15px;color:#F8FAFC">Webinar funnel</b><span class="pill">Live</span><div style="width:12px"></div><div class="seg"><button class="on">Map</button><button>Reports</button></div><div class="sp"></div><div class="seg"><button>Model</button><button class="on">Actual</button></div><div style="width:6px"></div><button class="chip on" style="height:32px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="15" rx="2"></rect><path d="M4 10h16M9 3v4M15 3v4"></path></svg><b>Nov 1, 2026 &ndash; Nov 30, 2026</b><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></button><span class="muted" style="font-size:12px;display:inline-flex;align-items:center;gap:6px"><i style="width:6px;height:6px;border-radius:50%;background:#22C55E;display:block"></i>Saved</span><span class="chip" style="height:28px">52%</span></div><div class="body" style="height:1052px"><div class="lrail"><button class="ri on" aria-label="Blocks"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1.5"></rect><rect x="13" y="4" width="7" height="7" rx="1.5"></rect><rect x="4" y="13" width="7" height="7" rx="1.5"></rect><rect x="13" y="13" width="7" height="7" rx="1.5"></rect></svg></button><button class="ri" aria-label="Templates"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="5" rx="1.5"></rect><rect x="4" y="12" width="7" height="8" rx="1.5"></rect><rect x="14" y="12" width="6" height="8" rx="1.5"></rect></svg></button><button class="ri" aria-label="Notes"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h9l4 4v12H6zM14 4v5h5"></path></svg></button><button class="ri" aria-label="Checklist"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"></path></svg></button><button class="ri" aria-label="Math"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9.5a2.5 2.5 0 114 2c-.8.6-1.5 1-1.5 2M12 17v.01"></path></svg></button><div class="sp"></div><button class="ri" aria-label="Collapse left panel"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></button></div><div class="cv" style="position:relative"><div style="position:absolute;left:80px;top:410px;width:840px;height:190px;line-height:0"><svg style="display:block" width="840" height="190" viewBox="0 0 840 190" role="img" aria-label="Map of Webinar Funnel (Nov): 3 blocks, 2 connections"><defs><pattern id="dpmc840190" width="12" height="12" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r=".8" fill="#1E293B"/></pattern></defs><rect width="840" height="190" fill="url(#dpmc840190)"/><g transform="translate(61.80 44.60) scale(0.9000)"></g><path d="M238.2 95.0 C285.0 95.0 285.0 95.0 331.8 95.0" fill="none" stroke="#64748B" stroke-width="2.70" stroke-linecap="round"/><path d="M331.8 95.0 l-7.2 -3.6 l0 7.2 z" fill="#64748B"/><path d="M508.2 95.0 C555.0 95.0 555.0 95.0 601.8 95.0" fill="none" stroke="#64748B" stroke-width="2.15" stroke-linecap="round"/><path d="M601.8 95.0 l-5.7 -2.9 l0 5.7 z" fill="#64748B"/><g transform="translate(61.80 44.60) scale(0.9000)"><g transform="translate(0.00 0.00)"><rect width="196" height="112" rx="12" fill="#111827" stroke="#2A3648" stroke-width="2"/><rect x="8" y="7" width="68" height="76" rx="5" fill="#F4F6FA" stroke="#475569" stroke-width="2"/><rect x="9" y="8" width="66" height="9" fill="#E3E8F0"/><svg x="9" y="17" width="66" height="65" viewBox="0 0 66 65"><rect x="8" y="7" width="50" height="4" rx="1.5" fill="#334155"/><rect x="14" y="14" width="38" height="2.5" rx="1.2" fill="#AEB7C6"/><rect x="9" y="24" width="48" height="9" rx="2" fill="#fff" stroke="#CBD5E1" stroke-width="1"/><rect x="9" y="37" width="48" height="9" rx="2" fill="#fff" stroke="#CBD5E1" stroke-width="1"/><rect x="9" y="50" width="48" height="9" rx="2" fill="#8B5CF6"/></svg><text x="86" y="32" font-family="DM Sans,sans-serif" font-size="12" font-weight="600" fill="#F1F5F9">Webinar Opt-in</text><rect x="86" y="58" width="40" height="12" rx="4" fill="#E2E8F0" opacity=".85"/><path d="M0 90h196v10a12 12 0 0 1-12 12H12A12 12 0 0 1 0 100z" fill="#0B1220"/><rect x="8" y="97" width="14" height="10" rx="3" fill="#A78BFA"/><rect x="28" y="99" width="70" height="6" rx="3" fill="#A78BFA"/></g><g transform="translate(300.00 19.00)"><rect width="196" height="74" rx="12" fill="#111827" stroke="#2A3648" stroke-width="2"/><g transform="translate(37 37) rotate(45)"><rect x="-17" y="-17" width="34" height="34" rx="8" fill="#2DD4BF"/></g><text x="70" y="42" font-family="DM Sans,sans-serif" font-size="12" font-weight="600" fill="#F1F5F9">Form Completed</text></g><g transform="translate(600.00 0.00)"><rect width="196" height="112" rx="12" fill="#111827" stroke="#2A3648" stroke-width="2"/><rect x="8" y="7" width="68" height="76" rx="5" fill="#F4F6FA" stroke="#475569" stroke-width="2"/><rect x="9" y="8" width="66" height="9" fill="#E3E8F0"/><svg x="9" y="17" width="66" height="65" viewBox="0 0 66 65"><circle cx="33" cy="18" r="11" fill="#10B981" opacity=".15"/><circle cx="33" cy="18" r="7.5" fill="none" stroke="#10B981" stroke-width="2"/><path d="M29.5 18l2.7 2.7 5-6" stroke="#10B981" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><rect x="14" y="35" width="38" height="4" rx="1.5" fill="#334155"/><rect x="18" y="43" width="30" height="2.5" rx="1.2" fill="#AEB7C6"/><rect x="22" y="49" width="22" height="2.5" rx="1.2" fill="#AEB7C6"/></svg><text x="86" y="28" font-family="DM Sans,sans-serif" font-size="12" font-weight="600" fill="#F1F5F9">Registration</text><text x="86" y="44" font-family="DM Sans,sans-serif" font-size="12" font-weight="600" fill="#F1F5F9">Thank You</text><rect x="86" y="58" width="40" height="12" rx="4" fill="#E2E8F0" opacity=".85"/><path d="M0 90h196v10a12 12 0 0 1-12 12H12A12 12 0 0 1 0 100z" fill="#0B1220"/><rect x="8" y="97" width="14" height="10" rx="3" fill="#A78BFA"/><rect x="28" y="99" width="70" height="6" rx="3" fill="#A78BFA"/></g></g></svg><span style="position:absolute;left:285px;top:61px;transform:translateX(-50%);background:#111827;border:1px solid #334155;color:#CBD5E1;font-size:11px;font-weight:600;border-radius:6px;padding:2px 9px;white-space:nowrap">46% &middot; 16,560</span><span style="position:absolute;left:555px;top:61px;transform:translateX(-50%);background:#111827;border:1px solid #334155;color:#CBD5E1;font-size:11px;font-weight:600;border-radius:6px;padding:2px 9px;white-space:nowrap">100% &middot; 16,560</span><span style="position:absolute;left:69px;top:153px;font-size:11px;color:#94A3B8;line-height:14px">36,000 people</span></div><div style="position:absolute;left:80px;top:610px;width:760px" class="note"><b>Actual mode.</b> The same map, now showing the real numbers you entered for the dates you picked. Switch back to Model to see your plan. A badge on the map always says which dates you are looking at.</div><div class="pill g" style="position:absolute;left:80px;top:476px">Actual &middot; Nov 2026 &middot; 30 days</div><div class="card" style="position:absolute;left:300px;top:6px;width:760px;z-index:6;box-shadow:0 24px 70px rgba(0,0,0,.55)"><div style="display:flex"><div style="width:150px;padding:10px;border-right:1px solid #1E293B"><button style="display:block;width:100%;border:0;text-align:left;padding:10px 12px;border-radius:7px;font-size:13px;background:transparent;color:#E2E8F0;font-weight:400;margin-bottom:2px">Today</button><button style="display:block;width:100%;border:0;text-align:left;padding:10px 12px;border-radius:7px;font-size:13px;background:transparent;color:#E2E8F0;font-weight:400;margin-bottom:2px">This month</button><button style="display:block;width:100%;border:0;text-align:left;padding:10px 12px;border-radius:7px;font-size:13px;background:transparent;color:#E2E8F0;font-weight:400;margin-bottom:2px">Last 30 days</button><button style="display:block;width:100%;border:0;text-align:left;padding:10px 12px;border-radius:7px;font-size:13px;background:#10B981;color:#04281C;font-weight:600;margin-bottom:2px">Custom range</button></div><div style="padding:14px 18px;display:flex;gap:26px"><div class="cal"><h5>Oct 2026</h5><div class="cg"><i class="h">Su</i><i class="h">Mo</i><i class="h">Tu</i><i class="h">We</i><i class="h">Th</i><i class="h">Fr</i><i class="h">Sa</i><i class="o"></i><i class="o"></i><i class="o"></i><i class="o"></i><i class="">1</i><i class="">2</i><i class="">3</i><i class="">4</i><i class="">5</i><i class="">6</i><i class="">7</i><i class="">8</i><i class="">9</i><i class="">10</i><i class="">11</i><i class="">12</i><i class="">13</i><i class="">14</i><i class="">15</i><i class="">16</i><i class="">17</i><i class="">18</i><i class="">19</i><i class="">20</i><i class="">21</i><i class="">22</i><i class="">23</i><i class="">24</i><i class="">25</i><i class="">26</i><i class="">27</i><i class="">28</i><i class="">29</i><i class="">30</i><i class="">31</i></div></div><div class="cal"><h5>Nov 2026</h5><div class="cg"><i class="h">Su</i><i class="h">Mo</i><i class="h">Tu</i><i class="h">We</i><i class="h">Th</i><i class="h">Fr</i><i class="h">Sa</i><i class="s">1</i><i class="r">2</i><i class="r">3</i><i class="r">4</i><i class="r">5</i><i class="r">6</i><i class="r">7</i><i class="r">8</i><i class="r">9</i><i class="r">10</i><i class="r">11</i><i class="r">12</i><i class="r">13</i><i class="r">14</i><i class="r">15</i><i class="r">16</i><i class="r">17</i><i class="r">18</i><i class="r">19</i><i class="r">20</i><i class="r">21</i><i class="r">22</i><i class="r">23</i><i class="r">24</i><i class="r">25</i><i class="r">26</i><i class="r">27</i><i class="r">28</i><i class="r">29</i><i class="s">30</i><i class="o"></i><i class="o"></i><i class="o"></i><i class="o"></i><i class="o"></i></div></div></div></div><div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid #1E293B"><span class="muted" style="font-size:12px;flex:1">Days with data show a dot: Oct 1&ndash;31 and Nov 1&ndash;30 have entries.</span><span class="mono" style="font-size:12.5px">11/01/2026 &ndash; 11/30/2026</span><button class="btn sm">Cancel</button><button class="btn pri sm">Ok</button></div></div></div></div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1100}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

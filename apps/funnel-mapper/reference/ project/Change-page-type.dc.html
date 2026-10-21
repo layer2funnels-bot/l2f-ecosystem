@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Change page type</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&amp;family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#070B14}
+*{box-sizing:border-box}
+.app{font-family:'DM Sans',system-ui,sans-serif;color:#E2E8F0;background:#0B1220;width:1440px;position:relative;font-size:13px;line-height:1.35;-webkit-font-smoothing:antialiased;font-feature-settings:'tnum' 1}
+.disp{font-family:'Bricolage Grotesque','DM Sans',sans-serif;letter-spacing:-.01em}
+h2.t{margin:0;font-size:26px;font-weight:600;color:#F8FAFC}
+p.lead{margin:4px 0 0;color:#94A3B8;font-size:13.5px;max-width:980px}
+.station{position:absolute}
+.cap{display:flex;align-items:center;gap:8px;margin:0 0 10px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#94A3B8;font-weight:600}
+.cap i{width:18px;height:18px;border-radius:50%;background:#1E293B;border:1px solid #334155;color:#CBD5E1;display:grid;place-items:center;font-size:10.5px;font-weight:700;letter-spacing:0;font-family:'JetBrains Mono',monospace;flex:none}
+.cv{position:relative;border:1px solid #1E293B;border-radius:14px;background-color:#0B1220;background-image:radial-gradient(rgba(148,163,184,.14) 1px,transparent 1.2px);background-size:22px 22px;overflow:hidden}
+.node{position:absolute;width:184px;background:#111827;border:1px solid #2A3648;border-radius:10px;padding:10px}
+.node.sel{border-color:#10B981;box-shadow:0 0 0 1px #10B981,0 0 0 5px rgba(16,185,129,.16)}
+.node.dim{opacity:.4}
+.nh{display:flex;align-items:center;gap:8px;padding-right:12px}
+.ni{width:26px;height:26px;border-radius:7px;display:grid;place-items:center;flex:none;background:rgba(167,139,250,.15);color:#A78BFA}
+.nt{display:flex;flex-direction:column;min-width:0;flex:1}
+.nt b{font-weight:600;font-size:13px;color:#F1F5F9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.nt span{font-size:11px;color:#94A3B8}
+.st{width:7px;height:7px;border-radius:50%;position:absolute;right:10px;top:12px}.st.live{background:#22C55E}
+.wfw{margin:-2px -2px 8px;height:30px;border-radius:6px;background:#0B1220;border:1px solid #1E293B;overflow:hidden}
+.nm{margin-top:9px;padding-top:8px;border-top:1px solid #1E293B;font-size:11.5px;color:#94A3B8}.nm strong{color:#E2E8F0}
+.port{position:absolute;width:10px;height:10px;border-radius:50%;background:#0B1220;border:1.5px solid #64748B}.port.pr{right:-6px;top:50%;margin-top:-5px}.port.pl{left:-6px;top:50%;margin-top:-5px}
+.node.sel .port{border-color:#10B981}
+/* floating toolbar */
+.tb{position:absolute;display:flex;align-items:center;gap:2px;padding:4px;height:38px;background:rgba(30,41,59,.96);border:1px solid #334155;border-radius:10px;box-shadow:0 12px 30px rgba(0,0,0,.45)}
+.tb button{height:28px;padding:0 8px;border:0;background:transparent;color:#CBD5E1;border-radius:6px;display:inline-flex;align-items:center;gap:6px;font-size:12px;font:inherit;cursor:pointer}
+.tb button:hover,.tb button.on{background:#0B1220;color:#F8FAFC}
+.tb button.on{box-shadow:0 0 0 1px #334155 inset}
+.tb .d{width:1px;height:18px;background:#334155;margin:0 3px}
+/* picker */
+.pick{position:absolute;width:300px;background:#1E293B;border:1px solid #334155;border-radius:12px;box-shadow:0 20px 48px rgba(0,0,0,.55);padding:12px;z-index:5}
+.pick h5{margin:2px 2px 10px;font-size:13px;color:#F1F5F9;font-weight:600}
+.pgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.ptile{border:1px solid #334155;background:#0B1220;border-radius:9px;padding:7px 6px 6px;cursor:pointer;text-align:center}
+.ptile:hover{border-color:#475569}
+.ptile.cur{border-color:#10B981;box-shadow:0 0 0 1px #10B981}
+.ptile .w{height:26px;border-radius:5px;background:#111827;border:1px solid #1E293B;overflow:hidden;margin-bottom:5px}
+.ptile .l{font-size:10.5px;color:#CBD5E1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ptile.cur .l{color:#6EE7B7;font-weight:600}
+.chip{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:999px;border:1px solid rgba(16,185,129,.35);background:rgba(16,185,129,.08);color:#6EE7B7;font-size:11.5px;font-weight:600}
+.chip svg{color:#34D399}
+.note{background:#0F172A;border:1px solid #1E293B;border-radius:12px;padding:16px 18px;color:#94A3B8;font-size:12.5px;line-height:1.55}
+.note b{color:#E2E8F0}
+.mi{display:flex;align-items:center;gap:9px;height:30px;padding:0 9px;border-radius:6px;color:#E2E8F0;font-size:12.5px}
+.menu{position:absolute;background:#1E293B;border:1px solid #334155;border-radius:9px;box-shadow:0 14px 34px rgba(0,0,0,.5);padding:5px;width:168px;z-index:5}
+.mi.h{background:#0B1220}
+kbd{font-family:'JetBrains Mono',monospace;font-size:10px;color:#94A3B8;border:1px solid #334155;border-radius:3px;padding:0 3px;background:#0B1220}
+
+/* ===== Page / Offer object (funnel-native) ===== */
+.node.fam-page,.node.fam-offer{height:112px;padding:0;overflow:visible}
+.pgo{display:flex;flex-direction:column;height:100%;border-radius:inherit;overflow:hidden}
+.pgo-top{display:flex;gap:10px;flex:1;min-height:0;padding:7px 10px 0 8px}
+.pgo-win{width:68px;height:76px;flex:none;border-radius:5px;overflow:hidden;background:#F4F6FA;border:1px solid #475569;box-shadow:0 2px 6px rgba(0,0,0,.4);box-sizing:border-box}
+.pgo-chrome{height:9px;background:#E3E8F0;display:flex;align-items:center;gap:2px;padding:0 4px;border-bottom:1px solid #D4DAE6;box-sizing:border-box}
+.pgo-chrome i{width:3px;height:3px;border-radius:50%;display:block;background:#AEB7C6}
+.pgo-chrome i:nth-child(1){background:#F87171}.pgo-chrome i:nth-child(2){background:#FBBF24}.pgo-chrome i:nth-child(3){background:#34D399}
+.pgo-win svg{display:block}
+.pgo-info{min-width:0;flex:1;display:flex;flex-direction:column;justify-content:space-between;padding:1px 0 5px}
+.pgo-title{font-size:13px;font-weight:600;color:#F1F5F9;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
+.pgo-m{display:flex;flex-direction:column;gap:1px;min-width:0}
+.pgo-l{font-size:10.5px;color:#94A3B8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pgo-l strong{color:#E2E8F0;font-weight:600}
+.pgo-r{font-family:'Bricolage Grotesque',sans-serif;font-size:15px;font-weight:600;color:#F1F5F9;line-height:1.15;letter-spacing:-.01em}
+.pgo-cap{height:22px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 10px 0 8px;background:#0B1220;border-top:1px solid #1E293B}
+.pgo-ty{display:flex;align-items:center;gap:6px;font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;white-space:nowrap;min-width:0}
+.pgo-ic{width:14px;height:14px;border-radius:4px;display:grid;place-items:center;color:#fff;flex:none}
+.pgo-ic svg{width:9px;height:9px}
+.node .pgo-cap .st{position:static;flex:none}
+.node.fam-page .port,.node.fam-offer .port{width:16px;height:16px;border:2px solid #0B1220;display:grid;place-items:center;font-size:8.5px;font-weight:800;line-height:1;color:#03241A;z-index:3;box-sizing:border-box}
+.node.fam-page .port.pr,.node.fam-offer .port.pr{right:-9px;left:auto;top:50%;margin-top:-8px;background:#10B981}
+.node.fam-page .port.pr::after,.node.fam-offer .port.pr::after{content:"Y"}
+.node.fam-page .port.pb,.node.fam-offer .port.pb{left:50%;margin-left:-8px;bottom:-9px;top:auto;background:#F97316}
+.node.fam-page .port.pb::after,.node.fam-offer .port.pb::after{content:"N"}
+.node.fam-page .port.pl,.node.fam-offer .port.pl{left:-7px;top:50%;margin-top:-6px;width:12px;height:12px;background:#0B1220;border:2px solid #64748B}
+
+/* four neutral ports: the line is chosen when you connect, not by the port */
+.node.fam-page .port,.node.fam-offer .port{width:12px!important;height:12px!important;border:2px solid #64748B!important;background:#0B1220!important;font-size:0!important;box-sizing:border-box;display:block}
+.node.fam-page .port::after,.node.fam-offer .port::after{content:none!important}
+.node.fam-page .port.pr,.node.fam-offer .port.pr{right:-7px;left:auto;top:50%;margin-top:-6px}
+.node.fam-page .port.pl,.node.fam-offer .port.pl{left:-7px;top:50%;margin-top:-6px}
+.node.fam-page .port.pb,.node.fam-offer .port.pb{left:50%;margin-left:-6px;bottom:-7px;top:auto}
+.node.fam-page::before,.node.fam-offer::before{content:"";position:absolute;left:50%;top:-7px;margin-left:-6px;width:12px;height:12px;border-radius:50%;background:#0B1220;border:2px solid #64748B;box-sizing:border-box;z-index:3}
+
+/* ports appear on hover, selection or while connecting; a calm map at rest */
+.node.fam-page .port,.node.fam-offer .port,.node.fam-page::before,.node.fam-offer::before{opacity:0;transition:opacity .12s}
+.node.fam-page:hover .port,.node.fam-offer:hover .port,.node.fam-page.sel .port,.node.fam-offer.sel .port,.node.fam-page.hov .port,.node.fam-offer.hov .port,.node.fam-page.msel .port,.node.fam-offer.msel .port,.node.on-port .port,
+.node.fam-page:hover::before,.node.fam-offer:hover::before,.node.fam-page.sel::before,.node.fam-offer.sel::before,.node.fam-page.hov::before,.node.fam-offer.hov::before,.node.fam-page.msel::before,.node.fam-offer.msel::before,.node.on-port::before{opacity:1}
+</style>
+</helmet>
+<div class="app" style="height:1000px">
+  <div style="position:absolute;left:62px;top:38px;right:62px">
+    <h2 class="t disp">Change page type</h2>
+    <p class="lead">Turn a page into a different page type without deleting and rebuilding it. The block keeps its identity, position, connections, URL, thumbnail and analytics — only its type, icon, wireframe and type-specific fields change.</p>
+  </div>
+
+  <!-- STATION 1: select + change type -->
+  <div class="station" style="left:62px;top:150px;width:420px">
+    <div class="cap"><i>1</i> Select a page → Change type</div>
+    <div class="cv" style="height:300px">
+      <!-- neighbours + edges to prove connections -->
+      <div class="node dim" style="left:-70px;top:120px;width:120px;padding:8px"><div class="nh"><span class="ni" data-skin="v3" style="background:#60A5FA;color:#fff;width:30px;height:30px;border-radius:11px;box-shadow:0 0 0 1px rgba(255,255,255,.12),0 2px 6px rgba(0,0,0,.4)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11l18-5v12L3 14z"></path></svg></span><div class="nt"><b style="font-size:11px">FB ads</b></div></div></div>
+      <div class="node dim" style="right:-70px;top:120px;width:120px;padding:8px"><div class="nh"><span class="ni" data-skin="v3" style="background:#FB923C;color:#fff;width:30px;height:30px;border-radius:7px;box-shadow:0 0 0 1px rgba(255,255,255,.12),0 2px 6px rgba(0,0,0,.4)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z M3 6h18"></path></svg></span><div class="nt"><b style="font-size:11px">Checkout</b></div></div></div>
+      <svg style="position:absolute;left:0;top:0;overflow:visible" width="420" height="300"><path d="M48 150 C 90 150, 90 150, 118 150" fill="none" stroke="#334155" stroke-width="2"></path><path d="M302 150 C 340 150, 340 150, 372 150" fill="none" stroke="#334155" stroke-width="2"></path></svg>
+      <div class="node fam-page sel" style="left:118px;top:94px"><div class="pgo"><div class="pgo-top"><div class="pgo-win"><div class="pgo-chrome"><i></i><i></i><i></i></div><svg width="66" height="65" viewBox="0 0 66 65" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><rect width="66" height="65" fill="#F4F6FA"/><rect x="8" y="7" width="50" height="4" rx="1.5" fill="#334155"/><rect x="14" y="14" width="38" height="2.5" rx="1.2" fill="#AEB7C6"/><rect x="9" y="24" width="48" height="9" rx="2" fill="#fff" stroke="#CBD5E1" stroke-width="1"/><rect x="9" y="37" width="48" height="9" rx="2" fill="#fff" stroke="#CBD5E1" stroke-width="1"/><rect x="9" y="50" width="48" height="9" rx="2" fill="#8B5CF6"/></svg></div><div class="pgo-info"><div class="pgo-title">Opt-in page</div><div class="pgo-m"><span class="pgo-l">2,400 → <strong>960</strong></span></div></div></div><div class="pgo-cap"><span class="pgo-ty" style="color:#A78BFA"><span class="pgo-ic" style="background:#A78BFA"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6"></path></svg></span>Opt-in page</span><span class="st live"></span></div></div><span class="port pl"></span><span class="port pr"></span></div>
+      <div class="tb" style="left:118px;top:72px"><button><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4z"></path></svg>Edit</button><div class="d"></div><button class="on"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v6H4z M4 14h16v6H4z"></path></svg>Change type</button><button><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"></rect><path d="M5 15V5a2 2 0 0 1 2-2h10"></path></svg></button><button><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="5" cy="12" r="1.6"></circle><circle cx="12" cy="12" r="1.6"></circle><circle cx="19" cy="12" r="1.6"></circle></svg></button></div>
+    </div>
+    <div style="margin-top:12px;color:#94A3B8;font-size:12px">Also in the right-click menu and the inspector's type pill.</div>
+    <div class="menu" style="position:relative;margin-top:8px;display:inline-block;box-shadow:none;left:0"><div class="mi h"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v6H4z M4 14h16v6H4z"></path></svg>Change type…<span style="margin-left:auto;color:#64748B"><kbd>T</kbd></span></div></div>
+  </div>
+
+  <!-- STATION 2: picker -->
+  <div class="station" style="left:518px;top:150px;width:324px">
+    <div class="cap"><i>2</i> Pick the new type</div>
+    <div class="pick" style="position:relative;top:0;left:0">
+      <h5>Change page type</h5>
+      <div class="pgrid">
+        <div class="ptile cur"><div class="w"><svg width="100%" height="26" viewBox="0 0 174 30" preserveAspectRatio="none"><rect x="8" y="6" width="70" height="3.5" rx="1.5" fill="#475569"></rect><rect x="8" y="15" width="104" height="9" rx="2" fill="none" stroke="#334155"></rect><rect x="118" y="15" width="48" height="9" rx="2" fill="#A78BFA"></rect></svg></div><div class="l">Opt-in</div></div>
+        <div class="ptile"><div class="w"><svg width="100%" height="26" viewBox="0 0 174 30" preserveAspectRatio="none"><rect x="8" y="5" width="92" height="4" rx="1.5" fill="#475569"></rect><rect x="8" y="13" width="150" height="2.5" rx="1.5" fill="#334155"></rect><rect x="8" y="23" width="40" height="4" rx="2" fill="#A78BFA"></rect></svg></div><div class="l">Sales</div></div>
+        <div class="ptile"><div class="w"><svg width="100%" height="26" viewBox="0 0 174 30" preserveAspectRatio="none"><rect x="8" y="4" width="46" height="22" rx="3" fill="none" stroke="#334155"></rect><path d="M27 10l8 5-8 5z" fill="#A78BFA"></path><rect x="62" y="8" width="90" height="3.5" rx="1.5" fill="#475569"></rect></svg></div><div class="l">VSL</div></div>
+        <div class="ptile"><div class="w"><svg width="100%" height="26" viewBox="0 0 174 30" preserveAspectRatio="none"><rect x="8" y="4" width="46" height="22" rx="3" fill="none" stroke="#334155"></rect><path d="M27 10l8 5-8 5z" fill="#A78BFA"></path><rect x="62" y="16" width="22" height="10" rx="2" fill="none" stroke="#A78BFA"></rect><rect x="88" y="16" width="22" height="10" rx="2" fill="none" stroke="#334155"></rect></svg></div><div class="l">Webinar</div></div>
+        <div class="ptile"><div class="w"><svg width="100%" height="26" viewBox="0 0 174 30" preserveAspectRatio="none"><circle cx="12" cy="8" r="2.6" fill="#A78BFA"></circle><rect x="19" y="7" width="90" height="2.6" rx="1.5" fill="#475569"></rect><circle cx="12" cy="15" r="2.6" fill="none" stroke="#475569"></circle><rect x="19" y="14" width="70" height="2.6" rx="1.5" fill="#334155"></rect></svg></div><div class="l">Quiz</div></div>
+        <div class="ptile"><div class="w"><svg width="100%" height="26" viewBox="0 0 174 30" preserveAspectRatio="none"><rect x="8" y="6" width="150" height="4" rx="1.5" fill="none" stroke="#334155"></rect><rect x="8" y="14" width="150" height="4" rx="1.5" fill="none" stroke="#334155"></rect><rect x="8" y="22" width="40" height="5" rx="2" fill="#A78BFA"></rect></svg></div><div class="l">Application</div></div>
+        <div class="ptile"><div class="w"><svg width="100%" height="26" viewBox="0 0 174 30" preserveAspectRatio="none"><rect x="8" y="6" width="10" height="7" rx="1" fill="none" stroke="#334155"></rect><rect x="8" y="16" width="10" height="7" rx="1" fill="none" stroke="#334155"></rect><rect x="22" y="6" width="10" height="7" rx="1" fill="none" stroke="#334155"></rect><rect x="22" y="16" width="10" height="7" rx="1" fill="#A78BFA"></rect><rect x="112" y="8" width="52" height="3.5" rx="1.5" fill="#475569"></rect></svg></div><div class="l">Calendar</div></div>
+        <div class="ptile"><div class="w"><svg width="100%" height="26" viewBox="0 0 174 30" preserveAspectRatio="none"><circle cx="18" cy="15" r="8" fill="none" stroke="#A78BFA"></circle><path d="M14 15l3 3 5-6" stroke="#A78BFA" fill="none" stroke-width="1.6"></path><rect x="32" y="9" width="90" height="3.5" rx="1.5" fill="#475569"></rect></svg></div><div class="l">Thank-you</div></div>
+      </div>
+      <div style="margin-top:10px;color:#64748B;font-size:11px;display:flex;justify-content:space-between"><span>Type to filter · ↑↓ to move</span><span><kbd>↵</kbd> apply</span></div>
+    </div>
+  </div>
+
+  <!-- STATION 3: transformed -->
+  <div class="station" style="left:878px;top:150px;width:500px">
+    <div class="cap"><i>3</i> Transformed in place</div>
+    <div class="cv" style="height:300px">
+      <div class="node dim" style="left:-70px;top:120px;width:120px;padding:8px"><div class="nh"><span class="ni" data-skin="v3" style="background:#60A5FA;color:#fff;width:30px;height:30px;border-radius:11px;box-shadow:0 0 0 1px rgba(255,255,255,.12),0 2px 6px rgba(0,0,0,.4)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11l18-5v12L3 14z"></path></svg></span><div class="nt"><b style="font-size:11px">FB ads</b></div></div></div>
+      <div class="node dim" style="right:-70px;top:120px;width:120px;padding:8px"><div class="nh"><span class="ni" data-skin="v3" style="background:#FB923C;color:#fff;width:30px;height:30px;border-radius:7px;box-shadow:0 0 0 1px rgba(255,255,255,.12),0 2px 6px rgba(0,0,0,.4)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z M3 6h18"></path></svg></span><div class="nt"><b style="font-size:11px">Checkout</b></div></div></div>
+      <svg style="position:absolute;left:0;top:0;overflow:visible" width="500" height="300"><path d="M48 150 C 90 150, 90 150, 128 150" fill="none" stroke="#334155" stroke-width="2"></path><path d="M312 150 C 380 150, 380 150, 452 150" fill="none" stroke="#334155" stroke-width="2"></path></svg>
+      <div class="node fam-page sel" style="left:128px;top:94px"><div class="pgo"><div class="pgo-top"><div class="pgo-win"><div class="pgo-chrome"><i></i><i></i><i></i></div><svg width="66" height="65" viewBox="0 0 66 65" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><rect width="66" height="65" fill="#F4F6FA"/><rect x="6" y="5" width="54" height="21" rx="2" fill="#D9DFEA"/><path d="M6 26 L21.12 14.450000000000001 L33.0 20.119999999999997 L43.8 11.3 L60 26 Z" fill="#C3CBD9"/><circle cx="16.8" cy="10.25" r="2.6" fill="#AEB7C6"/><rect x="8" y="30" width="40" height="4" rx="1.5" fill="#334155"/><rect x="8" y="37" width="50" height="2.5" rx="1.2" fill="#AEB7C6"/><rect x="8" y="42" width="44" height="2.5" rx="1.2" fill="#AEB7C6"/><rect x="8" y="50" width="28" height="9" rx="2" fill="#8B5CF6"/></svg></div><div class="pgo-info"><div class="pgo-title">Sales page</div><div class="pgo-m"><span class="pgo-l">2,400 → <strong>960</strong></span></div></div></div><div class="pgo-cap"><span class="pgo-ty" style="color:#A78BFA"><span class="pgo-ic" style="background:#A78BFA"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5z M1 5h15v14H1z"></path></svg></span>Sales page</span><span class="st live"></span></div></div><span class="port pl"></span><span class="port pr"></span></div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px">
+      <span class="chip"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>Position kept</span>
+      <span class="chip"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>Both connections kept</span>
+      <span class="chip"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>URL &amp; thumbnail kept</span>
+      <span class="chip"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>Analytics kept</span>
+    </div>
+  </div>
+
+  <!-- note -->
+  <div class="station" style="left:62px;top:560px;width:1316px">
+    <div class="note">
+      <b>What changes:</b> type label, icon, page-type wireframe, and any type-specific Detail fields (e.g. a Webinar gains date/time; a Quiz gains question count). <b>What stays:</b> the block's id, canvas position, incoming and outgoing connections, its URL and captured thumbnail, build status, and all recorded analytics. &nbsp;·&nbsp; <b>Fields with no equivalent</b> in the new type are preserved in the block's data but hidden, so switching back restores them. &nbsp;·&nbsp; One <kbd>⌘Z</kbd> reverts the whole change. Math-neutral: conversion still flows through the same node.
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
