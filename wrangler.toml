@@ -1,0 +1,6 @@
+# Cloudflare Pages project settings. PREPARED, NOT DEPLOYED: nothing in this repository publishes anything.
+# Go-live (owner approval) steps: docs/DEVELOPER_HANDOVER.md §12.
+name = "l2f-ecosystem"
+pages_build_output_dir = "dist/web"
+compatibility_date = "2026-10-01"
+compatibility_flags = ["nodejs_compat"]

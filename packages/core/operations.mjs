@@ -4,12 +4,17 @@
 // never name a different organization than the one the database is already narrowed to.
 const ROLES = ['owner', 'admin', 'editor', 'viewer'];
 
-export const defineOperation = (op) => Object.freeze({ allowNoOrg: false, input: {}, ...op });
+import { defineOperation } from './define.mjs';
+export { defineOperation };
+
+import { funnelOperations } from './funnel-operations.mjs';
 
 export const operations = Object.freeze(Object.fromEntries([
+  ...funnelOperations,
+  defineOperation({ name: 'org.list', class: 'read', allowNoOrg: true, run: (q) => q('select org_id, name, slug, member_kind, role, is_active from my_organizations()') }),
   defineOperation({
     name: 'launcher.list', class: 'read',
-    run: (q, ctx) => q('select app_key, name, scope, launch_url from launcher_apps($1)', [ctx.orgId]),
+    run: (q, ctx) => q('select app_key, name, scope, launch_url, lifecycle from launcher_apps($1)', [ctx.orgId]),
   }),
   defineOperation({
     name: 'org.switch', class: 'write', allowNoOrg: true,
@@ -29,7 +34,7 @@ export const operations = Object.freeze(Object.fromEntries([
     name: 'invitation.create', class: 'sensitive',
     input: {
       email: { type: 'email', required: true }, kind: { type: 'enum', values: ['staff', 'client'], required: true },
-      role: { type: 'enum', values: ROLES }, client: { type: 'uuid' }, apps: { type: 'list', items: 'text', max: 20 },
+      role: { type: 'enum', values: ROLES }, client: { type: 'uuid' }, apps: { type: 'list', items: 'text', max: 20, itemMax: 40 },
     },
     run: (q, ctx, i) => q('select create_invitation($1,$2,$3,$4,$5,$6) as token', [ctx.orgId, i.email, i.kind, i.role ?? null, i.client ?? null, i.apps ?? null]),
   }),

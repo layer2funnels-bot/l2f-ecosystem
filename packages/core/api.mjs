@@ -50,7 +50,11 @@ export function createApi({ executor, logger, limiter = createRateLimiter(), ope
       if (!gate.allowed) return fail(requestId, logName, t0, { ...RATE_LIMITED, retryAfterSeconds: gate.retryAfterSeconds });
 
       try {
-        const rows = await executor.withRequest({ userId, email: request.auth.email ?? null, orgId }, (q) => op.run(q, { orgId, userId }, v.value));
+        const rows = await executor.withRequest({ userId, email: request.auth.email ?? null, orgId }, async (q) => {
+          const out = await op.run(q, { orgId, userId }, v.value);
+          if (op.single && out.length === 0) throw { code: 'PGRST116' };   // a mutation that touched nothing looks like a denied one
+          return out;
+        });
         return done(requestId, logName, t0, 200, 'ok', null, false, { ok: true, data: rows });
       } catch (err) {
         const pub = toPublicError(err);

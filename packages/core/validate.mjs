@@ -5,15 +5,19 @@ const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,255}$/;
 
 export const isUuid = (v) => typeof v === 'string' && UUID.test(v);
 
-// spec: { field: { type, required?, max?, min?, values?, items? } }; types: uuid text email int bool enum list
+// lists: max = number of items, itemMax/itemMin = size of each item.
+// spec: { field: { type, required?, max?, min?, values?, items? } }; types: uuid text email int number currency hex bool enum list
 const rules = {
   uuid: (v) => isUuid(v),
   text: (v, f) => typeof v === 'string' && v.length >= (f.min ?? 1) && v.length <= (f.max ?? 200),
   email: (v) => typeof v === 'string' && v.length <= 320 && EMAIL.test(v),
   int: (v, f) => Number.isInteger(v) && v >= (f.min ?? -2147483648) && v <= (f.max ?? 2147483647),
   bool: (v) => typeof v === 'boolean',
+  number: (v, f) => typeof v === 'number' && Number.isFinite(v) && v >= (f.min ?? 0) && v <= (f.max ?? 1e9),
+  currency: (v) => typeof v === 'string' && /^[A-Z]{3}$/.test(v),
+  hex: (v) => typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v),
   enum: (v, f) => f.values.includes(v),
-  list: (v, f) => Array.isArray(v) && v.length <= (f.max ?? 50) && v.every((x) => rules[f.items](x, f)),
+  list: (v, f) => Array.isArray(v) && v.length <= (f.max ?? 50) && v.every((x) => rules[f.items](x, { max: f.itemMax, min: f.itemMin })),
 };
 
 // Returns { ok: true, value } with only declared fields, or { ok: false, fields: [names] }.
