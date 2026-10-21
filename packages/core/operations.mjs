@@ -24,6 +24,11 @@ export const operations = Object.freeze(Object.fromEntries([
     run: (q, _ctx, i) => q('select * from resolve_org_switch($1, $2, $3)', [i.org, i.app, i.page ?? null]),
   }),
   defineOperation({
+    // what the caller may do here: organization-wide, and on the clients/projects where they hold it at that narrower scope only
+    name: 'access.mine', class: 'read',
+    run: (q) => q('select permission_key, scope, client_id, project_id from my_permissions()'),
+  }),
+  defineOperation({
     name: 'access.effective', class: 'read',
     input: { user: { type: 'uuid' }, client: { type: 'uuid' } },
     run: (q, ctx, i) => q('select permission_key, app_key, allowed, reason from effective_access($1, $2, $3)', [ctx.orgId, i.user ?? null, i.client ?? null]),

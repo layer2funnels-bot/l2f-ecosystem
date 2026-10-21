@@ -75,6 +75,14 @@ r = await post('clients.get', { id: cl.id }, { token: guest.token });
 check('E18', 'Clients: the invited editor has no client access by default (a plain not-found, no leak)', r.status === 404);
 r = await post('clients.get', { id: cl.id }, { org: A });
 check('E19', 'Clients: the other organization header cannot see it', r.status === 404);
+// scoped permissions (migration 0011): give the invited editor "Client team" on ONE client and ask what they may do
+const lvlId = (await admin.query("select id from access_levels where workspace_id=$1 and name='Client team'", [L])).rows[0].id;
+await admin.query("insert into access_assignments (workspace_id,access_level_id,principal_type,principal_id,client_id) values ($1,$2,'user',$3,$4)", [L, lvlId, guest.id, cl.id]);
+r = await post('access.mine', {}, { token: guest.token });
+const mineRows = r.body.data ?? [];
+check('E29', 'Scoped permissions: the client-scoped editor is offered edit rights on that client only, and nothing organization-wide for clients', r.status === 200 && mineRows.some((x) => x.permission_key === 'clients.client.edit' && x.scope === 'client' && x.client_id === cl.id) && !mineRows.some((x) => x.permission_key.startsWith('clients.') && x.scope === 'workspace') && new Set(mineRows.filter((x) => x.client_id).map((x) => x.client_id)).size === 1);
+r = await post('clients.get', { id: cl.id }, { token: guest.token });
+check('E30', 'Scoped permissions: and the API then really lets them open that client', r.status === 200 && r.body.data[0].id === cl.id);
 r = await post('clients.stages.list');
 check('E20', 'Clients: the five default stages are there', r.status === 200 && r.body.data.length === 5);
 
