@@ -1,0 +1,212 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Shared states</title><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Newsreader:wght@600&family=Schibsted+Grotesk:wght@700&display=swap" rel="stylesheet"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+:root{--ink:#1b1f27;--muted:#566070;--panel:#fff;--shell:#eef0f3;--line:#c9cfd8;--line-soft:#e1e5eb;
+--success:#1d5f9e;--success-tint:#e4edf7;--warn:#f5b942;--warn-text:#8a5200;--warn-tint:#fff1d6;--danger:#b3261e;--danger-tint:#fde8e6;
+--space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:24px;--space-6:32px;--space-7:48px;--space-8:64px;
+--radius-sm:6px;--radius-md:10px;--radius-lg:16px;--radius-pill:999px;
+--shadow-1:0 1px 2px rgba(16,24,40,.10),0 1px 1px rgba(16,24,40,.06);--shadow-2:0 8px 24px rgba(16,24,40,.14),0 2px 6px rgba(16,24,40,.08);
+--font-body:"Hanken Grotesk",system-ui,sans-serif;--font-display-l2f:"Schibsted Grotesk",system-ui,sans-serif;--font-display-aurj:"Newsreader",Georgia,serif}
+[data-theme=l2f]{--primary:#173a8f;--on-primary:#fff;--surface:#f5f8fd;--accent:#ff7a59;--accent-text:#b23a1b;--tint:#e3eafa;--control-border:#667391;--font-display:var(--font-display-l2f)}
+[data-theme=aurj]{--primary:#b23a08;--on-primary:#fff;--surface:#fff7ee;--accent:#4db3f0;--accent-text:#14569f;--tint:#fce7d6;--control-border:#7f6f62;--font-display:var(--font-display-aurj)}
+body{margin:0;background:var(--shell);color:var(--ink);font:400 16px/1.5 var(--font-body)}
+h1,h2,h3,h4{font-family:var(--font-display,var(--font-display-l2f));margin:0;line-height:1.2}
+h1{font-size:28px}h2{font-size:20px}h3{font-size:16px;font-family:var(--font-body);font-weight:600}h4{font:600 13px var(--font-body);color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+[data-theme=aurj] h1,[data-theme=aurj] h2{font-weight:600}
+p{margin:0}button,select,input,textarea{font:inherit;color:inherit}button{cursor:pointer}
+:focus-visible{outline:3px solid var(--primary,#173a8f);outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+svg.i{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.muted{color:var(--muted)}.fine{font-size:13px;color:var(--muted)}
+/* board chrome */
+.bb{max-width:1240px;margin:0 auto;padding:var(--space-5) var(--space-4) var(--space-3);display:flex;flex-wrap:wrap;gap:var(--space-3) var(--space-5);align-items:end;justify-content:space-between}
+.bb h1{font-family:var(--font-body);font-size:22px;font-weight:700}.bb p{color:var(--muted);font-size:14px;max-width:62ch}
+.seg{display:inline-flex;flex-wrap:wrap;gap:4px;padding:4px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-md)}
+.seg button{min-height:44px;padding:0 var(--space-3);border:0;border-radius:8px;background:transparent;font-weight:600;font-size:14px;color:var(--muted)}
+.seg button:hover{background:var(--line-soft)}
+.seg button[aria-pressed=true]{background:#173a8f;color:#fff}
+.bw{max-width:1240px;margin:0 auto;padding:0 var(--space-4) var(--space-7)}
+.note{max-width:1240px;margin:0 auto;padding:0 var(--space-4) var(--space-3)}
+.note div{background:var(--panel);border:1px solid var(--line);border-left:4px solid #173a8f;border-radius:var(--radius-md);padding:var(--space-3) var(--space-4);font-size:14px;color:var(--muted)}
+.note b{color:var(--ink)}
+/* frame, header, nav */
+.frame{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-1);overflow:clip;min-width:0;position:relative}
+.bar4{height:4px;background:var(--primary);transition:background-color .2s ease-out}
+.hdr{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2) var(--space-4);background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.iconbtn{display:inline-grid;place-items:center;width:44px;height:44px;border:0;border-radius:var(--radius-md);background:transparent;position:relative}
+.iconbtn:hover{background:var(--tint)}.iconbtn[aria-current=page]{background:var(--tint);color:var(--primary)}
+.badge{position:absolute;top:6px;right:6px;min-width:18px;height:18px;padding:0 5px;border-radius:var(--radius-pill);background:var(--primary);color:var(--on-primary);font-size:11px;font-weight:700;display:grid;place-items:center}
+.swwrap{position:relative}
+.sw{display:flex;align-items:center;gap:var(--space-3);min-height:44px;padding:4px var(--space-3) 4px 6px;border:1px solid var(--control-border);border-radius:var(--radius-md);background:var(--panel);max-width:100%}
+.sw:hover,.sw[aria-expanded=true]{background:var(--tint)}
+.mark{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;background:var(--primary);color:var(--on-primary);font:700 14px var(--font-body);flex:none}
+.sw .t{display:grid;text-align:left;line-height:1.15;min-width:0}.sw .t small{font-size:11px;color:var(--muted);letter-spacing:.02em}.sw .t strong{font-size:15px;white-space:nowrap}
+.menu{position:absolute;z-index:20;top:calc(100% + 6px);left:0;width:320px;max-width:calc(100vw - 32px);background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-2);padding:var(--space-2);opacity:0;transform:translateY(-4px);pointer-events:none;visibility:hidden;transition:opacity .14s ease-out,transform .14s ease-out,visibility 0s linear .14s}
+.menu[data-open=true]{opacity:1;transform:none;pointer-events:auto;visibility:visible;transition-delay:0s}
+.menu .mh{padding:var(--space-2) var(--space-3);font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.opt{display:flex;align-items:center;gap:var(--space-3);width:100%;min-height:56px;padding:var(--space-2) var(--space-3);border:0;background:transparent;border-radius:var(--radius-md);text-align:left}
+.opt:hover,.opt:focus-visible{background:var(--tint)}.opt .mk{width:36px;height:36px;border-radius:9px;display:grid;place-items:center;color:#fff;font-weight:700;flex:none}
+.opt .tx{display:grid;flex:1;min-width:0;line-height:1.25}.opt .tx small{color:var(--muted);font-size:13px}
+.opt .st{display:inline-flex;gap:4px;align-items:center;font-size:12px;font-weight:600;color:var(--success)}
+.mfoot{padding:var(--space-2) var(--space-3);font-size:12px;color:var(--muted);border-top:1px solid var(--line-soft);margin-top:var(--space-2)}
+.search{flex:1;min-width:160px;display:flex;align-items:center;gap:var(--space-2);height:44px;padding:0 var(--space-3);border:1px solid var(--control-border);border-radius:var(--radius-md);background:var(--panel);color:var(--muted)}
+.search input{flex:1;min-width:0;border:0;outline:0;background:transparent;color:var(--ink)}.search:focus-within{outline:3px solid var(--primary);outline-offset:2px}
+.who{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:var(--tint);color:var(--primary);font-weight:700;font-size:13px;border:1px solid var(--line)}
+@media (max-width:720px){.swwrap{order:1;flex:1}.sw{width:100%}.hdr .hide-s{display:none}.search{order:5;flex-basis:100%}
+.menu{position:fixed;left:var(--space-3);right:var(--space-3);top:auto;bottom:calc(var(--space-3) + env(safe-area-inset-bottom,0px));width:auto;max-width:none;transform:translateY(12px)}}
+.nav{display:flex;gap:2px;padding:0 var(--space-3);background:var(--panel);border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:thin}
+.nav button{min-height:44px;padding:0 var(--space-3);border:0;background:transparent;font-weight:500;color:var(--muted);border-bottom:3px solid transparent;white-space:nowrap}
+.nav button:hover{color:var(--ink);background:var(--tint)}.nav button[aria-current=page]{color:var(--primary);border-bottom-color:var(--primary);font-weight:700}
+.nav .appname{display:inline-flex;align-items:center;padding:0 var(--space-3) 0 var(--space-2);margin-right:var(--space-2);font-weight:700;border-right:1px solid var(--line-soft);min-height:44px;white-space:nowrap}
+.subnav{display:flex;gap:var(--space-2);flex-wrap:wrap;margin-bottom:var(--space-4)}
+.subnav button{min-height:44px;padding:0 var(--space-4);border:1px solid var(--line);border-radius:var(--radius-pill);background:var(--panel);font-weight:600;font-size:14px}
+.subnav button:hover{background:var(--tint)}.subnav button[aria-pressed=true]{background:var(--primary);color:var(--on-primary);border-color:var(--primary)}
+/* content parts */
+.content{padding:var(--space-5);min-height:480px;position:relative}
+.real{animation:fadein .18s ease-out}@keyframes fadein{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.crumb{font-size:13px;color:var(--muted);margin-bottom:var(--space-2)}
+.sub{color:var(--muted);margin:var(--space-1) 0 var(--space-5)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-1)}
+.pad{padding:var(--space-5)}
+.grid{display:grid;gap:var(--space-4)}.g2{grid-template-columns:repeat(2,minmax(0,1fr))}.g3{grid-template-columns:repeat(3,minmax(0,1fr))}.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.split{display:grid;gap:var(--space-4);grid-template-columns:minmax(0,2fr) minmax(0,1fr)}
+@media (max-width:900px){.g3,.g4{grid-template-columns:repeat(2,minmax(0,1fr))}.split{grid-template-columns:1fr}}
+@media (max-width:560px){.g2,.g3,.g4{grid-template-columns:1fr}.content{padding:var(--space-4)}}
+.rows{list-style:none;margin:0;padding:0}.rows li{display:flex;gap:var(--space-3);align-items:center;justify-content:space-between;padding:var(--space-3) var(--space-5);border-bottom:1px solid var(--line-soft);min-height:56px}.rows li:last-child{border-bottom:0}
+.pill{display:inline-flex;gap:4px;align-items:center;font-size:12px;font-weight:600;padding:2px 10px;border-radius:var(--radius-pill);background:var(--line-soft);color:var(--ink);white-space:nowrap}
+.pill.ok{background:var(--success-tint);color:#143f69}.pill.warn{background:var(--warn-tint);color:var(--warn-text)}.pill.bad{background:var(--danger-tint);color:#7d1a14}.pill.pri{background:var(--tint);color:var(--primary)}
+.pill svg.i{width:14px;height:14px}
+.btn{display:inline-flex;gap:var(--space-2);align-items:center;justify-content:center;min-height:44px;padding:0 var(--space-4);border-radius:var(--radius-md);border:1px solid var(--control-border);background:var(--panel);font-weight:600;text-decoration:none;color:var(--ink)}
+.btn:hover{background:var(--tint)}.btn.pri{background:var(--primary);color:var(--on-primary);border-color:var(--primary)}.btn.pri:hover{filter:brightness(1.12)}
+.btn.dng{background:var(--danger);border-color:var(--danger);color:#fff}.btn.dng:hover{filter:brightness(1.1);background:var(--danger)}
+.btn.link{border:0;background:none;color:var(--primary);text-decoration:underline;padding:0 var(--space-2)}.btn:disabled,.btn[aria-disabled=true]{opacity:.55;cursor:not-allowed}
+.acts{display:flex;gap:var(--space-2);flex-wrap:wrap}
+.notice{display:flex;gap:var(--space-3);padding:var(--space-3) var(--space-4);border-radius:var(--radius-md);margin-bottom:var(--space-4);align-items:flex-start;font-size:14px}
+.notice.info{background:var(--success-tint);color:#143f69}.notice.warn{background:var(--warn-tint);color:var(--warn-text)}.notice.err{background:var(--danger-tint);color:#7d1a14}
+.notice p{flex:1}.notice .acts{margin-left:auto}
+/* forms */
+.fld{display:grid;gap:6px;margin-bottom:var(--space-4)}.fld label,.fld .lb{font-weight:600;font-size:14px}.fld .hint{font-size:13px;color:var(--muted)}
+.fld input,.fld select,.fld textarea{min-height:44px;padding:8px 12px;border:1px solid var(--control-border);border-radius:var(--radius-md);background:#fff;width:100%}
+.fld textarea{min-height:96px;resize:vertical}.fld .err{color:#7d1a14;font-size:13px;display:flex;gap:6px;align-items:center}
+.fld input[aria-invalid=true]{border-color:var(--danger);border-width:2px}
+.chk{display:flex;gap:var(--space-3);align-items:flex-start;min-height:44px;padding:var(--space-2) 0}.chk input{width:22px;height:22px;margin-top:2px;accent-color:var(--primary)}
+/* table */
+.tbl{width:100%;border-collapse:collapse}.tbl th{text-align:left;font:600 12px var(--font-body);letter-spacing:.04em;text-transform:uppercase;color:var(--muted);padding:var(--space-3) var(--space-4);border-bottom:1px solid var(--line)}
+.tbl td{padding:var(--space-3) var(--space-4);border-bottom:1px solid var(--line-soft);vertical-align:middle}.tbl tr:last-child td{border-bottom:0}
+.tbl-wrap{overflow-x:auto}
+@media (max-width:720px){.tbl.stack thead{display:none}.tbl.stack,.tbl.stack tbody,.tbl.stack tr,.tbl.stack td{display:block}.tbl.stack tr{padding:var(--space-3) var(--space-4);border-bottom:1px solid var(--line-soft)}.tbl.stack td{border:0;padding:2px 0}.tbl.stack td[data-l]::before{content:attr(data-l)": ";color:var(--muted);font-size:13px}}
+/* dialog + toast */
+.ovl{position:fixed;inset:0;z-index:100;background:rgba(27,31,39,.5);display:grid;place-items:center;padding:var(--space-4);overflow:auto}
+.dlg{background:var(--panel);border-radius:var(--radius-lg);box-shadow:var(--shadow-2);padding:var(--space-5);max-width:500px;width:100%;color:var(--ink)}
+.dlg h2{font-family:var(--font-body);font-size:20px;font-weight:700}.dlg .bd{color:var(--muted);margin:var(--space-2) 0 var(--space-4)}.dlg .bd .fld{color:var(--ink)}
+.toast{position:fixed;left:50%;bottom:calc(var(--space-5) + env(safe-area-inset-bottom,0px));transform:translate(-50%,8px);z-index:120;background:var(--success-tint);color:#143f69;border:1px solid #9bbbd9;border-radius:var(--radius-md);padding:var(--space-3) var(--space-4);box-shadow:var(--shadow-2);display:flex;gap:var(--space-2);align-items:center;font-weight:600;opacity:0;pointer-events:none;transition:opacity .18s ease-out,transform .18s ease-out;max-width:calc(100% - 32px)}
+.toast[data-show=true]{opacity:1;transform:translate(-50%,0)}
+.skel .bar{height:14px;border-radius:var(--radius-sm);background:var(--line-soft);margin-bottom:var(--space-3);animation:pulse 1.2s ease-in-out infinite}@keyframes pulse{50%{opacity:.5}}
+.empty{text-align:center;max-width:460px;margin:var(--space-6) auto}.empty p{color:var(--muted);margin:var(--space-2) 0 var(--space-4)}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
+
+/* tabs, bottom nav (phone) */
+.tabs{display:flex;gap:var(--space-2);border-bottom:1px solid var(--line);margin-bottom:var(--space-4);overflow-x:auto;scrollbar-width:thin}
+.tabs button{min-height:44px;padding:0 var(--space-4);border:0;background:none;font-weight:600;color:var(--muted);border-bottom:3px solid transparent;white-space:nowrap}
+.tabs button:hover{color:var(--ink);background:var(--tint)}.tabs button[aria-selected=true]{color:var(--primary);border-bottom-color:var(--primary)}
+.bnav{display:none}
+@media (max-width:720px){
+ .nav.has-b{display:none}
+ .bnav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--panel);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);box-shadow:0 -2px 8px rgba(16,24,40,.08)}
+ .bnav button{flex:1;min-width:0;min-height:56px;border:0;background:none;display:grid;justify-items:center;align-content:center;gap:2px;font-size:12px;font-weight:600;color:var(--muted);padding:4px 2px}
+ .bnav button[aria-current=page]{color:var(--primary)}.bnav button[aria-current=page] svg{background:var(--tint);border-radius:var(--radius-pill);width:44px;padding:0 12px}
+ body.hasb{padding-bottom:calc(64px + env(safe-area-inset-bottom,0px))}
+}
+.bnav.mock{display:flex;position:absolute;left:0;right:0;bottom:0;box-shadow:none}
+.bnav.mock{background:var(--panel);border-top:1px solid var(--line)}
+.bnav.mock button{flex:1;min-width:0;min-height:56px;border:0;background:none;display:grid;justify-items:center;align-content:center;gap:2px;font-size:12px;font-weight:600;color:var(--muted);padding:4px 2px}
+.bnav.mock button[aria-current=page]{color:var(--primary)}.bnav.mock button[aria-current=page] svg{background:var(--tint);border-radius:var(--radius-pill);width:44px;padding:0 12px}
+
+.s{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-1);padding:var(--space-5)}
+.s>h2{font-family:var(--font-body);font-size:20px;font-weight:700}.s>.lede{color:var(--muted);margin:var(--space-1) 0 var(--space-4);max-width:70ch}
+.demo{border:1px solid var(--line);border-radius:var(--radius-md);background:#f5f8fd;padding:var(--space-4);min-height:220px;display:grid;align-content:start}
+.demo .empty{margin:var(--space-3) auto}.demo h3{font-size:17px}
+.cap{font:600 12px var(--font-body);letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:var(--space-2)}
+.rule{margin:var(--space-4) 0 0;padding-left:20px;color:var(--muted);font-size:14px}.rule li{margin-bottom:4px}
+.big{width:56px;height:56px;border-radius:50%;display:grid;place-items:center;margin:0 auto var(--space-3);background:var(--line-soft);color:var(--muted)}.big svg{width:28px;height:28px}
+details{margin-top:var(--space-2);font-size:13px;color:var(--muted)}summary{min-height:44px;display:flex;align-items:center;cursor:pointer}
+.ro .fld input,.ro .fld textarea{background:#f6f7f9;color:var(--ink)}
+.tag{display:inline-flex;gap:4px;align-items:center;font-size:12px;font-weight:600;color:#143f69}</style></head><body><div class="bb"><div><h1>6 · Shared states</h1><p>Empty, loading, error, not found (identical to no access) and read-only. These patterns are used by every app, so each one has one wording and one layout.</p></div></div>
+<div class="note"><div>Prototype. Who can do what is an <b>assumption</b> until checked against the permission catalog. See DESIGN_INDEX.md → Assumptions.</div></div><div class="bw" data-theme="l2f" id="root" style="display:grid;gap:var(--space-5)"></div><script>const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
+const P={check:'<path d="m5 12.5 4.5 4.5L19 7.5"/>',lock:'<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',warn:'<path d="M12 4 3 19h18z"/><path d="M12 10v4M12 17v.01"/>',info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.01"/>',cross:'<circle cx="12" cy="12" r="9"/><path d="m9 9 6 6M15 9l-6 6"/>',search:'<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4-4"/>',bell:'<path d="M6 17V11a6 6 0 1 1 12 0v6l1.5 2h-15z"/><path d="M10 21h4"/>',grid:'<rect x="4" y="4" width="6" height="6" rx="1.5"/><rect x="14" y="4" width="6" height="6" rx="1.5"/><rect x="4" y="14" width="6" height="6" rx="1.5"/><rect x="14" y="14" width="6" height="6" rx="1.5"/>',chev:'<path d="m7 10 5 5 5-5"/>',plus:'<path d="M12 5v14M5 12h14"/>',more:'<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',share:'<path d="M12 15V4M8 8l4-4 4 4"/><path d="M5 13v6h14v-6"/>',archive:'<rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v10h14V9M10 13h4"/>',trash:'<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>',edit:'<path d="M4 20h4L19 9l-4-4L4 16z"/>',eye:'<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',undo:'<path d="M9 7 4 12l5 5"/><path d="M4 12h10a6 6 0 0 1 0 12"/>',user:'<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/>',mail:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',ext:'<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v6H4V6h6"/>',arrow:'<path d="M5 12h14M13 6l6 6-6 6"/>',eyeoff:'<path d="M3 3l18 18"/><path d="M10 6c.6-.1 1.300-.2 2-.2 6 0 10 6.200 10 6.200s-1.200 2-3.200 3.800M6.300 7.500C3.700 9.300 2 12 2 12s4 7 10 7c1.700 0 3.200-.5 4.500-1.200"/>',key:'<circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M16 7l3 3"/>',home:'<path d="M3 11 12 4l9 7v9H3z"/>',doc:'<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/>',star:'<path d="m12 3 2.700 5.600 6.100.8-4.500 4.200 1.100 6.100L12 16.800 6.600 19.700l1.100-6.100L3.200 9.400l6.100-.8z"/>'};
+const ic=(n,c='')=>`<svg class="i ${c}" viewBox="0 0 24 24" aria-hidden="true">${P[n]||''}</svg>`;
+const ORGS={l2f:{id:'l2f',name:'Layer2Funnels',mark:'L2',color:'#173a8f',role:'Owner'},aurj:{id:'aurj',name:'Aurj',mark:'Au',color:'#b23a08',role:'Owner'}};
+let _t;function toast(m,ok=true){let t=$('#toast');if(!t){t=document.createElement('div');t.id='toast';t.className='toast';t.setAttribute('role','status');document.body.appendChild(t)}
+t.innerHTML=ic(ok?'check':'info')+'<span></span>';t.lastChild.textContent=m;t.dataset.show='true';clearTimeout(_t);_t=setTimeout(()=>t.dataset.show='false',3200)}
+function dialog({title,body,actions,wide}){const prev=document.activeElement,o=document.createElement('div');o.className='ovl';
+o.innerHTML=`<div class="dlg" role="dialog" aria-modal="true" aria-labelledby="dlt" style="${wide?'max-width:620px':''}"><h2 id="dlt">${title}</h2><div class="bd">${body}</div><div class="acts" id="dla"></div></div>`;
+document.body.appendChild(o);const close=()=>{o.remove();prev&&prev.focus&&prev.focus()};const a=$('#dla',o);
+actions.forEach(x=>{const b=document.createElement('button');b.type='button';b.className='btn '+(x.cls||'');b.textContent=x.label;b.onclick=()=>{if(x.on){const r=x.on(close,b);if(r===false)return}if(!x.keep)close()};a.appendChild(b)});
+const f=()=>$$('button,input,select,textarea,[href]',o).filter(e=>!e.disabled);
+o.onkeydown=e=>{if(e.key==='Escape'){e.stopPropagation();close()}else if(e.key==='Tab'){const l=f(),i=l.indexOf(document.activeElement);if(e.shiftKey&&i<=0){e.preventDefault();l[l.length-1].focus()}else if(!e.shiftKey&&i===l.length-1){e.preventDefault();l[0].focus()}}};
+(o.querySelector('[autofocus]')||(actions.find(x=>x.focus)?a.children[actions.findIndex(x=>x.focus)]:null)||f()[0]).focus();return close}
+function seg(el,opts,cur,on){el.className='seg';el.innerHTML=opts.map(([k,l])=>`<button type="button" data-k="${k}" aria-pressed="${k===cur}">${l}</button>`).join('');
+$$('button',el).forEach(b=>b.onclick=()=>{$$('button',el).forEach(x=>x.setAttribute('aria-pressed',x===b));on(b.dataset.k)})}
+/* shared header: launcher button, org switcher, search, bell, profile. opts:{launcherCurrent,onOrg,searchLabel} */
+function mountHeader(root,st,o={}){
+root.innerHTML=`<button class="iconbtn" aria-label="Open the app Launcher" ${o.launcherCurrent?'aria-current="page"':''} data-act="launcher">${ic('grid')}</button>
+<div class="swwrap"><button class="sw" aria-haspopup="menu" aria-expanded="false" aria-controls="menu-${root.id}"><span class="mark">${ORGS[st.org].mark}</span><span class="t"><small>Organization</small><strong>${ORGS[st.org].name}</strong></span>${ic('chev')}</button>
+<div class="menu" id="menu-${root.id}" role="menu" aria-label="Switch organization" data-open="false"></div></div>
+<label class="search">${ic('search')}<span class="sr">Search this organization</span><input type="search" placeholder="Search ${ORGS[st.org].name}" autocomplete="off"></label>
+<button class="iconbtn hide-s" aria-label="Notifications, 3 new">${ic('bell')}<span class="badge" aria-hidden="true">3</span></button><span class="who" role="img" aria-label="Your profile: Tabish Riaz">TR</span>`;
+const sw=$('.sw',root),m=$('.menu',root);
+const close=(f)=>{m.dataset.open='false';sw.setAttribute('aria-expanded','false');if(f)sw.focus()};
+sw.onclick=()=>{if(m.dataset.open==='true')return close(true);
+m.innerHTML=`<div class="mh">Your organizations</div>`+Object.values(ORGS).map(g=>`<button class="opt" role="menuitemradio" aria-checked="${g.id===st.org}" data-k="${g.id}"><span class="mk" style="background:${g.color}">${g.mark}</span><span class="tx"><strong>${g.name}</strong><small>${g.role}</small></span>${g.id===st.org?`<span class="st">${ic('check')}Current</span>`:''}</button>`).join('')+`<div class="mfoot">Switching keeps you on the same page where it exists. The full set of switch outcomes is in the approved switcher board.</div>`;
+m.dataset.open='true';sw.setAttribute('aria-expanded','true');$$('.opt',m).forEach(b=>b.onclick=()=>{close();if(b.dataset.k!==st.org)o.onOrg&&o.onOrg(b.dataset.k)});($('[aria-checked=true]',m)).focus()};
+m.onkeydown=e=>{const it=$$('.opt',m),i=it.indexOf(document.activeElement);if(e.key==='ArrowDown'){e.preventDefault();it[(i+1)%it.length].focus()}else if(e.key==='ArrowUp'){e.preventDefault();it[(i-1+it.length)%it.length].focus()}else if(e.key==='Escape'){close(true)}else if(e.key==='Tab')close()};
+document.addEventListener('click',e=>{if(m.dataset.open==='true'&&!e.target.closest('.swwrap'))close()});
+$('[data-act=launcher]',root).onclick=()=>o.onLauncher&&o.onLauncher();}
+const NI={Home:'home',Planner:'clock',Projects:'doc',Funnels:'star',Documents:'doc',Team:'user',Apps:'grid',Admin:'key',Clients:'user','Requests & Approvals':'check','SOPs & Tools':'doc',Settings:'key',Dashboard:'home',Reports:'doc',More:'more'};
+const NS={'Requests & Approvals':'Requests','SOPs & Tools':'SOPs','Documents':'Docs'};
+function nav(root,app,items,cur,on,o={}){root.innerHTML=`<span class="appname">${app}</span>`+items.map(p=>`<button type="button" data-p="${p}" ${p===cur?'aria-current="page"':''}>${p}</button>`).join('');$$('button[data-p]',root).forEach(b=>b.onclick=()=>on(b.dataset.p));
+ const fr=root.closest('.frame');if(!fr)return;$$('.bnav:not(.mock)',fr).forEach(e=>e.remove());if(o.bottom===false){return}
+ root.classList.add('has-b');document.body.classList.add('hasb');
+ const main=items.length>5?items.slice(0,4):items,more=items.length>5?items.slice(4):[],inMore=more.includes(cur);
+ const b=document.createElement('nav');b.className='bnav';b.setAttribute('aria-label',app+' sections');
+ b.innerHTML=main.map(p=>`<button type="button" data-p="${p}" ${p===cur?'aria-current="page"':''}>${ic(NI[p]||'doc')}<span>${NS[p]||p}</span></button>`).join('')+(more.length?`<button type="button" data-more="1" aria-haspopup="dialog" ${inMore?'aria-current="page"':''}>${ic('more')}<span>More</span></button>`:'');
+ fr.appendChild(b);$$('button[data-p]',b).forEach(x=>x.onclick=()=>on(x.dataset.p));
+ const mb=$('[data-more]',b);if(mb)mb.onclick=()=>{let cl;const h=more.map(p=>`<button type="button" class="btn" data-m="${p}" style="justify-content:flex-start;width:100%;margin-bottom:8px" ${p===cur?'aria-current="page"':''}>${ic(NI[p]||'doc')}${p}</button>`).join('');
+  cl=dialog({title:'More in '+app,body:h,actions:[{label:'Close',focus:1}]});$$('[data-m]',document).forEach(x=>x.onclick=()=>{cl();on(x.dataset.m)})}}
+function pageHead(crumb,title,sub,right=''){return `<div class="crumb">${crumb}</div><div style="display:flex;flex-wrap:wrap;gap:var(--space-3);justify-content:space-between;align-items:flex-start"><div><h1>${title}</h1><p class="sub">${sub}</p></div><div class="acts">${right}</div></div>`}
+const SAMPLE='Sample data, not real records.';
+const PLATE=`<svg viewBox="0 0 120 90" width="120" height="90" aria-hidden="true" style="flex:none"><g stroke="#1b1f27" stroke-opacity=".12"><path d="M60 52 100 70 60 88 20 70z" fill="#c9cfd8"/><path d="M60 38 100 56 60 74 20 56z" fill="var(--tint,#e3eafa)"/><path d="M60 24 100 42 60 60 20 42z" fill="var(--accent,#ff7a59)"/><path d="M60 10 100 28 60 46 20 28z" fill="var(--primary,#173a8f)"/></g></svg>`;
+
+
+const R=$('#root');
+const sec=(id,t,l,b,r='')=>`<section class="s" aria-labelledby="${id}"><h2 id="${id}">${t}</h2><p class="lede">${l}</p>${b}${r}</section>`;
+const skel=n=>`<div class="skel" aria-hidden="true"><div class="bar" style="width:35%;height:24px"></div>${Array.from({length:n},(_, i)=>`<div class="bar" style="width:${90-i*12}%"></div>`).join('')}</div>`;
+const nf=()=>`<div class="empty" role="status"><div class="big">${ic('search')}</div><h3>We couldn’t find that</h3><p>It may have moved, or you may not have access.</p><button class="btn pri" type="button">Go to Office Home</button></div>`;
+R.innerHTML=
+sec('a','Loading','Show the shape of what’s coming, never a blank page. Lists and cards show placeholder rows that match the final layout. After a few seconds we say so.',
+`<div class="grid g2"><div><div class="cap">Loading</div><div class="demo" id="ld"></div><div class="acts" style="margin-top:var(--space-3)"><button class="btn" id="rp">Replay</button></div></div><div><div class="cap">Taking longer than usual</div><div class="demo"><div aria-busy="true">${skel(4)}<p class="fine" role="status" style="margin-top:var(--space-3)">${ic('clock')} Still loading. This is taking longer than usual.</p><button class="btn" style="margin-top:var(--space-2)">Try again</button></div></div></div></div>`,
+`<ul class="rule"><li>Placeholders match the final layout, so nothing jumps when data arrives.</li><li>Buttons that start a save show “Saving…” and turn off, so they can’t be pressed twice.</li><li>Pulse animation stops for people who prefer reduced motion.</li></ul>`)+
+sec('b','Empty','Three kinds of empty, each with a different next step. Always say what this place is for.',
+`<div class="grid g3"><div><div class="cap">First use</div><div class="demo"><div class="empty">${PLATE}<h3>No offers yet</h3><p>Create your first offer to start building your library.</p><button class="btn pri">New offer</button></div></div></div>
+<div><div class="cap">No results</div><div class="demo"><div class="empty"><div class="big">${ic('search')}</div><h3>No matches</h3><p>Nothing matches “webinar”. Try a different word.</p><button class="btn">Clear search</button></div></div></div>
+<div><div class="cap">Nothing for you</div><div class="demo"><div class="empty"><div class="big">${ic('check')}</div><h3>Nothing needs you right now</h3><p>Approvals and reviews assigned to you show up here.</p></div></div></div></div>`,
+`<ul class="rule"><li>If you can’t create here, the button is gone and the text says who can.</li><li>3D plate stack only for first-use empty states.</li></ul>`)+
+sec('c','Error','Say what failed and what is safe. Offer a retry. No raw codes on screen.',
+`<div class="grid g3"><div><div class="cap">Page didn’t load</div><div class="demo"><div class="empty"><div class="big" style="background:var(--danger-tint);color:var(--danger)">${ic('cross')}</div><h3>We couldn’t load this</h3><p>Your work is safe. Check your connection and try again.</p><button class="btn pri">Try again</button><details><summary>Details for support</summary>Reference: e7a4-91c2</details></div></div></div>
+<div><div class="cap">Save didn’t go through</div><div class="demo"><div class="notice err" role="alert">${ic('cross')}<p><b>Couldn’t save.</b> Your changes are still here. Try again.</p><div class="acts"><button class="btn pri">Try again</button></div></div><div class="fld"><label>Summary</label><input value="Edited text stays in the field"></div></div></div>
+<div><div class="cap">You’re offline</div><div class="demo"><div class="notice warn">${ic('warn')}<p><b>You’re offline.</b> You can keep reading. We’ll save your changes when you’re back.</p></div><div class="skel" aria-hidden="true"><div class="bar" style="width:70%"></div><div class="bar" style="width:55%"></div></div></div></div></div>`,
+`<ul class="rule"><li>Errors appear next to the thing that failed, and are announced to screen readers.</li><li>Colour is never the only signal: red always comes with a cross.</li></ul>`)+
+sec('d','Not found = no access','These two screens are the same on purpose. A person must never be able to tell whether a record exists in an organization they can’t open. The database returns the same answer; the screen must too.',
+`<div class="grid g2"><div><div class="cap">A link to a record that doesn’t exist</div><div class="demo" id="n1"></div></div><div><div class="cap">A link to a record in another organization you can’t open</div><div class="demo" id="n2"></div></div></div><p style="margin-top:var(--space-3)" class="tag" id="same" role="status"></p>`,
+`<ul class="rule"><li>Same words, same layout, same speed. No “access denied”, no organization or owner names.</li><li>The link goes somewhere safe you can always open: Office Home or the Launcher.</li><li>If a page isn’t available but you do have access (like an app that’s switched off), we say why. That’s a different screen.</li></ul>`)+
+sec('e','Read-only','When you can look but not change, say so once at the top and explain each turned-off control. Never hide a control without a reason.',
+`<div id="rosel" style="margin-bottom:var(--space-3)"></div><div class="demo ro" id="rod"></div>`,
+`<ul class="rule"><li>Turned-off buttons stay visible, stay in the tab order and say why when focused.</li><li>Fields look different from editable ones, but stay readable (4.5:1 contrast).</li></ul>`);
+function load(){const d=$('#ld');d.innerHTML=`<div aria-busy="true">${skel(4)}</div>`;setTimeout(()=>d.innerHTML=`<div class="real"><h3>Quiz funnel avatars</h3><ul class="rows" style="margin:var(--space-3) 0 0"><li>Busy coach, 35–45</li><li>First-time course creator</li></ul></div>`,1800)}
+$('#rp').onclick=load;load();
+$('#n1').innerHTML=nf();$('#n2').innerHTML=nf();
+$('#same').innerHTML=$('#n1').innerHTML===$('#n2').innerHTML?ic('check')+'Checked: the two screens are identical.':'';
+const RO={viewer:['Your level is Viewer','You can look but not change. Ask an editor to make changes.'],archived:['This item is archived','Restore it to edit it.'],paused:['This organization is paused','Everything is read-only until an owner turns it back on.']};
+function ro(k){const r=RO[k];$('#rod').innerHTML=`<div class="notice info">${ic('eye')}<p><b>Read only.</b> ${r[0]}. ${r[1]}</p></div><div class="fld"><label for="r1">Name</label><input id="r1" value="Busy coach, 35–45" readonly></div><div class="fld"><label for="r2">Motivations</label><textarea id="r2" readonly>Wants steady leads and more free time.</textarea></div><div class="acts"><button class="btn pri" aria-disabled="true" aria-describedby="why" id="sv">Save</button><span class="fine" id="why">${ic('lock')} ${r[0]}.</span></div>`;$('#sv').onclick=()=>toast(r[0]+'. '+r[1],false)}
+seg($('#rosel'),[['viewer','Viewer'],['archived','Archived item'],['paused','Paused organization']],'viewer',ro);ro('viewer');
+</script></body></html>
