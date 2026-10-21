@@ -28,3 +28,13 @@ Owner approvals live in `05_Decision_Register.md`. These are technical decisions
 | D19 | Audit records actor kind; agent actions refused until Layer 2 Agents is approved | 0004 | AI & Integration rule |
 | D20 | App lifecycle: coming-soon apps show a tile and hold no data | 0004 | Agents = coming soon |
 | D21 | "Organization" in specs = `workspaces` row; table not renamed | docs | Terminology |
+
+## Owner-approved design decisions (21 Oct 2026)
+| ID | Decision |
+|---|---|
+| UX1 | One global organization switcher in every app header (replaces Phase 3 fixed labels) |
+| UX2 | Projects: Home and My Work merged into one page |
+| UX3 | Office → Documents is the Drive organization space (one store, no copy) |
+| UX4 | SOPs live once in the Drive organization space as protected documents; Clients stages and other apps link to them |
+| UX5 | Office → Admin → Access ships first with: access levels, assignments, effective-access view (groups and restriction screens later; backend already supports them) |
+| UX6 | Client Portal on its own subdomain (proposed `portal.layer2funnels.com`, `portal.aurj...` later) with its own session; ecosystem chrome stays; client brand kit appears only inside portal content |

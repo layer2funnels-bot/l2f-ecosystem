@@ -38,8 +38,8 @@ Empty · loading (skeleton) · error (plain words, retry) · offline/saving · d
 ## 6. Preserve from Phase 3
 Palettes (L2F blue #173A8F + coral; Aurj #B23A08 + sky), fonts (Hanken Grotesk, Schibsted Grotesk, Newsreader), six states, 44px targets, 3px focus ring, no colour-only status, logical CSS properties, three breakpoints.
 
-## 7. Open questions for the session
-Global switcher vs fixed label (recommend global) · merge Home/My Work in Projects · Office Documents = Drive org space · where SOPs live · how much of Admin → Access ships first (recommend: levels, assignments, effective access) · Portal domain and branding (client brand kit only inside portal content, ecosystem chrome stays).
+## 7. Decisions approved by the owner (21 Oct) — design to these
+UX1 one global org switcher in every header · UX2 Projects Home + My Work merged · UX3 Office Documents = Drive org space · UX4 SOPs live once in Drive (protected), linked from Clients stages · UX5 Admin → Access first release = levels, assignments, effective access · UX6 Portal on its own subdomain and session, ecosystem chrome, client brand kit only inside content. Full list: DECISIONS.md.
 
 ## 8. Engine constraints for design (see ENGINES.md)
 Whiteboard = Excalidraw-based canvas; Docs = TipTap-based editor; Sheets later (no xlsx import/export or live co-editing in the free tier); no Slides editor in Phase 5; no live cursors in Phase 5. Design editor shells around single-user autosave + version history.
