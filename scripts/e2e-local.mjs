@@ -63,7 +63,7 @@ check('E14', 'The new editor sees the funnel records of the organization they jo
 
 // ---- Clients data layer through real tokens (migration 0008)
 r = await post('clients.create', { name: `E2E Client ${stamp}`, business_name: 'E2E Co', status: 'active', stage: 'strategy', tags: ['e2e'] });
-const cl = r.body.data?.[0];
+const cl = r.body.data?.[0]; if (!cl) console.log('DEBUG clients.create ->', r.status, JSON.stringify(r.body));
 check('E15', 'Clients: create with profile and stage through the real stack', r.status === 200 && cl?.status === 'active' && cl?.stage_key === 'strategy');
 r = await post('clients.notes.create', { client: cl.id, body: 'e2e note' });
 check('E16', 'Clients: a team note is added (internal only)', r.status === 200 && r.body.data[0].client_id === cl.id);
@@ -77,6 +77,49 @@ r = await post('clients.get', { id: cl.id }, { org: A });
 check('E19', 'Clients: the other organization header cannot see it', r.status === 404);
 r = await post('clients.stages.list');
 check('E20', 'Clients: the five default stages are there', r.status === 200 && r.body.data.length === 5);
+
+// ---- SECURITY: the Data API is closed (migration 0010). Real tokens, real HTTP, straight at Supabase's own interface.
+const REST = process.env.STACK_REST_URL || 'http://127.0.0.1:54321/rest/v1', API_ROOT = REST.replace('/rest/v1', '');
+const direct = async (path, { method = 'GET', token, body, headers = {} } = {}) => {
+  const r = await fetch(`${API_ROOT}${path}`, { method, headers: { apikey: KEY, 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}), ...headers }, body: body ? JSON.stringify(body) : undefined });
+  const text = await r.text(); let j = null; try { j = JSON.parse(text); } catch { /* not json */ }
+  return { status: r.status, text, json: j };
+};
+const noData = (r) => !(Array.isArray(r.json) && r.json.length > 0) && !/Secret|Layer2Funnels|Aurj/.test(r.text.replace(/"message":"[^"]*"/g, ''));
+const TABLES = ['clients', 'memberships', 'workspaces', 'audit_events', 'funnel_avatars', 'client_notes', 'invitations', 'permissions', 'profiles'];
+let allDenied = true; const detail = [];
+for (const [who, token] of [['owner (member of both organizations)', owner.token], ['guest (member of one)', guest.token], ['visitor (public key only)', undefined]]) {
+  for (const t of TABLES) {
+    const r = await direct(`/rest/v1/${t}?select=*`, { token });
+    if (!(r.status === 401 || r.status === 403 || r.status === 404) || !noData(r)) { allDenied = false; detail.push(`${who} GET ${t}: ${r.status}`); }
+  }
+}
+check('E21', 'SECURITY: reading any table through the Data API with an own token (or just the public key) is refused, for people in one or both organizations', allDenied, detail.slice(0, 4).join(' | '));
+let writesDenied = true; const wd = [];
+for (const [m, path, body] of [['POST', '/rest/v1/clients', { workspace_id: L, name: 'hacked' }], ['PATCH', '/rest/v1/clients?name=eq.x', { name: 'hacked' }], ['DELETE', '/rest/v1/memberships?role=eq.owner'], ['POST', '/rest/v1/memberships', { workspace_id: A, user_id: guest.id, kind: 'staff', role: 'owner' }], ['POST', '/rest/v1/audit_events', { workspace_id: L, action: 'x', subject_type: 'x' }]]) {
+  for (const token of [owner.token, guest.token]) { const r = await direct(path, { method: m, token, body }); if (![401, 403, 404].includes(r.status)) { writesDenied = false; wd.push(`${m} ${path} ${r.status}`); } }
+}
+check('E22', 'SECURITY: no write (insert, update, delete) works through the Data API, including promoting oneself to owner of another organization', writesDenied, wd.join(' | '));
+let rpcDenied = true; const rd = [];
+for (const [fn, body] of [['launcher_apps', { p_workspace: L }], ['create_invitation', { p_workspace: L, p_email: 'x@example.com', p_kind: 'staff', p_role: 'owner' }], ['accept_invitation', { p_token: 'x' }], ['my_organizations', {}], ['effective_access', { p_workspace: L }], ['resolve_org_switch', { p_org: L, p_app: 'office' }]]) {
+  for (const token of [owner.token, guest.token, undefined]) { const r = await direct(`/rest/v1/rpc/${fn}`, { method: 'POST', token, body }); if (![401, 403, 404].includes(r.status)) { rpcDenied = false; rd.push(`${fn} ${r.status}`); } }
+}
+check('E23', 'SECURITY: none of our functions can be called through the Data API (so rate limits, typed input and the request scope cannot be skipped)', rpcDenied, rd.slice(0, 4).join(' | '));
+let r2 = await direct('/rest/v1/', { token: owner.token, headers: { 'accept-profile': 'private' } });
+let r3 = await direct('/rest/v1/api_rate_limits', { token: owner.token, headers: { 'accept-profile': 'private' } });
+check('E24', 'SECURITY: the private schema is not exposed (policy helpers, rate-limit counters)', [404, 406, 400].includes(r2.status) && [404, 406, 400].includes(r3.status), `${r2.status}/${r3.status}`);
+const gq = await direct('/graphql/v1', { method: 'POST', token: owner.token, body: { query: '{ clientsCollection { edges { node { name } } } workspacesCollection { edges { node { name } } } }' } });
+check('E25', 'SECURITY: GraphQL cannot read our tables either', !/Secret|Layer2Funnels|Aurj|E2E Client/.test(gq.text) && !(gq.json?.data && Object.values(gq.json.data).some((v) => v?.edges?.length)), gq.text.slice(0, 120));
+const priv = (await admin.query(`select
+  (select count(*) from pg_tables t where t.schemaname in ('public','private') and (has_table_privilege('authenticated', format('%I.%I', t.schemaname, t.tablename), 'select,insert,update,delete') or has_table_privilege('anon', format('%I.%I', t.schemaname, t.tablename), 'select,insert,update,delete')))::int tables,
+  (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname in ('public','private') and not exists (select 1 from pg_depend d where d.objid = p.oid and d.deptype = 'e') and (has_function_privilege('authenticated', p.oid, 'execute') or has_function_privilege('anon', p.oid, 'execute')))::int fns`)).rows[0];
+check('E26', 'SECURITY: on the real Supabase stack no table or function of ours is granted to the Data API roles', priv.tables === 0 && priv.fns === 0, JSON.stringify(priv));
+await admin.query('create table public.zz_probe_future (id int)');
+const fut = (await admin.query("select has_table_privilege('authenticated','public.zz_probe_future','select') a, has_table_privilege('anon','public.zz_probe_future','select') b")).rows[0];
+await admin.query('drop table public.zz_probe_future');
+check('E27', 'SECURITY: a table created later by the platform admin role is NOT auto-exposed to the Data API roles', !fut.a && !fut.b, JSON.stringify(fut));
+r = await post('launcher.list');
+check('E28', 'Control: the same people still work normally through our API after the lockdown', r.status === 200 && r.body.data.length > 0);
 
 await s.close(); await admin.end();
 for (const x of results) console.log(`${x.ok ? 'PASS' : 'FAIL'}  ${x.id.padEnd(4)} ${x.n}${x.ok ? '' : `  [${x.d}]`}`);

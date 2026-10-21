@@ -24,15 +24,21 @@ const mutations = {
   'CL sharing needs no permission (requests)': `drop trigger client_requests_guard on client_requests;`,
   'CL client request scope removed': `drop policy org_scope on client_profiles;`,
   'CL stage in use can be deleted': `drop trigger client_stages_in_use on client_stages;`,
+  'DA signed-in role can read tables directly (API bypass)': `grant select on public.clients to authenticated;`,
+  'DA signed-in role can write tables directly': `grant insert, update, delete on public.memberships to authenticated;`,
+  'DA signed-in role can call our functions directly': `grant execute on function public.launcher_apps(uuid) to authenticated;`,
+  'DA visitor role can read tables directly': `grant select on public.workspaces to anon;`,
+  'DA private schema exposed to the signed-in role': `grant usage on schema private to authenticated;`,
 };
+const SUITES = ['isolation', 'audit', 'authz', 'switch', 'api', 'funnels', 'funnels-api', 'clients', 'direct-access'];
 let ok = true;
 for (const [name, sql] of Object.entries(mutations)) {
-  const fails = ['test/isolation.test.mjs', 'test/audit.test.mjs', 'test/authz.test.mjs', 'test/switch.test.mjs', 'test/api.test.mjs', 'test/funnels.test.mjs', 'test/funnels-api.test.mjs', 'test/clients.test.mjs'].map(f => {
+  const fails = SUITES.map((n) => `test/${n}.test.mjs`).map(f => {
     const r = spawnSync(process.execPath, [f], { env: { ...process.env, MUTATION_SQL: sql }, encoding: 'utf8' });
     return { n: (r.stdout.match(/^FAIL/gm) || []).length, status: r.status };
   });
   const caught = fails.some(f => f.status !== 0 && f.n > 0);
   ok &&= caught;
-  console.log(`${caught ? 'CAUGHT ' : 'MISSED '} ${name}  (failing checks: isolation ${fails[0].n}, audit ${fails[1].n}, authz ${fails[2].n}, switch ${fails[3].n}, api ${fails[4].n}, funnels ${fails[5].n}, funnels-api ${fails[6].n}, clients ${fails[7].n})`);
+  console.log(`${caught ? 'CAUGHT ' : 'MISSED '} ${name}  (failing checks: ${SUITES.map((n, i) => `${n} ${fails[i].n}`).join(', ')})`);
 }
 process.exit(ok ? 0 : 1);

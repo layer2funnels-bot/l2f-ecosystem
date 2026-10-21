@@ -1,9 +1,9 @@
 // Runs one API request inside one database transaction as the signed-in user, the way PostgREST does:
 // role, JWT claims and request headers (x-org-id) are set LOCAL, so nothing survives past the transaction.
 // acquire() -> { query(sql, params) -> { rows }, release() }. Works with a pg Pool client or any single connection.
-const ROLES = new Set(['app_user', 'authenticated']);   // fixed allowlist: `set role` cannot take parameters
+const ROLES = new Set(['app_user']);   // fixed allowlist: `set role` cannot take parameters
 
-export function createPgExecutor({ acquire, role = 'authenticated' }) {
+export function createPgExecutor({ acquire, role = 'app_user' }) {
   if (!ROLES.has(role)) throw new Error('unsupported database role');
   return {
     async withRequest({ userId, email = null, orgId }, fn) {

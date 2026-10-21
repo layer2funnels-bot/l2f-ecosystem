@@ -17,7 +17,7 @@ export function createServer(env, { sink = (l) => console.log(JSON.stringify(l))
   if (!env.SUPABASE_JWT_SECRET && !env.SUPABASE_JWKS_URL) throw new Error('SUPABASE_JWT_SECRET or SUPABASE_JWKS_URL is required');
   const pool = new pg.Pool({ connectionString: env.DATABASE_URL, max: Number(env.DB_POOL_MAX ?? 5) });
   const executor = createPgExecutor({
-    role: env.DB_ROLE ?? 'authenticated',
+    role: env.DB_ROLE ?? 'app_user',   // NOT authenticated: that role has no privileges on our tables (migration 0010)
     acquire: async () => { const c = await pool.connect(); return { query: (s, p) => c.query(s, p), release: () => c.release() }; },
   });
   const logger = createSafeLogger(sink);
