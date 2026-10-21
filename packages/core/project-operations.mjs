@@ -1,0 +1,180 @@
+// Projects API operations (migration 0013): projects, tasks, checklist items, time, and "my work".
+// Same conventions as the other operation files: column names are constants (never from the request), permissions are decided by row
+// policies and triggers in the database, and a refusal reads as "not found". Data and API only: the screens come with their own design.
+import { defineOperation } from './define.mjs';
+
+const T = (max = 8000) => ({ type: 'text', min: 0, max });
+const id = { id: { type: 'uuid', required: true } };
+const like = (q) => `%${String(q).replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+const PROJECT_STATUS = ['planned', 'active', 'on_hold', 'done'];
+const TASK_STATUS = ['todo', 'doing', 'blocked', 'done'];
+
+// ------------------------------------------------------------------ projects
+const PROJECT = { name: { type: 'text', required: true, max: 200 }, description: T(8000), status: { type: 'enum', values: PROJECT_STATUS }, owner: { type: 'uuid' }, start_on: { type: 'date' }, due_on: { type: 'date' } };
+const PCOL = { name: 'name', description: 'description', status: 'status', owner: 'owner_id', start_on: 'start_on', due_on: 'due_on' };
+const PSELECT = `select p.id, p.client_id, p.name, p.description, p.status, p.owner_id, p.start_on, p.due_on, p.client_visible, p.archived_at, p.created_at, p.updated_at,
+    (select count(*)::int from project_tasks t where t.project_id = p.id and t.archived_at is null) as tasks_total,
+    (select count(*)::int from project_tasks t where t.project_id = p.id and t.archived_at is null and t.status = 'done') as tasks_done
+  from projects p`;
+
+const projectOps = [
+  defineOperation({
+    name: 'projects.list', class: 'read',
+    input: { client: { type: 'uuid' }, status: { type: 'enum', values: PROJECT_STATUS }, archived: { type: 'bool' }, q: { type: 'text', max: 100 } },
+    run: (q, _c, i) => q(`${PSELECT} where ($1::uuid is null or p.client_id = $1) and ($2::text is null or p.status = $2) and ((p.archived_at is not null) = $3)
+      and ($4::text is null or p.name ilike $4) order by p.name limit 200`, [i.client ?? null, i.status ?? null, i.archived ?? false, i.q ? like(i.q) : null]),
+  }),
+  defineOperation({ name: 'projects.get', class: 'read', single: true, input: id, run: (q, _c, i) => q(`${PSELECT} where p.id = $1`, [i.id]) }),
+  defineOperation({
+    name: 'projects.create', class: 'write', single: true, input: { ...PROJECT, client: { type: 'uuid' } },
+    run: async (q, ctx, i) => {
+      const used = Object.keys(PCOL).filter((k) => i[k] !== undefined);
+      const [r] = await q(`insert into projects (workspace_id, client_id${used.map((k) => `, ${PCOL[k]}`).join('')}) values ($1, $2${used.map((_, n) => `, $${n + 3}`).join('')}) returning id`, [ctx.orgId, i.client ?? null, ...used.map((k) => i[k])]);
+      return q(`${PSELECT} where p.id = $1`, [r.id]);
+    },
+  }),
+  defineOperation({
+    name: 'projects.update', class: 'write', single: true, input: { ...id, ...Object.fromEntries(Object.entries(PROJECT).map(([k, f]) => [k, { ...f, required: false }])) },
+    run: async (q, _c, i) => {
+      const used = Object.keys(PCOL).filter((k) => i[k] !== undefined);
+      if (used.length && !(await q(`update projects set ${used.map((k, n) => `${PCOL[k]} = $${n + 2}`).join(', ')} where id = $1 returning id`, [i.id, ...used.map((k) => i[k])])).length) return [];
+      return q(`${PSELECT} where p.id = $1`, [i.id]);
+    },
+  }),
+  defineOperation({ name: 'projects.archive', class: 'write', single: true, input: id, run: (q, _c, i) => q('update projects set archived_at = now() where id = $1 and archived_at is null returning id, archived_at', [i.id]) }),
+  defineOperation({ name: 'projects.restore', class: 'write', single: true, input: id, run: (q, _c, i) => q('update projects set archived_at = null where id = $1 and archived_at is not null returning id, archived_at', [i.id]) }),
+  defineOperation({ name: 'projects.share', class: 'write', single: true, input: { ...id, visible: { type: 'bool', required: true } }, run: (q, _c, i) => q('update projects set client_visible = $2 where id = $1 returning id, client_visible', [i.id, i.visible]) }),
+  defineOperation({ name: 'projects.delete', class: 'write', single: true, input: id, run: (q, _c, i) => q('delete from projects where id = $1 returning id', [i.id]) }),
+  defineOperation({
+    name: 'projects.overview', class: 'read',
+    run: (q) => q(`select status, count(*)::int as n from projects where archived_at is null group by status order by status`),
+  }),
+];
+
+// ------------------------------------------------------------------ tasks
+const TASK = {
+  title: { type: 'text', required: true, max: 300 }, notes: T(20000), status: { type: 'enum', values: TASK_STATUS }, priority: { type: 'enum', values: ['low', 'normal', 'high', 'urgent'] },
+  assignee: { type: 'uuid' }, due_on: { type: 'date' }, position: { type: 'int', min: 0, max: 100000 },
+};
+const TCOL = { title: 'title', notes: 'notes', status: 'status', priority: 'priority', assignee: 'assignee_id', due_on: 'due_on', position: 'position' };
+const TSELECT = `select t.id, t.project_id, t.client_id, t.title, t.notes, t.status, t.priority, t.assignee_id, t.due_on, t.position, t.completed_at, t.client_visible, t.archived_at, t.created_at, t.updated_at,
+    (select count(*)::int from task_checklist_items c where c.task_id = t.id) as checklist_total,
+    (select count(*)::int from task_checklist_items c where c.task_id = t.id and c.done) as checklist_done
+  from project_tasks t`;
+
+const taskOps = [
+  defineOperation({
+    name: 'tasks.list', class: 'read',
+    input: { project: { type: 'uuid' }, assignee: { type: 'uuid' }, status: { type: 'enum', values: TASK_STATUS }, archived: { type: 'bool' }, open_only: { type: 'bool' } },
+    run: (q, _c, i) => q(`${TSELECT} where ($1::uuid is null or t.project_id = $1) and ($2::uuid is null or t.assignee_id = $2) and ($3::text is null or t.status = $3)
+      and ((t.archived_at is not null) = $4) and (not $5 or t.status <> 'done') order by t.position, t.due_on nulls last, t.created_at limit 500`,
+    [i.project ?? null, i.assignee ?? null, i.status ?? null, i.archived ?? false, i.open_only ?? false]),
+  }),
+  defineOperation({ name: 'tasks.get', class: 'read', single: true, input: id, run: (q, _c, i) => q(`${TSELECT} where t.id = $1`, [i.id]) }),
+  defineOperation({
+    name: 'tasks.create', class: 'write', single: true, input: { project: { type: 'uuid', required: true }, ...TASK },
+    run: async (q, ctx, i) => {
+      const used = Object.keys(TCOL).filter((k) => i[k] !== undefined);
+      const [r] = await q(`insert into project_tasks (workspace_id, project_id${used.map((k) => `, ${TCOL[k]}`).join('')}) values ($1, $2${used.map((_, n) => `, $${n + 3}`).join('')}) returning id`, [ctx.orgId, i.project, ...used.map((k) => i[k])]);
+      return q(`${TSELECT} where t.id = $1`, [r.id]);
+    },
+  }),
+  defineOperation({
+    name: 'tasks.update', class: 'write', single: true, input: { ...id, ...Object.fromEntries(Object.entries(TASK).map(([k, f]) => [k, { ...f, required: false }])), clear_assignee: { type: 'bool' }, clear_due: { type: 'bool' } },
+    run: async (q, _c, i) => {
+      const used = Object.keys(TCOL).filter((k) => i[k] !== undefined);
+      const sets = used.map((k, n) => `${TCOL[k]} = $${n + 2}`);
+      if (i.clear_assignee) sets.push('assignee_id = null');
+      if (i.clear_due) sets.push('due_on = null');
+      if (sets.length && !(await q(`update project_tasks set ${sets.join(', ')} where id = $1 returning id`, [i.id, ...used.map((k) => i[k])])).length) return [];
+      return q(`${TSELECT} where t.id = $1`, [i.id]);
+    },
+  }),
+  defineOperation({ name: 'tasks.archive', class: 'write', single: true, input: id, run: (q, _c, i) => q('update project_tasks set archived_at = now() where id = $1 and archived_at is null returning id, archived_at', [i.id]) }),
+  defineOperation({ name: 'tasks.restore', class: 'write', single: true, input: id, run: (q, _c, i) => q('update project_tasks set archived_at = null where id = $1 and archived_at is not null returning id, archived_at', [i.id]) }),
+  defineOperation({ name: 'tasks.share', class: 'write', single: true, input: { ...id, visible: { type: 'bool', required: true } }, run: (q, _c, i) => q('update project_tasks set client_visible = $2 where id = $1 returning id, client_visible', [i.id, i.visible]) }),
+  defineOperation({ name: 'tasks.delete', class: 'write', single: true, input: id, run: (q, _c, i) => q('delete from project_tasks where id = $1 returning id', [i.id]) }),
+  // "My work": what is assigned to the caller, across every project they may see, in one query. The row policies decide what is visible.
+  defineOperation({
+    name: 'my.work', class: 'read', input: { limit: { type: 'int', min: 1, max: 200 } },
+    run: (q, ctx, i) => q(`select t.id, t.project_id, p.name as project_name, t.client_id, t.title, t.status, t.priority, t.due_on,
+        (t.due_on is not null and t.due_on < current_date) as overdue
+      from project_tasks t join projects p on p.workspace_id = t.workspace_id and p.id = t.project_id
+      where t.assignee_id = $1 and t.archived_at is null and p.archived_at is null and t.status <> 'done'
+      order by t.due_on nulls last, case t.priority when 'urgent' then 0 when 'high' then 1 when 'normal' then 2 else 3 end, t.created_at limit $2`, [ctx.userId, i.limit ?? 100]),
+  }),
+  // Deadlines in the next days across the projects the caller may see: tasks assigned to anyone, and projects with a due date.
+  defineOperation({
+    name: 'projects.deadlines', class: 'read', input: { days: { type: 'int', min: 1, max: 90 } },
+    run: (q, _c, i) => q(`select * from (
+        select 'task' as kind, t.id, t.title as label, t.due_on, t.project_id from project_tasks t join projects p on p.workspace_id = t.workspace_id and p.id = t.project_id
+         where t.archived_at is null and p.archived_at is null and t.status <> 'done' and t.due_on between current_date and current_date + $1::int
+        union all
+        select 'project', p.id, p.name, p.due_on, p.id from projects p where p.archived_at is null and p.status <> 'done' and p.due_on between current_date and current_date + $1::int
+      ) d order by due_on, label limit 100`, [i.days ?? 14]),
+  }),
+];
+
+// ------------------------------------------------------------------ checklist items (part of the task: same permissions, removed directly)
+const checklistOps = [
+  defineOperation({ name: 'checklist.list', class: 'read', input: { task: { type: 'uuid', required: true } }, run: (q, _c, i) => q('select id, task_id, label, done, position from task_checklist_items where task_id = $1 order by position, created_at', [i.task]) }),
+  defineOperation({
+    name: 'checklist.add', class: 'write', single: true, input: { task: { type: 'uuid', required: true }, label: { type: 'text', required: true, min: 1, max: 500 }, position: { type: 'int', min: 0, max: 100000 } },
+    run: (q, ctx, i) => q('insert into task_checklist_items (workspace_id, task_id, label, position) values ($1, $2, $3, $4) returning id, task_id, label, done, position', [ctx.orgId, i.task, i.label, i.position ?? 0]),
+  }),
+  defineOperation({
+    name: 'checklist.update', class: 'write', single: true, input: { ...id, label: { type: 'text', min: 1, max: 500 }, done: { type: 'bool' }, position: { type: 'int', min: 0, max: 100000 } },
+    run: (q, _c, i) => q('update task_checklist_items set label = coalesce($2, label), done = coalesce($3, done), position = coalesce($4, position) where id = $1 returning id, task_id, label, done, position', [i.id, i.label ?? null, i.done ?? null, i.position ?? null]),
+  }),
+  defineOperation({ name: 'checklist.delete', class: 'write', single: true, input: id, run: (q, _c, i) => q('delete from task_checklist_items where id = $1 returning id', [i.id]) }),
+];
+
+// ------------------------------------------------------------------ time (the database clock starts and stops timers)
+const ESELECT = `select e.id, e.project_id, e.client_id, e.task_id, e.user_id, e.started_at, e.ended_at, e.note, e.billable, e.archived_at,
+    case when e.ended_at is null then null else extract(epoch from (e.ended_at - e.started_at))::int end as seconds from time_entries e`;
+const timeOps = [
+  defineOperation({
+    name: 'time.list', class: 'read',
+    input: { project: { type: 'uuid' }, task: { type: 'uuid' }, user: { type: 'uuid' }, from: { type: 'date' }, to: { type: 'date' }, archived: { type: 'bool' } },
+    run: (q, _c, i) => q(`${ESELECT} where ($1::uuid is null or e.project_id = $1) and ($2::uuid is null or e.task_id = $2) and ($3::uuid is null or e.user_id = $3)
+      and ($4::date is null or e.started_at >= $4::date) and ($5::date is null or e.started_at < $5::date + 1) and ((e.archived_at is not null) = $6)
+      order by e.started_at desc limit 500`, [i.project ?? null, i.task ?? null, i.user ?? null, i.from ?? null, i.to ?? null, i.archived ?? false]),
+  }),
+  defineOperation({ name: 'time.running', class: 'read', run: (q, ctx) => q(`${ESELECT} where e.user_id = $1 and e.ended_at is null and e.archived_at is null`, [ctx.userId]) }),
+  defineOperation({
+    name: 'time.start', class: 'write', single: true, input: { project: { type: 'uuid', required: true }, task: { type: 'uuid' }, note: T(500), billable: { type: 'bool' } },
+    run: (q, ctx, i) => q('insert into time_entries (workspace_id, project_id, task_id, user_id, note, billable) values ($1,$2,$3,$4,$5,$6) returning id, project_id, task_id, user_id, started_at, ended_at, note, billable',
+      [ctx.orgId, i.project, i.task ?? null, ctx.userId, i.note ?? null, i.billable ?? true]),
+  }),
+  defineOperation({
+    name: 'time.stop', class: 'write', single: true, input: { note: T(500) },
+    run: (q, ctx, i) => q(`update time_entries set ended_at = now(), note = coalesce($2, note) where user_id = $1 and ended_at is null and archived_at is null
+      returning id, project_id, task_id, user_id, started_at, ended_at, note, billable`, [ctx.userId, i.note ?? null]),
+  }),
+  defineOperation({
+    // a finished entry typed in by hand (for yourself; for someone else it needs projects.time.edit)
+    name: 'time.log', class: 'write', single: true,
+    input: { project: { type: 'uuid', required: true }, task: { type: 'uuid' }, user: { type: 'uuid' }, started_at: { type: 'timestamp', required: true }, ended_at: { type: 'timestamp', required: true }, note: T(500), billable: { type: 'bool' } },
+    run: (q, ctx, i) => q('insert into time_entries (workspace_id, project_id, task_id, user_id, started_at, ended_at, note, billable) values ($1,$2,$3,$4,$5,$6,$7,$8) returning id, project_id, task_id, user_id, started_at, ended_at, note, billable',
+      [ctx.orgId, i.project, i.task ?? null, i.user ?? ctx.userId, i.started_at, i.ended_at, i.note ?? null, i.billable ?? true]),
+  }),
+  defineOperation({
+    name: 'time.update', class: 'write', single: true,
+    input: { ...id, started_at: { type: 'timestamp' }, ended_at: { type: 'timestamp' }, note: T(500), billable: { type: 'bool' }, task: { type: 'uuid' } },
+    run: (q, _c, i) => q(`update time_entries set started_at = coalesce($2, started_at), ended_at = coalesce($3, ended_at), note = coalesce($4, note), billable = coalesce($5, billable), task_id = coalesce($6, task_id)
+      where id = $1 returning id, project_id, task_id, user_id, started_at, ended_at, note, billable`, [i.id, i.started_at ?? null, i.ended_at ?? null, i.note ?? null, i.billable ?? null, i.task ?? null]),
+  }),
+  defineOperation({ name: 'time.archive', class: 'write', single: true, input: id, run: (q, _c, i) => q('update time_entries set archived_at = now() where id = $1 and archived_at is null returning id, archived_at', [i.id]) }),
+  defineOperation({ name: 'time.restore', class: 'write', single: true, input: id, run: (q, _c, i) => q('update time_entries set archived_at = null where id = $1 and archived_at is not null returning id, archived_at', [i.id]) }),
+  defineOperation({ name: 'time.delete', class: 'write', single: true, input: id, run: (q, _c, i) => q('delete from time_entries where id = $1 returning id', [i.id]) }),
+  defineOperation({
+    // hours per person and project for a period (what the policies let the caller see)
+    name: 'time.summary', class: 'read', input: { project: { type: 'uuid' }, from: { type: 'date', required: true }, to: { type: 'date', required: true } },
+    run: (q, _c, i) => q(`select e.project_id, e.user_id, sum(extract(epoch from (e.ended_at - e.started_at)))::int as seconds,
+        sum(case when e.billable then extract(epoch from (e.ended_at - e.started_at)) else 0 end)::int as billable_seconds
+      from time_entries e where e.ended_at is not null and e.archived_at is null and ($1::uuid is null or e.project_id = $1)
+        and e.started_at >= $2::date and e.started_at < $3::date + 1 group by e.project_id, e.user_id order by seconds desc`, [i.project ?? null, i.from, i.to]),
+  }),
+];
+
+export const projectsOperations = [...projectOps, ...taskOps, ...checklistOps, ...timeOps];

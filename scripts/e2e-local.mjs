@@ -129,6 +129,28 @@ check('E27', 'SECURITY: a table created later by the platform admin role is NOT 
 r = await post('launcher.list');
 check('E28', 'Control: the same people still work normally through our API after the lockdown', r.status === 200 && r.body.data.length > 0);
 
+
+// ---- Projects data layer through real tokens (migration 0013)
+r = await post('projects.create', { name: `E2E Project ${stamp}`, client: cl.id });
+const pj = r.body.data?.[0];
+check('E31', 'Projects: an owner creates a project for a client, then a task with a checklist item, through the real stack', r.status === 200 && pj?.client_id === cl.id
+  && (r = await post('tasks.create', { project: pj.id, title: 'E2E task', assignee: owner.id, due_on: '2026-12-01' })).status === 200 && r.body.data[0].client_id === cl.id
+  && (await post('checklist.add', { task: r.body.data[0].id, label: 'step' })).status === 200);
+const tk = r.body.data?.[0];
+r = await post('my.work');
+check('E32', 'Projects: my.work lists the task assigned to the caller, with its project name', r.status === 200 && r.body.data.some((x) => x.id === tk.id && x.project_name === pj.name));
+r = await post('time.start', { project: pj.id, task: tk.id });
+const t0 = Date.now(); const startedAt = new Date(r.body.data?.[0]?.started_at).getTime();
+check('E33', 'Projects: a timer starts on the server clock (within seconds of now) and a second one is refused as a conflict', r.status === 200 && Math.abs(t0 - startedAt) < 20000 && (await post('time.start', { project: pj.id })).status === 409);
+r = await post('time.stop', { note: 'e2e' });
+check('E34', 'Projects: stopping it records the end by the server clock', r.status === 200 && new Date(r.body.data[0].ended_at) > new Date(r.body.data[0].started_at));
+r = await post('tasks.get', { id: tk.id }, { token: guest.token });
+check('E35', 'Projects: the invited editor (no project level) cannot read the task: a plain not-found', r.status === 404);
+r = await post('projects.get', { id: pj.id }, { org: A });
+check('E36', 'Projects: the other organization header cannot see the project', r.status === 404);
+const directP = await Promise.all(['projects', 'project_tasks', 'task_checklist_items', 'time_entries'].map((t) => fetch(`http://127.0.0.1:54321/rest/v1/${t}?select=id`, { headers: { apikey: KEY, authorization: `Bearer ${owner.token}` } }).then(async (x) => ({ t, status: x.status, rows: x.ok ? (await x.json()).length : 0 }))));
+check('E37', 'SECURITY: the Data API shows no project, task, checklist or time row to a signed-in owner (only our API can)', directP.every((d) => d.status >= 400 || d.rows === 0), JSON.stringify(directP));
+
 await s.close(); await admin.end();
 for (const x of results) console.log(`${x.ok ? 'PASS' : 'FAIL'}  ${x.id.padEnd(4)} ${x.n}${x.ok ? '' : `  [${x.d}]`}`);
 const p = results.filter((x) => x.ok).length; console.log(`\n${p}/${results.length} checks passed`); process.exit(p === results.length ? 0 : 1);

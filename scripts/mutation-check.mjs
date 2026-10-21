@@ -31,11 +31,17 @@ const mutations = {
   'DA private schema exposed to the signed-in role': `grant usage on schema private to authenticated;`,
   'PS permissions list ignores the decision (offers every client)': `create or replace function public.my_permissions() returns table (permission_key text, scope text, client_id uuid, project_id uuid) language sql stable security definer set search_path='' as $$ select p.key, 'client'::text, c.id, null::uuid from public.permissions p cross join public.clients c where 'client' = any (p.scopes) and private.is_staff(c.workspace_id) $$; grant execute on function public.my_permissions() to app_user;`,
   'PS permissions list shows hidden scope (organization-wide for everyone)': `create or replace function public.my_permissions() returns table (permission_key text, scope text, client_id uuid, project_id uuid) language sql stable security definer set search_path='' as $$ select p.key, 'workspace'::text, null::uuid, null::uuid from public.permissions p where private.is_staff(coalesce(nullif(private.request_org(),'')::uuid, '00000000-0000-0000-0000-000000000000')) $$; grant execute on function public.my_permissions() to app_user;`,
+  'PJ guard removed: the client of a task comes from the caller': `drop trigger project_tasks_guard on project_tasks;`,
+  'PJ client contact can read time entries': `create policy time_entries_leak on time_entries for select using (private.client_of(workspace_id, client_id));`,
+  'PJ everyone with the app sees all time': `create policy time_entries_all on time_entries for select using (private.can_use_app(workspace_id, 'projects'));`,
+  'PJ timer start time trusted from the caller': `drop trigger time_entries_guard on time_entries;`,
+  'PJ archive-before-delete removed on tasks': `drop trigger project_tasks_refuse_delete on project_tasks;`,
+  'PJ organization scope removed on tasks': `drop policy org_scope on project_tasks;`,
   'SH last-owner guard removed': `drop trigger memberships_last_owner on public.memberships;`,
   'SH member admin skips the owner and role checks': `create or replace function private.member_target(p_user uuid, p_new_role text) returns uuid language plpgsql stable security definer set search_path='' as $$ begin return private.request_org()::uuid; end $$;`,
   'SH invitation preview ignores whose e-mail it was sent to': `create or replace function public.invitation_preview(p_token text) returns table (org_name text, org_slug text, kind text, role text, inviter_name text, email text) language sql stable security definer set search_path='' as $$ select w.name, w.slug, i.kind, i.role, 'x', i.email from public.invitations i join public.workspaces w on w.id = i.workspace_id where i.token_hash = encode(sha256(convert_to(coalesce(p_token,''),'UTF8')),'hex') $$; grant execute on function public.invitation_preview(text) to app_user;`,
 };
-const SUITES = ['isolation', 'audit', 'authz', 'switch', 'api', 'funnels', 'funnels-api', 'clients', 'direct-access', 'permissions-scope', 'shell-admin'];
+const SUITES = ['isolation', 'audit', 'authz', 'switch', 'api', 'funnels', 'funnels-api', 'clients', 'direct-access', 'permissions-scope', 'shell-admin', 'projects'];
 let ok = true;
 for (const [name, sql] of Object.entries(mutations)) {
   const fails = SUITES.map((n) => `test/${n}.test.mjs`).map(f => {
