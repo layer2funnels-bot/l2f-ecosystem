@@ -1,6 +1,6 @@
 // Auth screens (design 02): sign in, sign up, check email, reset request, new password, accept invitation, no workspace yet, session expired.
 // Before sign-in there is no organization, so the shell is neutral. Creating an account never grants access to anything by itself.
-import { h, clear, icon, field, passwordField, notice, btn, link, dialog, toast, plate, roleLabel, orgMark, orgColor } from '../ui.js';
+import { h, clear, icon, field, passwordField, notice, btn, link, dialog, toast, plate, roleLabel, orgMark, orgColor, orgInk } from '../ui.js';
 import { MIN_PASSWORD, isEmail } from '../gotrue.js';
 
 const brand = () => h('div', { class: 'brand' }, (() => { const p = plate(); p.setAttribute('width', '44'); p.setAttribute('height', '33'); return p; })(), h('span', {}, 'Layer2Funnels + Aurj'));
@@ -115,9 +115,9 @@ export function inviteView({ app, token, preview, email }) {
   const accept = btn('Accept invitation', async (e) => { const b = e.currentTarget; busy(b, true); const bad = await app.acceptInvitation(token); if (bad) { busy(b, false, 'Accept invitation'); toast(bad, false); } }, 'pri');
   const decline = btn('Decline', () => dialog({ title: 'Decline this invitation?', body: h('p', {}, `You won’t be added to ${org.name}. An owner can send a new invitation later.`),
     actions: [{ label: 'Decline invitation', cls: 'dng', on: async () => { const bad = await app.declineInvitation(token); toast(bad ?? 'Invitation declined.', !bad); } }, { label: 'Keep it', focus: true }] }));
-  return h('div', { class: 'authwrap', 'data-theme': org.slug === 'aurj' ? 'aurj' : 'l2f' }, h('main', { class: 'auth real', id: 'main' }, brand(), card(
+  return h('div', { class: 'authwrap', 'data-org': org.slug === 'aurj' ? 'aurj' : 'l2f' }, h('main', { class: 'auth real', id: 'main' }, brand(), card(
     h('div', { style: 'display:flex;gap:var(--space-3);align-items:center;margin-bottom:var(--space-4)' },
-      h('span', { class: 'mark', style: `width:48px;height:48px;font-size:18px;border-radius:12px;background:${orgColor(org)}` }, orgMark(org)),
+      h('span', { class: 'mark', style: `width:48px;height:48px;font-size:18px;border-radius:12px;background:${orgColor(org)};color:${orgInk(org)}` }, orgMark(org)),
       h('div', {}, h('div', { class: 'fine' }, 'Invitation'), h('h1', { 'data-page-title': true, style: 'font-size:22px' }, `Join ${org.name}`))),
     h('p', {}, `${preview.inviter_name || 'An owner'} invited you to join `, h('b', {}, org.name), preview.kind === 'client' ? ' as a client.' : [' as ', h('b', {}, `${/^[aeiou]/i.test(roleLabel(preview.role)) ? 'an' : 'a'} ${roleLabel(preview.role)}`), '.']),
     notice('info', 'info', ['Signed in as ', h('b', {}, email), `. This invitation was sent to that email. Accepting adds you to ${org.name} only.`]),

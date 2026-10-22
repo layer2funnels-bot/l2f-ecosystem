@@ -36,7 +36,7 @@ const shot = (p, n) => p.screenshot({ path: `${SHOTS}/${n}.png`, fullPage: true 
 const h1 = (p = page) => p.locator('h1').first().innerText();
 const wait = (t, p = page) => p.waitForSelector(`text=${t}`, { timeout: 9000 }).catch(async (e) => { await shot(p, 'FAILED'); console.log(`--- waiting for "${t}"; page text ---\n` + (await p.locator('body').innerText()).slice(0, 700) + '\n--- problems: ' + problems.slice(0, 3).join(' | ') + '\n--- api errors: ' + net.slice(-6).join(' | ')); throw e; });
 const toastText = (p = page) => p.locator('.toast[data-show=true]').innerText();
-const theme = (p = page) => p.getAttribute('html', 'data-theme');
+const theme = (p = page) => p.getAttribute('html', 'data-org');
 const inMenu = async (p, name) => { await p.click('#org-switcher'); await p.locator('#org-menu .opt', { hasText: name }).click(); };
 // a hash-only change does not reload; visit() always shows the screen fresh
 const visit = async (p, url) => { await p.goto(url); await p.reload(); };

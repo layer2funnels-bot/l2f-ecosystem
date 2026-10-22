@@ -1,0 +1,37 @@
+{
+  "id": "drive",
+  "name": "Drive",
+  "description": "Files, SOPs and templates",
+  "group": "Everyday",
+  "plate": {
+    "colors": [
+      "#A898FF",
+      "#6B4FF0",
+      "#4729B5"
+    ],
+    "glyph": "#FFFEFA",
+    "icon": "drive"
+  },
+  "routes": "/drive/*",
+  "orgs": [
+    "layer2funnels",
+    "aurj"
+  ],
+  "permissionPrefix": [
+    "drive"
+  ],
+  "grantRequired": true,
+  "status": "building",
+  "embeds": [],
+  "reuses": [
+    "storage"
+  ],
+  "searchTypes": [
+    "file",
+    "folder",
+    "doc"
+  ],
+  "storage": "storage-adapter",
+  "ai": false,
+  "integrations": []
+}

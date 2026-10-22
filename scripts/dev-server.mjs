@@ -6,6 +6,7 @@ import { readFileSync } from 'node:fs';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createServer } from '../packages/core/server.mjs';
+import { loadManifests } from '../packages/core/manifests.mjs';
 
 const root = fileURLToPath(new URL('../apps/web/', import.meta.url));
 const ui = fileURLToPath(new URL('../packages/ui/', import.meta.url));
@@ -29,6 +30,7 @@ export async function startDevServer({ port = 8788, env = { ...LOCAL_ENV, ...pro
         const r = await server.handle(new Request(url, { method: req.method, headers: req.headers, body: ['GET', 'HEAD'].includes(req.method) ? undefined : Buffer.concat(chunks) }));
         res.writeHead(r.status, Object.fromEntries(r.headers)); res.end(Buffer.from(await r.arrayBuffer())); return;
       }
+      if (url.pathname === '/app-manifests.json') { res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' }); res.end(JSON.stringify(loadManifests().map(({ dir, ...m }) => m))); return; }
       // /packages/* is shared browser code (tokens, core modules); everything else comes from apps/web, SPA fallback to index.html
       const [base, rel] = url.pathname.startsWith('/packages/ui/') ? [ui, url.pathname.slice(13)] : url.pathname.startsWith('/packages/core/') ? [core, url.pathname.slice(15)] : [root, url.pathname];
       let file = normalize(join(base, rel)); if (!file.startsWith(base)) { res.writeHead(404).end(); return; }

@@ -1,0 +1,30 @@
+{
+  "id": "funnel_mapper_pro",
+  "name": "Funnel Mapper Pro",
+  "description": "Map, model and forecast",
+  "group": "Studio",
+  "plate": {
+    "colors": [
+      "#5CE6B2",
+      "#10B981",
+      "#087850"
+    ],
+    "glyph": "#FFFEFA",
+    "icon": "funnel_mapper_pro"
+  },
+  "routes": "/fmp/*",
+  "orgs": [
+    "layer2funnels",
+    "aurj"
+  ],
+  "permissionPrefix": [],
+  "grantRequired": true,
+  "status": "building",
+  "embeds": [],
+  "reuses": [],
+  "searchTypes": [],
+  "storage": "own-database",
+  "ai": false,
+  "integrations": [],
+  "codeDir": "apps/funnel-mapper"
+}

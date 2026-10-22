@@ -1,0 +1,38 @@
+{
+  "id": "forms",
+  "name": "Form Builder",
+  "description": "Forms, quizzes and intake",
+  "group": "Studio",
+  "plate": {
+    "colors": [
+      "#FFBE6E",
+      "#F07C1A",
+      "#AE520A"
+    ],
+    "glyph": "#FFFEFA",
+    "icon": "forms"
+  },
+  "routes": "/forms/*",
+  "orgs": [
+    "layer2funnels",
+    "aurj"
+  ],
+  "permissionPrefix": [
+    "forms"
+  ],
+  "grantRequired": true,
+  "status": "soon",
+  "embeds": [
+    "clients"
+  ],
+  "reuses": [
+    "clients",
+    "drive"
+  ],
+  "searchTypes": [
+    "form"
+  ],
+  "storage": "storage-adapter",
+  "ai": false,
+  "integrations": []
+}

@@ -1,40 +1,80 @@
 /* GENERATED from tokens.json by scripts/build-tokens.mjs. Do not edit by hand. */
-:root, [data-theme="l2f"] {
-  --primary: #173a8f;
-  --on-primary: #ffffff;
-  --surface: #f5f8fd;
-  --accent: #ff7a59;
-  --on-accent: #1b1f27;
-  --accent-text: #b23a1b;
-  --tint: #e3eafa;
-  --control-border: #667391;
-  --ink: #1b1f27;
-  --muted: #566070;
-  --panel: #ffffff;
-  --shell: #eef0f3;
-  --line: #c9cfd8;
-  --line-soft: #e1e5eb;
-  --success: #1d5f9e;
-  --success-tint: #e4edf7;
-  --warn: #f5b942;
-  --warn-text: #8a5200;
-  --warn-tint: #fff1d6;
-  --danger: #b3261e;
-  --danger-tint: #fde8e6;
-  --font-display: var(--font-display-l2f);
+:root,
+:root[data-theme="light"] {
+  --bg: #F3F1EB;
+  --surface: #FFFEFA;
+  --surface2: #F8F6F1;
+  --sunk: #ECE9E1;
+  --line: rgba(28,24,14,.09);
+  --line2: rgba(28,24,14,.18);
+  --control: #7D8190;
+  --text: #16171B;
+  --text2: #4A4E59;
+  --muted: #626674;
+  --warn: #8A5200;
+  --warn-tint: #FFF0D2;
+  --danger: #BA3126;
+  --danger-tint: #FCE8E4;
+  --ok: #1F6B45;
+  --ok-tint: #E3F4EA;
+  --brand: #FFC633;
+  --brand-ink: #1C1504;
+  --brand-deep: #C98F00;
+  --action: #295FF0;
+  --action-ink: #F7F9FF;
+  --action-tint: rgba(43,99,246,.1);
 }
-[data-theme="aurj"] {
-  --primary: #b23a08;
-  --on-primary: #ffffff;
-  --surface: #fff7ee;
-  --accent: #4db3f0;
-  --on-accent: #1b1f27;
-  --accent-text: #14569f;
-  --tint: #fce7d6;
-  --control-border: #7f6f62;
-  --font-display: var(--font-display-aurj);
+:root[data-theme="dark"] {
+  --bg: #0C0D10;
+  --surface: #15171C;
+  --surface2: #111317;
+  --sunk: #1D2026;
+  --line: rgba(255,255,255,.075);
+  --line2: rgba(255,255,255,.15);
+  --control: #7C8190;
+  --text: #EEEEEA;
+  --text2: #ABAFB9;
+  --muted: #8A8F9B;
+  --warn: #FFC266;
+  --warn-tint: rgba(255,184,77,.12);
+  --danger: #FF8577;
+  --danger-tint: rgba(255,106,90,.13);
+  --ok: #6FD39A;
+  --ok-tint: rgba(111,211,154,.12);
+  --brand: #FFC633;
+  --brand-ink: #1C1504;
+  --brand-deep: #C98F00;
+  --action: #7398FF;
+  --action-ink: #06132F;
+  --action-tint: rgba(115,152,255,.14);
+}
+:root[data-org="aurj"],
+:root[data-org="aurj"][data-theme="light"] {
+  --bg: #F6F0EB;
+  --surface: #FFFCF9;
+  --surface2: #FAF5F0;
+  --sunk: #EFE6DF;
+  --brand: #B0305A;
+  --brand-ink: #FFF6F2;
+  --brand-deep: #7E1C3D;
+  --action: #0A7388;
+  --action-ink: #F2FCFE;
+  --action-tint: rgba(12,127,149,.11);
+}
+:root[data-org="aurj"][data-theme="dark"] {
+  --bg: #110C0F;
+  --surface: #1A1317;
+  --surface2: #140F12;
+  --sunk: #251C21;
+  --brand: #E0638A;
+  --brand-ink: #1A0A10;
+  --brand-deep: #A83A60;
+  --action: #4CC6DC;
+  --action-ink: #04262D;
+  --action-tint: rgba(76,198,220,.14);
 }
 :root {
+  color-scheme: light;
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -49,18 +89,33 @@
   --radius-pill: 999px;
   --shadow-1: 0 1px 2px rgba(16,24,40,.10), 0 1px 1px rgba(16,24,40,.06);
   --shadow-2: 0 8px 24px rgba(16,24,40,.14), 0 2px 6px rgba(16,24,40,.08);
-  --font-body: "Hanken Grotesk", system-ui, sans-serif;
-  --font-display-l2f: "Schibsted Grotesk", system-ui, sans-serif;
-  --font-display-aurj: "Newsreader", Georgia, serif;
-  --focus-ring: 0 0 0 3px var(--primary);
+  --r-sm: 10px;
+  --r: 14px;
+  --r-lg: 22px;
+  --sh1: 0 1px 2px rgba(20,16,6,.07);
+  --sh2: 0 2px 6px rgba(20,16,6,.07), 0 10px 28px rgba(20,16,6,.07);
+  --sh3: 0 8px 20px rgba(20,16,6,.12), 0 28px 64px rgba(20,16,6,.16);
+  --e-out: cubic-bezier(.22,1,.36,1);
+  --e-spring: cubic-bezier(.34,1.56,.64,1);
+  --font: "Geist", system-ui, sans-serif;
+  --font-d: "Bricolage Grotesque", system-ui, sans-serif;
+  --mono: "Geist Mono", ui-monospace, monospace;
+  --urdu: "Noto Nastaliq Urdu", serif;
+  --focus-ring: 0 0 0 3px var(--action);
   --target-min: 44px;
   --motion-fast: 120ms;
   --motion-base: 200ms;
-  --ease: cubic-bezier(.2,.0,.2,1);
+  --ease: var(--e-out);
   --z-sticky: 10;
   --z-menu: 100;
   --z-dialog: 200;
   --z-toast: 300;
-  /* breakpoints (use in media queries): tablet <= 900px, mobile <= 600px */
+  /* breakpoints (use in media queries): phone <= 600px, tablet <= 900px */
+  /* compatibility names used by screens built before v4; new code uses the v4 names above */
+  --primary: var(--action); --on-primary: var(--action-ink); --accent: var(--brand); --on-accent: var(--brand-ink); --accent-text: var(--brand-deep);
+  --tint: var(--action-tint); --control-border: var(--control); --ink: var(--text); --panel: var(--surface); --shell: var(--bg);
+  --success: var(--ok); --success-tint: var(--ok-tint); --warn-text: var(--warn); --line-soft: var(--line);
+  --font-body: var(--font); --font-display: var(--font-d);
 }
+:root[data-theme="dark"] { color-scheme: dark; }
 @media (prefers-reduced-motion: reduce) { :root { --motion-fast: 0ms; --motion-base: 0ms; } }

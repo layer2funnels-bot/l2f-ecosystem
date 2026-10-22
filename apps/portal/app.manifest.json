@@ -1,0 +1,34 @@
+{
+  "id": "portal",
+  "name": "Client Portal",
+  "description": "What your clients will see",
+  "group": "Everyday",
+  "plate": {
+    "colors": [
+      "#5FDCCB",
+      "#13A592",
+      "#0A7064"
+    ],
+    "glyph": "#FFFEFA",
+    "icon": "portal"
+  },
+  "routes": "/portal/*",
+  "orgs": [
+    "layer2funnels",
+    "aurj"
+  ],
+  "permissionPrefix": [
+    "portal"
+  ],
+  "grantRequired": true,
+  "status": "locked",
+  "embeds": [],
+  "reuses": [
+    "clients",
+    "approvals"
+  ],
+  "searchTypes": [],
+  "storage": "none",
+  "ai": false,
+  "integrations": []
+}
