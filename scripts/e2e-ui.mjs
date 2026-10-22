@@ -18,7 +18,9 @@ const stamp = Date.now(); const EMAIL = `ui.${stamp}@example.com`, PW = 'correct
 const GUEST = `guest.ui.${stamp}@example.com`, OUTSIDER = `outsider.ui.${stamp}@example.com`;
 
 // every page load is several API calls; the browser run loads many pages as one person, so it gets room above the production limits (the limits themselves are tested in api.test)
-const s = await startDevServer({ port: 0, sink: () => {}, limits: { read: { max: 2000, windowMs: 60_000 }, write: { max: 500, windowMs: 60_000 }, sensitive: { max: 100, windowMs: 60_000 } } });
+// MET Norway is never called from tests: a fake answers in its real format and counts the calls
+const metCalls = []; const weatherFetch = async (url, init) => { metCalls.push({ url: String(url), ua: init?.headers?.['user-agent'] }); return new Response(JSON.stringify({ properties: { timeseries: [{ time: '2026-10-22T10:00:00Z', data: { instant: { details: { air_temperature: 16.4 } }, next_1_hours: { summary: { symbol_code: 'lightrain_day' } } } }] } }), { status: 200, headers: { 'content-type': 'application/json' } }); };
+const s = await startDevServer({ port: 0, sink: () => {}, weatherFetch, limits: { read: { max: 2000, windowMs: 60_000 }, write: { max: 500, windowMs: 60_000 }, sensitive: { max: 100, windowMs: 60_000 } } });
 const base = `http://127.0.0.1:${s.port}`;
 const browser = await chromium.launch();
 const problems = []; const net = [];
@@ -30,7 +32,7 @@ const watch = (p) => {
   return p;
 };
 const newPage = async (w = 1280, h = 800, opts = {}) => watch(await (await browser.newContext({ viewport: { width: w, height: h }, ...opts })).newPage());
-const page = await newPage();
+const page = await newPage(1280, 800, { geolocation: { latitude: 31.5204, longitude: 74.3587 }, permissions: ['geolocation'] });
 page.route('https://example.com/**', (r) => r.fulfill({ status: 200, contentType: 'text/html', body: '<h1>Funnel Mapper Pro (stub)</h1>' }));
 const shot = (p, n) => p.screenshot({ path: `${SHOTS}/${n}.png`, fullPage: true });
 const h1 = (p = page) => p.locator('h1').first().innerText();
@@ -109,10 +111,36 @@ await page.getByRole('button', { name: 'Check for invitations' }).click(); await
 check('U9', 'After an admin adds them, "Check for invitations" opens the Launcher in the organization theme with the switcher showing it', (await theme()) === 'l2f' && (await page.locator('#org-switcher strong').innerText()) === 'Layer2Funnels' && (await page.locator('.bar4').count()) === 1);
 const tile = (k) => page.locator(`.tile[data-app=${k}]`);
 const keys = await page.locator('.tile').evaluateAll((els) => els.map((e) => e.dataset.app));
-check('U10', 'Owner sees the twelve apps in the designed order, Funnel Mapper Pro among them as a normal tile', keys.join() === 'office,projects,clients,portal,drive,planner,forms,value_ladder,social_planner,whiteboard,layer2_agents,funnel_mapper_pro', keys.join());
+check('U10', 'Owner sees the twelve apps grouped Everyday then Studio in the v4 order, Funnel Mapper Pro among them as a normal tile', keys.join() === 'office,projects,clients,drive,planner,portal,forms,value_ladder,social_planner,whiteboard,funnel_mapper_pro,layer2_agents', keys.join());
 const state = async (k) => (await tile(k).getAttribute('class')).split(' ')[1];
 check('U11', 'Tile states come from the real catalog: Client Portal locked, five apps coming soon', (await state('portal')) === 'locked' && (await tile('portal').innerText()).includes('Locked') && (await state('forms')) === 'soon' && (await tile('layer2_agents').innerText()).includes('Coming soon') && (await state('office')) === 'ok');
+await wait('your location');
 await shot(page, 'b1-launcher');
+const sky = await page.locator('.launcher').evaluate((e) => ({ part: e.dataset.part, wx: e.dataset.wx }));
+const hourNow = await page.evaluate(() => new Date().getHours()); const partNow = hourNow >= 5 && hourNow < 12 ? 'morning' : hourNow >= 12 && hourNow < 17 ? 'afternoon' : hourNow >= 17 && hourNow < 21 ? 'evening' : 'night';
+check('V1', 'Launcher sky: time of day from the clock, weather from the server, chip reads "Light rain · 16° · your location", MET Norway credited with a link',
+  sky.part === partNow && sky.wx === 'rain' && (await page.locator('.wxchip').innerText()).includes('Light rain · 16° · your location') && (await page.getByRole('link', { name: 'Data from MET Norway' }).count()) === 1);
+check('V2', 'MET Norway was asked once, by our server, with an identifying User-Agent and coordinates cut to two decimals', metCalls.length === 1 && /lat=31\.52&lon=74\.36/.test(metCalls[0].url) && /@|\./.test(metCalls[0].ua ?? ''), JSON.stringify(metCalls));
+check('V3', 'Apps sit on the frosted shelf in two labelled groups, Everyday and Studio', (await page.locator('.shelf h2').allInnerTexts()).join().toLowerCase() === 'everyday,studio');
+await page.keyboard.press('Escape'); await page.locator('body').click({ position: { x: 5, y: 400 } }); await page.keyboard.press('/');
+check('V4', '"/" jumps to Find an app; typing narrows the tiles; Enter opens the first match', (await page.evaluate(() => document.activeElement.id)) === 'app-find');
+await page.keyboard.type('form'); const found = await page.locator('.tile').evaluateAll((els) => els.map((e) => e.dataset.app));
+await page.keyboard.press('Enter'); await wait('Form Builder: coming soon'); await page.getByRole('button', { name: 'Got it' }).click();
+check('V5', 'Find an app shows only matching apps; a search with no match says so', found.join() === 'forms' && (await (async () => { await page.fill('#app-find', 'zzzz'); return page.getByText('No app matches').count(); })()) === 1);
+await page.fill('#app-find', ''); await page.keyboard.press('Escape');
+await page.locator('#app-switcher').click();
+const swApps = await page.locator('#apps-menu .appitem').evaluateAll((els) => els.map((e) => e.dataset.app));
+check('V6', 'The app switcher offers Back to Launcher and the apps this person may open here (not the locked or coming-soon ones)', (await page.locator('#apps-menu .back').innerText()).includes('Back to Launcher') && swApps.includes('office') && !swApps.includes('portal') && !swApps.includes('forms'), swApps.join());
+await page.keyboard.press('Escape');
+// weather opt-out: profile menu, no new location use, no new server call; the chip goes; switching it on again brings it back
+const callsBefore = metCalls.length;
+await page.locator('.who').click(); await page.getByRole('menuitemcheckbox', { name: /Weather on the Launcher/ }).click();
+await page.waitForFunction(() => !document.querySelector('.wxchip'));
+check('V7', 'Switching weather off in the profile menu removes the chip and the weather tint, and stops all weather calls', (await page.locator('.launcher').getAttribute('data-wx')) === 'none' && metCalls.length === callsBefore);
+await page.locator('.who').click(); await page.getByRole('menuitemcheckbox', { name: /Weather on the Launcher/ }).click(); await wait('your location');
+await page.context().clearPermissions(); await page.evaluate(() => sessionStorage.clear()); await page.reload(); await wait('Your apps in');
+check('V8', 'If location is not allowed, the Launcher shows time of day only: no chip, no error', (await page.locator('.wxchip').count()) === 0 && (await page.locator('.launcher').getAttribute('data-wx')) === 'none');
+await page.context().grantPermissions(['geolocation']); await page.reload(); await wait('your location');
 // keyboard: open a dialog from a tile, focus stays inside, Esc closes and focus returns to the tile
 await tile('portal').focus(); await page.keyboard.press('Enter'); await wait('Client Portal is locked');
 await page.keyboard.press('Tab'); await page.keyboard.press('Tab'); await page.keyboard.press('Tab');

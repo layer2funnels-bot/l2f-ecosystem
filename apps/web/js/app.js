@@ -8,6 +8,7 @@ import { messageFor } from './messages.js';
 import { dirty } from './dirty.js';
 import { createTheme } from './theme.js';
 import { loadRegistry } from './registry.js';
+import { loadWeather, weatherOff, setWeatherOff } from './sky.js';
 import { permissionSet, canWith, canAnywhereWith } from './perm.js';
 import { switchOrganization } from '/packages/core/org-switch.mjs';
 import { dialog, toast, btn, notice, skeleton, notFoundState, designBadge, icon } from './ui.js';
@@ -280,7 +281,7 @@ async function render(opts = {}) {
   } else {
     switch (route.name) {
       case 'home': case 'launcher': case 'signin': case 'signup': case 'check-email': case 'forgot': case 'invite':
-        content = launcherView({ catalog: ctx.catalog, error: ctx.catalogError, org, orgs: ctx.orgs, role, onSwitch: (i) => switchFlow(i), retry: async () => { await loadOrgContext(org); render(); } }); break;
+        content = launcherView({ catalog: ctx.catalog, error: ctx.catalogError, org, orgs: ctx.orgs, role, name: session.get()?.name, registry: await loadRegistry(), loadWeather: () => loadWeather({ api, store: localStorage }), onSwitch: (i) => switchFlow(i), retry: async () => { await loadOrgContext(org); render(); } }); break;
       case 'office': content = officeHomeView({ org, role, isAdmin, api, live, portalState: ctx.catalog.find((a) => a.app_key === 'portal')?.state }); break;
       case 'office-page': content = appNotBuiltView(OFFICE_PAGES.find((p) => p.key === route.params.page)?.label ?? 'This page'); break;
       case 'funnels': content = funnelsHomeView(c); break;
@@ -292,7 +293,8 @@ async function render(opts = {}) {
     }
   }
   const view = shellView({ app: appApi, orgs: ctx.orgs, active: org, email: session.get()?.email, name: session.get()?.name, route, content, banner: bannerEl(), isAdmin, inOffice, launcherCurrent: route.name === 'launcher' || route.name === 'home',
-    catalog: ctx.catalog, registry: await loadRegistry(), currentApp: inOffice ? 'office' : route.name === 'app' ? route.params.app : null, theme });
+    catalog: ctx.catalog, registry: await loadRegistry(), currentApp: inOffice ? 'office' : route.name === 'app' ? route.params.app : null, theme,
+    weather: { on: () => !weatherOff(localStorage), set: (on) => { setWeatherOff(localStorage, !on); try { sessionStorage.removeItem('l2f.wx'); } catch { /* none */ } render(); } } });
   put(root, view, designBadge('Built to design'));
   document.title = `${pageLabel(route)} · ${org.name}`;
   if (toastLater) { toast(toastLater); toastLater = null; }

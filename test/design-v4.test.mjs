@@ -45,6 +45,9 @@ check('DV19', 'The organization brand colours in the web UI equal the theme file
 check('DV20', 'No fixed hex colour is left in the stylesheet outside the tokens (so dark mode and Aurj cannot be bypassed)', !/#[0-9a-fA-F]{3,6}\b/.test(readFileSync('apps/web/ui.css', 'utf8').replace(/\.aplate\{--g:#FFFEFA/, '')));
 check('DV21', 'Fonts: the four v4 families are declared and every file exists; no remote font URL', (() => { const f = readFileSync('apps/web/fonts.css', 'utf8'); return ['Bricolage Grotesque', 'Geist', 'Geist Mono', 'Noto Nastaliq Urdu'].every((n) => f.includes(`"${n}"`)) && [...f.matchAll(/url\("\/fonts\/([^"]+)"\)/g)].every((m) => { try { readFileSync(`apps/web/fonts/${m[1]}`); return true; } catch { return false; } }) && !/https?:/.test(f); })());
 
+const hdr = readFileSync('apps/web/_headers', 'utf8');
+check('DV22', 'The page policy lets only our own pages ask for the location (Launcher weather); camera and microphone stay off', /geolocation=\(self\)/.test(hdr) && /camera=\(\)/.test(hdr) && /microphone=\(\)/.test(hdr));
+
 // ---- registry
 const manifests = loadManifests();
 const ids = manifests.map((x) => x.id);

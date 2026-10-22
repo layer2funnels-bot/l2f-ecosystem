@@ -41,5 +41,6 @@
   ],
   "storage": "drive-documents",
   "ai": false,
-  "integrations": []
+  "integrations": [],
+  "order": 1
 }

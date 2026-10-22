@@ -43,7 +43,7 @@ for (const org of ['l2f', 'aurj']) for (const theme of ['light', 'dark']) for (c
       const r = e.getBoundingClientRect(); if (!r.width) continue;
       if (r.height < 43.5 || r.width < 43.5) out.small.push(`${e.tagName.toLowerCase()} "${(e.innerText || e.getAttribute('aria-label') || e.id || '').slice(0, 24)}" ${Math.round(r.width)}x${Math.round(r.height)}`);
     }
-    const rgba = (s) => { const v = s.match(/[\d.]+/g).map(Number); return [v[0], v[1], v[2], v.length > 3 ? v[3] : 1]; };
+    const rgba = (s) => { const v = s.match(/[\d.]+/g).map(Number); const k = s.startsWith('color(srgb') ? 255 : 1; return [v[0] * k, v[1] * k, v[2] * k, v.length > 3 ? v[3] : 1]; };   // color-mix() computes to color(srgb 0-1 ...)
     const over = (top, under) => [0, 1, 2].map((i) => top[i] * top[3] + under[i] * (1 - top[3])).concat(1);
     const bgOf = (e) => { const layers = []; for (let n = e; n; n = n.parentElement) { const c = rgba(getComputedStyle(n).backgroundColor); if (c[3] > 0) layers.push(c); if (c[3] === 1) break; } return layers.reverse().reduce((acc, c) => over(c, acc), [255, 255, 255, 1]).slice(0, 3); };
     const rgb = (s) => rgba(s).slice(0, 3);
