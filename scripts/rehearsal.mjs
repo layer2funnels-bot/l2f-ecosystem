@@ -122,10 +122,13 @@ await srv.close?.();
 
 // ---------------------------------------------------------------- step 10: backup, restore, compare
 const bin = join(work, 'bin'); sh('mkdir', ['-p', bin]);
-// the sandbox's pg_dump is version 16 and the Supabase database is 17: run PostgreSQL 17's own tools inside the database container, same arguments
-writeFileSync(join(bin, 'pg_dump'), `#!/usr/bin/env bash
+// Supabase is PostgreSQL 17. With version 17 tools on PATH the backup script runs them directly; otherwise (an older laptop) the version 17 tools inside the database container stand in
+const native17 = /\b17\./.test(sh('pg_dump', ['--version']).stdout);
+if (!native17) gap('R10k', 'pg_dump on this computer is not version 17: the rehearsal used the tools inside the database container. Install postgresql-client-17 (npm run check:pg17 says exactly what is missing)', 'environment');
+if (!native17) writeFileSync(join(bin, 'pg_dump'), `#!/usr/bin/env bash
 args=(); file=""; while [ $# -gt 0 ]; do case "$1" in -f) file="$2"; shift 2;; postgresql://*) args+=("postgresql://postgres:postgres@localhost:5432/postgres"); shift;; *) args+=("$1"); shift;; esac; done
-docker exec -i ${DBC} pg_dump "\${args[@]}" > "$file"\n`); chmodSync(join(bin, 'pg_dump'), 0o755);
+docker exec -i ${DBC} pg_dump "\${args[@]}" > "$file"\n`);
+if (!native17) chmodSync(join(bin, 'pg_dump'), 0o755);
 const kg = sh('age-keygen', []); const privKey = kg.stdout; const pub = (kg.stderr.match(/Public key: (age1\S+)/) || privKey.match(/public key: (age1\S+)/) || [])[1];
 writeFileSync(join(work, 'key.txt'), privKey);
 const bk = sh('bash', [join(root, 'scripts/backup-supabase.sh')], { cwd: work, env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, SUPABASE_DB_URL: 'postgresql://postgres:postgres@127.0.0.1:54322/postgres', AGE_RECIPIENT: pub } });
