@@ -70,15 +70,17 @@ const mutations = {
   'SP post guard removed (review and approval set by hand, content edits while locked)': `drop trigger social_posts_guard on public.social_posts;`,
   'SP approvals no longer drive the post': `drop trigger social_post_follow_approval on public.approvals;`,
   'SP media guard removed (another client\'s files)': `drop trigger social_post_files_guard on public.social_post_files;`,
+  'SC storage cap removed (any number of bytes can be registered)': `drop trigger file_versions_cap on public.file_versions;`,
+  'SC usage counter shown to every member of the organization': `create or replace function public.storage_usage() returns table (total_bytes bigint, cap_bytes bigint, org_bytes bigint, files int, versions int, by_space jsonb) language sql stable security definer set search_path='' as $$ select private.storage_used_bytes(), 1::bigint, 0::bigint, 0, 0, '{}'::jsonb where private.request_org() is not null $$;`,
   'AU audience gate treats every caller as staff': `create or replace function public.my_audience(p_org uuid) returns text language sql stable security definer set search_path='' as $$ select 'staff'::text $$;`,
   'SH last-owner guard removed': `drop trigger memberships_last_owner on public.memberships;`,
   'SH member admin skips the owner and role checks': `create or replace function private.member_target(p_user uuid, p_new_role text) returns uuid language plpgsql stable security definer set search_path='' as $$ begin return private.request_org()::uuid; end $$;`,
   'SH invitation preview ignores whose e-mail it was sent to': `create or replace function public.invitation_preview(p_token text) returns table (org_name text, org_slug text, kind text, role text, inviter_name text, email text) language sql stable security definer set search_path='' as $$ select w.name, w.slug, i.kind, i.role, 'x', i.email from public.invitations i join public.workspaces w on w.id = i.workspace_id where i.token_hash = encode(sha256(convert_to(coalesce(p_token,''),'UTF8')),'hex') $$; grant execute on function public.invitation_preview(text) to app_user;`,
 };
-const SUITES = ['isolation', 'audit', 'authz', 'switch', 'api', 'funnels', 'funnels-api', 'clients', 'direct-access', 'permissions-scope', 'shell-admin', 'projects', 'drive', 'planner', 'audience', 'approvals', 'portal', 'forms', 'ladder', 'social'];
+const SUITES = ['isolation', 'audit', 'authz', 'switch', 'api', 'funnels', 'funnels-api', 'clients', 'direct-access', 'permissions-scope', 'shell-admin', 'projects', 'drive', 'planner', 'audience', 'approvals', 'portal', 'forms', 'ladder', 'social', 'storage-cap'];
 // A mutation is caught as soon as one suite fails, so each mutation tries the suite most likely to catch it first (by its name prefix) and
 // stops at the first failure; several mutations run at once. A mutation nobody catches still runs every suite.
-const FIRST = { PJ: 'projects', DR: 'drive', PL: 'planner', AU: 'audience', AP: 'approvals', PT: 'portal', FM: 'forms', VL: 'ladder', SP: 'social', CL: 'clients', FN: 'funnels', DA: 'direct-access', PS: 'permissions-scope', SH: 'shell-admin', SW: 'switch', AZ: 'authz' };
+const FIRST = { PJ: 'projects', DR: 'drive', PL: 'planner', AU: 'audience', AP: 'approvals', PT: 'portal', FM: 'forms', VL: 'ladder', SP: 'social', SC: 'storage-cap', CL: 'clients', FN: 'funnels', DA: 'direct-access', PS: 'permissions-scope', SH: 'shell-admin', SW: 'switch', AZ: 'authz' };
 const run = (suite, sql) => new Promise((done) => {
   const p = spawn(process.execPath, [`test/${suite}.test.mjs`], { env: { ...process.env, MUTATION_SQL: sql } });
   let out = ''; p.stdout.on('data', (d) => { out += d; }); p.on('close', (status) => done({ n: (out.match(/^FAIL/gm) || []).length, status }));

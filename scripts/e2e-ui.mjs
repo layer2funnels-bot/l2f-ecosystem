@@ -324,6 +324,9 @@ await visit(page, base + '/#/office/admin/access/effective'); await wait('Show a
 await page.selectOption('#ep', { label: 'Gus Guest' }); await wait('Funnels records'); await page.waitForFunction(() => document.querySelector('tbody')?.innerText.includes('Deny wins'), null, { timeout: 9000 });
 const eff = await page.locator('tbody').innerText();
 check('F15', 'Effective access shows one row per area with Can edit / Can view / No access, and a denial reads "Deny wins"', eff.includes('Funnels records') && eff.includes('No access') && eff.includes('Deny wins') && eff.includes('Can edit'));
+await visit(page, base + '/#/office/admin/storage'); await wait('File storage'); await wait('used');
+const stg = await page.locator('main').innerText();
+check('F18', 'Admin → Storage shows the counter against the 8 GB limit, with a labelled meter and plain words about the shared limit', /of 8\.00 GB used/.test(stg) && (await page.getByRole('progressbar').getAttribute('aria-label')).startsWith('Storage used') && stg.includes('every organization on this system together') && (await page.locator('[role=tab][aria-selected=true]').innerText()) === 'Storage');
 await shot(page, 'f3-effective');
 await visit(page, base + '/#/office/admin/access/assignments'); await wait('Remove');
 await page.getByRole('button', { name: /Remove Gus Guest Funnels · edit/ }).click(); await page.getByRole('button', { name: 'Remove', exact: true }).last().click(); await wait('Assignment removed.');

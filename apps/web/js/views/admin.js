@@ -68,8 +68,8 @@ export function adminView({ api, live, org, role, route, rerender, go, clients }
   if (!isAdmin) return h('section', {}, notFoundState(hrefFor.office()));        // same screen as a page that doesn't exist (design 07)
   const tab = route.params.tab; const sub = route.params.sub ?? 'levels';
   const pane = h('div', { id: 'pane', role: 'tabpanel', 'aria-labelledby': `tab-${tab}` }, skeleton(4));
-  const tabStrip = tabs([['members', 'Members'], ['access', 'Access']], tab, (k) => go(hrefFor.admin(k)), 'Admin sections');
-  const section = h('section', {}, h('div', { class: 'crumb' }, `Office · Admin · ${org.name}`), h('h1', { 'data-page-title': true }, 'Admin'), h('p', { class: 'sub' }, `Who is in ${org.name} and what they can do.`), tabStrip, pane);
+  const tabStrip = tabs([['members', 'Members'], ['access', 'Access'], ['storage', 'Storage']], tab, (k) => go(hrefFor.admin(k)), 'Admin sections');
+  const section = h('section', {}, h('div', { class: 'crumb' }, `Office · Admin · ${org.name}`), h('h1', { 'data-page-title': true }, 'Admin'), h('p', { class: 'sub' }, `Who is in ${org.name}, what they can do, and how much file storage is used.`), tabStrip, pane);
   const run = (op, input) => api.call(op, input);
   const setPane = (...c) => { if (live()) put(pane, ...c); };
 
@@ -239,6 +239,29 @@ export function adminView({ api, live, org, role, route, rerender, go, clients }
     if (people.length) show(); else put(out, emptyState({ title: 'No members', ic: 'user' }));
   }
 
-  (tab === 'members' ? members : access)();
+  // ------------------------------------------------------------ Storage: how much of the hard cap is used (the whole application shares one cap)
+  const size = (n) => (n >= 1e9 ? `${(n / 1e9).toFixed(n >= 1e10 ? 0 : 2)} GB` : n >= 1e6 ? `${(n / 1e6).toFixed(1)} MB` : n >= 1e3 ? `${(n / 1e3).toFixed(0)} KB` : `${n} bytes`);
+  async function storage() {
+    const res = await run('storage.usage', {});
+    if (!live()) return;
+    if (!res.ok) return setPane(errorState(storage));
+    const u = res.data[0]; const pct = u.cap_bytes ? Math.min(100, (u.total_bytes / u.cap_bytes) * 100) : 100;
+    const level = pct >= 95 ? 'full' : pct >= 80 ? 'warn' : 'ok';
+    const say = { ok: 'Plenty of room.', warn: 'Getting full. Delete files you no longer need, or plan for more storage.', full: 'Almost full. New uploads will be refused once the limit is reached.' }[level];
+    const spaces = Object.entries(u.by_space ?? {});
+    setPane(h('div', { class: 'card', 'data-storage': level, style: 'padding:var(--space-5);max-width:640px' },
+      h('h2', { style: 'margin:0 0 var(--space-2)' }, 'File storage'),
+      h('p', { id: 'storage-used', style: 'font-size:var(--text-lg);margin:0' }, h('b', {}, size(u.total_bytes)), ` of ${size(u.cap_bytes)} used`),
+      h('div', { class: 'meter', role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': String(Math.round(pct)), 'aria-label': `Storage used: ${Math.round(pct)} percent`, style: 'height:10px;border-radius:5px;background:var(--line-soft);margin:var(--space-3) 0;overflow:hidden' },
+        h('div', { style: `height:100%;width:${pct.toFixed(1)}%;background:${level === 'ok' ? 'var(--primary)' : level === 'warn' ? 'var(--warn, #8a5200)' : 'var(--danger, #b42318)'}` })),
+      h('p', { class: 'fine' }, say),
+      h('p', { class: 'fine' }, 'The limit covers every organization on this system together. Only people with the Admin level see this page.'),
+      h('table', { class: 'tbl', style: 'margin-top:var(--space-4)' }, h('caption', { class: 'sr' }, `Storage used by ${org.name}`),
+        h('tbody', {}, h('tr', {}, h('th', { scope: 'row' }, `Used by ${org.name}`), h('td', { id: 'storage-org' }, size(u.org_bytes))),
+          h('tr', {}, h('th', { scope: 'row' }, 'Files'), h('td', {}, String(u.files))), h('tr', {}, h('th', { scope: 'row' }, 'Stored versions'), h('td', {}, String(u.versions))),
+          ...spaces.map(([k, v]) => h('tr', {}, h('th', { scope: 'row' }, { shared: 'Shared space', client: 'Client files', personal: 'Personal spaces' }[k] ?? k), h('td', {}, size(v))))))));
+  }
+
+  (tab === 'members' ? members : tab === 'storage' ? storage : access)();
   return section;
 }

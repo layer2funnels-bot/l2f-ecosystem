@@ -36,6 +36,7 @@ export function parseRoute(hash) {
   if (a === 'office' && b === 'admin') {
     if (seg.length === 2) return r('admin', { tab: 'members' });
     if (c === 'members' && seg.length === 3) return r('admin', { tab: 'members' });
+    if (c === 'storage' && seg.length === 3) return r('admin', { tab: 'storage' });
     if (c === 'access' && seg.length === 3) return r('admin', { tab: 'access', sub: 'levels' });
     if (c === 'access' && ADMIN_ACCESS_TABS.includes(d) && seg.length === 4) return r('admin', { tab: 'access', sub: d });
   }
@@ -50,7 +51,7 @@ export function parseRoute(hash) {
 export const hrefFor = {
   launcher: () => '#/launcher', office: () => '#/office', funnels: () => '#/office/funnels', page: (p) => `#/office/${p}`,
   list: (type) => `#/office/funnels/${type}`, record: (type, id) => `#/office/funnels/${type}/${id}`, app: (k) => `#/app/${k}`,
-  admin: (tab = 'members', sub) => (tab === 'members' ? '#/office/admin/members' : `#/office/admin/access/${sub ?? 'levels'}`),
+  admin: (tab = 'members', sub) => (tab === 'members' ? '#/office/admin/members' : tab === 'storage' ? '#/office/admin/storage' : `#/office/admin/access/${sub ?? 'levels'}`),
 };
 export const AUTH_ROUTES = new Set(['signin', 'signup', 'check-email', 'forgot', 'reset', 'invite', 'expired']);
 
