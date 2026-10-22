@@ -1,0 +1,32 @@
+/* Docs editor (Design v4). Tokens only; the page is a sheet on the paper background with display headings and a comfortable measure. */
+.docs{display:grid;gap:var(--space-3)}
+.docbar{display:grid;gap:var(--space-2)}
+.docrow{display:flex;flex-wrap:wrap;gap:var(--space-3);align-items:center;justify-content:space-between}
+.doctitle{flex:1;min-width:220px;min-height:44px;font:700 clamp(22px,3.4vw,30px)/1.2 var(--font-d);letter-spacing:-.025em;color:var(--text);background:transparent;border:1px solid transparent;border-radius:var(--radius-md);padding:0 var(--space-2)}
+.doctitle:hover:not([readonly]){border-color:var(--line2)}.doctitle:focus{border-color:var(--control);outline:3px solid var(--action);outline-offset:2px}
+.docacts{display:flex;flex-wrap:wrap;gap:var(--space-2);align-items:center}
+.docstate{display:inline-flex;gap:6px;align-items:center;font-size:13px;color:var(--text2)}
+.docstate .dot{width:8px;height:8px;border-radius:50%;background:var(--ok)}.docstate .dot.dirty{background:var(--warn)}.docstate .dot.saving{background:var(--action)}.docstate .dot.failed{background:var(--danger)}.docstate .dot.readonly{background:var(--muted)}
+.docstat{font-size:13px}.docstat.warn{color:var(--warn);font-weight:600}
+.doctools{position:sticky;top:0;z-index:var(--z-sticky);display:flex;flex-wrap:wrap;gap:4px;align-items:center;padding:var(--space-2);background:var(--surface);border:1px solid var(--line2);border-radius:var(--radius-md);box-shadow:var(--sh1)}
+.doctools .tb{min-width:44px;min-height:44px;border:1px solid transparent;border-radius:var(--radius-md);background:transparent;color:var(--text);font:600 15px var(--font);display:inline-grid;place-items:center}
+.doctools .tb:hover:not(:disabled){background:var(--action-tint)}.doctools .tb[aria-pressed=true]{background:var(--action);color:var(--action-ink)}
+.doctools .tb.i{font-style:italic}.doctools .tb.u{text-decoration:underline}.doctools .tb.s{text-decoration:line-through}.doctools .tb svg.i{width:18px;height:18px}
+.doctools .tbsel{min-height:44px;border:1px solid var(--control);border-radius:var(--radius-md);background:var(--surface);padding:0 var(--space-2)}
+.doctools :disabled{opacity:.5}
+.docbody{display:grid;grid-template-columns:220px minmax(0,1fr);gap:var(--space-4);align-items:start}
+.docoutline-wrap{position:sticky;top:76px;background:var(--surface);border:1px solid var(--line2);border-radius:var(--radius-md);padding:var(--space-3)}
+.docoutline-wrap summary{display:none}
+.docoutline h2{font:700 12px var(--font);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 var(--space-2)}
+.docoutline ul{list-style:none;margin:0;padding:0}.docoutline li.l2{padding-left:var(--space-3)}.docoutline li.l3{padding-left:var(--space-5)}
+.docoutline .lnk{min-height:44px;width:100%;padding:0 var(--space-2);border:0;background:none;border-radius:var(--radius-md);color:var(--text);font:500 14px var(--font);text-align:left;cursor:pointer}.docoutline .lnk:hover,.docoutline .lnk:focus-visible{color:var(--action);background:var(--action-tint)}
+.docsheet{background:var(--surface);border:1px solid var(--line2);border-radius:var(--r);box-shadow:var(--sh2);padding:clamp(var(--space-4),5vw,var(--space-8)) clamp(var(--space-4),6vw,64px);min-height:60vh}
+.docpage{max-width:70ch;margin:0 auto;outline:0;font:400 17px/1.7 var(--font);color:var(--text);overflow-wrap:anywhere}
+.docpage:focus-visible{outline:3px solid var(--action);outline-offset:8px;border-radius:var(--radius-md)}
+.docpage h1,.docpage h2,.docpage h3{font-family:var(--font-d);letter-spacing:-.025em;line-height:1.2;margin:1.4em 0 .4em}.docpage h1{font-size:2rem}.docpage h2{font-size:1.5rem}.docpage h3{font-size:1.2rem}
+.docpage p,.docpage ul,.docpage ol,.docpage blockquote{margin:0 0 .9em}.docpage blockquote{border-left:3px solid var(--brand);padding-left:var(--space-4);color:var(--text2)}
+.docpage a{color:var(--action);text-decoration:underline}.docpage hr{border:0;border-top:1px solid var(--line2);margin:1.6em 0}
+.docpage[contenteditable=false]{cursor:default}
+@media (max-width:900px){.docbody{grid-template-columns:1fr}.docoutline-wrap{position:static}.docoutline-wrap summary{display:block;min-height:44px;line-height:44px;font-weight:600;cursor:pointer}.docoutline-wrap:not([open]) .docoutline{display:none}}
+@media (max-width:600px){.doctools{position:static}.docacts{width:100%}}
+.docs .crumbs a{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;color:var(--text2)}

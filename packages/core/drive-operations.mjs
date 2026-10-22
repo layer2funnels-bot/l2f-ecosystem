@@ -26,7 +26,7 @@ const byteLength = (text) => new TextEncoder().encode(text).length;
 export const newLinkToken = () => toBase64Url(crypto.getRandomValues(new Uint8Array(32)));
 
 const FSELECT = `select f.id, f.space, f.client_id, f.owner_id, f.folder_id, f.name, f.kind, f.mime_type, f.size_bytes::float8 as size_bytes, f.current_version, f.protected_sop, f.sop_key,
-    f.client_visible, f.uploaded_by, f.archived_at, f.created_at, f.updated_at from files f`;
+    f.client_visible, f.project_id, f.uploaded_by, f.archived_at, f.created_at, f.updated_at from files f`;
 const DSELECT = `select d.id, d.space, d.client_id, d.owner_id, d.parent_id, d.name, d.archived_at, d.created_at, d.updated_at,
     (select count(*)::int from files f where f.folder_id = d.id and f.archived_at is null) as files,
     (select count(*)::int from drive_folders c where c.parent_id = d.id and c.archived_at is null) as folders from drive_folders d`;
@@ -69,27 +69,34 @@ const fileOps = [
       and ($6::text is null or f.name ilike $6) and ($7::text is null or f.kind = $7) order by lower(f.name) limit 500`,
     [i.space, i.client ?? null, i.anywhere ?? false, i.folder ?? null, i.archived ?? false, i.q ? like(i.q) : null, i.kind ?? null]),
   }),
+  // Everything that belongs to one project (documents and whiteboards opened inside the project). Only what the person may read comes back.
+  defineOperation({
+    name: 'drive.project.files', class: 'read', input: { project: { type: 'uuid', required: true }, kind: { type: 'enum', values: ['file', 'document'] }, mime: T(120), archived: { type: 'bool' }, q: { type: 'text', max: 100 } },
+    run: (q, _c, i) => q(`${FSELECT} where f.project_id = $1 and ((f.archived_at is not null) = $2) and ($3::text is null or f.kind = $3) and ($4::text is null or f.mime_type = $4) and ($5::text is null or f.name ilike $5)
+      order by f.updated_at desc limit 500`, [i.project, i.archived ?? false, i.kind ?? null, i.mime ?? null, i.q ? like(i.q) : null]),
+  }),
   defineOperation({ name: 'drive.files.get', class: 'read', single: true, input: id, run: (q, _c, i) => q(`${FSELECT} where f.id = $1`, [i.id]) }),
   defineOperation({
     // a file (bytes already uploaded to the signed address, path given) or a first-party document (text given); version 1 is created with it
     name: 'drive.files.create', class: 'write', single: true,
-    input: { space: SPACE, client: { type: 'uuid' }, folder: { type: 'uuid' }, name: NAME, kind: { type: 'enum', values: ['file', 'document'], required: true }, mime_type: T(120), size_bytes: { type: 'int', min: 0 },
+    input: { space: SPACE, client: { type: 'uuid' }, folder: { type: 'uuid' }, project: { type: 'uuid' }, name: NAME, kind: { type: 'enum', values: ['file', 'document'], required: true }, mime_type: T(120), size_bytes: { type: 'int', min: 0 },
       storage_path: T(600), body: T(200000), note: T(300) },
     run: async (q, ctx, i) => {
       if (i.kind === 'file' && (!i.storage_path || i.body !== undefined)) throw bad('a file needs the path of its stored copy');
       if (i.kind === 'document' && (i.body === undefined || i.storage_path)) throw bad('a document needs its text');
       if (i.kind === 'file') i = { ...i, size_bytes: await verifyStored(ctx, i.storage_path, i.size_bytes) };
-      const [f] = await q('insert into files (workspace_id, space, client_id, owner_id, folder_id, name, kind, mime_type, size_bytes, storage_path, uploaded_by) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) returning id',
-        [ctx.orgId, i.space, i.client ?? null, i.space === 'personal' ? ctx.userId : null, i.folder ?? null, i.name, i.kind, i.mime_type ?? null, i.size_bytes ?? (i.body !== undefined ? byteLength(i.body) : null), i.kind === 'file' ? i.storage_path : null, ctx.userId]);
+      const [f] = await q('insert into files (workspace_id, space, client_id, owner_id, folder_id, project_id, name, kind, mime_type, size_bytes, storage_path, uploaded_by) values ($1,$2,$3,$4,$5,$12,$6,$7,$8,$9,$10,$11) returning id',
+        [ctx.orgId, i.space, i.client ?? null, i.space === 'personal' ? ctx.userId : null, i.folder ?? null, i.name, i.kind, i.mime_type ?? null, i.size_bytes ?? (i.body !== undefined ? byteLength(i.body) : null), i.kind === 'file' ? i.storage_path : null, ctx.userId, i.project ?? null]);
       await q('insert into file_versions (workspace_id, file_id, storage_path, body, size_bytes, note) values ($1,$2,$3,$4,$5,$6)', [ctx.orgId, f.id, i.kind === 'file' ? i.storage_path : null, i.kind === 'document' ? i.body : null, i.size_bytes ?? (i.body !== undefined ? byteLength(i.body) : null), i.note ?? null]);
       return q(`${FSELECT} where f.id = $1`, [f.id]);
     },
   }),
   defineOperation({
-    name: 'drive.files.versions.add', class: 'write', single: true, input: { ...id, storage_path: T(600), body: T(200000), size_bytes: { type: 'int', min: 0 }, note: T(300) },
+    name: 'drive.files.versions.add', class: 'write', single: true, input: { ...id, storage_path: T(600), body: T(200000), size_bytes: { type: 'int', min: 0 }, note: T(300), expected: { type: 'int', min: 1 } },
     run: async (q, ctx, i) => {
-      const [f] = await q('select kind from files where id = $1', [i.id]);
+      const [f] = await q('select kind, current_version from files where id = $1', [i.id]);
       if (!f) return [];
+      if (i.expected !== undefined && i.expected !== f.current_version) throw { code: '40001' };      // someone saved a newer version: the editor asks what to do instead of overwriting
       if (f.kind === 'file' && (!i.storage_path || i.body !== undefined)) throw bad('a file needs the path of its stored copy');
       if (f.kind === 'document' && (i.body === undefined || i.storage_path)) throw bad('a document needs its text');
       if (f.kind === 'file') i = { ...i, size_bytes: await verifyStored(ctx, i.storage_path, i.size_bytes) };

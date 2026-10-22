@@ -34,5 +34,8 @@ Step 0: Design v4 files, `DESIGN_SYSTEM.md`, onboarding kit and decisions V4-1 t
 ## Done: Launcher (app PR 1, 23 Oct 2026)
 Sky by time of day and weather (MET Norway through `weather.get`, 30-minute cache, 23 tests with a fake MET server), frosted shelf with Everyday/Studio groups from the manifests, Find an app (`/`, Enter), zoom-open (off under reduced motion), weather opt-out and Appearance in the profile menu, geolocation allowed for our own pages only (V4-13). Browser suite 89/89 (8 new, V1 to V8). Next app: Docs and Whiteboard shared modules.
 
+## Done: Docs module and context link (app PR 2)
+Migration 0024 (`files.project_id`), `drive.project.files`, expected-version saves; Docs editor module (`apps/web/js/modules/docs.js`, route `#/doc/<id>`): toolbar, outline, history with restore, conflict dialog, read-only and archived states, hostile-content tests; document model tests (15), context tests (24, two new mutation controls), browser suite 105/105, gallery 77/77. Docs has no entry point yet except the address: Drive, Projects and Clients add "New document" and open it in their own PRs. Next: Whiteboard module (Excalidraw bundle, boards as Drive documents with the context link).
+
 ## What is next
 Owner decisions: Vercel plan for FMP (`docs/FMP_HOSTING_OPTIONS.md`); independent-account policy; design approvals (Clients 09, Funnel Strategies, Portal screens, Forms, Value Ladder, Social Planner, Whiteboard) before any screen is built. Engineering that needs no decision: FMP step 2 (export palettes, real organization switcher) once the migration plan is approved; the Hyperdrive upgrade only if connection-per-request proves slow.
