@@ -80,7 +80,7 @@ const stray = [...hosts].filter((h) => !allowedHosts.has(h) && !h.endsWith('.exa
 ok('R8d', 'The built site loads nothing from any other host (fonts, scripts, styles are our own); only licence/namespace text mentions other hosts', stray.length === 0, stray.join(','));
 const cfgjs = readFileSync(join(dist, 'config.js'), 'utf8');
 ok('R8e', 'config.js carries only the public URL and publishable key', cfgjs.includes('rehearsalref') && !/service_role|sb_secret|eyJ/.test(cfgjs));
-ok('R8f', 'The three self-hosted font families are in the build', ['hanken-grotesk', 'newsreader', 'schibsted-grotesk'].every((n) => files.concat(walk(dist)).some((f) => f.includes(n))));
+ok('R8f', 'The four self-hosted v4 font families are in the build', ['bricolage-grotesque', 'geist-latin', 'geist-mono', 'noto-nastaliq-urdu'].every((n) => files.concat(walk(dist)).some((f) => f.includes(n))));
 const fnSrc = readFileSync(join(root, 'functions/api/[[route]].js'), 'utf8');
 ok('R8h', 'The Pages function builds a server per request (Workers cannot reuse a connection across requests: found in this rehearsal) and shares only state with no connection in it', /createSharedState/.test(fnSrc) && /createServer\(\{ \.\.\.env, DB_POOL_MAX: '1' \}/.test(fnSrc) && /waitUntil\(server\.close\(\)\)/.test(fnSrc));
 ok('R8g', 'The Pages function exists and wrangler.toml carries nodejs_compat', existsSync(join(root, 'functions/api/[[route]].js')) && /nodejs_compat/.test(readFileSync(join(root, 'wrangler.toml'), 'utf8')));

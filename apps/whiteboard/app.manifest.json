@@ -1,0 +1,38 @@
+{
+  "id": "whiteboard",
+  "name": "Whiteboard",
+  "description": "Sketch ideas together",
+  "group": "Studio",
+  "plate": {
+    "colors": [
+      "#FFFFFC",
+      "#E7E4DB",
+      "#ACA796"
+    ],
+    "glyph": "#1B1D23",
+    "icon": "whiteboard"
+  },
+  "routes": "/whiteboard/*",
+  "orgs": [
+    "layer2funnels",
+    "aurj"
+  ],
+  "permissionPrefix": [
+    "drive"
+  ],
+  "grantRequired": true,
+  "status": "soon",
+  "embeds": [
+    "projects",
+    "clients"
+  ],
+  "reuses": [
+    "drive"
+  ],
+  "searchTypes": [
+    "board"
+  ],
+  "storage": "drive-documents",
+  "ai": false,
+  "integrations": []
+}

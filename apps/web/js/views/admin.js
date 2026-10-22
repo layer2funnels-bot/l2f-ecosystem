@@ -168,7 +168,7 @@ export function adminView({ api, live, org, role, route, rerender, go, clients }
     put(body, h('p', { class: 'fine', style: 'margin-bottom:var(--space-3)' }, 'Levels are the starting point. Assignments and denials refine them. ', h('b', {}, 'Deny always wins.')),
       h('div', { class: 'card tbl-wrap' }, h('table', { class: 'tbl' }, h('caption', { class: 'sr' }, 'What each level can do by default'),
         h('thead', {}, h('tr', {}, h('th', {}, 'Can they…'), ...LEVELS.map((l) => h('th', {}, LABEL[l])))),
-        ...groups.map((g) => h('tbody', {}, h('tr', {}, h('th', { colspan: '5', scope: 'colgroup', style: 'background:var(--line-soft);color:var(--ink)' }, g.app)), ...g.rows.map((r) => h('tr', {}, h('td', {}, r.text), ...r.cells.map(cell))))))),
+        ...groups.map((g) => h('tbody', {}, h('tr', {}, h('th', { colspan: '5', scope: 'colgroup', style: 'background:var(--line);color:var(--ink)' }, g.app)), ...g.rows.map((r) => h('tr', {}, h('td', {}, r.text), ...r.cells.map(cell))))))),
       custom.ok && custom.data.length ? h('div', { style: 'margin-top:var(--space-5)' }, h('h3', {}, 'Levels you can assign'), h('p', { class: 'fine', style: 'margin:var(--space-1) 0 var(--space-3)' }, 'Extra levels for a single app or client. Give one to a person on the Assignments view.'),
         h('div', { class: 'card' }, h('ul', { class: 'rows' }, ...custom.data.map((l) => h('li', {}, h('span', {}, h('b', {}, l.name), h('br'), h('span', { class: 'fine' }, `${areaName(l.app_key)} · ${l.description ?? ''}`)), pill(`${l.permissions.length} abilities`)))))) : null,
       notice('info', 'info', 'The last owner can’t be removed or demoted. Every organization always has at least one.'));
@@ -252,7 +252,7 @@ export function adminView({ api, live, org, role, route, rerender, go, clients }
     setPane(h('div', { class: 'card', 'data-storage': level, style: 'padding:var(--space-5);max-width:640px' },
       h('h2', { style: 'margin:0 0 var(--space-2)' }, 'File storage'),
       h('p', { id: 'storage-used', style: 'font-size:var(--text-lg);margin:0' }, h('b', {}, size(u.total_bytes)), ` of ${size(u.cap_bytes)} used`),
-      h('div', { class: 'meter', role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': String(Math.round(pct)), 'aria-label': `Storage used: ${Math.round(pct)} percent`, style: 'height:10px;border-radius:5px;background:var(--line-soft);margin:var(--space-3) 0;overflow:hidden' },
+      h('div', { class: 'meter', role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': String(Math.round(pct)), 'aria-label': `Storage used: ${Math.round(pct)} percent`, style: 'height:10px;border-radius:5px;background:var(--line);margin:var(--space-3) 0;overflow:hidden' },
         h('div', { style: `height:100%;width:${pct.toFixed(1)}%;background:${level === 'ok' ? 'var(--primary)' : level === 'warn' ? 'var(--warn, #8a5200)' : 'var(--danger, #b42318)'}` })),
       h('p', { class: 'fine' }, say),
       h('p', { class: 'fine' }, 'The limit covers every organization on this system together. Only people with the Admin level see this page.'),

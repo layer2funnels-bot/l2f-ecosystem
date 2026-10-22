@@ -1,7 +1,12 @@
-/* Self-hosted fonts (SIL Open Font License 1.1, see fonts/LICENSES.txt). Latin subset. Nothing is loaded from another host (CSP: font-src 'self'). */
-@font-face { font-family: "Hanken Grotesk"; font-weight: 400; font-style: normal; font-display: swap; src: url("/fonts/hanken-grotesk-latin-400.woff2") format("woff2"); }
-@font-face { font-family: "Hanken Grotesk"; font-weight: 500; font-style: normal; font-display: swap; src: url("/fonts/hanken-grotesk-latin-500.woff2") format("woff2"); }
-@font-face { font-family: "Hanken Grotesk"; font-weight: 600; font-style: normal; font-display: swap; src: url("/fonts/hanken-grotesk-latin-600.woff2") format("woff2"); }
-@font-face { font-family: "Hanken Grotesk"; font-weight: 700; font-style: normal; font-display: swap; src: url("/fonts/hanken-grotesk-latin-700.woff2") format("woff2"); }
-@font-face { font-family: "Schibsted Grotesk"; font-weight: 700; font-style: normal; font-display: swap; src: url("/fonts/schibsted-grotesk-latin-700.woff2") format("woff2"); }
-@font-face { font-family: "Newsreader"; font-weight: 600; font-style: normal; font-display: swap; src: url("/fonts/newsreader-latin-600.woff2") format("woff2"); }
+/* Self-hosted fonts (SIL Open Font License 1.1, see fonts/LICENSES.txt). Nothing is loaded from another host (CSP: font-src 'self'). */
+@font-face { font-family: "Bricolage Grotesque"; font-weight: 500; font-style: normal; font-display: swap; src: url("/fonts/bricolage-grotesque-latin-500.woff2") format("woff2"); }
+@font-face { font-family: "Bricolage Grotesque"; font-weight: 700; font-style: normal; font-display: swap; src: url("/fonts/bricolage-grotesque-latin-700.woff2") format("woff2"); }
+@font-face { font-family: "Bricolage Grotesque"; font-weight: 800; font-style: normal; font-display: swap; src: url("/fonts/bricolage-grotesque-latin-800.woff2") format("woff2"); }
+@font-face { font-family: "Geist"; font-weight: 400; font-style: normal; font-display: swap; src: url("/fonts/geist-latin-400.woff2") format("woff2"); }
+@font-face { font-family: "Geist"; font-weight: 500; font-style: normal; font-display: swap; src: url("/fonts/geist-latin-500.woff2") format("woff2"); }
+@font-face { font-family: "Geist"; font-weight: 600; font-style: normal; font-display: swap; src: url("/fonts/geist-latin-600.woff2") format("woff2"); }
+@font-face { font-family: "Geist"; font-weight: 700; font-style: normal; font-display: swap; src: url("/fonts/geist-latin-700.woff2") format("woff2"); }
+@font-face { font-family: "Geist Mono"; font-weight: 400; font-style: normal; font-display: swap; src: url("/fonts/geist-mono-latin-400.woff2") format("woff2"); }
+@font-face { font-family: "Geist Mono"; font-weight: 500; font-style: normal; font-display: swap; src: url("/fonts/geist-mono-latin-500.woff2") format("woff2"); }
+@font-face { font-family: "Noto Nastaliq Urdu"; font-weight: 400; font-style: normal; font-display: swap; src: url("/fonts/noto-nastaliq-urdu-arabic-400.woff2") format("woff2"); }
+@font-face { font-family: "Noto Nastaliq Urdu"; font-weight: 700; font-style: normal; font-display: swap; src: url("/fonts/noto-nastaliq-urdu-arabic-700.woff2") format("woff2"); }

@@ -1,0 +1,42 @@
+{
+  "id": "clients",
+  "name": "Clients",
+  "description": "Pipeline, strategy and delivery",
+  "group": "Everyday",
+  "plate": {
+    "colors": [
+      "#FF9A7E",
+      "#EF5235",
+      "#A93220"
+    ],
+    "glyph": "#FFFEFA",
+    "icon": "clients"
+  },
+  "routes": "/clients/*",
+  "orgs": [
+    "layer2funnels",
+    "aurj"
+  ],
+  "permissionPrefix": [
+    "clients"
+  ],
+  "grantRequired": true,
+  "status": "building",
+  "embeds": [
+    "forms",
+    "whiteboard",
+    "drive"
+  ],
+  "reuses": [
+    "funnels",
+    "drive",
+    "projects"
+  ],
+  "searchTypes": [
+    "client",
+    "request"
+  ],
+  "storage": "drive-documents",
+  "ai": false,
+  "integrations": []
+}

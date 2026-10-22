@@ -117,8 +117,8 @@ export const skeleton = (rows = 4) => h('div', { class: 'skel', 'aria-busy': 'tr
 export const plate = () => {
   const NS = 'http://www.w3.org/2000/svg'; const svg = document.createElementNS(NS, 'svg');
   svg.setAttribute('viewBox', '0 0 120 90'); svg.setAttribute('width', '120'); svg.setAttribute('height', '90'); svg.setAttribute('aria-hidden', 'true');
-  const g = document.createElementNS(NS, 'g'); g.setAttribute('stroke', '#1b1f27'); g.setAttribute('stroke-opacity', '.12');
-  [['M60 52 100 70 60 88 20 70z', '#c9cfd8'], ['M60 38 100 56 60 74 20 56z', 'var(--tint,#e3eafa)'], ['M60 24 100 42 60 60 20 42z', 'var(--accent,#ff7a59)'], ['M60 10 100 28 60 46 20 28z', 'var(--primary,#173a8f)']].forEach(([d, f]) => {
+  const g = document.createElementNS(NS, 'g'); g.setAttribute('stroke', 'currentColor'); g.setAttribute('stroke-opacity', '.12');
+  [['M60 52 100 70 60 88 20 70z', 'var(--line2)'], ['M60 38 100 56 60 74 20 56z', 'var(--tint,#e3eafa)'], ['M60 24 100 42 60 60 20 42z', 'var(--accent,#ff7a59)'], ['M60 10 100 28 60 46 20 28z', 'var(--primary,#173a8f)']].forEach(([d, f]) => {
     const p = document.createElementNS(NS, 'path'); p.setAttribute('d', d); p.setAttribute('fill', f); g.append(p);
   });
   svg.append(g); return svg;
@@ -140,6 +140,29 @@ export const designBadge = (status = 'Needs design') => (window.L2F_CONFIG?.show
 
 export const initials = (text) => String(text ?? '').trim().split(/\s+/).slice(0, 2).map((w) => w[0] ?? '').join('').toUpperCase() || '?';
 export const orgMark = (o) => ({ l2f: 'L2', layer2funnels: 'L2', aurj: 'Au' }[o?.slug] ?? initials(o?.name).slice(0, 2));
-export const orgColor = (o) => ({ aurj: '#b23a08' }[o?.slug] ?? '#173a8f');
+// Brand colour and the text colour on it per organization: the same values as packages/ui/tokens.json (a test keeps them equal).
+export const orgColor = (o) => (o?.slug === 'aurj' ? '#B0305A' : '#FFC633');
+export const orgInk = (o) => (o?.slug === 'aurj' ? '#FFF6F2' : '#1C1504');
 export const roleLabel = (r) => ({ owner: 'Owner', admin: 'Admin', editor: 'Editor', viewer: 'Viewer' }[r] ?? 'Member');
+// ---- v4 shared pieces (apps use these, they do not restyle them)
+export const chip = (text, kind = '', ic) => h('span', { class: `chip ${kind}`.trim() }, ic ? icon(ic) : null, text);
+export const avatar = (name, size = 32) => h('span', { class: 'avatar', style: `--s:${size}px`, role: 'img', 'aria-label': String(name ?? '') }, initials(name));
+/** Side drawer: focus moves in, Esc closes, focus returns. `body` is a node or list; close() is returned. */
+export function drawer({ title, body, actions = [], onClose, label }) {
+  const prev = document.activeElement;
+  const back = h('div', { class: 'drawer-back' });
+  const panel = h('aside', { class: 'drawer', role: 'dialog', 'aria-modal': 'true', 'aria-label': label ?? title, tabindex: '-1' },
+    h('header', {}, h('h2', {}, title), h('button', { type: 'button', class: 'iconbtn', 'aria-label': 'Close', onclick: () => close() }, icon('cross'))),
+    h('div', { class: 'drawer-bd' }, body), actions.length ? h('footer', {}, ...actions.map((a) => h('button', { type: 'button', class: `btn ${a.cls ?? ''}`.trim(), onclick: () => { a.on?.(); if (a.close !== false) close(); } }, a.label))) : null);
+  const key = (e) => { if (e.key === 'Escape') close(); };
+  function close() { document.removeEventListener('keydown', key); back.remove(); panel.remove(); prev?.focus?.(); onClose?.(); }
+  back.addEventListener('click', () => close()); document.addEventListener('keydown', key);
+  document.body.append(back, panel); panel.focus();
+  return close;
+}
+/** Shown on a screen whose actions do not do anything real yet (Client Portal until gate G2). */
+export const previewRibbon = (text = 'Preview only. Nothing here is sent or saved for real yet.') => h('div', { class: 'ribbon', role: 'note' }, icon('eye'), text);
+/** The person may not open this: a plain "Not here", never a hint that the record exists. */
+export const noAccessState = ({ title = 'Not here', body = 'This page isn’t available to you. If you think it should be, ask an admin.', action } = {}) =>
+  h('div', { class: 'empty', role: 'status' }, icon('lock'), h('h2', {}, title), h('p', { class: 'muted' }, body), action ?? null);
 export { h, clear, put, icon };

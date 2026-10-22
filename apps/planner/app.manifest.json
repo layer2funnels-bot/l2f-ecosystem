@@ -1,0 +1,33 @@
+{
+  "id": "planner",
+  "name": "Planner",
+  "description": "Your week, in one view",
+  "group": "Everyday",
+  "plate": {
+    "colors": [
+      "#D3F38A",
+      "#7FBF2A",
+      "#4F7F12"
+    ],
+    "glyph": "#1E2A06",
+    "icon": "planner"
+  },
+  "routes": "/planner/*",
+  "orgs": [
+    "layer2funnels",
+    "aurj"
+  ],
+  "permissionPrefix": [
+    "planner"
+  ],
+  "grantRequired": true,
+  "status": "soon",
+  "embeds": [],
+  "reuses": [
+    "projects"
+  ],
+  "searchTypes": [],
+  "storage": "none",
+  "ai": false,
+  "integrations": []
+}

@@ -1,0 +1,41 @@
+{
+  "id": "projects",
+  "name": "Projects",
+  "description": "Boards, tasks and timelines",
+  "group": "Everyday",
+  "plate": {
+    "colors": [
+      "#6E98FF",
+      "#2B5CF0",
+      "#1A3BAE"
+    ],
+    "glyph": "#FFFEFA",
+    "icon": "projects"
+  },
+  "routes": "/projects/*",
+  "orgs": [
+    "layer2funnels",
+    "aurj"
+  ],
+  "permissionPrefix": [
+    "projects"
+  ],
+  "grantRequired": true,
+  "status": "building",
+  "embeds": [
+    "whiteboard",
+    "drive"
+  ],
+  "reuses": [
+    "clients",
+    "drive"
+  ],
+  "searchTypes": [
+    "project",
+    "task",
+    "doc"
+  ],
+  "storage": "drive-documents",
+  "ai": false,
+  "integrations": []
+}

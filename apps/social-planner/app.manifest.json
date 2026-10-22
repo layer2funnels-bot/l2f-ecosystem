@@ -1,0 +1,38 @@
+{
+  "id": "social_planner",
+  "name": "Social Planner",
+  "description": "Posts, carousels, schedule",
+  "group": "Studio",
+  "plate": {
+    "colors": [
+      "#FF9CC8",
+      "#E9488F",
+      "#A82462"
+    ],
+    "glyph": "#FFFEFA",
+    "icon": "social_planner"
+  },
+  "routes": "/social/*",
+  "orgs": [
+    "layer2funnels",
+    "aurj"
+  ],
+  "permissionPrefix": [
+    "social"
+  ],
+  "grantRequired": true,
+  "status": "soon",
+  "embeds": [],
+  "reuses": [
+    "clients",
+    "drive",
+    "approvals"
+  ],
+  "searchTypes": [
+    "campaign",
+    "post"
+  ],
+  "storage": "drive-documents",
+  "ai": false,
+  "integrations": []
+}

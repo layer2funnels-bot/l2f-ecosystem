@@ -6,6 +6,8 @@ import { createApiClient, NO_ORG } from './api.js';
 import { parseRoute, hrefFor, pageKeyFor, routeForPage, defaultOrg, AUTH_ROUTES, OFFICE_PAGES, FUNNEL_TYPES, appLabel } from './routes.js';
 import { messageFor } from './messages.js';
 import { dirty } from './dirty.js';
+import { createTheme } from './theme.js';
+import { loadRegistry } from './registry.js';
 import { permissionSet, canWith, canAnywhereWith } from './perm.js';
 import { switchOrganization } from '/packages/core/org-switch.mjs';
 import { dialog, toast, btn, notice, skeleton, notFoundState, designBadge, icon } from './ui.js';
@@ -225,11 +227,12 @@ const bannerEl = () => {
 };
 const centered = (...c) => h('div', { class: 'authwrap' }, h('main', { class: 'auth', id: 'main' }, h('div', { class: 'card', style: 'padding:var(--space-6)' }, ...c)));
 
+const theme = createTheme(); theme.apply();
 async function render(opts = {}) {
   const id = ++renderId; const live = () => id === renderId;
   const route = parseRoute(location.hash);
   document.body.classList.remove('hasb');
-  document.documentElement.dataset.theme = 'l2f';
+  theme.setOrg(null);
   if (!ready) { put(root, centered(skeleton(3))); return; }
   if (opts.bootError) { put(root, centered(h('h1', { 'data-page-title': true }, 'We couldn’t load this'), h('p', { class: 'sub' }, 'Your work is safe. Check your connection and try again.'), btn('Try again', () => boot(), 'pri'))); return focusTitle(root); }
 
@@ -259,7 +262,7 @@ async function render(opts = {}) {
 
   // inside the ecosystem
   const org = ctx.active;
-  document.documentElement.dataset.theme = org.slug === 'aurj' ? 'aurj' : 'l2f';
+  theme.setOrg(org);
   const role = org.role; const isAdmin = role === 'owner' || role === 'admin';
   const c = {
     api, orgName: org.name, clients: ctx.clients, live, announce, go, guard, rerender: () => render(),
@@ -288,7 +291,8 @@ async function render(opts = {}) {
       default: content = notFoundState(hrefFor.office());
     }
   }
-  const view = shellView({ app: appApi, orgs: ctx.orgs, active: org, email: session.get()?.email, name: session.get()?.name, route, content, banner: bannerEl(), isAdmin, inOffice, launcherCurrent: route.name === 'launcher' || route.name === 'home' });
+  const view = shellView({ app: appApi, orgs: ctx.orgs, active: org, email: session.get()?.email, name: session.get()?.name, route, content, banner: bannerEl(), isAdmin, inOffice, launcherCurrent: route.name === 'launcher' || route.name === 'home',
+    catalog: ctx.catalog, registry: await loadRegistry(), currentApp: inOffice ? 'office' : route.name === 'app' ? route.params.app : null, theme });
   put(root, view, designBadge('Built to design'));
   document.title = `${pageLabel(route)} · ${org.name}`;
   if (toastLater) { toast(toastLater); toastLater = null; }

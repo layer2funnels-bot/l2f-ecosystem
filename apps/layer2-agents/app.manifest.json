@@ -1,0 +1,29 @@
+{
+  "id": "layer2_agents",
+  "name": "Layer 2 Agents",
+  "description": "Coming later, with approval",
+  "group": "Studio",
+  "plate": {
+    "colors": [
+      "#C3B0FF",
+      "#7E5BF2",
+      "#5030C0"
+    ],
+    "glyph": "#FFFEFA",
+    "icon": "layer2_agents"
+  },
+  "routes": "/agents/*",
+  "orgs": [
+    "layer2funnels",
+    "aurj"
+  ],
+  "permissionPrefix": [],
+  "grantRequired": false,
+  "status": "soon",
+  "embeds": [],
+  "reuses": [],
+  "searchTypes": [],
+  "storage": "none",
+  "ai": false,
+  "integrations": []
+}

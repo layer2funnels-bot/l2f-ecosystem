@@ -1,0 +1,36 @@
+{
+  "id": "value_ladder",
+  "name": "Value Ladder",
+  "description": "Offers from free to premium",
+  "group": "Studio",
+  "plate": {
+    "colors": [
+      "#FFE58F",
+      "#EEBB12",
+      "#A07A00"
+    ],
+    "glyph": "#2A1F00",
+    "icon": "value_ladder"
+  },
+  "routes": "/ladder/*",
+  "orgs": [
+    "layer2funnels",
+    "aurj"
+  ],
+  "permissionPrefix": [
+    "valueladder"
+  ],
+  "grantRequired": true,
+  "status": "soon",
+  "embeds": [],
+  "reuses": [
+    "funnels",
+    "clients"
+  ],
+  "searchTypes": [
+    "ladder"
+  ],
+  "storage": "none",
+  "ai": false,
+  "integrations": []
+}
