@@ -76,3 +76,6 @@ Found while filing the designs; none changed yet. The index says the permission 
 
 
 Note (batch 3): Admin → Storage (usage and cap) was built on the owner's instruction without a design; it needs a design review.
+
+## Design v4 "Signal" (23 Oct 2026)
+Approved by the owner as the visual direction (`docs/design/v4/`). Apps are rebuilt on v4 tokens one by one (see `docs/SESSION_HANDOFF.md`). Screens awaiting the updated design before they are built: Office > Projects inside Office; Projects two-section home; Whiteboards in context and All boards; Social campaigns/states/channels; Form Builder versions/validation/submissions/client-linked; Value Ladder step types/offer picker/compare/client copy. Copy stage requirements are an open item. Logos and Aurj colours are placeholders in one theme file.

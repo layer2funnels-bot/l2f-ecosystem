@@ -66,3 +66,44 @@ Home: templates, recent boards. Board: dotted infinite canvas, pan (drag empty s
 
 ## 10. Social Planner [social/*] (light version, as allowed)
 Calendar (posts coloured by channel), Posts, Queue, Approvals, Channels (Connect disabled until provider review). Composer drawer: channels, text, media from Drive (reference), per-channel preview, date/time, Submit for review / Save draft. Banner: nothing publishes until channels are connected and approved.
+
+---
+# Appendix: feature completeness and decisions (added 23 Oct 2026)
+Marks: **[existing]** = approved v4/prototype; **[addition]** = proposed addition from the owner's list (screen waits for design approval, backend may proceed). Decisions V4-1 to V4-12 are in `docs/DECISIONS.md`.
+
+## Changes by decision
+- **Office > Projects [existing menu, changed by V4-2]:** opens the Projects overview and workspace inside Office by mounting the shared Projects module (same data, permissions, breadcrumbs). No redirect. The Projects tile stays.
+- **Projects Home and sidebar [addition, V4-3]:** two labelled sections, *Client projects* (grouped by client) and *<Organization> projects* (internal = no client). No duplicates.
+- **Whiteboards [addition, V4-4]:** Project > Whiteboards and a client's Whiteboards open boards inside that context. The Whiteboard tile and Office > Apps entry are the *All boards* lens (list, search, filter by context, only boards the person may open; create asks for a context).
+- **Clients > Strategy [V4-1]:** copies started once from Office > Funnels, never synced, never in shared Drive.
+- **Copy stage [V4-6]:** versions, internal review, send an exact version, approve/request changes. Shows "Copy requirements not yet defined".
+
+## Social Planner (campaigns [addition], light version [existing])
+- **Campaigns:** name, goal, dates, channels, owner, optional client or internal, optional link to funnel/offer. Status Draft > Planned > Active > Paused > Completed > Archived. Campaign page: posts list, calendar, progress counts (drafted / in review / scheduled / published / failed).
+- **Posts:** in a campaign or stand-alone; add, duplicate, reorder, bulk-add; per-channel variants and preview; media by reference from Drive; time zone shown (team in Pakistan, clients abroad).
+- **States:** Draft > In review > Approved > Scheduled > Publishing > Published, plus Failed (reason, retry) and Cancelled. Review uses Approvals v2.
+- **Channels:** capability table per platform (text limit, media types, scheduling support). Connect disabled until provider review and owner approval.
+- **Manual path:** "Mark as posted manually", labelled as the person's own confirmation, never as published by us.
+- **Not in this round:** analytics, auto-publish, evergreen recycling.
+- Workflows: plan a campaign, write posts, send for review, approve, schedule (record only), mark posted. Screens: calendar, posts, queue, approvals, channels, campaigns, campaign page, composer drawer. States: empty, loading, error, no-access, Connect disabled banner. Relationships: Approvals, Drive (media), Clients, Office > Funnels (offer link). Permissions: `social.*` (view/create/edit/review/delete owner-only), client scope. Dependencies: migration 0026.
+
+## Form Builder
+- Forms list; builder with 11 field types and show-if logic; validation (required, formats, min/max, file type and size limits); settings (confirmation message, redirect); preview phone/desktop; **versions** (publishing creates a version; submissions tied to the version they answered); submissions (list, view, search, status, delete owner-only; export needs backend); templates; scope = organization form or client-linked form whose answers feed Brand Base; file uploads through the storage adapter; privacy and retention note; RTL/Urdu.
+- **Public publish and embed stay disabled** until a security review (spam, rate limits, CAPTCHA, privacy notice) and owner approval; internal use and share-in-Clients only.
+- Workflows: build, preview, publish a version, record a submission, review. Screens: list, builder, preview, publish dialog, submissions, submission detail, templates, settings. States: empty, loading, error, no-access, draft vs published, retention note. Relationships: Clients (Brand Base overlay), Drive (uploads), Approvals. Permissions: `forms.form.*`, `forms.submission.*` with client scope. Dependencies: 0019 (exists), 0027.
+
+## Value Ladder
+- Ladder list/create/duplicate. Steps typed (lead magnet, front-end, core, upsell, downsell, high-ticket, continuity); reorder, add/remove. Each step **references an Offers & Products record** (price and name read from it, never edited here; broken-link warning). Ladder belongs to the organization library or is a client-specific copy (V4-1). Per-step assumptions (conversion %, audience) kept as notes/numbers for later Funnel Mapper maths. Views: map, table, compare two versions. History. Status draft/approved. Sharing with a client only if the ladder belongs to that client. Image/PDF export needs backend.
+- Workflows: build a ladder, link offers, compare versions, approve, copy for a client. States: empty, loading, error, no-access, broken link. Relationships: Office > Funnels offers, Clients. Permissions: `ladder.*`. Dependencies: 0020 (exists), 0028.
+
+## Other apps: workflow, states, relations, permissions, dependencies
+| App | Core workflows | States to cover | Relations | Permissions | Depends on |
+|---|---|---|---|---|---|
+| Launcher | open app, find app, see why locked/soon | locked, soon, not here, next round, no weather | catalog, grants, weather op | `launcher_catalog()` | app manifests, MET op |
+| Office | home, funnels records, strategies, documents, team, apps, admin | first use, no match, no access | Drive org space, Projects module, Admin | office/funnels/admin keys | Drive, Projects |
+| Projects | plan, assign, track time, archive, search | empty, archived read-only, no access | Clients (optional), Drive docs, whiteboards | `projects.*` with client/project scope | 0013 |
+| Clients | onboard, stages, requests, approvals, notes | first use, archived, client-scoped | Funnels copies, Forms, Drive, Portal | `clients.*` | 0025 |
+| Drive | upload, organize, share, version, trash | empty, trash, protected SOP, personal | all apps (documents), storage adapter | `drive.*` | 0014, 0023 |
+| Client Portal | see progress, approve, answer | preview-only ribbon (gate G2) | Clients, Approvals | projections only | G2 owner approval |
+| Whiteboard | draw, open in context, All boards | empty, saving, newer version exists | Drive documents, Projects, Clients | Drive rights + context | 0024 |
+| Planner | placeholder | soon | Projects tasks (later) | none yet | external onboarding, V4-9 |
