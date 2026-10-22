@@ -21,3 +21,36 @@ jobs:
           AGE_RECIPIENT: ${{ secrets.AGE_RECIPIENT }}
       - uses: actions/upload-artifact@v4
         with: { name: db-backup, path: 'l2f-backup-*.tar.age', retention-days: 30, if-no-files-found: error }
+
+  # Stored FILES (the database dump does not contain them). Needs the same storage variables the API uses, as secrets:
+  #   STORAGE_DRIVER (supabase or s3) and STORAGE_URL + STORAGE_SERVER_KEY, or S3_ENDPOINT + S3_BUCKET + S3_ACCESS_KEY_ID + S3_SECRET_ACCESS_KEY
+  # While the files are small the encrypted archive is kept as an artifact (retention 7 days: the free artifact quota is only 500 MB). When the files outgrow
+  # BACKUP_MAX_BYTES the job stops with exit code 4: then set BACKUP_S3_* (a SECOND S3-compatible bucket at another provider) and the archive goes there instead.
+  # Exit code 3 means a file registered in the database is MISSING from storage: the job fails loudly on purpose.
+  storage-files:
+    runs-on: ubuntu-24.04
+    env: { BACKUP_DEST: '${{ secrets.BACKUP_S3_ENDPOINT }}' }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: sudo apt-get install -y -q age
+      - run: node scripts/backup-storage.mjs
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          AGE_RECIPIENT: ${{ secrets.AGE_RECIPIENT }}
+          STORAGE_DRIVER: ${{ secrets.STORAGE_DRIVER }}
+          STORAGE_URL: ${{ secrets.STORAGE_URL }}
+          STORAGE_SERVER_KEY: ${{ secrets.STORAGE_SERVER_KEY }}
+          S3_ENDPOINT: ${{ secrets.S3_ENDPOINT }}
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
+          S3_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
+          S3_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
+          BACKUP_S3_ENDPOINT: ${{ secrets.BACKUP_S3_ENDPOINT }}
+          BACKUP_S3_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}
+          BACKUP_S3_ACCESS_KEY_ID: ${{ secrets.BACKUP_S3_ACCESS_KEY_ID }}
+          BACKUP_S3_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET_ACCESS_KEY }}
+      - uses: actions/upload-artifact@v4
+        if: env.BACKUP_DEST == ''
+        with: { name: storage-backup, path: 'l2f-storage-backup-*.tar.age', retention-days: 7, if-no-files-found: ignore }

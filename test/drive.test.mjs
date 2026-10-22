@@ -61,7 +61,7 @@ await db.query("insert into file_versions (workspace_id,file_id,body) values ($1
 await db.query("insert into file_versions (workspace_id,file_id,body,version) values ($1,$2,'SECRET-DOC-TEXT second', 99)", [L, doc]);
 check('DR5', 'A document keeps its text in versions: numbered by the database (a version number sent by the caller is ignored), the file follows the newest', (await rows('select version from file_versions where file_id=$1 order by version', [doc])).map((r) => r.version).join() === '1,2'
   && (await rows('select current_version from files where id=$1', [doc]))[0].current_version === 2);
-check('DR6', 'A document cannot carry a stored copy and a file cannot carry text', (await errCode(() => db.query("insert into file_versions (workspace_id,file_id,storage_path) values ($1,$2,$3)", [L, doc, `${SH}x/y.txt`]))) !== 'no-error'
+check('DR6', 'A document cannot carry a stored copy and a file cannot carry text', (await errCode(() => db.query("insert into file_versions (workspace_id,file_id,storage_path,size_bytes) values ($1,$2,$3,10)", [L, doc, `${SH}x/y.txt`]))) !== 'no-error'
   && (await errCode(() => db.query("insert into file_versions (workspace_id,file_id,body) values ($1,$2,'text')", [L, fl.id]))) === 'P0001');
 check('DR7', 'Versions are history: they cannot be changed or removed by anyone using the app', (await errCode(() => db.query("update file_versions set body='x' where file_id=$1", [doc]))) === '42501' && (await errCode(() => db.query("delete from file_versions where file_id=$1", [doc]))) === '42501');
 await asUser(U.VW);
@@ -113,7 +113,7 @@ check('SP6', 'A protected SOP cannot be shared by link', (await errCode(() => db
 await asUser(U.ED);
 const cf = file('contract.pdf', 'client', { client: C1 });
 const cfile = (await db.query("insert into files (workspace_id,space,client_id,name,kind,storage_path,uploaded_by) values ($1,'client',$2,'contract.pdf','file',$3,$4) returning id", [L, C1, cf.path, U.ED])).rows[0].id;
-await db.query("insert into file_versions (workspace_id,file_id,storage_path) values ($1,$2,$3)", [L, cfile, cf.path]);
+await db.query("insert into file_versions (workspace_id,file_id,storage_path,size_bytes) values ($1,$2,$3,10)", [L, cfile, cf.path]);
 check('CS1', 'A person who may use Clients adds a file to a client’s own workspace; it never shows in the shared space list', (await rows("select id from files where space='shared'")).every((r) => r.id !== cfile) && (await rows("select id from files where space='client'")).length === 1);
 check('CS2', 'A client file needs a path under that client, and a shared-space file cannot be tied to a client', (await errCode(() => db.query("insert into files (workspace_id,space,client_id,name,kind,storage_path,uploaded_by) values ($1,'client',$2,'x','file',$3,$4)", [L, C1, `${CP(C2)}x/x.pdf`, U.ED]))) === 'P0001'
   && (await errCode(() => db.query("insert into files (workspace_id,space,client_id,name,kind,storage_path,uploaded_by) values ($1,'shared',$2,'x','file',$3,$4)", [L, C1, `${SH}x/x.pdf`, U.ED]))) === '23514');
@@ -138,7 +138,7 @@ await asUser(U.ED);
 const PF = (await db.query("insert into drive_folders (workspace_id,space,owner_id,name) values ($1,'personal',$2,'Mine') returning id", [L, U.ED])).rows[0].id;
 const pp = file('notes.txt', 'personal', { owner: U.ED });
 const pfile = (await db.query("insert into files (workspace_id,space,owner_id,folder_id,name,kind,storage_path,uploaded_by) values ($1,'personal',$2,$3,'notes.txt','file',$4,$2) returning id", [L, U.ED, PF, pp.path])).rows[0].id;
-await db.query("insert into file_versions (workspace_id,file_id,storage_path) values ($1,$2,$3)", [L, pfile, pp.path]);
+await db.query("insert into file_versions (workspace_id,file_id,storage_path,size_bytes) values ($1,$2,$3,10)", [L, pfile, pp.path]);
 const pdoc = (await db.query("insert into files (workspace_id,space,owner_id,name,kind,uploaded_by) values ($1,'personal',$2,'Private plan','document',$2) returning id", [L, U.ED])).rows[0].id;
 await db.query("insert into file_versions (workspace_id,file_id,body) values ($1,$2,'SECRET-PERSONAL-TEXT')", [L, pdoc]);
 check('PS1', 'A person keeps their own files and folders in their personal space', (await rows("select id from files where space='personal'")).length === 2 && (await rows("select id from drive_folders where space='personal'")).length === 1);

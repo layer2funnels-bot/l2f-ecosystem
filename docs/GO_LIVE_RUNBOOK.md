@@ -38,13 +38,13 @@ Choose the address for the office (for example `office.layer2funnels.com`; the s
 *Check:* Brevo shows the domain "authenticated". *Undo:* delete the added records.
 
 ## 3. Read-only preparation (owner approves the slot)
-- Export the existing `application-office` project with `scripts/export-project.sh` and verify it with `DUMP_FILE=… npm run drill:restore` (docs/INFRASTRUCTURE.md); store the encrypted export offline.
-- Decide the project slot: a **new** project for the ecosystem (recommended; `application-office` stays as it is).
+- **`application-office`: delete at go-live with owner approval.** The owner says it is not needed. It is not exported, paused or touched before then; deleting it frees the project slot. Delete only after the owner's explicit approval in that step (deletion cannot be undone).
+- Decide the project slot: a **new** project for the ecosystem (recommended), or the slot freed by deleting `application-office`.
 *Undo:* nothing was changed.
 
 ## 4. Create the Supabase project and apply the database (owner + assistant)
 1. Create the project in the region from step 0; strong database password into the password manager; no extra add-ons.
-2. Apply `migrations/0001` … `0022` **in order** through the session pooler connection (one transaction per file; stop on the first error). The same order is used by `npm run stack:migrate` locally.
+2. Use database client tools of **version 17** (`pg_dump`, `pg_restore`, `psql`; CI checks this with `npm run check:pg17`). Apply `migrations/0001` … `0023` **in order** through the session pooler connection (one transaction per file; stop on the first error). The same order is used by `npm run stack:migrate` locally.
 3. Do **not** run `seed/bootstrap.sql` yet.
 *Check (read-only):* (a) `select count(*) from public.workspaces` is 0; (b) as the publishable (anon) key, `GET {project}/rest/v1/clients` is refused and `GET {project}/rest/v1/rpc/…` of any public function is refused (migration 0010 closed the Data API; the permanent test is `test/direct-access.test.mjs`, the HTTP proof is E-series in `scripts/e2e-local.mjs`); (c) the project list shows the intended region.
 *Undo:* delete the project (it is empty at this point).
@@ -73,6 +73,7 @@ Google Cloud → OAuth client (web); authorised redirect = the callback address 
 - Connect the private repository, branch `main` (or the commit recorded in step 0). Build command `node scripts/build-web.mjs`, output `dist/web`. `wrangler.toml` already carries `nodejs_compat`.
 - **Build-time (browser-safe) variables:** `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` (the publishable key only; the build refuses a secret or legacy JWT key), `GOOGLE_ENABLED=true`. The build rewrites the page security policy to allow only that project's address.
 - **Encrypted runtime variables (API function):** `DATABASE_URL` (the **session pooler** string, role `postgres`; the API then runs every request as `app_user`), `SUPABASE_JWKS_URL`, `SUPABASE_JWT_ISSUER`, `RATE_LIMIT_STORE=postgres` (shared counters from migration 0009), optional `DB_POOL_MAX` (default 5; keep it small on the free plan).
+- **Storage variables (runtime):** `STORAGE_DRIVER=supabase` with `STORAGE_URL` (the project address), `STORAGE_SERVER_KEY` (the project's server-side secret key; encrypted, never in the browser build) and `STORAGE_BUCKET` (a private bucket, e.g. `drive`). The hard application cap is 8 GB (`storage_settings`, migration 0023); at the limit uploads answer 507 `storage_limit` with a clear message. Usage is shown in Admin → Storage.
 - **One server per request:** the function builds a database connection per request (Workers cannot reuse one across requests; found in the rehearsal, `docs/GO_LIVE_REHEARSAL.md`); `DB_POOL_MAX` is forced to 1 by the function.
 - **Fonts:** Hanken Grotesk, Schibsted Grotesk and Newsreader are self-hosted from `apps/web/fonts` (licences in `LICENSES.txt`); nothing loads from a font service, and the policy allows only the site's own files. Confirm after deploy that the page loads no request to any other host.
 - Custom domain = the office address from step 2.
@@ -89,7 +90,36 @@ Google Cloud → OAuth client (web); authorised redirect = the callback address 
 - Create the GitHub secrets `SUPABASE_DB_URL` (session pooler) and `AGE_RECIPIENT` (the public key of an age key pair; the private key stays offline with the owner).
 - Rename `.github/workflows/backup.yml.disabled` to `backup.yml`; run it once by hand.
 - **Restore test:** download the artifact, decrypt with the private key, restore into a local PostgreSQL with `pg_restore`, compare table row counts, run `npm run drill:restore` against it. A backup that has not been restored is not a backup.
-*Undo:* rename the file back. Note: files in Storage are **not** in the database dump (Drive backup is planned work).
+- **Storage backup (files):** `scripts/backup-storage.mjs` (job `storage-files` in the same workflow) reads every stored object, cross-checks the database's list of files, writes a SHA-256 manifest and one `age`-encrypted archive. Same `AGE_RECIPIENT` and `SUPABASE_DB_URL` secrets plus the storage variables from step 8 (as secrets). The archive is a GitHub artifact limited by `BACKUP_MAX_BYTES` (default 400 MB). Exit codes: 0 ok · 1 failed · 3 a registered file is missing from storage (archive still written) · 4 over budget. For more than the budget, set `BACKUP_S3_ENDPOINT`, `BACKUP_S3_BUCKET`, `BACKUP_S3_ACCESS_KEY_ID`, `BACKUP_S3_SECRET_ACCESS_KEY` (and `BACKUP_S3_REGION`) to upload the archive to a second S3-compatible bucket instead. Restore: `scripts/restore-storage.mjs`; rehearsed in `npm run rehearsal:local` (steps R10s–R10z).
+*Undo:* rename the file back.
+
+## 10a. Switch Drive files from Supabase Storage to Cloudflare R2 (later; owner creates the account)
+Nothing here is done now: no Cloudflare account or card exists. The adapter (`packages/core/storage-adapter.mjs`) already speaks S3 (SigV4), tested against a fake S3 server and real local Supabase Storage. **Unverified against real R2:** presigned PUT signs `content-length`; run the smoke test in step 5 before trusting it.
+1. Owner: create the Cloudflare account and an R2 bucket (private); create an R2 API token limited to that bucket (Object Read & Write); note the account endpoint `https://<account>.r2.cloudflarestorage.com`.
+2. Set runtime variables: `STORAGE_DRIVER=s3`, `S3_ENDPOINT`, `S3_REGION=auto`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`. Add the bucket's CORS rule for the office address (PUT, GET).
+3. Copy existing objects (same keys) from Supabase Storage to R2 (`rclone` or a small script using the adapter's `list/get/put`); compare counts and bytes with Admin → Storage.
+4. Run `node scripts/storage-smoke.mjs` with the new variables (upload, download, size check, delete). Then run the storage backup once and restore it (step 10).
+5. Redeploy with the new variables; keep the old bucket read-only for 30 days, then delete with owner approval.
+*Undo:* set `STORAGE_DRIVER=supabase` again (the old bucket is untouched during the 30 days).
+
+**Cloudflare R2 usage-alert checklist (owner):** R2 free tier is 10 GB storage, 1 M Class A and 10 M Class B operations per month; the application cap is 8 GB, but a second backup copy in the same account would count too. (1) Dashboard → Notifications: add alerts for R2 usage if offered for the account; (2) check R2 → Metrics weekly for storage and operations; (3) compare with Admin → Storage (alert point 80 % of 8 GB); (4) never enable a paid plan or add a card without the owner's decision; (5) if usage approaches 10 GB, lower the cap or delete trash from Drive.
+
+## 10b. Dashboard-only settings (cannot be set by migrations or code) — owner checklist
+Menu names change; if one is not found, search the Supabase docs for the setting name.
+- [ ] Authentication → Sign In / Providers → Email: **Confirm email** on; **Minimum password length 10**.
+- [ ] Authentication → URL Configuration: **Site URL** = office address; **Redirect URLs** = office address only.
+- [ ] Authentication → Providers → Google: enable only after step 7; client id and secret from Google.
+- [ ] Authentication → Sign In / Providers: **Allow new users to sign up** per the step 5 decision.
+- [ ] Authentication → Emails (SMTP settings): Brevo SMTP host, port, user, key; sender on the verified domain.
+- [ ] Authentication → Rate limits: defaults.
+- [ ] Project Settings → API (or JWT Keys): asymmetric signing keys on; copy JWKS address and issuer.
+- [ ] Project Settings → Data API: Data API may stay on because migration 0010 revokes all grants; confirm `public` tables return nothing to the publishable key (step 4 check b).
+- [ ] Storage → New bucket: private bucket named as `STORAGE_BUCKET`, **not** public; set the file size limit per file as wanted.
+- [ ] Project Settings → Database: note the session pooler connection string for `DATABASE_URL` and `SUPABASE_DB_URL`; confirm the Postgres version is 17 or newer.
+- [ ] Project Settings → Database → Backups: note that free projects have no managed restore; our nightly job (step 10) is the backup.
+- [ ] Organization → Billing: stay on the plan the owner chose; no add-ons; spend cap on.
+- [ ] Cloudflare Pages: environment variables from step 8 (encrypted ones as secrets), custom domain.
+- [ ] GitHub → Settings → Secrets: `SUPABASE_DB_URL`, `AGE_RECIPIENT`, storage variables, `SITE_URL`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `FMP_READ_TOKEN` (nightly FMP job).
 
 ## 11. Keep-alive (owner)
 Free Supabase projects pause after 7 idle days. Add secrets `SITE_URL`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, rename `.github/workflows/keepalive.yml.disabled` to `keepalive.yml`. **Unverified [V15]:** whether these calls count as activity; check the dashboard after a week and, if the project still shows "inactive soon", move to the paid plan (about US$25 a month) or add a database-touching health call (small API change, needs approval).

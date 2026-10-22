@@ -27,3 +27,7 @@ Run: `npm run stack:start && npm run stack:migrate && npm run rehearsal:local` (
 - Step 8 now states the one-server-per-request design and that connections to the pooler are per request.
 - Step 4 now includes migration `0022`.
 - Restoring a dump needs a database owned by the restoring login (`postgres` on Supabase); a fresh Supabase project already is.
+
+
+## Update (batch 3)
+The rehearsal now also covers Storage: files are written through the adapter, backed up with `scripts/backup-storage.mjs`, restored, and compared by SHA-256 (steps R10s–R10z). Last local run: 42 passed, 0 failed, 4 gaps (dashboard-only settings, restoring auth users, real R2, client-tool version on the owner's machine). The dashboard-only gap is now the checklist in runbook 10b.

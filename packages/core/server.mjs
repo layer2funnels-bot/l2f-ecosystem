@@ -11,6 +11,7 @@ import { createPgExecutor } from './pg-executor.mjs';
 import { createSafeLogger } from './safe-log.mjs';
 import { createRateLimiter } from './rate-limit.mjs';
 import { createPgRateLimiter, createTieredLimiter } from './rate-limit-store.mjs';
+import { storageFromEnv } from './storage-adapter.mjs';
 
 // State with no open connections in it (rate-limit counters, the cached signing keys). A runtime that forbids reusing connections between requests
 // (Cloudflare Workers) builds this ONCE and a fresh server per request; everything else may ignore it.
@@ -32,7 +33,7 @@ export function createServer(env, { sink = (l) => console.log(JSON.stringify(l))
   const limiter = env.RATE_LIMIT_STORE === 'postgres'
     ? createTieredLimiter({ local, shared: createPgRateLimiter({ query: async (sql, p) => (await pool.query(sql, p)).rows }), onError: () => logger.log({ class: 'rate_store_unavailable' }) })
     : local;
-  const api = createApi({ executor, logger, limiter });
+  const api = createApi({ executor, logger, limiter, storage: storageFromEnv(env) });
   const jwks = shared ? shared.jwks : (env.SUPABASE_JWKS_URL ? createJwksProvider({ url: env.SUPABASE_JWKS_URL }) : null);
   const hs = env.SUPABASE_JWT_SECRET ? [{ alg: 'HS256', secret: env.SUPABASE_JWT_SECRET }] : [];   // one object: its CryptoKey is cached
   const verifyToken = createJwtVerifier({

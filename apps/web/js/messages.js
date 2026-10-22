@@ -9,6 +9,8 @@ export const MESSAGES = {
   org_required: 'Choose an organization first.',
   session_expired: 'Your session has ended. Sign in again.',
   bad_request: 'That request could not be read.',
+  storage_limit: 'The storage limit has been reached, so this file was not saved. Delete files you no longer need, or ask an admin.',
+  storage_unavailable: 'File storage is not available right now.',
   offline: "You appear to be offline. Nothing was saved. Check your connection and try again.",
 };
 export const messageFor = (code) => MESSAGES[code] ?? MESSAGES.failed;

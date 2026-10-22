@@ -179,3 +179,6 @@ Data and API only; no screens yet (each app waits for its own design). Same stan
 - **Whiteboard spike:** `docs/WHITEBOARD_SPIKE.md`; storage test `test/whiteboard-spike.test.mjs`.
 - Test counts: audience 9, approvals 38, portal 52, forms 48, ladder 25, social 34, whiteboard 10; mutation controls 59 + 16 = see `scripts/mutation-check.mjs`.
 
+
+## 19. Storage (0023)
+Files go through the storage adapter (`supabase`, `s3` for Cloudflare R2, `memory` for tests), chosen by `STORAGE_DRIVER`. Operations: `drive.uploads.sign`, `drive.files.download`, `storage.usage`. The 8 GB cap lives in `storage_settings` and is enforced by trigger `file_versions_cap`, a pre-check at signing, and the real size from `head` at registration. Tests: `test/storage-adapter.test.mjs`, `test/storage-cap.test.mjs`, `test/storage-backup.test.mjs` (fake S3 and fake Supabase Storage in `test/fakes`); `scripts/storage-smoke.mjs` for a real bucket. Backups: `scripts/backup-storage.mjs`, `scripts/restore-storage.mjs`. Database tools are version 17 (`npm run check:pg17`). Switch-over and checklists: `docs/GO_LIVE_RUNBOOK.md` 10a and 10b.

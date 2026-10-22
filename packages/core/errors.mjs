@@ -10,6 +10,8 @@ export const RATE_LIMITED = Object.freeze({ status: 429, code: 'rate_limited', m
 export const ORG_REQUIRED = Object.freeze({ status: 400, code: 'org_required', message: 'Choose an organization first.' });
 export const SESSION_EXPIRED = Object.freeze({ status: 401, code: 'session_expired', message: 'Your session has ended. Sign in again.' });
 export const BAD_REQUEST = Object.freeze({ status: 400, code: 'bad_request', message: 'That request could not be read.' });
+export const STORAGE_LIMIT = Object.freeze({ status: 507, code: 'storage_limit', message: 'The storage limit has been reached, so this file was not saved. Delete files you no longer need, or ask an admin.' });
+export const STORAGE_OFF = Object.freeze({ status: 503, code: 'storage_unavailable', message: 'File storage is not available right now.' });
 export const FAILED = Object.freeze({ status: 500, code: 'failed', message: 'Something went wrong. Nothing was changed.' });
 
 // 42501 RLS/permission denied · 23503 reference not found or in another workspace · P0002 invitation invalid
@@ -24,6 +26,8 @@ export function toPublicError(err) {
   const code = String(err.code ?? '');
   if (AS_NOT_FOUND.has(code)) return NOT_FOUND;
   if (AS_CONFLICT.has(code)) return CONFLICT;
+  if (code === 'P0001' && /storage limit reached/.test(String(err.message ?? ''))) return STORAGE_LIMIT;
+  if (code === 'STORAGE_OFF') return STORAGE_OFF;
   if (AS_INVALID.has(code)) return INVALID;
   if (AS_UNAVAILABLE.has(code)) return UNAVAILABLE;
   return FAILED;

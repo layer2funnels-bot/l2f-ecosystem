@@ -17,7 +17,7 @@ const header = (headers, name) => {
   return Array.isArray(v) ? v[0] : v;
 };
 
-export function createApi({ executor, logger, limiter = createRateLimiter(), operations = defaultOperations, now = Date.now }) {
+export function createApi({ executor, logger, limiter = createRateLimiter(), operations = defaultOperations, now = Date.now, storage = null }) {
   const done = (requestId, op, t0, status, cls, dbCode, rateLimited, body) => {
     logger.log({ ts: new Date(now()).toISOString(), requestId, op, status, class: cls, db_code: dbCode, ms: now() - t0, rateLimited });
     return { status, body: { requestId, ...body } };
@@ -56,7 +56,7 @@ export function createApi({ executor, logger, limiter = createRateLimiter(), ope
             const want = op.audience ?? 'staff';
             if (want !== 'any' && a !== want) throw { code: 'PGRST116' };
           }
-          const out = await op.run(q, { orgId, userId }, v.value);
+          const out = await op.run(q, { orgId, userId, storage }, v.value);
           if (op.single && out.length === 0) throw { code: 'PGRST116' };   // a mutation that touched nothing looks like a denied one
           return out;
         });

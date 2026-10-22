@@ -3,6 +3,7 @@
 // policies and triggers in the database (a refusal reads as "not found"), data and API only. Real file bytes are not handled here: the
 // browser would upload to storage through a signed address (packages/core/storage.mjs, prepared), then register the path.
 import { defineOperation } from './define.mjs';
+import { newObjectPath } from './storage.mjs';
 
 const T = (max = 500) => ({ type: 'text', min: 0, max });
 const id = { id: { type: 'uuid', required: true } };
@@ -11,6 +12,16 @@ const NAME = { type: 'text', required: true, min: 1, max: 200 };
 const like = (q) => `%${String(q).replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
 const bad = (message) => Object.assign(new Error(message), { code: 'P0001' });       // reads as "invalid" in the API contract
 const toBase64Url = (bytes) => btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const MAX_FILE = 5368709120;                                   // 5 GiB, the same ceiling as file_versions.size_bytes
+const needStorage = (ctx) => { if (!ctx.storage) throw { code: 'STORAGE_OFF' }; return ctx.storage; };
+// a stored copy must exist, and ITS size is the size (never the caller's claim: the cap counts real bytes)
+const verifyStored = async (ctx, path, claimed) => {
+  if (!ctx.storage) return claimed;
+  const h = await ctx.storage.head(path);
+  if (!h) throw bad('the upload was not found');
+  if (h.size > MAX_FILE) throw bad('file too large');
+  return h.size;
+};
 const byteLength = (text) => new TextEncoder().encode(text).length;
 export const newLinkToken = () => toBase64Url(crypto.getRandomValues(new Uint8Array(32)));
 
@@ -67,6 +78,7 @@ const fileOps = [
     run: async (q, ctx, i) => {
       if (i.kind === 'file' && (!i.storage_path || i.body !== undefined)) throw bad('a file needs the path of its stored copy');
       if (i.kind === 'document' && (i.body === undefined || i.storage_path)) throw bad('a document needs its text');
+      if (i.kind === 'file') i = { ...i, size_bytes: await verifyStored(ctx, i.storage_path, i.size_bytes) };
       const [f] = await q('insert into files (workspace_id, space, client_id, owner_id, folder_id, name, kind, mime_type, size_bytes, storage_path, uploaded_by) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) returning id',
         [ctx.orgId, i.space, i.client ?? null, i.space === 'personal' ? ctx.userId : null, i.folder ?? null, i.name, i.kind, i.mime_type ?? null, i.size_bytes ?? (i.body !== undefined ? byteLength(i.body) : null), i.kind === 'file' ? i.storage_path : null, ctx.userId]);
       await q('insert into file_versions (workspace_id, file_id, storage_path, body, size_bytes, note) values ($1,$2,$3,$4,$5,$6)', [ctx.orgId, f.id, i.kind === 'file' ? i.storage_path : null, i.kind === 'document' ? i.body : null, i.size_bytes ?? (i.body !== undefined ? byteLength(i.body) : null), i.note ?? null]);
@@ -80,6 +92,7 @@ const fileOps = [
       if (!f) return [];
       if (f.kind === 'file' && (!i.storage_path || i.body !== undefined)) throw bad('a file needs the path of its stored copy');
       if (f.kind === 'document' && (i.body === undefined || i.storage_path)) throw bad('a document needs its text');
+      if (f.kind === 'file') i = { ...i, size_bytes: await verifyStored(ctx, i.storage_path, i.size_bytes) };
       await q('insert into file_versions (workspace_id, file_id, storage_path, body, size_bytes, note) values ($1,$2,$3,$4,$5,$6)', [ctx.orgId, i.id, f.kind === 'file' ? i.storage_path : null, f.kind === 'document' ? i.body : null, i.size_bytes ?? (i.body !== undefined ? byteLength(i.body) : null), i.note ?? null]);
       return q(`${FSELECT} where f.id = $1`, [i.id]);
     },
@@ -150,4 +163,40 @@ const personalOps = [
   defineOperation({ name: 'drive.notices.seen', class: 'write', single: true, input: id, run: (q, _c, i) => q('update drive_notices set seen_at = coalesce(seen_at, now()) where id = $1 returning id, seen_at', [i.id]) }),
 ];
 
-export const driveOperations = [...folderOps, ...fileOps, ...sopOps, ...linkOps, ...personalOps];
+// ---- real bytes: where to put them, where to get them, and how much room is left
+const uploadOps = [
+  defineOperation({
+    // Step 1 of an upload: the same permission as registering a file, and the cap is checked BEFORE any bytes move. The browser then PUTs the bytes to the returned
+    // address and registers the path with drive.files.create (which looks at the stored copy and takes its real size).
+    name: 'drive.uploads.sign', class: 'write', single: true,
+    input: { space: SPACE, client: { type: 'uuid' }, name: NAME, size_bytes: { type: 'int', required: true, min: 1, max: MAX_FILE }, mime_type: T(120) },
+    run: async (q, ctx, i) => {
+      const storage = needStorage(ctx);
+      if (i.space === 'client' && !i.client) throw bad('a client file needs its client');
+      const [ok] = await q(`select case when $1 = 'shared' then private.has_permission($2, 'drive.file.upload')
+        when $1 = 'client' then private.has_permission($2, 'drive.file.upload', $3) and private.has_permission($2, 'clients.client.view', $3)
+        else private.can_use_app($2, 'drive') end as ok`, [i.space, ctx.orgId, i.client ?? null]);
+      if (!ok?.ok) throw { code: 'PGRST116' };
+      const [room] = await q('select (private.storage_used_bytes() + $1 <= (select cap_bytes from storage_settings)) as fits', [i.size_bytes]);
+      if (!room?.fits) throw Object.assign(new Error('storage limit reached'), { code: 'P0001' });
+      const path = newObjectPath({ workspaceId: ctx.orgId, space: i.space, clientId: i.client, ownerId: ctx.userId }, i.name);
+      const r = await storage.signUpload({ path, size: i.size_bytes, contentType: i.mime_type ?? 'application/octet-stream' });
+      return [{ path, url: r.url, method: r.method, headers: r.headers ?? {} }];
+    },
+  }),
+  defineOperation({
+    // A short-lived download address for the file (or one version of it). Row security decides whether the caller may read the file at all.
+    name: 'drive.files.download', class: 'read', single: true, input: { ...id, version: { type: 'int', min: 1 } },
+    run: async (q, ctx, i) => {
+      const storage = needStorage(ctx);
+      const [v] = await q(`select f.name, f.mime_type, v.storage_path, v.size_bytes::float8 as size_bytes, v.version from files f join file_versions v on v.file_id = f.id
+        where f.id = $1 and f.kind = 'file' and v.version = coalesce($2, f.current_version)`, [i.id, i.version ?? null]);
+      if (!v || !v.storage_path) return [];
+      const r = await storage.signDownload({ path: v.storage_path, seconds: 300, fileName: v.name });
+      return [{ url: r.url, expires_in_seconds: 300, name: v.name, mime_type: v.mime_type, size_bytes: v.size_bytes, version: v.version }];
+    },
+  }),
+  defineOperation({ name: 'storage.usage', class: 'read', single: true, run: (q) => q('select total_bytes::float8 as total_bytes, cap_bytes::float8 as cap_bytes, org_bytes::float8 as org_bytes, files, versions, by_space from storage_usage()') }),
+];
+
+export const driveOperations = [...folderOps, ...fileOps, ...sopOps, ...linkOps, ...personalOps, ...uploadOps];
