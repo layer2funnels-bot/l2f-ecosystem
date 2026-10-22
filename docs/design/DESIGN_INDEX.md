@@ -80,3 +80,6 @@ Extract `l2f-design-files.zip` at the repo root. It creates `docs/design/` (all 
 
 ## Not designed yet (by design)
 Projects, Drive, Planner, Form Builder, Value Ladder, Social Planner, Whiteboard, Layer 2 Agents, Client Portal, FMP Phase 2 moves, dark theme. Each app comes one at a time.
+
+## Design v4 "Signal" (23 Oct 2026)
+Folder `docs/design/v4/` (`DESIGN_SYSTEM.md`, `APP_SPECS.md`, `AUDIT.md`, `ecosystem-v4.html`, `prototype-source/`). **Owner approved v4 as the visual direction.** It supersedes the look of designs 01 to 08 (behaviour and the permission catalog still win). Screens a to g in `CLAUDE_CODE_PROMPT.md` are changed by the owner's decisions and wait for the updated design before they are built. Clients (09) and shell patterns (10) are superseded by the v4 Clients and shell; build from v4.
