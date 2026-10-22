@@ -23,6 +23,7 @@ export function manifestProblems(m) {
   need(STATUSES.includes(m.status), `status must be one of ${STATUSES.join(', ')}`);
   need(['embeds', 'reuses', 'searchTypes', 'integrations'].every((k) => Array.isArray(m[k])), 'embeds, reuses, searchTypes and integrations must be lists');
   need(STORAGE.includes(m.storage), `storage must be one of ${STORAGE.join(', ')}`);
+  need(Number.isInteger(m.order) && m.order > 0, 'order must be a positive whole number (position in the Launcher)');
   need(m.ai === false, 'ai must be false (no AI provider is switched on)');
   need(m.integrations?.length === 0, 'integrations must be empty (none are switched on)');
   return p;

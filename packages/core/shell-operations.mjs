@@ -16,6 +16,13 @@ export const shellOperations = [
     run: async (q, _c, i) => ((await q('select invitation_decline($1) as ok', [i.token]))[0].ok ? [{ ok: true }] : []),
   }),
 
+  // Weather for the Launcher sky (V4-7). Staff only; the place is rounded and never stored or logged; the answer is cached 30 minutes (weather.mjs).
+  defineOperation({
+    name: 'weather.get', class: 'read', audience: 'staff', single: true,
+    input: { lat: { type: 'number', required: true, min: -90, max: 90 }, lon: { type: 'number', required: true, min: -180, max: 180 } },
+    run: async (_q, ctx, i) => { if (!ctx.weather) throw { code: 'WEATHER_OFF' }; return [await ctx.weather.get(i.lat, i.lon)]; },
+  }),
+
   // ---- Admin → Members
   defineOperation({ name: 'members.list', class: 'read', run: (q) => q('select row_kind, user_id, invitation_id, display_name, email, role, status, since, is_you from members_list()') }),
   defineOperation({ name: 'members.setRole', class: 'write', single: true, input: { user: { type: 'uuid', required: true }, role: { type: 'enum', values: ROLES, required: true } }, run: (q, _c, i) => q('select member_set_role($1, $2) as done', [i.user, i.role]) }),

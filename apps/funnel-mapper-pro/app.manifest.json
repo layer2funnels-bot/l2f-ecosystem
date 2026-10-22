@@ -26,5 +26,6 @@
   "storage": "own-database",
   "ai": false,
   "integrations": [],
-  "codeDir": "apps/funnel-mapper"
+  "codeDir": "apps/funnel-mapper",
+  "order": 11
 }

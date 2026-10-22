@@ -60,7 +60,7 @@ function appSwitcher({ catalog = [], registry, current, launcherCurrent }) {
   return h('div', { class: 'swwrap apps-wrap' }, btn, menu);
 }
 
-function profile({ email, name, onSignOut, theme }) {
+function profile({ email, name, onSignOut, theme, weather }) {
   const btn = h('button', { type: 'button', class: 'who', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-controls': 'profile-menu', 'aria-label': `Your profile: ${name || email}` }, initials(name || email));
   const menu = h('div', { class: 'menu profile-menu', id: 'profile-menu', role: 'menu', 'aria-label': 'Your profile', 'data-open': 'false' });
   const close = (refocus) => { menu.dataset.open = 'false'; btn.setAttribute('aria-expanded', 'false'); if (refocus) btn.focus(); };
@@ -69,6 +69,7 @@ function profile({ email, name, onSignOut, theme }) {
     const pref = theme?.pref?.() ?? 'system';
     const choose = (v) => h('button', { type: 'button', role: 'menuitemradio', 'aria-checked': String(pref === v), tabindex: '-1', onclick: () => { theme.set(v); close(false); } }, { system: 'System', light: 'Light', dark: 'Dark' }[v]);
     menu.replaceChildren(h('div', { class: 'mh' }, 'Signed in as'), h('div', { class: 'mfoot', style: 'border:0;margin:0;color:var(--text);overflow-wrap:anywhere' }, email ?? ''),
+      weather ? h('button', { type: 'button', role: 'menuitemcheckbox', class: 'opt opt-plain', 'aria-checked': String(weather.on()), tabindex: '-1', onclick: () => { close(false); weather.set(!weather.on()); } }, h('span', { class: 'tx' }, h('strong', {}, 'Weather on the Launcher'), h('small', {}, weather.on() ? 'On. Uses your location when you allow it.' : 'Off'))) : null,
       theme ? [h('div', { class: 'mh' }, 'Appearance'), h('div', { class: 'seg-theme', role: 'group', 'aria-label': 'Appearance' }, choose('system'), choose('light'), choose('dark'))] : null,
       h('button', { type: 'button', role: 'menuitem', class: 'opt opt-plain', tabindex: '-1', onclick: () => { close(false); onSignOut(); } }, h('span', { class: 'tx' }, h('strong', {}, 'Sign out'))));
     menu.dataset.open = 'true'; btn.setAttribute('aria-expanded', 'true'); menu.querySelector('[role=menuitem]').focus();
@@ -93,7 +94,7 @@ export function officeNav(route, isAdmin) {
   return { top, bottom };
 }
 
-export function shellView({ app, orgs, active, email, name, route, content, banner, isAdmin, inOffice, launcherCurrent, catalog, registry, currentApp, theme }) {
+export function shellView({ app, orgs, active, email, name, route, content, banner, isAdmin, inOffice, launcherCurrent, catalog, registry, currentApp, theme, weather }) {
   offs.forEach((f) => f()); offs = [];
   document.body.classList.toggle('hasb', Boolean(inOffice));
   const nav = inOffice ? officeNav(route, isAdmin) : null;
@@ -107,7 +108,7 @@ export function shellView({ app, orgs, active, email, name, route, content, bann
         h('input', { type: 'search', placeholder: `Search ${active.name}`, disabled: true, 'aria-describedby': 'search-why', autocomplete: 'off' })),
       h('span', { class: 'sr', id: 'search-why' }, 'Search is not available yet. It arrives with the apps it searches.'),
       h('span', { class: 'iconbtn hide-s', role: 'img', 'aria-label': 'Notifications are not available yet', 'aria-disabled': 'true', title: 'Notifications are not available yet' }, icon('bell')),
-      profile({ email, name, onSignOut: () => app.signOut(), theme })),
+      profile({ email, name, onSignOut: () => app.signOut(), theme, weather })),
     nav?.top ?? null,
     h('main', { class: 'content', id: 'main', 'aria-busy': 'false' }, banner ?? null, content),
     nav?.bottom ?? null);

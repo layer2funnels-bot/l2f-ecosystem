@@ -34,5 +34,6 @@
   ],
   "storage": "storage-adapter",
   "ai": false,
-  "integrations": []
+  "integrations": [],
+  "order": 7
 }

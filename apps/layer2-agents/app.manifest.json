@@ -25,5 +25,6 @@
   "searchTypes": [],
   "storage": "none",
   "ai": false,
-  "integrations": []
+  "integrations": [],
+  "order": 12
 }

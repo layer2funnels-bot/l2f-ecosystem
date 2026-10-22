@@ -1,0 +1,46 @@
+/* Launcher sky (Design v4 section 8). A decorative scene behind frosted panels: all text sits on --surface, so contrast never depends on the sky.
+   Time of day sets the gradient, weather adds a tint and a few moving pieces. Moving pieces are hidden when the person prefers reduced motion. */
+.launcher{position:relative;isolation:isolate;border-radius:var(--r-lg);overflow:hidden;padding:var(--space-5);min-height:70vh}
+.sky{position:absolute;inset:0;z-index:-1;pointer-events:none;overflow:hidden;background:linear-gradient(180deg,var(--sky1),var(--sky2))}
+.launcher[data-part=morning]{--sky1:#ffd9a8;--sky2:#fff3d6}
+.launcher[data-part=afternoon]{--sky1:#6fb4ff;--sky2:#d8ecff}
+.launcher[data-part=evening]{--sky1:#5b4a9a;--sky2:#ff9d6e}
+.launcher[data-part=night]{--sky1:#070b1f;--sky2:#1b2250}
+.launcher[data-wx=rain]{--sky1:#5d6b80;--sky2:#aab7c6}.launcher[data-part=night][data-wx=rain]{--sky1:#0a0f1c;--sky2:#2a3346}
+.launcher[data-wx=cloudy]{--sky1:#8fa3bd;--sky2:#d5dde8}.launcher[data-part=night][data-wx=cloudy]{--sky1:#0d1226;--sky2:#2b3350}
+.launcher[data-wx=hot]{--sky1:#ffb457;--sky2:#ffe3a6}.launcher[data-part=night][data-wx=hot]{--sky1:#2a1410;--sky2:#6b3a25}
+.launcher[data-wx=cold]{--sky1:#a9c7e6;--sky2:#eef6ff}.launcher[data-part=night][data-wx=cold]{--sky1:#0b1730;--sky2:#2a4263}
+.sky .orb{position:absolute;top:8%;right:10%;width:84px;height:84px;border-radius:50%;background:#fff6c9;box-shadow:0 0 60px 20px rgba(255,236,160,.55)}
+.launcher[data-part=morning] .orb{top:16%;left:12%;right:auto;background:#fff1b8}
+.launcher[data-part=evening] .orb{top:34%;right:14%;background:#ffd2a0;box-shadow:0 0 70px 26px rgba(255,160,100,.5)}
+.launcher[data-part=night] .orb{background:#eef2ff;box-shadow:0 0 40px 10px rgba(200,215,255,.35);width:64px;height:64px}
+.launcher[data-wx=rain] .orb,.launcher[data-wx=cloudy] .orb{opacity:.35}
+.sky .stars{position:absolute;inset:0;display:none;background-image:radial-gradient(1.5px 1.5px at 12% 20%,#fff,transparent),radial-gradient(1.5px 1.5px at 30% 60%,#fff,transparent),radial-gradient(1.5px 1.5px at 55% 15%,#fff,transparent),radial-gradient(1.5px 1.5px at 72% 48%,#fff,transparent),radial-gradient(1.5px 1.5px at 88% 24%,#fff,transparent),radial-gradient(1px 1px at 40% 35%,#fff,transparent),radial-gradient(1px 1px at 66% 72%,#fff,transparent)}
+.launcher[data-part=night] .stars{display:block}.launcher[data-part=night][data-wx=rain] .stars,.launcher[data-part=night][data-wx=cloudy] .stars{opacity:.25}
+.sky .fx{position:absolute;inset:0;display:none}
+.launcher[data-wx=cloudy] .fx.cloud,.launcher[data-wx=rain] .fx.cloud{display:block;background:radial-gradient(60px 26px at 20% 22%,rgba(255,255,255,.7),transparent),radial-gradient(90px 34px at 62% 14%,rgba(255,255,255,.6),transparent),radial-gradient(70px 28px at 84% 30%,rgba(255,255,255,.55),transparent);animation:drift 60s linear infinite alternate}
+.launcher[data-wx=rain] .fx.rain{display:block;background:repeating-linear-gradient(100deg,transparent 0 14px,rgba(220,235,255,.28) 14px 15px);background-size:40px 60px;animation:fall .7s linear infinite}
+.launcher[data-wx=cold] .fx.snow{display:block;background-image:radial-gradient(3px 3px at 10% 10%,#fff,transparent),radial-gradient(3px 3px at 40% 30%,#fff,transparent),radial-gradient(2px 2px at 70% 20%,#fff,transparent),radial-gradient(3px 3px at 90% 50%,#fff,transparent);background-size:140px 140px;animation:snow 9s linear infinite}
+.launcher[data-wx=hot] .fx.haze{display:block;background:linear-gradient(180deg,transparent 55%,rgba(255,170,70,.32));animation:haze 5s ease-in-out infinite alternate}
+@keyframes drift{to{transform:translateX(40px)}}@keyframes fall{to{background-position:-12px 60px}}@keyframes snow{to{background-position:30px 140px}}@keyframes haze{to{opacity:.55}}
+@media (prefers-reduced-motion:reduce){.sky .fx{display:none!important}}
+.skyhead,.shelf{background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(14px) saturate(1.2);-webkit-backdrop-filter:blur(14px) saturate(1.2);border:1px solid var(--line2);border-radius:var(--r-lg);box-shadow:var(--sh2)}
+.skyhead{display:flex;flex-wrap:wrap;gap:var(--space-3) var(--space-5);align-items:center;justify-content:space-between;padding:var(--space-4) var(--space-5);margin-bottom:var(--space-4)}
+.skyhead .hi{font-size:14px;color:var(--text2);margin:0}
+.skyhead h1{margin:2px 0 0;font-size:clamp(24px,4vw,32px)}
+.skyhead .sub{margin:var(--space-1) 0 0}
+.wxchip{display:inline-flex;align-items:center;gap:var(--space-2);min-height:36px;padding:2px 14px;border-radius:var(--radius-pill);background:var(--sunk);color:var(--text);font-size:14px;font-weight:600}
+.wxchip small{font-weight:500;color:var(--muted)}
+.shelf{padding:var(--space-5)}
+.findwrap{display:flex;gap:var(--space-3);align-items:center;margin-bottom:var(--space-4)}
+.findwrap label{flex:1;display:flex;align-items:center;gap:var(--space-2);min-height:44px;padding:0 var(--space-3);border:1px solid var(--control);border-radius:var(--radius-md);background:var(--surface)}
+.findwrap input{flex:1;min-width:0;border:0;background:transparent;min-height:44px;outline:0;color:var(--text)}
+.findwrap label:focus-within{outline:3px solid var(--action);outline-offset:2px}
+.findwrap kbd{font:600 12px var(--mono);padding:2px 8px;border-radius:6px;background:var(--sunk);color:var(--muted)}
+.shelf h2{font:700 13px var(--font);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:var(--space-4) 0 var(--space-3)}
+.shelf h2:first-of-type{margin-top:0}
+.attrib{margin-top:var(--space-4);font-size:12.5px;color:var(--muted)}
+.tile.opening{animation:zoomout var(--motion-base) var(--e-out) forwards}
+@keyframes zoomout{to{transform:scale(1.14);opacity:0}}
+.tile .ico{background:none}.tile .ico .aplate{box-shadow:var(--sh1)}
+@media (max-width:600px){.tile .top{flex-wrap:wrap}.tile .pill{font-size:11px;padding:1px 8px}.launcher{padding:var(--space-3);border-radius:var(--r)}.skyhead,.shelf{padding:var(--space-4)}.findwrap kbd{display:none}}
