@@ -1,7 +1,7 @@
 // Document model for first-party Docs (Drive documents of kind "document"). The text lives in file_versions.body (200,000 characters at most).
 // Format v1 is JSON, never HTML: nothing the server returns is ever parsed as markup, so a hostile body cannot inject script or styles.
 //   { v: 1, blocks: [ { t: 'p' | 'h1' | 'h2' | 'h3' | 'quote', c: [run...] } | { t: 'ul' | 'ol', items: [[run...], ...] } | { t: 'hr' } ] }
-//   run: { x: 'text', b?: 1, i?: 1, u?: 1, s?: 1, a?: 'https://...' }
+//   run: { x: 'text', b?: 1, i?: 1, u?: 1, s?: 1, a?: a web or mail link }
 // Older documents (protected SOPs and anything written as plain text) open as paragraphs and become v1 on their next save.
 export const MAX_CHARS = 200000, MAX_BLOCKS = 5000, MAX_RUNS = 2000, MAX_ITEMS = 2000, MAX_LINK = 2000;
 const BLOCKS = new Set(['p', 'h1', 'h2', 'h3', 'quote']);
