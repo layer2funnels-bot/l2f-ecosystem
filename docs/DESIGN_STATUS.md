@@ -73,3 +73,6 @@ Found while filing the designs; none changed yet. The index says the permission 
 | Clients spec rewrite (09, 22 Oct) | Strategy workspaces and a Brand Kit inside each client, in-app form builder, Copy workflow, a Documents workspace per client whose files never appear in the shared Drive, separate SOPs and Tools menus, requests with exact versions | Clients data layer built to the earlier version (0008): profile, notes, requests, updates, stages. No Strategy, forms, copy, documents or versions | Awaiting owner approval of the new design; then a gap review and migration plan before any change. The Drive layer (0014) already keeps client files out of the shared Drive |
 | Password length (02, A12) | Minimum 10 characters | Applied: 10 in the browser and in the local Supabase configuration | Done; set the same value in the live project at go-live |
 | Launcher pins / recents (10 §B, A26) | Per person | Not stored | Small per-person table when the Launcher is rebuilt |
+
+
+Note (batch 3): Admin → Storage (usage and cap) was built on the owner's instruction without a design; it needs a design review.

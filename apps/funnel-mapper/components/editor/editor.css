@@ -1553,6 +1553,30 @@
   margin: 0;
   color: var(--muted);
 }
+.fm-kcheck {
+  display: block;
+  width: 100%;
+  min-height: 32px;
+  padding: 4px 6px;
+  margin-left: -6px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.fm-kcheck:hover,
+.fm-kcheck:focus-visible {
+  background: var(--panel2);
+}
+.fm-kcheck small {
+  display: block;
+  color: var(--brand-light);
+  font-size: 11.5px;
+  font-weight: 600;
+}
 .fm-kgo {
   display: flex;
   flex-wrap: wrap;

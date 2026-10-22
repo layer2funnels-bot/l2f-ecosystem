@@ -145,7 +145,24 @@ export function KpiBar() {
                   </p>
                   <ul>
                     {checks.map((c) => (
-                      <li key={c.id}>{c.text}</li>
+                      <li key={c.id}>
+                        <button
+                          type="button"
+                          className="fm-kcheck"
+                          onClick={() => {
+                            close();
+                            if (c.nodeId) focus(c.nodeId);
+                            else {
+                              clearSelection();
+                              setTab("math");
+                              document.querySelector(".fm-editor")?.classList.add("show-insp");
+                            }
+                          }}
+                        >
+                          {c.text}
+                          <small>{c.nodeId ? " Show on the map" : " Open the funnel panel"}</small>
+                        </button>
+                      </li>
                     ))}
                   </ul>
                   {named.length > 0 && (

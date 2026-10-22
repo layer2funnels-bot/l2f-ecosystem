@@ -39,3 +39,5 @@ Rules that still apply: code only; no real data; no connection to any live proje
 | `app/fonts/jetbrains-mono-latin-400-normal.woff2` | Added (latin subset, unmodified from the `@fontsource` npm package). | Self-hosted font: the build must never fetch Google Fonts (a fetch failure broke a CI build). SIL OFL 1.1. |
 | `app/fonts/jetbrains-mono-latin-500-normal.woff2` | Added (latin subset, unmodified from the `@fontsource` npm package). | Self-hosted font: the build must never fetch Google Fonts (a fetch failure broke a CI build). SIL OFL 1.1. |
 | `app/fonts/LICENSES.txt` | Added: the three OFL licence texts. | Licence obligation for the bundled fonts. |
+| `components/editor/kpi-bar.tsx` | Each model check in the checks popover is now a button: it selects and zooms to its block, or opens the funnel panel for funnel-wide checks. | Audit P0 "make warnings clickable". |
+| `components/editor/editor.css` | Styles for the clickable check rows (`.fm-kcheck`). | Same. |
