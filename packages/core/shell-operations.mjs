@@ -8,7 +8,7 @@ const reasonText = { type: 'text', max: 200 };
 
 export const shellOperations = [
   // ---- launcher, profile, invitations (people who may not have an organization yet use the nil organization)
-  defineOperation({ name: 'launcher.catalog', class: 'read', run: (q) => q('select app_key, name, scope, lifecycle, sort_order, launch_url, state, other_org from launcher_catalog()') }),
+  defineOperation({ name: 'launcher.catalog', class: 'read', audience: 'any', run: (q) => q('select app_key, name, scope, lifecycle, sort_order, launch_url, state, other_org from launcher_catalog()') }),
   defineOperation({ name: 'profile.touch', class: 'write', allowNoOrg: true, input: { name: { type: 'text', max: 120 } }, run: (q, _c, i) => q('select profile_touch($1)', [i.name ?? null]) }),
   defineOperation({ name: 'invitation.preview', class: 'sensitive', allowNoOrg: true, single: true, input: { token: { type: 'text', required: true, max: 200 } }, run: (q, _c, i) => q('select org_name, org_slug, kind, role, inviter_name, email from invitation_preview($1)', [i.token]) }),
   defineOperation({

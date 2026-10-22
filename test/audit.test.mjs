@@ -81,7 +81,7 @@ const publicExec = await rows(`select p.oid::regprocedure::text f from pg_proc p
   where n.nspname in ('public','private') and has_function_privilege('public', p.oid, 'execute')`);
 check('F4b', 'No public or private function is executable by PUBLIC', publicExec.length === 0, publicExec.map(r => r.f).join(', '));
 const apiFns = (await rows(`select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' order by 1`)).map(r => r.proname);
-check('F4c', 'Only the intended RPCs exist in the API schema', JSON.stringify(apiFns) === JSON.stringify(['accept_invitation', 'create_invitation', 'drive_break_glass_open', 'drive_link_resolve', 'effective_access', 'invitation_cancel', 'invitation_decline', 'invitation_preview', 'launcher_apps', 'launcher_catalog', 'member_remove', 'member_set_role', 'member_set_status', 'members_list', 'my_organizations', 'my_permissions', 'profile_touch', 'resolve_org_switch']), apiFns.join(','));
+check('F4c', 'Only the intended RPCs exist in the API schema', JSON.stringify(apiFns) === JSON.stringify(['accept_invitation', 'create_invitation', 'drive_break_glass_open', 'drive_link_resolve', 'effective_access', 'invitation_cancel', 'invitation_decline', 'invitation_preview', 'launcher_apps', 'launcher_catalog', 'member_remove', 'member_set_role', 'member_set_status', 'members_list', 'my_audience', 'my_organizations', 'my_permissions', 'profile_touch', 'resolve_org_switch']), apiFns.join(','));
 const unsafe = await rows(`select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
   where n.nspname in ('public','private') and (p.proconfig is null or not exists (select 1 from unnest(p.proconfig) c where c like 'search_path=%'))`);
 check('F4d', 'Every function pins its search_path', unsafe.length === 0, unsafe.map(r => r.proname).join(','));
@@ -133,10 +133,10 @@ check('F6e', 'Admin sees every enabled app without a grant', (await rows('select
 
 // ---------------- F7 approvals ----------------
 await asUser(U.ED);
-check('F7a', 'Editor cannot insert a pre-approved request',
-  (await errCode(() => db.query("insert into approvals (workspace_id,subject_type,subject_id,requested_by,status) values ($1,'deliverable',$2,$3,'approved')", [L2F, F_VIS, U.ED]))) === '42501');
 const AP = id();
-await db.query("insert into approvals (id,workspace_id,subject_type,subject_id,requested_by) values ($1,$2,'deliverable',$3,$4)", [AP, L2F, F_VIS, U.ED]);
+await db.query("insert into approvals (id,workspace_id,subject_type,subject_id,requested_by,status) values ($1,$2,'deliverable',$3,$4,'approved')", [AP, L2F, F_VIS, U.ED]);
+check('F7a', 'Editor cannot insert a pre-approved request: whatever status is sent, the request is stored as pending and undecided',
+  (await rows('select status, decided_by from approvals where id=$1', [AP]))[0].status === 'pending' && (await rows('select decided_by from approvals where id=$1', [AP]))[0].decided_by === null);
 await asUser(U.ADM);
 check('F7b', 'Decision cannot change what was requested',
   (await errCode(() => db.query("update approvals set status='approved', subject_id=$2 where id=$1", [AP, id()]))) === 'P0001');

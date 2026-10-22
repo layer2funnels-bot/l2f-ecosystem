@@ -123,7 +123,8 @@ check('D2d', 'Editor can delete their own upload, after moving it to the trash (
 
 // ---- D4 approvals ----
 await asUser(U.E1);
-check('D4a', 'Requester cannot approve own request', (await affected("update approvals set status='approved' where id=$1", [APPR_E1])) === 0);
+const d4a = await errCode(() => db.query("update approvals set status='approved' where id=$1", [APPR_E1]));
+check('D4a', 'Requester cannot approve own request (refused by the policy, or no row matched) and it stays pending', ['42501', 'P0001', 'no-error'].includes(d4a) && (await rows('select status from approvals where id=$1', [APPR_E1]))[0].status === 'pending');
 await asUser(U.A1);
 check('D4b', 'Admin can approve a request raised by another user', (await affected("update approvals set status='approved' where id=$1", [APPR_E1])) === 1);
 

@@ -52,7 +52,7 @@ d = await asRows(U.NOAPP);
 check('PS7', 'An editor without the Clients app gets nothing for it', !d.some((r) => r.permission_key.startsWith('clients.')));
 d = await asRows(U.OWN);
 check('PS8', 'Owner: organization-wide everything, no client rows (they would be redundant)', d.length > 50 && !d.some((r) => r.scope !== 'workspace') && has(d, 'platform.access.manage', 'workspace'));
-check('PS9', 'Other organization header, an outsider, and a client contact all get an empty answer; "no organization chosen" is refused', (await asRows(U.SC, A)).length === 0 && (await asRows(U.OTHER, L)).length === 0 && (await asRows(U.CL, L)).length === 0 && (await mine(U.SC, NO_ORG)).status === 400);
+check('PS9', 'Other organization header, an outsider, and a client contact all get "not found"; "no organization chosen" is refused', (await asRows(U.SC, A)) === null && (await asRows(U.OTHER, L)) === null && (await asRows(U.CL, L)) === null && (await mine(U.SC, NO_ORG)).status === 400);
 
 // deny beats a narrower allow, expiry, and agreement with what the database really accepts
 await asSuper();

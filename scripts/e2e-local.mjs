@@ -191,6 +191,36 @@ check('E48', 'Planner: the overview counts the active objective', r.status === 2
 const directPl = await Promise.all(['planner_objectives', 'planner_measures', 'planner_measure_values', 'planner_objective_tasks', 'planner_reviews'].map((t) => fetch(`http://127.0.0.1:54321/rest/v1/${t}?select=*`, { headers: { apikey: KEY, authorization: `Bearer ${owner.token}` } }).then(async (x) => ({ t, status: x.status, rows: x.ok ? (await x.json()).length : 0 }))));
 check('E49', 'SECURITY: the Data API shows no planner row to a signed-in owner', directPl.every((d) => d.status >= 400 || d.rows === 0), JSON.stringify(directPl));
 
+// ---- Phase 6 through real tokens: audience gate (0016), approvals (0017), Client Portal / gate G2 (0018), and the new tables behind the closed Data API
+r = await post('approvals.request', { subject_type: 'other', subject: cl.id, title: `E2E approval ${stamp}`, note: 'please look' }, { token: guest.token });
+const apv = r.body.data?.[0]; if (!apv) console.log('DEBUG approvals.request ->', r.status, JSON.stringify(r.body));
+const dSelf = await post('approvals.decide', { id: apv.id, decision: 'approved' }, { token: guest.token }); const dOwner = await post('approvals.decide', { id: apv.id, decision: 'approved', note: 'ok' }); const gOwner = await post('approvals.get', { id: apv.id });
+check('E50', 'Approvals: the invited editor asks for an approval; the owner (someone else) approves it with a note; the requester cannot decide their own',
+  r.status === 200 && apv?.status === 'pending' && dSelf.status !== 200 && dOwner.status === 200 && gOwner.body.data[0].events.length === 2, `${r.status} ${dSelf.status} ${dOwner.status} ${JSON.stringify(dOwner.body).slice(0, 150)}`);
+const clientUser = await signUp(`client.${stamp}@example.com`);
+await admin.query("insert into memberships (workspace_id,user_id,kind,client_id) values ($1,$2,'client',$3)", [L, clientUser.id, cl.id]);
+r = await post('portal.me', {}, { token: clientUser.token });
+check('E51', 'Client Portal OFF by default: a client account gets nothing from the Portal through the real stack', r.status === 404 && (await post('portal.requests.list', {}, { token: clientUser.token })).body.data?.length === 0);
+await admin.query("update workspace_apps set enabled = true where workspace_id = $1 and app_key = 'portal'", [L]);
+r = await post('portal.requests.list', {}, { token: clientUser.token });
+check('E52', 'Portal ON: the client sees the request staff shared and nothing else; the home counts agree', r.status === 200 && r.body.data.some((x) => x.id === rq.id) && Object.keys(r.body.data[0]).sort().join() === 'body,created_at,due_on,id,kind,response,status,title,updated_at'
+  && (await post('portal.home', {}, { token: clientUser.token })).body.data[0].open_requests >= 1);
+r = await post('clients.list', {}, { token: clientUser.token });
+const g2 = await Promise.all(['projects.list', 'forms.list', 'approvals.list', 'access.mine', 'members.list', 'planner.objectives.list'].map((op) => post(op, {}, { token: clientUser.token }).then((x) => `${op}:${x.status}`)));
+check('E53', 'Gate G2: every staff operation answers "not found" to a client account (clients, projects, forms, approvals, access, members, planner)',
+  r.status === 404 && g2.every((x) => x.endsWith(':404')), g2.join(' '));
+r = await post('portal.requests.answer', { id: rq.id, response: 'Logo sent' }, { token: clientUser.token });
+check('E54', 'Gate G2: the client answers the shared request; the owner then sees it answered', r.status === 200 && r.body.data[0].status === 'answered');
+r = await post('portal.messages.send', { subject_type: 'request', subject: rq.id, body: 'Anything else needed?' }, { token: clientUser.token });
+check('E55', 'Portal messages: the client writes on the request; staff read and reply; the audit trail holds no text',
+  r.status === 200 && (await post('portal.staff.messages.send', { subject_type: 'request', subject: rq.id, body: 'All good, thanks' })).status === 200 && (await post('portal.staff.messages.list', { client: cl.id })).body.data.length === 2);
+await admin.query("update workspace_apps set enabled = false where workspace_id = $1 and app_key = 'portal'", [L]);
+r = await post('portal.requests.list', {}, { token: clientUser.token });
+check('E56', 'The Portal kill switch works at once through the real stack', r.status === 200 && r.body.data.length === 0 && (await post('portal.me', {}, { token: clientUser.token })).status === 404);
+const phase6 = ['approvals', 'approval_events', 'portal_messages', 'forms', 'form_versions', 'form_submissions', 'value_ladders', 'value_ladder_rungs', 'social_posts', 'social_post_files'];
+const directP6 = (await Promise.all(phase6.flatMap((t) => [owner.token, clientUser.token].map((tok) => fetch(`http://127.0.0.1:54321/rest/v1/${t}?select=*`, { headers: { apikey: KEY, authorization: `Bearer ${tok}` } }).then(async (x) => ({ t, status: x.status, rows: x.ok ? (await x.json()).length : null })))))).flat();
+check('E57', 'SECURITY: the Data API shows no approval, portal message, form, ladder or post row to an owner or a client account', directP6.every((d) => d.status >= 400 || d.rows === 0), JSON.stringify(directP6.filter((d) => !(d.status >= 400 || d.rows === 0))));
+
 await s.close(); await admin.end();
 for (const x of results) console.log(`${x.ok ? 'PASS' : 'FAIL'}  ${x.id.padEnd(4)} ${x.n}${x.ok ? '' : `  [${x.d}]`}`);
 const p = results.filter((x) => x.ok).length; console.log(`\n${p}/${results.length} checks passed`); process.exit(p === results.length ? 0 : 1);

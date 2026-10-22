@@ -51,6 +51,11 @@ export function createApi({ executor, logger, limiter = createRateLimiter(), ope
 
       try {
         const rows = await executor.withRequest({ userId, email: request.auth.email ?? null, orgId }, async (q) => {
+          if (orgId !== NO_ORG && !op.allowNoOrg) {   // who is calling: client accounts reach only operations marked for clients, and the reverse
+            const [{ a } = {}] = await q('select public.my_audience($1) as a', [orgId]);
+            const want = op.audience ?? 'staff';
+            if (want !== 'any' && a !== want) throw { code: 'PGRST116' };
+          }
           const out = await op.run(q, { orgId, userId }, v.value);
           if (op.single && out.length === 0) throw { code: 'PGRST116' };   // a mutation that touched nothing looks like a denied one
           return out;

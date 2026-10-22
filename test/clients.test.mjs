@@ -93,7 +93,7 @@ const otherReq = (await db.query("insert into client_requests (workspace_id,clie
 await asUser(U.CL1);
 check('CT17', 'A client sees only the visible, unarchived requests and updates of their own client', (await rows('select id from client_requests')).map((r) => r.id).join() === rq && (await rows('select id from client_updates')).map((r) => r.id).join() === up);
 check('CT18', 'A client cannot create, change or delete any of it', (await errCode(() => db.query("insert into client_requests (workspace_id,client_id,title) values ($1,$2,'x')", [L, C1]))) === '42501'
-  && (await affected("update client_requests set response='hi' where id=$1", [rq])) === 0 && (await affected('delete from client_updates where id=$1', [up])) === 0);
+  && ['42501', 'no-error'].includes(await errCode(() => db.query("update client_requests set response='hi' where id=$1", [rq]))) && (await rows('select response from client_requests where id=$1', [rq]))[0].response === null && (await affected('delete from client_updates where id=$1', [up])) === 0);
 await asUser(U.CL2);
 check('CT19', 'Another client sees only their own', (await rows('select id from client_requests')).map((r) => r.id).join() === otherReq && (await rows('select id from client_updates')).length === 0);
 await asUser(U.ADM); await db.query('update client_updates set archived_at=now() where id=$1', [up]);
@@ -165,7 +165,7 @@ r = await call('clients.get', { id: c100.id }, U.NOAPP);
 check('CA11', 'Someone without the Clients app gets the same not-found as for a missing client', r.status === 404 && JSON.stringify((await call('clients.get', { id: id() }, U.NOAPP)).body.error) === JSON.stringify(r.body.error));
 await asSuper(); await db.query("update workspace_apps set enabled=true where workspace_id=$1 and app_key='portal'", [L]);
 r = await call('clients.get', { id: C1 }, U.CL1);
-check('CA12', 'A client contact calling the API sees their client’s name only: every profile field is empty', r.status === 200 && r.body.data[0].name === 'Client One' && r.body.data[0].email === null && r.body.data[0].status === null && r.body.data[0].tags === null);
+check('CA12', 'A client contact calling a staff operation is refused as not found (the Portal projection replaces it, see test/portal.test.mjs)', r.status === 404);
 r = await call('clients.archive', { id: c100.id }, U.ED);
 const arch = r;
 r = await call('clients.list', { archived: true }, U.ED);

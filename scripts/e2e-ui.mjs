@@ -13,7 +13,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || '/opt/node22/lib/n
 const SHOTS = process.env.SHOTS || 'e2e-shots'; mkdirSync(SHOTS, { recursive: true });
 const results = []; const check = (id, n, ok, d = '') => results.push({ id, n, ok: !!ok, d });
 const admin = new pg.Client({ connectionString: 'postgresql://supabase_admin:postgres@127.0.0.1:54322/postgres' }); await admin.connect();
-await admin.query('truncate funnel_references, funnel_brand_kits, funnel_stories, funnel_offers, funnel_avatars');   // clean slate (local database only)
+await admin.query('truncate value_ladder_rungs, funnel_references, funnel_brand_kits, funnel_stories, funnel_offers, funnel_avatars');   // clean slate (local database only)
 const stamp = Date.now(); const EMAIL = `ui.${stamp}@example.com`, PW = 'correct-horse-battery-staple'; const NAME = 'Una Owner';
 const GUEST = `guest.ui.${stamp}@example.com`, OUTSIDER = `outsider.ui.${stamp}@example.com`;
 
@@ -125,7 +125,7 @@ check('U13', 'Funnel Mapper Pro opens in the same tab (a regular app of the ecos
 await page.goBack(); await page.reload(); await wait('Your apps in Layer2Funnels');
 
 // =============================================================== C. Office Home (design 04)
-await tile('office').click(); await wait('Needs your attention');
+await tile('office').click(); await wait('Needs your attention'); await wait('Nothing assigned to you.'); await wait('0 invitations waiting');   // the cards fill in after their data loads
 check('U14', 'Office Home: the eight section menu, Home current, designed empty states, owner/admin card with waiting invitations', (await page.locator('nav.nav a').allInnerTexts()).join() === 'Home,Planner,Projects,Funnels,Documents,Team,Apps,Admin' && (await page.locator('nav.nav a[aria-current=page]').innerText()) === 'Home'
   && (await page.locator('main').innerText()).includes('Nothing assigned to you.') && await page.getByText('For owners and admins').isVisible() && await page.getByText('0 invitations waiting').isVisible());
 await shot(page, 'c1-home');
@@ -297,7 +297,7 @@ await out.close();
 
 // ---- Members as owner, now with the guest
 await visit(page, base + '/#/office/admin/members'); await wait('3 people.');
-await page.getByRole('button', { name: 'Manage Gus Guest' }).click(); await page.selectOption('#ml', 'viewer'); await page.getByRole('button', { name: 'Save changes' }).click(); await wait('Viewer');
+await page.getByRole('button', { name: 'Manage Gus Guest' }).click(); await page.selectOption('#ml', 'viewer'); await page.getByRole('button', { name: 'Save changes' }).click(); await wait('Level updated.'); await page.waitForFunction(() => document.querySelector('tbody')?.innerText.includes('Viewer'), null, { timeout: 9000 });   // the confirmation first, then the refreshed table
 check('F7', 'Changing a level saves and shows at once', (await q("select role from memberships where workspace_id = $1 and role = 'viewer' and user_id = (select id from auth.users where email = $2)", [L, GUEST])).length === 1 && (await page.locator('tbody').innerText()).includes('Viewer'));
 await page.getByRole('button', { name: 'Manage Gus Guest' }).click(); await page.getByRole('button', { name: 'Deactivate' }).click(); await wait('Deactivate Gus Guest?'); await page.getByRole('button', { name: 'Deactivate', exact: true }).last().click(); await wait('Deactivated');
 check('F8', 'Deactivating confirms first, deletes nothing, and the row says Deactivated', (await q("select status from memberships where workspace_id = $1 and user_id = (select id from auth.users where email = $2)", [L, GUEST]))[0].status !== 'active');
@@ -321,7 +321,7 @@ check('F13', '"Deny instead" asks for a short reason (kept in the audit history)
 await page.fill('#ar', 'Not needed yet'); await page.getByRole('button', { name: 'Add', exact: true }).click(); await wait('Restriction added.');
 check('F14', 'A denial is listed as Denied', (await page.locator('tbody').innerText()).includes('Denied: Funnels · edit'));
 await visit(page, base + '/#/office/admin/access/effective'); await wait('Show access for');
-await page.selectOption('#ep', { label: 'Gus Guest' }); await wait('Funnels records');
+await page.selectOption('#ep', { label: 'Gus Guest' }); await wait('Funnels records'); await page.waitForFunction(() => document.querySelector('tbody')?.innerText.includes('Deny wins'), null, { timeout: 9000 });
 const eff = await page.locator('tbody').innerText();
 check('F15', 'Effective access shows one row per area with Can edit / Can view / No access, and a denial reads "Deny wins"', eff.includes('Funnels records') && eff.includes('No access') && eff.includes('Deny wins') && eff.includes('Can edit'));
 await shot(page, 'f3-effective');
