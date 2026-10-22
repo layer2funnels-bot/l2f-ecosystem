@@ -2,7 +2,8 @@
 // Local only: refuses anything that is not 127.0.0.1. Creates throw-away databases (`rehearsal`, `rehearsal_restore`) and files under a temp folder.
 // Output: PASS / FAIL for what must hold, GAP for what the rehearsal found that the runbook or the setup does not cover yet.
 //   npm run stack:start && npm run stack:migrate && node scripts/rehearsal.mjs
-import { execFileSync, spawnSync } from 'node:child_process';
+import { execFile, execFileSync, spawnSync } from 'node:child_process';
+import { promisify } from 'node:util';
 import { readFileSync, writeFileSync, mkdtempSync, readdirSync, existsSync, chmodSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -10,6 +11,9 @@ import { randomUUID } from 'node:crypto';
 import pg from 'pg';
 import { migrationFiles } from '../test/lib.mjs';
 import { startDevServer, LOCAL_ENV } from './dev-server.mjs';
+import { startFakeS3 } from '../test/fakes/fake-s3.mjs';
+import { createS3Storage } from '../packages/core/storage-adapter.mjs';
+const runAsync = (cmd, args, opts = {}) => new Promise((done) => { execFile(cmd, args, { encoding: 'utf8', ...opts }, (err, stdout, stderr) => done({ status: err ? (err.code ?? 1) : 0, stdout, stderr })); });   // not spawnSync: the in-process fake server must keep answering
 
 const ADMIN = 'postgresql://supabase_admin:postgres@127.0.0.1:54322';
 const KEY = process.env.STACK_PUBLISHABLE_KEY || 'sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH';
@@ -143,8 +147,36 @@ if (enc) {
   const fn = (await rc.query("select count(*)::int n from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname in ('public','private') and (has_function_privilege('anon', p.oid, 'execute') or has_function_privilege('authenticated', p.oid, 'execute')) and not exists (select 1 from pg_depend d where d.objid = p.oid and d.deptype = 'e')")).rows[0].n;
   ok('R10f', 'After restoring, the Data API roles still cannot execute our functions', fn === 0, String(fn));
   await rc.end(); await sc.end();
-  gap('R10g', 'The backup covers the database only (public and private schemas and auth users). Files in Storage and the Supabase project settings are NOT in it; Drive file backup is still planned work', 'runbook step 10 already says so; the owner should know before storing real client files');
+  gap('R10g', 'The database backup covers the database only (public and private schemas and auth users); stored FILES are covered by the separate storage backup (steps R10s to R10z), which needs its own secrets and a destination sized for the files', 'runbook step 10 lists both jobs')
   gap('R10h', 'A backup of the auth schema restores users and identities but the restore of auth.users into a NEW project needs the same auth schema version; test this once on the live project (cannot be rehearsed on the local stack)', 'part of the restore test in step 10');
+}
+
+// ---------------------------------------------------------------- step 10b: STORAGE FILES in the backup and the restore (fake S3 stands in for the file storage)
+{
+  const work2 = mkdtempSync(join(tmpdir(), 'rehearsal-files-'));
+  const srcS3 = await startFakeS3({ pageSize: 2 }); const dstS3 = await startFakeS3({ pageSize: 2 }); const bkS3 = await startFakeS3({ bucket: 'backups' });
+  const S = createS3Storage({ endpoint: srcS3.endpoint, bucket: srcS3.bucket, accessKeyId: srcS3.accessKeyId, secretAccessKey: srcS3.secretAccessKey });
+  const ORG = randomUUID(), CL = randomUUID();
+  const sample = { [`${ORG}/shared/${randomUUID()}/brand guide.pdf`]: Buffer.alloc(150000, 3), [`${ORG}/clients/${CL}/${randomUUID()}/logo.png`]: Buffer.from([137, 80, 78, 71, 0, 255]), [`${ORG}/personal/${randomUUID()}/${randomUUID()}/notes.txt`]: Buffer.from('private notes'), [`${ORG}/shared/${randomUUID()}/ünï.txt`.replace(/[^\x00-\x7f]/g, '_')]: Buffer.from('ascii only names are what the app creates') };
+  for (const [p, b] of Object.entries(sample)) await S.put(p, b);
+  const env = { ...process.env, STORAGE_DRIVER: 's3', S3_ENDPOINT: srcS3.endpoint, S3_BUCKET: srcS3.bucket, S3_ACCESS_KEY_ID: srcS3.accessKeyId, S3_SECRET_ACCESS_KEY: srcS3.secretAccessKey, AGE_RECIPIENT: pub, BACKUP_S3_ENDPOINT: bkS3.endpoint, BACKUP_S3_BUCKET: 'backups', BACKUP_S3_ACCESS_KEY_ID: bkS3.accessKeyId, BACKUP_S3_SECRET_ACCESS_KEY: bkS3.secretAccessKey };
+  delete env.SUPABASE_DB_URL;
+  const sm = await runAsync('node', [join(root, 'scripts/storage-smoke.mjs')], { env });
+  ok('R10s', 'The storage smoke test passes against the configured storage (signed upload, measured size, signed download, listing, delete)', sm.status === 0 && (sm.stdout.match(/^PASS/gm) ?? []).length === 5, sm.stdout + sm.stderr);
+  const bf = await runAsync('node', [join(root, 'scripts/backup-storage.mjs')], { cwd: work2, env });
+  const arch = readdirSync(work2).find((f) => f.startsWith('l2f-storage-backup-') && f.endsWith('.tar.age'));
+  ok('R10t', 'The storage backup script writes one encrypted archive of every stored file', bf.status === 0 && !!arch && /wrote .*: 4 files/.test(bf.stdout), bf.stdout + bf.stderr);
+  ok('R10u', 'The archive holds no readable file content or file names (encrypted)', !!arch && !readFileSync(join(work2, arch)).includes('brand guide') && !readFileSync(join(work2, arch)).includes('private notes'));
+  ok('R10v', 'The same archive was uploaded to the separate backup bucket (the destination for archives too large for the free artifact store)', [...bkS3.objects.keys()].some((k) => k.startsWith('storage-backups/l2f-storage-backup-')));
+  const keyFile = join(work, 'key.txt'); writeFileSync(join(work2, 'key.txt'), privKey);
+  const rs2 = await runAsync('node', [join(root, 'scripts/restore-storage.mjs'), join(work2, arch ?? 'none')], { env: { ...process.env, AGE_IDENTITY: join(work2, 'key.txt'), STORAGE_DRIVER: 's3', S3_ENDPOINT: dstS3.endpoint, S3_BUCKET: dstS3.bucket, S3_ACCESS_KEY_ID: dstS3.accessKeyId, S3_SECRET_ACCESS_KEY: dstS3.secretAccessKey } });
+  ok('R10w', 'Restoring into a fresh, empty storage brings back every file', rs2.status === 0 && /restored 4 files/.test(rs2.stdout) && dstS3.objects.size === 4, rs2.stdout + rs2.stderr);
+  ok('R10x', 'Every restored file is byte for byte the original', Object.entries(sample).every(([p, b]) => dstS3.objects.get(p)?.equals(b)));
+  const rs3 = await runAsync('node', [join(root, 'scripts/restore-storage.mjs'), join(work2, arch ?? 'none')], { env: { ...process.env, AGE_IDENTITY: join(work2, 'nokey.txt'), STORAGE_DRIVER: 's3', S3_ENDPOINT: dstS3.endpoint, S3_BUCKET: dstS3.bucket, S3_ACCESS_KEY_ID: dstS3.accessKeyId, S3_SECRET_ACCESS_KEY: dstS3.secretAccessKey } });
+  ok('R10y', 'Without the private key the archive cannot be opened', rs3.status !== 0);
+  const big = await runAsync('node', [join(root, 'scripts/backup-storage.mjs')], { cwd: work2, env: { ...env, BACKUP_MAX_BYTES: '1000', BACKUP_S3_ENDPOINT: '' } });
+  ok('R10z', 'A backup over its budget fails with its own exit code (4) and a pointer to the runbook, not silently', big.status === 4 && /Storage backup/.test(big.stderr), `${big.status} ${big.stderr}`);
+  for (const f of [srcS3, dstS3, bkS3]) await f.close(); rmSync(work2, { recursive: true, force: true });
 }
 await a.query('drop database if exists rehearsal'); await a.query('drop database if exists rehearsal_restore'); await a.end();
 rmSync(work, { recursive: true, force: true });
