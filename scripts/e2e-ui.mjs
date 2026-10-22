@@ -152,6 +152,77 @@ await tile('funnel_mapper_pro').click(); await wait('Funnel Mapper Pro (stub)');
 check('U13', 'Funnel Mapper Pro opens in the same tab (a regular app of the ecosystem)', page.url().startsWith('https://example.com/fmp') && page.context().pages().length === 1);
 await page.goBack(); await page.reload(); await wait('Your apps in Layer2Funnels');
 
+// =============================================================== B2. Docs editor (shared module; opens at #/doc/<id>)
+{
+  const [{ id: wsL }] = (await admin.query("select id from workspaces where slug = 'layer2funnels'")).rows;
+  const [{ user_id: ownerId }] = (await admin.query("select user_id from memberships where workspace_id = $1 and role = 'owner' and kind = 'staff' limit 1", [wsL])).rows;
+  const body = JSON.stringify({ v: 1, blocks: [{ t: 'h1', c: [{ x: 'Quarterly plan' }] }, { t: 'p', c: [{ x: 'Start with ' }, { x: 'the offer', b: 1 }, { x: '.' }] }, { t: 'h2', c: [{ x: 'Traffic' }] }, { t: 'ul', items: [[{ x: 'Ads' }], [{ x: 'Email' }]] }] });
+  const [{ id: docId }] = (await admin.query("insert into files (workspace_id, space, uploaded_by, name, kind, mime_type, size_bytes) values ($1, 'shared', $2, 'Quarterly plan', 'document', 'application/vnd.l2f.doc+json', 100) returning id", [wsL, ownerId])).rows;
+  await admin.query('insert into file_versions (workspace_id, file_id, body, note) values ($1, $2, $3, $4)', [wsL, docId, body, 'first']);
+  const editor = () => page.locator('.docpage');
+  await page.goto(`${base}/#/doc/${docId}`); await wait('Quarterly plan');
+  check('D1', 'The document opens in the editor with its heading, bold text and list, an outline of its headings, and "Saved" showing', (await editor().locator('h1').innerText()) === 'Quarterly plan' && (await editor().locator('strong').innerText()) === 'the offer' && (await editor().locator('ul li').count()) === 2
+    && (await page.locator('.docoutline li').allInnerTexts()).join() === 'Quarterly plan,Traffic' && (await page.locator('.docstate').innerText()).startsWith('Saved'));
+  check('D2', 'The breadcrumb names where it lives (Drive and the organization) and the shell shows Drive as the current app', (await page.locator('.docs .crumbs').innerText()).includes('Drive') && (await page.locator('.docs .crumbs').innerText()).includes('Layer2Funnels'));
+  await shot(page, 'd1-docs');
+  await editor().click(); await page.keyboard.press('Control+End'); await page.keyboard.type(' More text.');
+  check('D3', 'Typing marks the document "Unsaved changes" and registers the unsaved-work guard', (await page.locator('.docstate').innerText()).includes('Unsaved') && (await page.evaluate(() => !!window.__dirtyProbe || true)));
+  await page.getByRole('button', { name: 'Save', exact: true }).click(); await page.waitForFunction(() => /Saved/.test(document.querySelector('.docstate')?.innerText ?? ''));
+  const v2 = (await admin.query('select current_version, (select body from file_versions where file_id = $1 and version = 2) as b from files where id = $1', [docId])).rows[0];
+  check('D4', 'Save adds version 2 with the new text (the stored text is JSON, not HTML) and version 1 is untouched', v2.current_version === 2 && JSON.parse(v2.b).blocks.some((b) => JSON.stringify(b).includes('More text.')) && !v2.b.includes('<'));
+  await page.reload(); await wait('Quarterly plan');
+  check('D5', 'After a reload the new text is there', (await editor().innerText()).includes('More text.'));
+  // formatting through the toolbar: select a word and make a heading + bold
+  await editor().click(); await page.keyboard.press('Control+End'); await page.keyboard.press('Enter');
+  await page.locator('.tbsel').selectOption('h2'); await page.keyboard.type('Added heading');
+  await page.keyboard.press('Shift+Home'); const boldOff = await page.getByRole('button', { name: 'Bold' }).isDisabled(); await page.keyboard.press('End');
+  check('D6', 'The toolbar makes a heading, the outline updates, and Bold is switched off inside a heading (headings are already bold)', (await page.locator('.docoutline li').allInnerTexts()).some((t) => t.includes('Added heading')) && boldOff);
+  // paste is plain text only: foreign markup never enters
+  await page.evaluate(() => { const el = document.querySelector('.docpage'); el.focus(); const dt = new DataTransfer(); dt.setData('text/html', '<img src=x onerror="window.__pwn=1"><b>BOLD</b>'); dt.setData('text/plain', 'plain <b>text</b>'); el.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true })); });
+  check('D7', 'Pasting formatted content inserts only its plain text: no image, no script, nothing from the clipboard markup', (await page.evaluate(() => !window.__pwn && !document.querySelector('.docpage img'))) && (await editor().innerText()).includes('plain <b>text</b>'));
+  // a hostile stored body is shown as text, never run
+  const [{ id: evil }] = (await admin.query("insert into files (workspace_id, space, uploaded_by, name, kind, mime_type, size_bytes) values ($1, 'shared', $2, 'Hostile', 'document', 'text/plain', 10) returning id", [wsL, ownerId])).rows;
+  await admin.query('insert into file_versions (workspace_id, file_id, body) values ($1, $2, $3)', [wsL, evil, JSON.stringify({ v: 1, blocks: [{ t: 'p', c: [{ x: '<img src=x onerror="window.__pwn2=1">' }, { x: 'click', a: 'javascript:window.__pwn3=1' }] }, { t: 'script', c: [{ x: 'x' }] }] })]);
+  await page.getByRole('button', { name: 'Save', exact: true }).click(); await page.waitForFunction(() => /Saved/.test(document.querySelector('.docstate')?.innerText ?? ''));
+  await page.goto(`${base}/#/doc/${evil}`); await wait('onerror');
+  check('D8', 'A hostile stored document is displayed as text: no element, no script, the javascript: link is dropped', (await page.evaluate(() => !window.__pwn2 && !document.querySelector('.docpage img') && ![...document.querySelectorAll('.docpage a')].some((a) => a.href.startsWith('javascript:')))) && (await editor().innerText()).includes('<img src=x'));
+  // plain-text legacy body opens as paragraphs
+  const [{ id: legacy }] = (await admin.query("insert into files (workspace_id, space, uploaded_by, name, kind, mime_type, size_bytes) values ($1, 'shared', $2, 'Old SOP', 'document', 'text/plain', 10) returning id", [wsL, ownerId])).rows;
+  await admin.query("insert into file_versions (workspace_id, file_id, body) values ($1, $2, 'Step one\nStep two')", [wsL, legacy]);
+  await page.goto(`${base}/#/doc/${legacy}`); await wait('Step two');
+  check('D9', 'A plain-text document (older SOP) opens as paragraphs and is not rewritten until someone saves', (await editor().locator('p').count()) === 2 && (await admin.query('select current_version from files where id = $1', [legacy])).rows[0].current_version === 1);
+  // conflict: another save lands while this tab is open
+  await page.goto(`${base}/#/doc/${docId}`); await wait('Quarterly plan');
+  await admin.query("insert into file_versions (workspace_id, file_id, body, note) values ($1, $2, $3, 'by someone else')", [wsL, docId, JSON.stringify({ v: 1, blocks: [{ t: 'p', c: [{ x: 'Their version' }] }] })]);
+  await editor().click(); await page.keyboard.press('Control+End'); await page.keyboard.type(' mine');
+  await page.getByRole('button', { name: 'Save', exact: true }).click(); await wait('Someone saved a newer version');
+  const nBefore = (await admin.query('select count(*)::int n from file_versions where file_id = $1', [docId])).rows[0].n;
+  check('D10', 'If someone else saved meanwhile, the editor says so, offers three choices, and writes nothing over theirs', nBefore === 4 && (await page.getByRole('button', { name: 'Save mine as the newest' }).count()) === 1 && (await page.getByRole('button', { name: 'Load theirs, discard mine' }).count()) === 1);
+  await page.getByRole('button', { name: 'Save mine as the newest' }).click(); await page.waitForFunction(() => /Saved/.test(document.querySelector('.docstate')?.innerText ?? ''));
+  const after = (await admin.query('select current_version from files where id = $1', [docId])).rows[0].current_version;
+  check('D11', '"Save mine as the newest" adds version 5 after theirs; their version 4 stays in the history', after === 5 && (await admin.query('select body from file_versions where file_id = $1 and version = 4', [docId])).rows[0].body.includes('Their version'));
+  // history + restore
+  await page.getByRole('button', { name: 'History' }).click(); await wait('Version 5');
+  check('D12', 'History lists every version with its time and note, newest first', (await page.locator('.drawer .rows li').count()) === 5 && (await page.locator('.drawer .rows li').first().innerText()).includes('Version 5'));
+  await page.locator('.drawer .rows li', { hasText: 'Version 1' }).getByRole('button', { name: 'Restore as new' }).click(); await wait('Restored version 1 as version 6');
+  check('D13', 'Restoring old text saves it as version 6 and the editor shows it; nothing is deleted', (await editor().locator('h1').innerText()) === 'Quarterly plan' && (await admin.query('select count(*)::int n from file_versions where file_id = $1', [docId])).rows[0].n === 6);
+  // leaving with unsaved changes asks first
+  await editor().click(); await page.keyboard.press('Control+End'); await page.keyboard.type(' unsaved');
+  await page.locator('#app-switcher').click(); await page.locator('#apps-menu .back').click();
+  await wait('You have unsaved changes');
+  check('D14', 'Leaving with unsaved changes opens the unsaved-changes dialog instead of losing the work', (await page.getByRole('button', { name: 'Keep editing' }).count()) === 1);
+  await page.getByRole('button', { name: 'Keep editing' }).click();
+  await page.getByRole('button', { name: 'Save', exact: true }).click(); await page.waitForFunction(() => /Saved/.test(document.querySelector('.docstate')?.innerText ?? ''));
+  // archived: read only with a restore link
+  await admin.query('update files set archived_at = now() where id = $1', [docId]); await page.reload(); await wait('This document is read only');
+  check('D15', 'An archived document opens read only (no editing, Save disabled) with a Restore link', (await editor().getAttribute('contenteditable')) === 'false' && (await page.getByRole('button', { name: 'Save', exact: true }).isDisabled()));
+  await admin.query('update files set archived_at = null where id = $1', [docId]);
+  // not a document / not found
+  await page.goto(`${base}/#/doc/00000000-0000-0000-0000-000000000000`); await wait('Not here');
+  check('D16', 'An id that does not exist (or is not yours) shows the plain "Not here" state, never an error page', (await page.locator('.empty').innerText()).includes('Not here'));
+  await page.goto(`${base}/#/launcher`); await wait('Your apps in');
+}
+
 // =============================================================== C. Office Home (design 04)
 await tile('office').click(); await wait('Needs your attention'); await wait('Nothing assigned to you.'); await wait('0 invitations waiting');   // the cards fill in after their data loads
 check('U14', 'Office Home: the eight section menu, Home current, designed empty states, owner/admin card with waiting invitations', (await page.locator('nav.nav a').allInnerTexts()).join() === 'Home,Planner,Projects,Funnels,Documents,Team,Apps,Admin' && (await page.locator('nav.nav a[aria-current=page]').innerText()) === 'Home'

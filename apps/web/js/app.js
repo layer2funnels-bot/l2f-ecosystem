@@ -8,6 +8,7 @@ import { messageFor } from './messages.js';
 import { dirty } from './dirty.js';
 import { createTheme } from './theme.js';
 import { loadRegistry } from './registry.js';
+import { docView } from './modules/docs.js';
 import { loadWeather, weatherOff, setWeatherOff } from './sky.js';
 import { permissionSet, canWith, canAnywhereWith } from './perm.js';
 import { switchOrganization } from '/packages/core/org-switch.mjs';
@@ -287,13 +288,14 @@ async function render(opts = {}) {
       case 'funnels': content = funnelsHomeView(c); break;
       case 'funnel-list': content = funnelListView(c, route.params.type); break;
       case 'funnel-record': content = funnelRecordView(c, route.params.type, route.params.id); break;
+      case 'doc': content = docView({ api, id: route.params.id, ctx: c }); break;
       case 'admin': content = adminView({ api, live, org, role, route, rerender: () => render(), go, clients: ctx.clients }); break;
       case 'app': content = appNotBuiltView(ctx.catalog.find((a) => a.app_key === route.params.app)?.name ?? appLabel(route.params.app)); break;
       default: content = notFoundState(hrefFor.office());
     }
   }
   const view = shellView({ app: appApi, orgs: ctx.orgs, active: org, email: session.get()?.email, name: session.get()?.name, route, content, banner: bannerEl(), isAdmin, inOffice, launcherCurrent: route.name === 'launcher' || route.name === 'home',
-    catalog: ctx.catalog, registry: await loadRegistry(), currentApp: inOffice ? 'office' : route.name === 'app' ? route.params.app : null, theme,
+    catalog: ctx.catalog, registry: await loadRegistry(), currentApp: inOffice ? 'office' : route.name === 'doc' ? 'drive' : route.name === 'app' ? route.params.app : null, theme,
     weather: { on: () => !weatherOff(localStorage), set: (on) => { setWeatherOff(localStorage, !on); try { sessionStorage.removeItem('l2f.wx'); } catch { /* none */ } render(); } } });
   put(root, view, designBadge('Built to design'));
   document.title = `${pageLabel(route)} · ${org.name}`;

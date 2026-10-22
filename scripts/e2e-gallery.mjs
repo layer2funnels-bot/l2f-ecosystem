@@ -40,6 +40,7 @@ for (const org of ['l2f', 'aurj']) for (const theme of ['light', 'dark']) for (c
   const m = await p.evaluate(() => {
     const out = { overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth, small: [], fonts: [...document.fonts].filter((f) => f.status === 'loaded').map((f) => f.family.replace(/"/g, '')) };
     for (const e of document.querySelectorAll('button, a[href], input, select, textarea')) {
+      if (e.closest('.docpage')) continue;          // links inside running text are exempt (WCAG 2.5.8 inline exception)
       const r = e.getBoundingClientRect(); if (!r.width) continue;
       if (r.height < 43.5 || r.width < 43.5) out.small.push(`${e.tagName.toLowerCase()} "${(e.innerText || e.getAttribute('aria-label') || e.id || '').slice(0, 24)}" ${Math.round(r.width)}x${Math.round(r.height)}`);
     }
@@ -66,6 +67,20 @@ for (const org of ['l2f', 'aurj']) for (const theme of ['light', 'dark']) for (c
     check(`G7 ${org}`, 'The dialog opens, and Esc closes it and returns focus', (await p.locator('[role=dialog]').count()) === 1 && (await p.keyboard.press('Escape'), await p.locator('[role=dialog]').count()) === 0 && (await p.evaluate(() => document.activeElement?.textContent)) === 'Open dialog');
     await p.getByRole('button', { name: 'Open drawer' }).focus(); await p.keyboard.press('Enter');
     check(`G8 ${org}`, 'The drawer opens with focus inside, and Esc closes it and returns focus', (await p.locator('aside.drawer').count()) === 1 && (await p.evaluate(() => !!document.activeElement.closest('aside.drawer'))) && (await p.keyboard.press('Escape'), await p.locator('aside.drawer').count()) === 0 && (await p.evaluate(() => document.activeElement?.textContent)) === 'Open drawer');
+  }
+  if (w === 1366 && theme === 'light') {
+    // the Docs editor: format, type, save with the keyboard, no policy violations from the browser's own editing commands
+    await p.waitForSelector('[data-gallery=docs] .docpage');
+    const ed = p.locator('[data-gallery=docs] .docpage'); const bar = p.locator('[data-gallery=docs]');
+    await ed.click(); await p.keyboard.press('Control+End'); await p.keyboard.press('Enter');
+    await bar.locator('.tbsel').selectOption('h2'); await p.keyboard.type('New heading'); await p.keyboard.press('Enter');
+    await bar.getByRole('button', { name: 'Bulleted list' }).click(); await p.keyboard.type('first'); await p.keyboard.press('Enter'); await p.keyboard.type('second');
+    await p.keyboard.press('Shift+Home'); await bar.getByRole('button', { name: 'Bold' }).click(); await bar.getByRole('button', { name: 'Italic' }).click(); await bar.getByRole('button', { name: 'Underline' }).click(); await bar.getByRole('button', { name: 'Strikethrough' }).click();
+    await bar.getByRole('button', { name: 'Divider' }).click(); await bar.getByRole('button', { name: 'Undo' }).click(); await bar.getByRole('button', { name: 'Redo' }).click();
+    check(`G12 ${org}`, 'Docs editor: heading, list and styles can be applied from the toolbar and the outline shows the new heading', (await bar.locator('.docoutline li').allInnerTexts()).some((t) => t.includes('New heading')) && (await ed.locator('ul li').count()) >= 2);
+    await p.keyboard.press('Control+s'); await p.waitForFunction(() => /Saved/.test(document.querySelector('[data-gallery=docs] .docstate')?.innerText ?? ''));
+    check(`G13 ${org}`, 'Ctrl+S saves and the status reads Saved', true);
+    await p.screenshot({ path: `${SHOTS}/gallery-docs-${org}.png`, fullPage: true });
   }
   if (w === 390 && theme === 'light') {
     const stacked = await p.evaluate(() => getComputedStyle(document.querySelector('table.stack td')).display);
