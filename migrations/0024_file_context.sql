@@ -41,3 +41,6 @@ create policy files_project_context on public.files as restrictive for all
 drop trigger audit_files on public.files;
 create trigger audit_files after insert or update or delete on public.files
   for each row execute function private.audit_change('space', 'client_id', 'owner_id', 'folder_id', 'project_id', 'name', 'kind', 'protected_sop', 'sop_key', 'client_visible', 'archived_at', 'current_version');
+
+-- like every private function: not executable by anyone but the table owner and the trigger machinery
+revoke all on function private.files_context_guard() from public;
