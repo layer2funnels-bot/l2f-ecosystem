@@ -61,15 +61,24 @@ const mutations = {
   'PT a client contact may change any field of a shared request': `drop trigger client_requests_contact_guard on public.client_requests;`,
   'PT a client sees approvals staff did not share': `drop policy appr_client_select on public.approvals; create policy appr_client_select on public.approvals for select using (private.client_of(workspace_id, client_id));`,
   'PT staff may message clients without the Portal permission': `drop policy portal_messages_insert on public.portal_messages; create policy portal_messages_insert on public.portal_messages for insert with check (true);`,
+  'FM submissions are not checked against the form version': `drop trigger form_submissions_guard on public.form_submissions;`,
+  'FM form versions can be rewritten': `grant update, delete on public.form_versions to app_user; drop trigger form_versions_guard on public.form_versions;`,
+  'FM answers readable by everyone with the form': `drop policy form_submissions_select on public.form_submissions; create policy form_submissions_select on public.form_submissions for select using (private.has_permission(workspace_id, 'forms.form.view', client_id));`,
+  'FM organization scope removed on submissions': `drop policy org_scope on public.form_submissions;`,
+  'VL rung guard removed (another client\'s offer, positions, client copy)': `drop trigger value_rungs_guard on public.value_ladder_rungs;`,
+  'VL organization scope removed on rungs': `drop policy org_scope on public.value_ladder_rungs;`,
+  'SP post guard removed (review and approval set by hand, content edits while locked)': `drop trigger social_posts_guard on public.social_posts;`,
+  'SP approvals no longer drive the post': `drop trigger social_post_follow_approval on public.approvals;`,
+  'SP media guard removed (another client\'s files)': `drop trigger social_post_files_guard on public.social_post_files;`,
   'AU audience gate treats every caller as staff': `create or replace function public.my_audience(p_org uuid) returns text language sql stable security definer set search_path='' as $$ select 'staff'::text $$;`,
   'SH last-owner guard removed': `drop trigger memberships_last_owner on public.memberships;`,
   'SH member admin skips the owner and role checks': `create or replace function private.member_target(p_user uuid, p_new_role text) returns uuid language plpgsql stable security definer set search_path='' as $$ begin return private.request_org()::uuid; end $$;`,
   'SH invitation preview ignores whose e-mail it was sent to': `create or replace function public.invitation_preview(p_token text) returns table (org_name text, org_slug text, kind text, role text, inviter_name text, email text) language sql stable security definer set search_path='' as $$ select w.name, w.slug, i.kind, i.role, 'x', i.email from public.invitations i join public.workspaces w on w.id = i.workspace_id where i.token_hash = encode(sha256(convert_to(coalesce(p_token,''),'UTF8')),'hex') $$; grant execute on function public.invitation_preview(text) to app_user;`,
 };
-const SUITES = ['isolation', 'audit', 'authz', 'switch', 'api', 'funnels', 'funnels-api', 'clients', 'direct-access', 'permissions-scope', 'shell-admin', 'projects', 'drive', 'planner', 'audience', 'approvals', 'portal'];
+const SUITES = ['isolation', 'audit', 'authz', 'switch', 'api', 'funnels', 'funnels-api', 'clients', 'direct-access', 'permissions-scope', 'shell-admin', 'projects', 'drive', 'planner', 'audience', 'approvals', 'portal', 'forms', 'ladder', 'social'];
 // A mutation is caught as soon as one suite fails, so each mutation tries the suite most likely to catch it first (by its name prefix) and
 // stops at the first failure; several mutations run at once. A mutation nobody catches still runs every suite.
-const FIRST = { PJ: 'projects', DR: 'drive', PL: 'planner', AU: 'audience', AP: 'approvals', PT: 'portal', CL: 'clients', FN: 'funnels', DA: 'direct-access', PS: 'permissions-scope', SH: 'shell-admin', SW: 'switch', AZ: 'authz' };
+const FIRST = { PJ: 'projects', DR: 'drive', PL: 'planner', AU: 'audience', AP: 'approvals', PT: 'portal', FM: 'forms', VL: 'ladder', SP: 'social', CL: 'clients', FN: 'funnels', DA: 'direct-access', PS: 'permissions-scope', SH: 'shell-admin', SW: 'switch', AZ: 'authz' };
 const run = (suite, sql) => new Promise((done) => {
   const p = spawn(process.execPath, [`test/${suite}.test.mjs`], { env: { ...process.env, MUTATION_SQL: sql } });
   let out = ''; p.stdout.on('data', (d) => { out += d; }); p.on('close', (status) => done({ n: (out.match(/^FAIL/gm) || []).length, status }));

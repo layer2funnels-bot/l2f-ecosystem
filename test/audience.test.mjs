@@ -28,7 +28,7 @@ const api = createApi({ executor: createPgExecutor({ acquire, role: 'app_user' }
 const call = async (op, input, user, org = L) => { seen = []; const r = await api.handle({ operation: op, input, auth: { userId: user, email: 'x@example.com' }, headers: { 'x-org-id': org } }); return { ...r, ran: seen.filter((s) => !/my_audience|^begin|^commit|^rollback|set local role|set_config/.test(s)).length }; };
 
 const sample = (f) => ({ uuid: () => id(), text: () => 'x'.repeat(Math.max(1, f.min ?? 1)), email: () => 'a@example.com', int: () => Math.max(f.min ?? 0, 1), bool: () => true, number: () => Math.max(f.min ?? 0, 1),
-  currency: () => 'GBP', date: () => '2026-01-01', timestamp: () => '2026-01-01T00:00:00Z', hex: () => '#112233', enum: () => f.values[0], list: () => [] }[f.type]());
+  currency: () => 'GBP', date: () => '2026-01-01', timestamp: () => '2026-01-01T00:00:00Z', hex: () => '#112233', enum: () => f.values[0], list: () => [], json: () => [] }[f.type]());
 const inputFor = (op) => Object.fromEntries(Object.entries(op.input).filter(([, f]) => f.required).map(([k, f]) => [k, sample(f)]));
 
 const all = Object.values(operations);

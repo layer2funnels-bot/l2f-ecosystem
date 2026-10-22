@@ -6,7 +6,7 @@ const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,255}$/;
 export const isUuid = (v) => typeof v === 'string' && UUID.test(v);
 
 // lists: max = number of items, itemMax/itemMin = size of each item.
-// spec: { field: { type, required?, max?, min?, values?, items? } }; types: uuid text email int number currency date timestamp hex bool enum list
+// spec: { field: { type, required?, max?, min?, values?, items? } }; types: uuid text email int number currency date timestamp hex bool enum list json
 const rules = {
   uuid: (v) => isUuid(v),
   text: (v, f) => typeof v === 'string' && v.length >= (f.min ?? 1) && v.length <= (f.max ?? 200),
@@ -19,6 +19,7 @@ const rules = {
   timestamp: (v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,6})?)?(Z|[+-]\d{2}:\d{2})$/.test(v) && !Number.isNaN(Date.parse(v)),   // ISO 8601 with a zone
   hex: (v) => typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v),
   enum: (v, f) => f.values.includes(v),
+  json: (v, f) => v !== null && typeof v === 'object' && JSON.stringify(v).length <= (f.max ?? 20000),   // an object or list; size-capped here, shape checked by the database
   list: (v, f) => Array.isArray(v) && v.length <= (f.max ?? 50) && v.every((x) => rules[f.items](x, { max: f.itemMax, min: f.itemMin })),
 };
 
