@@ -6,3 +6,7 @@ node_modules/
 e2e-shots/
 dist/
 !apps/funnel-mapper/.env.example
+
+# built bundle of the whiteboard editor (scripts/build-whiteboard.mjs)
+apps/web/whiteboard/
+apps/whiteboard/node_modules/

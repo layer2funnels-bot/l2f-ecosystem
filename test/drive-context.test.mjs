@@ -86,6 +86,27 @@ check('FC21', 'A second save from the same starting version is refused as a conf
 r = await J('drive.files.versions.add', { id: board.id, body: '{"elements":[3]}', expected: 2 }, U.OWN);
 check('FC22', 'Starting from the current version works again (version 3); nothing is lost on the way', r.status === 200 && r.row.current_version === 3);
 check('FC23', 'Saving without naming a version still works (older callers): it adds the next version', (await J('drive.files.versions.add', { id: board.id, body: '{"elements":[4]}' }, U.ED)).row.current_version === 4);
+// ---- E. the All boards lens (drive.boards.list): every whiteboard the person may open, by context
+await asSuper();
+const mkBoard = async (user, input) => (await J('drive.files.create', { kind: 'document', mime_type: BOARD, body: '{}', ...input }, user)).row;
+const bShared = await mkBoard(U.ED, { space: 'shared', name: 'Org workshop' });
+const bClientOnly = await mkBoard(U.ED, { space: 'client', client: C1, name: 'Client One workshop' });
+const bClient2 = await mkBoard(U.ED, { space: 'client', client: C2, name: 'Client Two workshop' });
+const names = (r) => r.rows.map((x) => x.name).sort().join('|');
+r = await J('drive.boards.list', {}, U.ED);
+check('FC25', 'The lens lists every board the person may open, across the shared Drive, clients and projects, and nothing that is not a board', names(r) === ['Client One map', 'Client One workshop', 'Client Two workshop', 'Kickoff board', 'Org workshop'].sort().join('|') && !r.rows.some((x) => x.id === sharedDoc.id));
+check('FC26', 'Filtering by context: shared Drive only', names(await J('drive.boards.list', { scope: 'shared' }, U.ED)) === 'Org workshop');
+check('FC27', 'Filtering by one client (boards that live in the client space, not in one of its projects)', names(await J('drive.boards.list', { scope: 'client', client: C1 }, U.ED)) === 'Client One workshop');
+check('FC28', 'Filtering by one project', names(await J('drive.boards.list', { scope: 'project', project: PI }, U.ED)) === 'Kickoff board' && names(await J('drive.boards.list', { scope: 'project', project: P1 }, U.ED)) === 'Client One map');
+check('FC29', 'Search narrows by name; archived boards only appear when asked for', names(await J('drive.boards.list', { q: 'workshop' }, U.ED)).split('|').length === 3 && (await J('drive.boards.list', { archived: true }, U.ED)).rows.length === 0);
+r = await J('drive.boards.list', {}, U.VW);
+check('FC30', 'A viewer with read levels sees the same boards (read only); an editor with no levels sees only the shared Drive boards and none through a project or a client', r.rows.length === 5 && names(await J('drive.boards.list', {}, U.PM)) === 'Org workshop');
+await asSuper(); await db.query('update files set archived_at = now() where id = $1', [bShared.id]);
+check('FC31', 'An archived board leaves the lens and shows with archived: true', !names(await J('drive.boards.list', {}, U.ED)).includes('Org workshop') && names(await J('drive.boards.list', { archived: true }, U.ED)) === 'Org workshop');
+await asUser(U.CL1);
+check('FC32', 'A client contact sees no boards unless both the board and its project were shared with them (the lens is a staff operation)', (await J('drive.boards.list', {}, U.CL1)).status === 404);
+check('FC33', 'The other organization sees none of these boards', (await J('drive.boards.list', {}, U.AOWN, A)).rows.length === 0);
+await asSuper();
 const au = JSON.stringify((await rows("select detail from audit_events where action like 'file_versions.%' or action like 'files.%'")).map((x) => x.detail));
 check('FC24', 'Audit records the project link and sizes, never the board content', au.includes('project_id') && !au.includes('elements'));
 

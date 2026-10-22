@@ -1,0 +1,15 @@
+{
+  "name": "l2f-whiteboard-bundle",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Build-time only: bundles the Excalidraw whiteboard editor (MIT) into one self-hosted ES module for the web app. Not a runtime dependency of the API.",
+  "type": "module",
+  "dependencies": {
+    "@excalidraw/excalidraw": "0.18.1",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.10"
+  }
+}

@@ -9,7 +9,9 @@ const at = (p) => fileURLToPath(new URL(`../${p}`, import.meta.url));
 const url = process.env.SUPABASE_URL || 'http://127.0.0.1:54321';
 const key = process.env.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH';
 if (/service_role|sb_secret_/i.test(key) || /^eyJ/.test(key)) { console.error('Refusing: that looks like a privileged or legacy JWT key. Use the publishable key.'); process.exit(1); }
+import { buildWhiteboard } from './build-whiteboard.mjs';
 const out = at('dist/web'); rmSync(out, { recursive: true, force: true }); mkdirSync(out + '/packages/core', { recursive: true });
+await buildWhiteboard({ quiet: true });          // the editor bundle (skipped when its build-time dependencies are not installed: the board page then says so)
 cpSync(at('apps/web'), out, { recursive: true });
 cpSync(at('packages/ui'), out + '/packages/ui', { recursive: true });
 rmSync(out + '/gallery.html', { force: true }); rmSync(out + '/js/gallery.js', { force: true });         // the component gallery is for development and tests only
