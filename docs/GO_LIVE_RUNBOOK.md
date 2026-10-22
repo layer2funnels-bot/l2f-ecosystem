@@ -22,6 +22,8 @@ Status of the code at hand-over: all migrations `0001` to `0015` and the API/web
 | 12 | First owner sign-in, bootstrap, invite the team | owner | deactivate members |
 | 13 | Announce; watch the first week | owner | see "Emergency stops" |
 
+> **Rehearsed** on the local stack (`npm run rehearsal:local`, report in `docs/GO_LIVE_REHEARSAL.md`): steps 4, 5 (as far as a repository can), 8, 9, 10, 11 and 12 pass; the gaps it lists (dashboard-only settings, Storage files not in the backup, restoring auth users, client-tool version) are owner checklist items below.
+
 ## 0. Pre-flight (no approval needed)
 - `git status` clean; CI green on the commit to be deployed; `npm run test:all` passes locally; `node scripts/fmp-copy.mjs verify` passes.
 - Record the commit id here before starting: `____________`.
@@ -42,7 +44,7 @@ Choose the address for the office (for example `office.layer2funnels.com`; the s
 
 ## 4. Create the Supabase project and apply the database (owner + assistant)
 1. Create the project in the region from step 0; strong database password into the password manager; no extra add-ons.
-2. Apply `migrations/0001` … `0015` **in order** through the session pooler connection (one transaction per file; stop on the first error). The same order is used by `npm run stack:migrate` locally.
+2. Apply `migrations/0001` … `0022` **in order** through the session pooler connection (one transaction per file; stop on the first error). The same order is used by `npm run stack:migrate` locally.
 3. Do **not** run `seed/bootstrap.sql` yet.
 *Check (read-only):* (a) `select count(*) from public.workspaces` is 0; (b) as the publishable (anon) key, `GET {project}/rest/v1/clients` is refused and `GET {project}/rest/v1/rpc/…` of any public function is refused (migration 0010 closed the Data API; the permanent test is `test/direct-access.test.mjs`, the HTTP proof is E-series in `scripts/e2e-local.mjs`); (c) the project list shows the intended region.
 *Undo:* delete the project (it is empty at this point).
@@ -71,12 +73,13 @@ Google Cloud → OAuth client (web); authorised redirect = the callback address 
 - Connect the private repository, branch `main` (or the commit recorded in step 0). Build command `node scripts/build-web.mjs`, output `dist/web`. `wrangler.toml` already carries `nodejs_compat`.
 - **Build-time (browser-safe) variables:** `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` (the publishable key only; the build refuses a secret or legacy JWT key), `GOOGLE_ENABLED=true`. The build rewrites the page security policy to allow only that project's address.
 - **Encrypted runtime variables (API function):** `DATABASE_URL` (the **session pooler** string, role `postgres`; the API then runs every request as `app_user`), `SUPABASE_JWKS_URL`, `SUPABASE_JWT_ISSUER`, `RATE_LIMIT_STORE=postgres` (shared counters from migration 0009), optional `DB_POOL_MAX` (default 5; keep it small on the free plan).
+- **One server per request:** the function builds a database connection per request (Workers cannot reuse one across requests; found in the rehearsal, `docs/GO_LIVE_REHEARSAL.md`); `DB_POOL_MAX` is forced to 1 by the function.
 - **Fonts:** Hanken Grotesk, Schibsted Grotesk and Newsreader are self-hosted from `apps/web/fonts` (licences in `LICENSES.txt`); nothing loads from a font service, and the policy allows only the site's own files. Confirm after deploy that the page loads no request to any other host.
 - Custom domain = the office address from step 2.
 *Check:* `GET /api/health` answers `{"ok":true}`; the page loads with the correct fonts; the browser console shows no policy violation. *Undo:* in Pages, roll back to the previous deployment or delete the project; DNS record removal takes the site offline.
 
 ## 9. Smoke tests and security proof (assistant, read-only on live)
-1. `/api/health` ok; sign-in page renders; wrong password is refused; a signed-out call to any `/api/*` operation answers 401 `session_expired`.
+1. `/api/health` ok; sign-in page renders; wrong password is refused; a call with **no** sign-in answers "not found" and a call with a **bad or expired token** answers 401 `session_expired` (both checked in the rehearsal).
 2. With the publishable key and **no** token, and again with a token of a test user, the direct Data API calls from step 4 (b) are refused (table reads, writes, rpc, GraphQL, the `private` schema).
 3. Run the local suites against a **copy** (not live data): `npm run test:all` already covers rules; for live, only the read-only checks above and a single owner sign-in are run. Do not run the data-writing e2e suites against the live project.
 4. Cross-organization check once a second organization exists: a member of one cannot read the other (use two test members; remove them afterwards).

@@ -58,6 +58,10 @@ jobs:
       - name: Browser end-to-end (real Chromium)
         run: npm run test:e2e:ui
         env: { PLAYWRIGHT_MODULE: '${{ github.workspace }}/node_modules/playwright' }
+      - name: 'Go-live rehearsal (runbook on the local stack: fresh database, bootstrap, build, smoke tests, encrypted backup and restore)'
+        run: |
+          sudo apt-get install -y -q age
+          node scripts/rehearsal.mjs
       - uses: actions/upload-artifact@v4
         if: failure()
         with: { name: e2e-shots, path: e2e-shots, if-no-files-found: ignore }

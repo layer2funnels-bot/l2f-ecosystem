@@ -1,5 +1,5 @@
 # Session handoff (kept current at the end of every batch)
-Last updated: 21 Oct 2026, end of batch 1 (batch 2 in progress, see "What is next").
+Last updated: 22 Oct 2026, end of batch 2 (batch 1 merged as PR 9; batch 2 awaiting its PR).
 
 ## Working rules (from the owner)
 - Repository: `layer2funnels-bot/l2f-ecosystem` only. **Never write to, merge into or push to the original Funnel Mapper Pro repository; never deploy; no live project, account, domain or key is touched.** Real data is never read or moved.
@@ -22,5 +22,8 @@ Organization = `workspaces` row; one permission engine (`private.has_permission`
 ## Owner approvals still pending
 Go-live (all of `docs/GO_LIVE_RUNBOOK.md`); `FMP_READ_TOKEN` secret for the nightly job; design 09 Clients and Funnel Strategies; FMP hosting choice; independent-account policy; the FMP data migration.
 
-## What is next (batch 2, in this order)
-Merge flow and this file; FMP fonts self-hosted; research documents (hosting, independent accounts, application-office import plan); Phase 6 data layers (Client Portal gate G2 suite, Approvals, Form Builder, Value Ladder, Social Planner, Whiteboard spike); local go-live rehearsal with gaps report.
+## Done in batch 2 (22 Oct 2026)
+FMP fonts self-hosted (FNT-1); research documents (`docs/FMP_HOSTING_OPTIONS.md`, `docs/INDEPENDENT_ACCOUNTS.md`, `docs/APPLICATION_OFFICE_IMPORT_PLAN.md`); API audience gate (0016, AUD-1); Approvals v2 (0017); Client Portal data layer with the G2 suite (0018, PRT-1; OFF by default); Form Builder (0019), Value Ladder (0020), Social Planner (0021); Whiteboard spike (`docs/WHITEBOARD_SPIKE.md`); rate-limit grant (0022); go-live rehearsal (`docs/GO_LIVE_REHEARSAL.md`) which found and fixed the Cloudflare one-connection-per-request defect. Correction: the earlier claim that a slug rule blocks independent accounts was wrong (see `docs/INDEPENDENT_ACCOUNTS.md`).
+
+## What is next
+Owner decisions: Vercel plan for FMP (`docs/FMP_HOSTING_OPTIONS.md`); independent-account policy; approval to un-pause application-office for the export; design approvals (Clients 09, Funnel Strategies, Portal screens, Forms, Value Ladder, Social Planner, Whiteboard) before any screen is built. Engineering that needs no decision: FMP step 2 (export palettes, real organization switcher) once the migration plan is approved; Drive file backup; the Hyperdrive upgrade only if connection-per-request proves slow.
