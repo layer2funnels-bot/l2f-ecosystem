@@ -73,11 +73,22 @@ const dist = join(root, 'dist/web');
 const hdr = readFileSync(join(dist, '_headers'), 'utf8');
 ok('R8c', 'The page policy allows only our own files and the live project (no localhost left)', hdr.includes('rehearsalref.supabase.co') && !hdr.includes('127.0.0.1') && /script-src 'self'/.test(hdr) && /frame-ancestors 'none'/.test(hdr));
 const walk = (d) => readdirSync(d, { withFileTypes: true }).flatMap((e) => e.isDirectory() ? walk(join(d, e.name)) : [join(d, e.name)]);
-const files = walk(dist).filter((f) => /\.(html|js|css|mjs)$/.test(f));
+const files = walk(dist).filter((f) => /\.(html|js|css|mjs)$/.test(f) && !f.includes('/whiteboard/'));          // the editor bundle has its own check (R8i)
 const hosts = new Set(); for (const f of files) for (const m of readFileSync(f, 'utf8').matchAll(/https?:\/\/([a-z0-9.-]+)/gi)) hosts.add(m[1].toLowerCase());
 const allowedHosts = new Set(['rehearsalref.supabase.co', 'www.w3.org', 'openfontlicense.org', 'scripts.sil.org', 'fonts.google.com', 'github.com', 'www.met.no', 'example.com', 'office.example', 'layer2funnels.com', 'www.layer2funnels.com']);
 const stray = [...hosts].filter((h) => !allowedHosts.has(h) && !h.endsWith('.example.com'));
 ok('R8d', 'The built site loads nothing from any other host (fonts, scripts, styles are our own); only licence/namespace text mentions other hosts', stray.length === 0, stray.join(','));
+// The whiteboard editor (Excalidraw) mentions many web addresses in its code (help links, embed lists, a collaboration service this app never turns on).
+// None can load: the page policy allows only our own files and the live project. This list pins what the shipped version mentions, so an upgrade that
+// adds a new address fails here and gets a look before it goes live.
+const BOARD_HOSTS = new Set(['www.w3.org', 'chevrotain.io', 'github.com', 'www.youtube.com', 'player.vimeo.com', 'mermaid.js.org', 'plus.excalidraw.com', 'libraries.excalidraw.com', 'json.excalidraw.com', 'docs.excalidraw.com', 'discord.gg', 'youtube.com', 'x.com', 'www.figma.com', 'us-central1-excalidraw-room-persistence.cloudfunctions.net', 'twitter.com', 'reddit.com', 'reactjs.org', 'platform.twitter.com', 'oss-collab.excalidraw.com', 'oss-ai.excalidraw.com', 'langium.org', 'gist.github.com', 'giphy.com', 'excalidraw-room-persistence.firebaseio.com', 'esm.sh', 'en.wikipedia.org', 'embed.reddit.com', 'app.excalidraw.com']);
+const boardDir = join(dist, 'whiteboard');
+if (existsSync(boardDir)) {
+  const bh = new Set(); for (const f of walk(boardDir).filter((x) => /\.(js|css)$/.test(x))) for (const m of readFileSync(f, 'utf8').matchAll(/https?:\/\/([a-z0-9.-]+)/gi)) bh.add(m[1].toLowerCase());
+  const newHosts = [...bh].filter((x) => !BOARD_HOSTS.has(x));
+  ok('R8i', 'The whiteboard editor bundle only mentions the pinned list of addresses (none can load: the page policy forbids them)', newHosts.length === 0, newHosts.join(','));
+  ok('R8j', 'The editor bundle, its stylesheet, its fonts and its licence notices are in the build; the 13 MB CJK font set is not', ['board.js', 'board.css', 'NOTICES.txt'].every((n) => existsSync(join(boardDir, n))) && existsSync(join(boardDir, 'fonts')) && !existsSync(join(boardDir, 'fonts', 'Xiaolai')));
+} else gap('R8j', 'The whiteboard editor was not part of this build (npm ci --prefix apps/whiteboard first); the board page then says the editor is not available', 'runbook step 8 build command');
 const cfgjs = readFileSync(join(dist, 'config.js'), 'utf8');
 ok('R8e', 'config.js carries only the public URL and publishable key', cfgjs.includes('rehearsalref') && !/service_role|sb_secret|eyJ/.test(cfgjs));
 ok('R8f', 'The four self-hosted v4 font families are in the build', ['bricolage-grotesque', 'geist-latin', 'geist-mono', 'noto-nastaliq-urdu'].every((n) => files.concat(walk(dist)).some((f) => f.includes(n))));

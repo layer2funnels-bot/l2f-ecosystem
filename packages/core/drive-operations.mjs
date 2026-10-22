@@ -75,6 +75,14 @@ const fileOps = [
     run: (q, _c, i) => q(`${FSELECT} where f.project_id = $1 and ((f.archived_at is not null) = $2) and ($3::text is null or f.kind = $3) and ($4::text is null or f.mime_type = $4) and ($5::text is null or f.name ilike $5)
       order by f.updated_at desc limit 500`, [i.project, i.archived ?? false, i.kind ?? null, i.mime ?? null, i.q ? like(i.q) : null]),
   }),
+  // The "All boards" lens: every whiteboard the person may open, optionally by context (shared Drive, one client, one project). Only readable records come back.
+  defineOperation({
+    name: 'drive.boards.list', class: 'read',
+    input: { scope: { type: 'enum', values: ['all', 'shared', 'client', 'project'] }, client: { type: 'uuid' }, project: { type: 'uuid' }, q: { type: 'text', max: 100 }, archived: { type: 'bool' } },
+    run: (q, _c, i) => q(`${FSELECT} where f.kind = 'document' and f.mime_type = 'application/vnd.excalidraw+json' and ((f.archived_at is not null) = $1)
+      and ($2::text is null or $2 = 'all' or ($2 = 'shared' and f.space = 'shared' and f.project_id is null) or ($2 = 'client' and f.space = 'client' and f.project_id is null and f.client_id is not distinct from $3) or ($2 = 'project' and f.project_id is not distinct from $4))
+      and ($5::text is null or f.name ilike $5) order by f.updated_at desc limit 500`, [i.archived ?? false, i.scope ?? null, i.client ?? null, i.project ?? null, i.q ? like(i.q) : null]),
+  }),
   defineOperation({ name: 'drive.files.get', class: 'read', single: true, input: id, run: (q, _c, i) => q(`${FSELECT} where f.id = $1`, [i.id]) }),
   defineOperation({
     // a file (bytes already uploaded to the signed address, path given) or a first-party document (text given); version 1 is created with it

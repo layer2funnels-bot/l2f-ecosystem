@@ -50,6 +50,10 @@ jobs:
         run: |
           npm run stack:start
           npm run stack:migrate
+      - name: 'Whiteboard editor bundle (build-time dependencies of apps/whiteboard)'
+        run: |
+          npm ci --prefix apps/whiteboard
+          node scripts/build-whiteboard.mjs
       - name: Playwright (not a project dependency; installed for this job only)
         run: |
           npm install --no-save --no-package-lock playwright@1.56.1

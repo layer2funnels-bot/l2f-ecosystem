@@ -1,0 +1,13 @@
+/* Whiteboard (Design v4): our frame around the self-hosted Excalidraw editor, and the editor's own colour variables mapped to v4 tokens.
+   Where it cannot match the prototype: the hand-drawn canvas font (Excalifont) and the editor's own toolbar sizes (about 36 px; the
+   editor changes layout on phones but its buttons stay under 44 px) belong to the editor and are not restyled. */
+.board{display:grid;gap:var(--space-3)}
+.boardsurface{position:relative;height:calc(100dvh - 280px);min-height:520px;border:1px solid var(--line2);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh2);background:var(--surface)}
+.boardsurface .l2f-board,.boardsurface .excalidraw{height:100%;width:100%}
+.boardsurface .excalidraw,.boardsurface .excalidraw.theme--dark{
+  --ui-font:var(--font);--color-primary:var(--action);--color-primary-darker:var(--action);--color-primary-darkest:var(--action);--color-primary-light:var(--action-tint);--color-primary-light-darker:var(--action-tint);
+  --island-bg-color:var(--surface);--default-bg-color:var(--surface);--color-surface-lowest:var(--surface);--color-surface-low:var(--surface2);--color-surface-mid:var(--sunk);--color-surface-high:var(--sunk);
+  --text-primary-color:var(--text);--color-on-primary-container:var(--action-ink);--color-gray-100:var(--surface2);--color-border-outline:var(--line2);--focus-highlight-color:var(--action);--popup-bg-color:var(--surface);--popup-text-color:var(--text);
+  --button-bg:var(--sunk);--button-hover-bg:var(--action-tint);--button-active-bg:var(--action-tint);--button-destructive-bg-color:var(--danger-tint);--button-destructive-color:var(--danger);--shadow-island:var(--sh2)}
+.boardsurface .excalidraw .library-menu-browse-button,.boardsurface .excalidraw .library-menu-items-private-library-container .library-menu-browse-button{display:none}
+@media (max-width:600px){.boardsurface{height:calc(100dvh - 330px);min-height:420px;border-radius:var(--r-sm)}}

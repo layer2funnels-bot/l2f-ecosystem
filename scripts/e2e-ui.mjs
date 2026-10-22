@@ -223,6 +223,71 @@ await page.goBack(); await page.reload(); await wait('Your apps in Layer2Funnels
   await page.goto(`${base}/#/launcher`); await wait('Your apps in');
 }
 
+// =============================================================== B3. Whiteboard (shared module; opens at #/board/<id>)
+{
+  const [{ id: wsL }] = (await admin.query("select id from workspaces where slug = 'layer2funnels'")).rows;
+  const [{ user_id: ownerId }] = (await admin.query("select user_id from memberships where workspace_id = $1 and role = 'owner' and kind = 'staff' limit 1", [wsL])).rows;
+  const BOARD = 'application/vnd.excalidraw+json';
+  const mk = async (name, body, extra = '') => { const [{ id }] = (await admin.query(`insert into files (workspace_id, space, uploaded_by, name, kind, mime_type, size_bytes) values ($1, 'shared', $2, $3, 'document', $4, 100) returning id`, [wsL, ownerId, name, BOARD])).rows; await admin.query('insert into file_versions (workspace_id, file_id, body) values ($1, $2, $3)', [wsL, id, body]); return id; };
+  const rect = (id) => ({ id, type: 'rectangle', x: 40, y: 40, width: 120, height: 80, angle: 0, strokeColor: '#1e1e1e', backgroundColor: 'transparent', fillStyle: 'solid', strokeWidth: 2, strokeStyle: 'solid', roughness: 1, opacity: 100, groupIds: [], frameId: null, roundness: null, seed: 1, version: 1, versionNonce: 1, isDeleted: false, boundElements: null, updated: 1, link: null, locked: false, index: 'a0' });
+  const boardId = await mk('Kickoff workshop', JSON.stringify({ type: 'excalidraw', version: 2, elements: [rect('r1')], appState: { viewBackgroundColor: '#ffffff' } }));
+  const editorUp = () => page.waitForSelector('.boardsurface .excalidraw', { timeout: 20000 });
+  const savedNow = () => page.waitForFunction(() => /Saved/.test(document.querySelector('.docstate')?.innerText ?? ''));
+  await page.goto(`${base}/#/board/${boardId}`); await editorUp();
+  check('W1', 'A board opens in the shared editor with its name, "Saved", an item count and the breadcrumb of where it lives (Drive, the organization, Whiteboards)', (await page.locator('.doctitle').inputValue()) === 'Kickoff workshop' && (await page.locator('.docstate').innerText()).startsWith('Saved') && (await page.locator('.docstat').innerText()).includes('1 item')
+    && (await page.locator('.board .crumbs').innerText()).includes('Whiteboards') && (await page.locator('.board .crumbs').innerText()).includes('Layer2Funnels'));
+  await shot(page, 'w1-board');
+  // draw a rectangle: focus the canvas, press R, drag
+  const canvas = page.locator('.boardsurface canvas.interactive'); const box = await canvas.boundingBox();
+  await page.mouse.click(box.x + 400, box.y + 300); await page.keyboard.press('r');
+  await page.mouse.move(box.x + 300, box.y + 250); await page.mouse.down(); await page.mouse.move(box.x + 420, box.y + 330, { steps: 6 }); await page.mouse.up();
+  await page.waitForFunction(() => /Unsaved/.test(document.querySelector('.docstate')?.innerText ?? ''), null, { timeout: 8000 });
+  check('W2', 'Drawing marks the board "Unsaved changes" and the item count follows', (await page.locator('.docstat').innerText()).includes('2 items'));
+  await page.getByRole('button', { name: 'Save', exact: true }).click(); await savedNow();
+  const w2 = (await admin.query('select current_version, (select body from file_versions where file_id = $1 and version = 2) b from files where id = $1', [boardId])).rows[0];
+  const sc = JSON.parse(w2.b);
+  check('W3', 'Save adds version 2 holding both rectangles as a scene (JSON), and version 1 is untouched', w2.current_version === 2 && sc.elements.filter((e) => e.type === 'rectangle').length === 2 && sc.type === 'excalidraw');
+  await page.reload(); await editorUp(); await page.waitForFunction(() => /2 items/.test(document.querySelector('.docstat')?.innerText ?? ''));
+  check('W4', 'After a reload both rectangles are still there', (await page.locator('.docstat').innerText()).includes('2 items'));
+  // a stored board with outside content: images, embeds, a javascript link and unknown types are not opened
+  const evilId = await mk('Hostile board', JSON.stringify({ elements: [rect('ok'), { ...rect('img'), type: 'image', fileId: 'f1' }, { ...rect('emb'), type: 'embeddable', link: 'https://evil.example/x' }, { ...rect('lnk'), id: 'lnk', link: 'javascript:window.__pwnb=1' }, { ...rect('bad'), type: 'script' }], files: { f1: { dataURL: 'data:image/png;base64,AAAA' } } }));
+  await page.goto(`${base}/#/board/${evilId}`); await editorUp(); await page.waitForFunction(() => /items?/.test(document.querySelector('.docstat')?.innerText ?? ''));
+  check('W5', 'A hostile stored board opens with only its drawing elements (2 of 5), no image, no embed, no script', (await page.locator('.docstat').innerText()).includes('2 items') && (await page.evaluate(() => !window.__pwnb && !document.querySelector('.boardsurface iframe, .boardsurface img[src^=http]'))));
+  // conflict
+  await page.goto(`${base}/#/board/${boardId}`); await editorUp();
+  await admin.query("insert into file_versions (workspace_id, file_id, body, note) values ($1, $2, $3, 'by someone else')", [wsL, boardId, JSON.stringify({ type: 'excalidraw', version: 2, elements: [rect('theirs')], appState: {} })]);
+  const b2 = await page.locator('.boardsurface canvas.interactive').boundingBox();
+  await page.mouse.click(b2.x + 500, b2.y + 400); await page.keyboard.press('o'); await page.mouse.move(b2.x + 480, b2.y + 380); await page.mouse.down(); await page.mouse.move(b2.x + 560, b2.y + 440, { steps: 5 }); await page.mouse.up();
+  await page.getByRole('button', { name: 'Save', exact: true }).click({ timeout: 3000 }).catch(() => {});          // the idle autosave may already have found the conflict
+  await wait('Someone saved a newer version');
+  check('W6', 'If someone else saved meanwhile, the board offers the same three choices and writes nothing over theirs', (await admin.query('select count(*)::int n from file_versions where file_id = $1', [boardId])).rows[0].n === 3 && (await page.getByRole('button', { name: 'Save mine as the newest' }).count()) === 1);
+  await page.getByRole('button', { name: 'Save mine as the newest' }).click(); await savedNow();
+  check('W7', '"Save mine as the newest" adds version 4 after theirs', (await admin.query('select current_version from files where id = $1', [boardId])).rows[0].current_version === 4);
+  await page.getByRole('button', { name: 'History' }).click(); await wait('Version 4');
+  check('W8', 'History lists the versions and offers "Restore as new" for the older ones', (await page.locator('.drawer .rows li').count()) === 4 && (await page.locator('.drawer .rows li', { hasText: 'Version 1' }).getByRole('button', { name: 'Restore as new' }).count()) === 1);
+  await page.locator('.drawer .rows li', { hasText: 'Version 1' }).getByRole('button', { name: 'Restore as new' }).click(); await wait('Restored version 1 as version 5');
+  check('W9', 'Restoring version 1 saves it as version 5 and the editor shows the original single rectangle; nothing is deleted', (await page.locator('.docstat').innerText()).includes('1 item') && (await admin.query('select count(*)::int n from file_versions where file_id = $1', [boardId])).rows[0].n === 5);
+  // dark theme
+  await page.locator('.who').click();
+  check('W9b', 'The profile menu shows Appearance with System, Light and Dark choices (no stray object text), the weather switch and Sign out', (await page.locator('#profile-menu').innerText()).toLowerCase().includes('appearance') && !(await page.locator('#profile-menu').innerText()).includes('[object') && (await page.locator('#profile-menu [role=menuitemradio]').count()) === 3);
+  await page.getByRole('menuitemradio', { name: 'Dark' }).click();
+  await page.waitForFunction(() => document.documentElement.dataset.theme === 'dark'); await page.waitForSelector('.boardsurface .excalidraw.theme--dark', { timeout: 8000 }).catch(() => {});
+  check('W10', 'Choosing Dark in the profile menu makes the whiteboard editor dark too', await page.locator('.boardsurface .excalidraw.theme--dark').count() === 1);
+  await shot(page, 'w2-board-dark');
+  await page.locator('.who').click(); await page.getByRole('menuitemradio', { name: 'Light' }).click(); await page.waitForFunction(() => document.documentElement.dataset.theme === 'light');
+  // archived: read only
+  await admin.query('update files set archived_at = now() where id = $1', [boardId]); await page.goto(`${base}/#/doc/00000000-0000-0000-0000-000000000000`); await page.goto(`${base}/#/board/${boardId}`); await wait('This board is read only');
+  check('W11', 'An archived board opens read only, Save is disabled and a Restore link is offered', (await page.getByRole('button', { name: 'Save', exact: true }).isDisabled()) && (await page.getByRole('button', { name: 'Restore' }).count()) >= 1);
+  await admin.query('update files set archived_at = null where id = $1', [boardId]);
+  // not a board, not found
+  const [{ id: docOnly }] = (await admin.query("insert into files (workspace_id, space, uploaded_by, name, kind, mime_type, size_bytes) values ($1, 'shared', $2, 'Plain doc', 'document', 'text/plain', 5) returning id", [wsL, ownerId])).rows; await admin.query("insert into file_versions (workspace_id, file_id, body) values ($1, $2, 'x')", [wsL, docOnly]);
+  await page.goto(`${base}/#/board/${docOnly}`); await wait('This is not a whiteboard');
+  check('W12', 'A document opened as a board says so and offers to open it as a document', (await page.getByRole('link', { name: 'Open it as a document' }).count()) === 1);
+  await page.goto(`${base}/#/board/00000000-0000-0000-0000-000000000000`); await wait('Not here');
+  check('W13', 'An id that does not exist (or is not yours) shows the plain "Not here" state', (await page.locator('.empty').innerText()).includes('Not here'));
+  await page.goto(`${base}/#/launcher`); await wait('Your apps in');
+}
+
 // =============================================================== C. Office Home (design 04)
 await tile('office').click(); await wait('Needs your attention'); await wait('Nothing assigned to you.'); await wait('0 invitations waiting');   // the cards fill in after their data loads
 check('U14', 'Office Home: the eight section menu, Home current, designed empty states, owner/admin card with waiting invitations', (await page.locator('nav.nav a').allInnerTexts()).join() === 'Home,Planner,Projects,Funnels,Documents,Team,Apps,Admin' && (await page.locator('nav.nav a[aria-current=page]').innerText()) === 'Home'

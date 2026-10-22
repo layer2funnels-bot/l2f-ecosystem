@@ -29,3 +29,7 @@ A realistic scene (frame, 12 boxes, bound arrows, text with unicode and emoji, a
 
 ## Cost and effort (estimate)
 Editor page + boards list + autosave + image references: 4 to 6 working days with tests; no running cost. Recommendation: proceed only after the Whiteboard design is approved and the first real use is clear (workshops with clients, funnel sketches); until then the data path is ready and tested.
+
+
+## Built (23 Oct 2026)
+The editor page became a lazily loaded module inside the app shell (not a separate page), so the header, switcher, breadcrumb and unsaved-work guard apply. See DECISIONS WBD-2 for the build, the licences, the patch that removes the remote fallback and what does not match the prototype. Images in boards and boards above the document limit are still open (a board is refused at 200,000 characters with a clear message).
