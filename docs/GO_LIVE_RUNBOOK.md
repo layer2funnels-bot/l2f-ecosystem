@@ -44,7 +44,7 @@ Choose the address for the office (for example `office.layer2funnels.com`; the s
 
 ## 4. Create the Supabase project and apply the database (owner + assistant)
 1. Create the project in the region from step 0; strong database password into the password manager; no extra add-ons.
-2. Use database client tools of **version 17** (`pg_dump`, `pg_restore`, `psql`; CI checks this with `npm run check:pg17`). Apply `migrations/0001` … `0023` **in order** through the session pooler connection (one transaction per file; stop on the first error). The same order is used by `npm run stack:migrate` locally.
+2. Use database client tools of **version 17** (`pg_dump`, `pg_restore`, `psql`; CI checks this with `npm run check:pg17`). Apply `migrations/0001` … `0025` **in order** through the session pooler connection (one transaction per file; stop on the first error). The same order is used by `npm run stack:migrate` locally.
 3. Do **not** run `seed/bootstrap.sql` yet.
 *Check (read-only):* (a) `select count(*) from public.workspaces` is 0; (b) as the publishable (anon) key, `GET {project}/rest/v1/clients` is refused and `GET {project}/rest/v1/rpc/…` of any public function is refused (migration 0010 closed the Data API; the permanent test is `test/direct-access.test.mjs`, the HTTP proof is E-series in `scripts/e2e-local.mjs`); (c) the project list shows the intended region.
 *Undo:* delete the project (it is empty at this point).

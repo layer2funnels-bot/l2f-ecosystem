@@ -7,6 +7,8 @@ import { newObjectPath } from './storage.mjs';
 
 const T = (max = 500) => ({ type: 'text', min: 0, max });
 const id = { id: { type: 'uuid', required: true } };
+/** The apps whose own records may own files. A file with an owner app is stored like any other but is not listed in the organization's Drive until someone adds it to the library. */
+export const APPS = ['projects', 'clients', 'portal', 'whiteboard', 'forms', 'social_planner', 'value_ladder', 'funnels', 'planner'];
 const SPACE = { type: 'enum', values: ['shared', 'personal', 'client'], required: true };
 const NAME = { type: 'text', required: true, min: 1, max: 200 };
 const like = (q) => `%${String(q).replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
@@ -26,9 +28,9 @@ const byteLength = (text) => new TextEncoder().encode(text).length;
 export const newLinkToken = () => toBase64Url(crypto.getRandomValues(new Uint8Array(32)));
 
 const FSELECT = `select f.id, f.space, f.client_id, f.owner_id, f.folder_id, f.name, f.kind, f.mime_type, f.size_bytes::float8 as size_bytes, f.current_version, f.protected_sop, f.sop_key,
-    f.client_visible, f.project_id, f.uploaded_by, f.archived_at, f.created_at, f.updated_at from files f`;
+    f.client_visible, f.project_id, f.managed_by, f.in_library, f.uploaded_by, f.archived_at, f.created_at, f.updated_at from files f`;
 const DSELECT = `select d.id, d.space, d.client_id, d.owner_id, d.parent_id, d.name, d.archived_at, d.created_at, d.updated_at,
-    (select count(*)::int from files f where f.folder_id = d.id and f.archived_at is null) as files,
+    (select count(*)::int from files f where f.folder_id = d.id and f.archived_at is null and (f.space <> 'shared' or f.in_library)) as files,
     (select count(*)::int from drive_folders c where c.parent_id = d.id and c.archived_at is null) as folders from drive_folders d`;
 
 const folderOps = [
@@ -65,7 +67,7 @@ const fileOps = [
   defineOperation({
     name: 'drive.files.list', class: 'read',
     input: { space: SPACE, client: { type: 'uuid' }, folder: { type: 'uuid' }, anywhere: { type: 'bool' }, archived: { type: 'bool' }, q: { type: 'text', max: 100 }, kind: { type: 'enum', values: ['file', 'document'] } },
-    run: (q, _c, i) => q(`${FSELECT} where f.space = $1 and f.client_id is not distinct from $2 and ($3::boolean or f.folder_id is not distinct from $4) and ((f.archived_at is not null) = $5)
+    run: (q, _c, i) => q(`${FSELECT} where f.space = $1 and f.client_id is not distinct from $2 and ($3::boolean or f.folder_id is not distinct from $4) and ((f.archived_at is not null) = $5) and (f.space <> 'shared' or f.in_library)
       and ($6::text is null or f.name ilike $6) and ($7::text is null or f.kind = $7) order by lower(f.name) limit 500`,
     [i.space, i.client ?? null, i.anywhere ?? false, i.folder ?? null, i.archived ?? false, i.q ? like(i.q) : null, i.kind ?? null]),
   }),
@@ -88,13 +90,13 @@ const fileOps = [
     // a file (bytes already uploaded to the signed address, path given) or a first-party document (text given); version 1 is created with it
     name: 'drive.files.create', class: 'write', single: true,
     input: { space: SPACE, client: { type: 'uuid' }, folder: { type: 'uuid' }, project: { type: 'uuid' }, name: NAME, kind: { type: 'enum', values: ['file', 'document'], required: true }, mime_type: T(120), size_bytes: { type: 'int', min: 0 },
-      storage_path: T(600), body: T(200000), note: T(300) },
+      storage_path: T(600), body: T(200000), note: T(300), app: { type: 'enum', values: APPS } },
     run: async (q, ctx, i) => {
       if (i.kind === 'file' && (!i.storage_path || i.body !== undefined)) throw bad('a file needs the path of its stored copy');
       if (i.kind === 'document' && (i.body === undefined || i.storage_path)) throw bad('a document needs its text');
       if (i.kind === 'file') i = { ...i, size_bytes: await verifyStored(ctx, i.storage_path, i.size_bytes) };
-      const [f] = await q('insert into files (workspace_id, space, client_id, owner_id, folder_id, project_id, name, kind, mime_type, size_bytes, storage_path, uploaded_by) values ($1,$2,$3,$4,$5,$12,$6,$7,$8,$9,$10,$11) returning id',
-        [ctx.orgId, i.space, i.client ?? null, i.space === 'personal' ? ctx.userId : null, i.folder ?? null, i.name, i.kind, i.mime_type ?? null, i.size_bytes ?? (i.body !== undefined ? byteLength(i.body) : null), i.kind === 'file' ? i.storage_path : null, ctx.userId, i.project ?? null]);
+      const [f] = await q('insert into files (workspace_id, space, client_id, owner_id, folder_id, project_id, managed_by, name, kind, mime_type, size_bytes, storage_path, uploaded_by) values ($1,$2,$3,$4,$5,$12,$13,$6,$7,$8,$9,$10,$11) returning id',
+        [ctx.orgId, i.space, i.client ?? null, i.space === 'personal' ? ctx.userId : null, i.folder ?? null, i.name, i.kind, i.mime_type ?? null, i.size_bytes ?? (i.body !== undefined ? byteLength(i.body) : null), i.kind === 'file' ? i.storage_path : null, ctx.userId, i.project ?? null, i.app ?? null]);
       await q('insert into file_versions (workspace_id, file_id, storage_path, body, size_bytes, note) values ($1,$2,$3,$4,$5,$6)', [ctx.orgId, f.id, i.kind === 'file' ? i.storage_path : null, i.kind === 'document' ? i.body : null, i.size_bytes ?? (i.body !== undefined ? byteLength(i.body) : null), i.note ?? null]);
       return q(`${FSELECT} where f.id = $1`, [f.id]);
     },
@@ -125,6 +127,14 @@ const fileOps = [
       if (i.folder !== undefined) { p.push(i.folder); sets.push(`folder_id = $${p.length}`); }
       if (i.to_root) sets.push('folder_id = null');
       if (sets.length && !(await q(`update files set ${sets.join(', ')} where id = $1 returning id`, p)).length) return [];
+      return q(`${FSELECT} where f.id = $1`, [i.id]);
+    },
+  }),
+  // Adds an app-owned file to the organization's Drive library, or takes it out again. Changes the flag only: the stored bytes and path stay where they are.
+  defineOperation({
+    name: 'drive.files.setLibrary', class: 'write', single: true, input: { ...id, in_library: { type: 'bool', required: true } },
+    run: async (q, _c, i) => {
+      if (!(await q('update files set in_library = $2 where id = $1 returning id', [i.id, i.in_library])).length) return [];
       return q(`${FSELECT} where f.id = $1`, [i.id]);
     },
   }),
