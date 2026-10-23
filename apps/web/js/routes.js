@@ -31,12 +31,14 @@ export function parseRoute(hash) {
   const [a, b, c, d] = seg;
   if (['signin', 'signup', 'check-email', 'forgot', 'reset', 'invite', 'no-org', 'expired', 'launcher'].includes(a) && seg.length === 1) return r(a);
   if (a === 'app' && b === 'clients' && seg.length === 2) return r('clients', { view: 'list' });
-  if (a === 'app' && b && seg.length === 2 && b !== 'projects' && b !== 'drive') return r('app', { app: b });
+  if (a === 'app' && b && seg.length === 2 && b !== 'projects' && b !== 'drive' && b !== 'portal') return r('app', { app: b });
   if ((a === 'drive' && !b) || (a === 'app' && b === 'drive' && seg.length === 2)) return r('drive', { view: 'files', space: 'shared' });
   if (a === 'drive' && b === 'f' && c && seg.length === 3) return r('drive', { view: 'files', space: 'shared', folder: c });
   if (a === 'drive' && b === 'personal' && seg.length === 2) return r('drive', { view: 'files', space: 'personal' });
   if (a === 'drive' && b === 'personal' && c === 'f' && d && seg.length === 4) return r('drive', { view: 'files', space: 'personal', folder: d });
   if (a === 'drive' && (b === 'recent' || b === 'trash') && seg.length === 2) return r('drive', { view: b, space: 'shared' });
+  if ((a === 'portal' && !b) || (a === 'app' && b === 'portal' && seg.length === 2)) return r('portal', {});
+  if (a === 'portal' && b && seg.length <= 3) return r('portal', { client: b, page: c ?? 'home' });
   if (a === 'sheet' && b && seg.length === 2) return r('sheet', { id: b });
   if (a === 'clients' && !b) return r('clients', { view: 'list' });
   if (a === 'clients' && b === 'c' && c && seg.length === 3) return r('clients', { view: 'client', id: c });
@@ -69,7 +71,7 @@ export function parseRoute(hash) {
 }
 export const hrefFor = {
   launcher: () => '#/launcher', office: () => '#/office', funnels: () => '#/office/funnels', page: (p) => `#/office/${p}`,
-  doc: (id) => `#/doc/${id}`, board: (id) => `#/board/${id}`, list: (type) => `#/office/funnels/${type}`, record: (type, id) => `#/office/funnels/${type}/${id}`, app: (k) => (k === 'projects' ? '#/projects' : k === 'clients' ? '#/clients' : k === 'drive' ? '#/drive' : `#/app/${k}`),
+  doc: (id) => `#/doc/${id}`, board: (id) => `#/board/${id}`, list: (type) => `#/office/funnels/${type}`, record: (type, id) => `#/office/funnels/${type}/${id}`, app: (k) => (k === 'projects' ? '#/projects' : k === 'clients' ? '#/clients' : k === 'drive' ? '#/drive' : k === 'portal' ? '#/portal' : `#/app/${k}`),
   admin: (tab = 'members', sub) => (tab === 'members' ? '#/office/admin/members' : tab === 'storage' ? '#/office/admin/storage' : `#/office/admin/access/${sub ?? 'levels'}`),
 };
 export const AUTH_ROUTES = new Set(['signin', 'signup', 'check-email', 'forgot', 'reset', 'invite', 'expired']);
@@ -98,6 +100,7 @@ export function pageKeyFor(route) {
     case 'doc': case 'sheet': case 'drive': return { app: 'drive', page: null };
     case 'projects': return { app: 'projects', page: null };
     case 'clients': return { app: 'clients', page: null };
+    case 'portal': return { app: 'portal', page: null };
     case 'board': return { app: 'whiteboard', page: null };        // a document belongs to one organization: after a switch the person lands on the app, not on a record
     default: return { app: 'office', page: 'home' };
   }

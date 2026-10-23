@@ -42,7 +42,7 @@ export function launcherView({ catalog, error, org, orgs, role, name, registry, 
     const [, desc] = META[a.app_key] ?? ['gen', ''];
     if (a.state === 'locked') {
       return dialog({ title: `${a.name} is locked`, body: [h('p', {}, 'Clients can’t sign in yet. The Portal stays off until the security tests for client access pass. ', role === 'owner' ? 'Then you switch it on here.' : 'An owner switches it on when it’s ready.'),
-        h('div', { class: 'notice warn', style: 'margin-top:var(--space-3)' }, icon('lock'), h('p', {}, 'Security checks: ', h('b', {}, 'not yet passed'), '. Nothing is visible to clients.'))], actions: [{ label: 'Close', focus: true }] });
+        h('div', { class: 'notice warn', style: 'margin-top:var(--space-3)' }, icon('lock'), h('p', {}, 'Security checks: ', h('b', {}, 'not yet passed'), '. Nothing is visible to clients.'))], actions: [{ label: 'Preview what clients will see', cls: 'pri', on: () => { location.hash = '#/portal'; } }, { label: 'Close', focus: true }] });
     }
     if (a.state === 'coming_soon') {
       return dialog({ title: `${a.name}: coming soon`, body: h('p', {}, a.app_key === 'layer2_agents' ? 'AI helpers are planned. Nothing runs yet, and nothing will without your approval of the provider, cost and data rules.' : `${a.name} is planned. ${desc}`), actions: [{ label: 'Got it', focus: true }] });

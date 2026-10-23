@@ -643,6 +643,23 @@ await rm.close();
   check('CL10', 'Manage client sharing explains that the Client Portal is locked instead of pretending to share', true); await page.keyboard.press('Escape');
   await page.goto(`${base}/#/clients`); await page.waitForSelector('.tbl', { timeout: 9000 }); await page.getByRole('button', { name: 'Pipeline' }).click();
   check('CL11', 'Pipeline groups clients in columns by stage (with a "No stage" column)', (await page.locator('.pj-col').count()) >= 2 && (await page.locator('.pj-col a', { hasText: CN }).count()) === 1);
+  // Client Portal preview (read only; shows only what is marked "show to client")
+  const [{ id: cid }] = (await admin.query('select id from clients where name = $1', [CN])).rows;
+  await admin.query("update client_requests set client_visible = true where client_id = $1 and title = 'Send logo files'", [cid]);
+  await admin.query("insert into client_requests (workspace_id, client_id, title, kind) values ($1, $2, 'Internal-only question', 'info')", [wsL, cid]);
+  await admin.query("insert into client_updates (workspace_id, client_id, title, client_visible) values ($1, $2, 'Strategy v2 is ready', true), ($1, $2, 'Internal update', false)", [wsL, cid]);
+  await page.goto(`${base}/#/portal`); await page.waitForSelector('text=The Portal is locked', { timeout: 9000 });
+  check('CP1', 'The Portal preview starts with the lock notice and a list of clients to preview', (await page.locator('main').innerText()).includes('nothing here is sent') && (await page.locator(`a:has-text("${CN}")`).count()) === 1);
+  await page.locator(`a:has-text("${CN}")`).click(); await page.waitForSelector('.p-ribbon', { timeout: 9000 });
+  check('CP2', 'The preview of one client shows the "Preview of what … will see" ribbon, the five Portal pages, and the client’s journey', (await page.locator('.p-ribbon').innerText()).includes('Clients can’t sign in') && (await page.locator('.pnav a').count()) === 5 && (await page.locator('main').innerText()).includes('Your journey'));
+  await page.waitForSelector('text=Strategy v2 is ready', { timeout: 9000 });
+  check('CP3', 'Only shared items appear: the shared update and request are there, the internal ones are not', (await page.locator('main').innerText()).includes('Send logo files') && !(await page.locator('main').innerText()).includes('Internal-only question') && !(await page.locator('main').innerText()).includes('Internal update'));
+  await page.locator('.pnav a', { hasText: 'Requests' }).click(); await page.waitForSelector('text=Send logo files', { timeout: 9000 });
+  check('CP4', 'Every action in the preview is switched off and says it is preview only', (await page.getByRole('button', { name: 'Send answer' }).isDisabled()) && (await page.getByRole('button', { name: 'Send answer' }).getAttribute('title')).includes('Preview only'));
+  await page.locator('.pnav a', { hasText: 'My notes' }).click(); await page.waitForSelector('text=Private to the client', { timeout: 9000 });
+  check('CP5', 'A client’s own notes are private: the preview says staff cannot see them', true);
+  await page.getByRole('link', { name: 'Exit preview' }).click(); await page.waitForSelector('[role=tablist]', { timeout: 9000 });
+  check('CP6', 'Exit preview returns to the client page, which also offers "Preview client portal"', (await page.getByRole('link', { name: 'Preview client portal' }).count()) === 1);
   await page.goto(`${base}/#/clients/c/00000000-0000-0000-0000-000000000000`); await wait('Not here');
   check('CL12', 'A client id that does not exist (or is not yours) shows the plain "Not here" state', (await page.locator('.empty').innerText()).includes('Not here'));
   await page.goto(`${base}/#/launcher`); await wait('Your apps in');
@@ -694,7 +711,7 @@ await rm.close();
 }
 
 const routes = [['/#/launcher', 'Your apps in'], ['/#/office', 'Needs your attention'], ['/#/office/funnels', 'Recently changed'], ['/#/office/funnels/avatars', 'Avatar for C1'], ['/#/office/funnels/avatars/new', 'Belongs to'],
-  ['/#/office/admin/members', 'Joining is by invitation only.'], ['/#/office/admin/access/levels', 'Deny always wins.'], ['/#/office/admin/access/assignments', 'Add assignment'], ['/#/office/admin/access/effective', 'Show access for'], ['/#/drive', 'stay with their own app'], ['/#/clients', 'Everyone you work for'], ['/#/office/funnels/strategies', 'One written strategy per funnel'], ['/#/office/documents', 'stay with their own app'], ['/#/office/team', 'only where your own access allows'], ['/#/office/apps', 'Locked and coming-soon apps'], ['/#/office/admin/access/history', 'The last 100 changes'], ['/#/office/planner', 'isn’t built yet']];
+  ['/#/office/admin/members', 'Joining is by invitation only.'], ['/#/office/admin/access/levels', 'Deny always wins.'], ['/#/office/admin/access/assignments', 'Add assignment'], ['/#/office/admin/access/effective', 'Show access for'], ['/#/portal', 'The Portal is locked'], ['/#/drive', 'stay with their own app'], ['/#/clients', 'Everyone you work for'], ['/#/office/funnels/strategies', 'One written strategy per funnel'], ['/#/office/documents', 'stay with their own app'], ['/#/office/team', 'only where your own access allows'], ['/#/office/apps', 'Locked and coming-soon apps'], ['/#/office/admin/access/history', 'The last 100 changes'], ['/#/office/planner', 'isn’t built yet']];
 for (const [w, label] of [[1280, 'desktop'], [768, 'tablet'], [390, 'phone']]) {
   const p = await newPage(w, 900);
   await p.goto(base + '/'); await wait('Sign in', p);

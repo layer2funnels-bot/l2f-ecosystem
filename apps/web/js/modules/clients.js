@@ -66,10 +66,11 @@ export function clientsView({ api, ctx, route }) {
     let tab = TABS.some(([k]) => k === route.query.tab) ? route.query.tab : 'overview';
     const body = h('div', { class: 'pj-body' });
     const tabBar = tabs(TABS, tab, (k) => { tab = k; history.replaceState(null, '', hrefs.client(id, k)); draw(); }, 'Client sections');
+    const preview = h('a', { class: 'btn', href: `#/portal/${id}` }, 'Preview client portal');
     const share = btn('Manage client sharing', () => dialog({ title: 'Client sharing', body: h('p', {}, 'Sharing with the client goes through the Client Portal, which is locked until its security checks pass. Items marked “Show to client” are saved but nobody outside your team sees them yet.'), actions: [{ label: 'Close', focus: true }] }), '');
     put(main, h('div', { class: 'pj-head' }, h('div', {}, h('div', { class: 'crumbs fine' }, h('a', { href: hrefs.list() }, 'Clients'), ' / ', c.name),
       h('div', { class: 'cl-title' }, avatar(c.name, 48), h('div', {}, h('h1', { 'data-page-title': true }, c.name), h('div', { class: 'pj-meta' }, statusChip(c.status), chip(stageLabel(c.stage_key)), archived ? chip('Archived', 'warn') : null, c.business_name ? h('span', { class: 'fine muted' }, c.business_name) : null)))),
-      h('div', { class: 'pj-actions' }, share, can('clients.client.edit') ? btn('Edit details', edit, '') : null,
+      h('div', { class: 'pj-actions' }, preview, share, can('clients.client.edit') ? btn('Edit details', edit, '') : null,
         archived ? (ctx.can('clients.client.edit', id) ? btn('Restore client', async () => { const x = await api.call('clients.restore', { id }); if (x.ok) { toast('Client restored.'); client(); } else fail(x, 'restore this client'); }) : null)
           : (ctx.can('clients.client.edit', id) ? btn('Archive', () => dialog({ title: `Archive ${c.name}?`, body: h('p', {}, 'They leave the lists. Nothing is deleted and you can restore them from Archived.'), actions: [{ label: 'Archive', cls: 'pri', on: async () => { const x = await api.call('clients.archive', { id }); if (!x.ok) { fail(x, 'archive this client'); return false; } toast('Client archived.'); ctx.go(hrefs.list()); } }, { label: 'Cancel', focus: true }] })) : null))), tabBar, body);
 
