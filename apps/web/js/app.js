@@ -239,7 +239,7 @@ const bannerEl = () => {
   if (!banner) return null; const b = banner; banner = null;
   return notice(b.kind, b.icon, b.content, b.actions ?? []);
 };
-const centered = (...c) => h('div', { class: 'authwrap' }, h('main', { class: 'auth', id: 'main' }, h('div', { class: 'card', style: 'padding:var(--space-6)' }, ...c)));
+const centered = (...c) => h('div', { class: 'authwrap' }, h('main', { class: 'authnarrow', id: 'main' }, h('div', { class: 'card', style: 'padding:32px' }, ...c)));
 
 const theme = createTheme(); theme.apply();
 async function render(opts = {}) {
@@ -340,7 +340,7 @@ window.addEventListener('hashchange', () => {
     const target = location.hash; history.replaceState(null, '', lastHash || '#/');
     return askUnsaved(() => go(target));
   }
-  lastHash = location.hash; render();
+  lastHash = location.hash; window.scrollTo(0, 0); render();       // a new page starts at the top, as the design's navigation does
 });
 window.addEventListener('beforeunload', (e) => { if (dirty.isDirty()) { e.preventDefault(); e.returnValue = ''; } });
 window.addEventListener('offline', () => announce('You are offline. Changes will not be saved.'));

@@ -1,7 +1,7 @@
 // Projects: the shared Projects experience (home list, My Work, project workspace with List / Board / Calendar / Timeline / Docs / Whiteboards,
 // task drawer with timer, smart search). One module so that the Projects app and, later, Office > Projects (V4-2) mount the very same screens and data.
 // Everything goes through the permission-checked API; buttons follow `ctx.can`, the database decides. Logic lives in projectmodel.js (tested without a browser).
-import { h, put, icon, btn, chip, dialog, drawer, toast, field, notice, skeleton, emptyState, errorState, noAccessState, seg, tabs, readOnlyNotice } from '../ui.js';
+import { setCrumbs, h, put, icon, btn, chip, dialog, drawer, toast, field, notice, skeleton, emptyState, errorState, noAccessState, seg, tabs, readOnlyNotice } from '../ui.js';
 import { splitProjects, PROJECT_STATUS, TASK_STATUS, PRIORITY, label, byStatus, progress, monthGrid, monthTitle, shiftMonth, timeline, dueLabel, myWorkGroups, parseSearch, searchInput, duration, clock } from './projectmodel.js';
 import { createBoard, BOARD_MIME } from './whiteboard.js';
 import { emptyDoc, serialize } from './docmodel.js';
@@ -48,18 +48,20 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
   // the sidebar and the home list use the same two labelled sections: client projects (grouped by client) and the organization's own (internal) projects
   const sideGroups = (cur) => {
     const sp = splitProjects(state.projects.filter((p) => !p.archived_at && p.status !== 'done'), clientName, ctx.orgName);
-    const link = (p) => h('li', {}, h('a', { class: 'pj-link', href: hrefs.project(p.id), ...(cur === p.id ? { 'aria-current': 'page' } : {}) }, p.name));
+    const link = (p) => h('li', {}, h('a', { class: 'pj-link', href: hrefs.project(p.id), ...(cur === p.id ? { 'aria-current': 'page' } : {}) }, h('span', { class: 'pdot', style: `--c:${dotOf(p.id)}` }), h('span', {}, p.name)));
     return [
       h('h2', {}, 'Client projects'),
       sp.clients.length ? h('div', {}, ...sp.clients.map((g) => h('div', { class: 'pj-group' }, h('h3', { class: 'pj-gname' }, g.name), h('ul', {}, ...g.projects.slice(0, 15).map(link))))) : h('p', { class: 'fine muted pj-none' }, 'None yet'),
       h('h2', {}, sp.internalTitle),
       sp.internal.length ? h('ul', {}, ...sp.internal.slice(0, 30).map(link)) : h('p', { class: 'fine muted pj-none' }, 'None yet')];
   };
+  const DOTS = ['#E8553D', '#6B4FF0', '#2B5CF0', '#F07C1A', '#13A592', '#E9488F'];
+  const dotOf = (id) => DOTS[[...String(id)].reduce((n, c) => n + c.charCodeAt(0), 0) % DOTS.length];
   const paintSide = (cur) => {
     side.replaceChildren(
-      h('a', { class: 'pj-link', href: hrefs.home(), ...(route.view === 'home' ? { 'aria-current': 'page' } : {}) }, icon('prj'), 'Projects'),
-      h('a', { class: 'pj-link', href: hrefs.mine(), ...(route.view === 'mine' ? { 'aria-current': 'page' } : {}) }, icon('check'), 'My Work'),
-      h('button', { type: 'button', class: 'pj-link', onclick: () => openSearch() }, icon('search'), 'Search', h('kbd', { 'aria-hidden': 'true' }, 'Ctrl K')),
+      ...(embedded ? [h('a', { class: 'pj-link', href: hrefs.home(), ...(route.view === 'home' ? { 'aria-current': 'page' } : {}) }, icon('projects'), 'Projects'),
+        h('a', { class: 'pj-link', href: hrefs.mine(), ...(route.view === 'mine' ? { 'aria-current': 'page' } : {}) }, icon('mywork'), 'My Work')] : []),
+      h('button', { type: 'button', class: 'pj-link pj-searchbtn', onclick: () => openSearch() }, icon('search'), 'Search', h('kbd', { 'aria-hidden': 'true' }, 'Ctrl K')),
       ...sideGroups(cur));
   };
   const loadProjects = async () => { const r = await api.call('projects.list', { scope: 'all' }); if (live()) { state.projects = r.ok ? r.data : []; paintSide(route.id); } return r; };
@@ -128,6 +130,7 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
     const setStatus = async (t, status, position) => { const x = await api.call('tasks.update', { id: t.id, status, ...(position != null ? { position } : {}) }); if (x.ok) await reload(); else fail(x, 'change that task'); };
     const openTask = (t) => taskDrawer(t, p, { onChange: reload, canEdit: tasksOk });
 
+    setCrumbs(root, [['Projects', hrefs.home()], [p.client_id ? clientName(p.client_id) : 'Internal'], [p.name]]);
     const head = h('div', { class: 'pj-head' }, h('div', {}, h('div', { class: 'crumbs fine' }, h('a', { href: hrefs.home() }, 'Projects'), ' / ', p.client_id ? clientName(p.client_id) : 'Internal'),
       h('h1', { 'data-page-title': true }, p.name), h('div', { class: 'pj-meta' }, statusChip(p.status), p.due_on ? h('span', { class: 'fine muted' }, `Due ${dueLabel(p.due_on, todayIso())}`) : null, archived ? chip('Archived', 'warn') : null)),
       h('div', { class: 'pj-actions' }, editable ? btn('Edit details', () => editProject(p), '') : null, editable || archived ? projectMenu(p, archived) : null));
@@ -267,7 +270,9 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
   document.addEventListener('keydown', key);
 
   // ---------------------------------------------------------------- mount
-  root.append(timerBar, h('div', { class: 'pj-grid' }, side, main)); paintSide(route.id); loadTimer();
+  // standalone: the project list lives in the app's side rail (the shell lifts it); inside Office it stays beside the page
+  if (embedded) root.append(timerBar, h('div', { class: 'pj-grid embedded' }, side, main)); else { root.append(timerBar, h('div', { class: 'pj-grid' }, main)); root.__side = side; }
+  paintSide(route.id); loadTimer();
   (route.view === 'mine' ? mine : route.view === 'project' ? project : home)();
   return root;
 }

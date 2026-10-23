@@ -53,6 +53,11 @@ export function dialog({ title, body, actions = [], wide = false, role = 'dialog
 }
 
 // ---- small parts
+const CAV = ['#EF5235', '#6B4FF0', '#13A592', '#E9488F', '#F07C1A', '#2B5CF0', '#7FBF2A', '#EEBB12'];
+/** A client or person tile: their initial on a colour taken from the name (Design v4 `.cav`). */
+export const cav = (name, size = 'sm') => h('span', { class: `cav ${size === 'sm' ? 'sm' : ''}`.trim(), style: `--c:${CAV[[...String(name ?? '')].reduce((n, c) => n + c.charCodeAt(0), 0) % CAV.length]}`, 'aria-hidden': 'true' }, String(name ?? '?').trim()[0]?.toUpperCase() ?? '?');
+/** The v4 search field for toolbars: `.inp` with the glass icon. */
+export const inp = (input, grow = true) => h('label', { class: `inp${grow ? ' grow' : ''}` }, icon('search'), input);
 export const pill = (text, kind = '', ic) => h('span', { class: `pill ${kind}`.trim() }, ic ? icon(ic) : null, text);
 export const btn = (label, onClick, cls = '', attrs = {}) => h('button', { type: 'button', class: `btn ${cls}`.trim(), onclick: onClick, ...attrs }, label);
 export const link = (label, onClick) => h('button', { type: 'button', class: 'btn link', onclick: onClick }, label);
@@ -60,7 +65,7 @@ export function notice(kind, ic, content, actions = []) {   // kind: info | warn
   return h('div', { class: `notice ${kind}`, role: kind === 'err' || kind === 'warn' ? 'alert' : 'status' }, icon(ic), h('p', {}, content), actions.length ? h('div', { class: 'act' }, ...actions) : null);
 }
 export function seg(options, current, onChange, label) {
-  const wrap = h('div', { class: 'seg', role: 'group', 'aria-label': label ?? false });
+  const wrap = h('div', { class: 'vsw', role: 'group', 'aria-label': label ?? false });
   for (const [k, text] of options) {
     wrap.append(h('button', { type: 'button', 'data-k': k, 'aria-pressed': String(k === current), onclick: () => {
       wrap.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.k === k))); onChange(k);
@@ -143,9 +148,17 @@ export const orgMark = (o) => ({ l2f: 'L2', layer2funnels: 'L2', aurj: 'Au' }[o?
 // Brand colour and the text colour on it per organization: the same values as packages/ui/tokens.json (a test keeps them equal).
 export const orgColor = (o) => (o?.slug === 'aurj' ? '#B0305A' : '#FFC633');
 export const orgInk = (o) => (o?.slug === 'aurj' ? '#FFF6F2' : '#1C1504');
+/** The organization's mark (Design v4: Layer2Funnels dark tile with the L2 mark, Aurj the Arabic wordmark placeholder; any other organization gets its initials). */
+export function orgMarkEl(o, size = 32) {
+  const s = { class: 'mark', style: `--s:${size}px`, 'aria-hidden': 'true' };
+  if (o?.slug === 'aurj') return h('span', { ...s, class: 'mark m-aurj' }, h('b', {}, 'عروج'));
+  if (o?.slug === 'layer2funnels' || o?.slug === 'l2f') return h('span', { ...s, class: 'mark m-l2f' }, h('b', {}, 'L2'), h('i'));
+  return h('span', { ...s, style: `--s:${size}px;background:${orgColor(o)};color:${orgInk(o)}` }, h('b', {}, orgMark(o)));
+}
 export const roleLabel = (r) => ({ owner: 'Owner', admin: 'Admin', editor: 'Editor', viewer: 'Viewer' }[r] ?? 'Member');
 // ---- v4 shared pieces (apps use these, they do not restyle them)
-export const chip = (text, kind = '', ic) => h('span', { class: `chip ${kind}`.trim() }, ic ? icon(ic) : null, text);
+/** A status label (Design v4 pill). kind: ok | warn | bad | act | brand. */
+export const chip = (text, kind = '', ic) => h('span', { class: `pill ${({ act: 'blue' })[kind] ?? kind}`.trim() }, ic ? icon(ic) : null, text);
 export const avatar = (name, size = 32) => h('span', { class: 'avatar', style: `--s:${size}px`, role: 'img', 'aria-label': String(name ?? '') }, initials(name));
 /** Side drawer: focus moves in, Esc closes, focus returns. `body` is a node or list; close() is returned. */
 export function drawer({ title, body, actions = [], onClose, label }) {
@@ -163,6 +176,8 @@ export function drawer({ title, body, actions = [], onClose, label }) {
 /** Shown on a screen whose actions do not do anything real yet (Client Portal until gate G2). */
 export const previewRibbon = (text = 'Preview only. Nothing here is sent or saved for real yet.') => h('div', { class: 'ribbon', role: 'note' }, icon('eye'), text);
 /** The person may not open this: a plain "Not here", never a hint that the record exists. */
+/** A page tells the header its breadcrumb ([[label, href?], ...] after the app name); the shell repaints it, also when the page loads later. */
+export function setCrumbs(root, list) { root.__crumbs = list; document.dispatchEvent(new CustomEvent('l2f:crumbs', { detail: { root } })); }
 export const noAccessState = ({ title = 'Not here', body = 'This page isn’t available to you. If you think it should be, ask an admin.', action } = {}) =>
   h('div', { class: 'empty', role: 'status' }, icon('lock'), h('h2', {}, title), h('p', { class: 'muted' }, body), action ?? null);
 export { h, clear, put, icon };

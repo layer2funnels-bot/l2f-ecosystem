@@ -53,7 +53,7 @@ export function boardView({ api, id, ctx }) {
     const statusEl = h('span', { class: 'docstate', role: 'status', 'aria-live': 'polite' }); const counter = h('span', { class: 'docstat muted' });
     const saveBtn = btn('Save', () => sess.save({ manual: true }), 'pri');
     const titleIn = h('input', { class: 'doctitle', value: meta.name, 'aria-label': 'Board name', maxlength: '200', ...(readOnly ? { readonly: true } : {}) });
-    const crumb = h('nav', { class: 'crumbs fine', 'aria-label': 'Where this board lives' });
+    const crumb = h('nav', { class: 'fpath fine', 'aria-label': 'Where this board lives' });
     let board = null;
     const paint = ({ status, savedAt, readOnly: ro, saving }) => {
       const t = { saved: `Saved ${timeOf(savedAt)}`, dirty: 'Unsaved changes', saving: 'Saving…', failed: 'Couldn’t save. Your changes are still here.', readonly: 'Read only' }[status];

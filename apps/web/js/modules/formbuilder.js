@@ -1,7 +1,7 @@
 // Form Builder (v4): build (11 question types, properties, show-if), preview (phone / desktop), submissions, settings, versions. The same builder opens as a page
 // (#/forms/f/<id>) and as an overlay inside Clients (Brand Base). Saving the questions always creates a new immutable version; submissions stay tied to the
 // version they answered. There is no public link or embed: forms are filled in by signed-in staff, and publishing only means "staff can record answers".
-import { h, put, icon, btn, chip, dialog, toast, field, notice, skeleton, emptyState, errorState, noAccessState, seg, tabs, readOnlyNotice } from '../ui.js';
+import { setCrumbs, h, put, icon, btn, chip, dialog, toast, field, notice, skeleton, emptyState, errorState, noAccessState, seg, tabs, readOnlyNotice } from '../ui.js';
 import { dirty } from '../dirty.js';
 import { FIELD_TYPES, OPS, typeLabel, newField, cleanField, checkFields, keyFromLabel, MAX_FIELDS } from './formmodel.js';
 import { renderForm } from './formrender.js';
@@ -30,6 +30,7 @@ export function builderView({ api, ctx, id, embedded = false, onClose = null }) 
   }
   function paintHead() {
     if (!form) return;
+    if (!embedded) setCrumbs(root, [['Forms', '#/forms'], [form.name]]);
     const edit = canEdit();
     put(headEl, h('div', {}, h('div', { class: 'crumbs fine' }, embedded ? 'Form builder' : h('a', { href: '#/forms' }, 'Forms'), ' / ', form.client_id ? ctx.clients?.get?.(form.client_id) ?? 'Client' : ctx.orgName), h('h1', { 'data-page-title': !embedded }, form.name),
       h('div', { class: 'pj-meta' }, chip(form.status === 'published' ? 'Published' : 'Draft', form.status === 'published' ? 'ok' : ''), form.is_template ? chip('Template', 'act') : null, form.archived_at ? chip('Archived', 'warn') : null, h('span', { class: 'fine muted' }, form.current_version ? `Version ${form.current_version}` : 'No version yet'), isDirty() ? h('span', { class: 'fine', role: 'status' }, 'Unsaved changes') : null)),
@@ -120,7 +121,7 @@ export function builderView({ api, ctx, id, embedded = false, onClose = null }) 
         h('tbody', {}, ...rows.map((s) => h('tr', {}, h('td', {}, when(s.created_at)), h('td', {}, `v${s.form_version}`), h('td', {}, Object.values(s.answers).slice(0, 2).map((v) => (Array.isArray(v) ? `${v.length} item${v.length === 1 ? '' : 's'}` : String(v))).join(' · ').slice(0, 90)), h('td', {}, btn(['View', h('span', { class: 'sr' }, ` submission from ${when(s.created_at)}`)], () => detail(s, byV.get(s.form_version) ?? []), 'link'))))))) : emptyState({ title: q ? 'No answer matches' : 'No submissions yet', body: q ? 'Try another word.' : form.status === 'published' ? 'Use Record a submission in Preview to add one.' : 'Publish the form so your team can record answers.', ic: 'inbox' }));
     };
     search.addEventListener('input', () => { q = search.value.trim().toLowerCase(); draw2(); });
-    put(body, ro, form.retention_note ? notice('info', 'info', [h('b', {}, 'Retention.'), ` ${form.retention_note}`]) : null, h('div', { class: 'cl-bar' }, search), list); draw2();
+    put(body, ro, form.retention_note ? notice('info', 'info', [h('b', {}, 'Retention.'), ` ${form.retention_note}`]) : null, h('div', { class: 'toolbar' }, search), list); draw2();
   }
   function detail(s, spec) {
     const rows = spec.map((f) => ({ f, v: s.answers[f.key] })).filter((x) => x.v !== undefined);

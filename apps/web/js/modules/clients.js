@@ -1,6 +1,6 @@
 // Clients (v4): client list (table, grid, pipeline), the client page (Overview, Work, Requests & Approvals, Documents, Team Notes) and the
 // client-specific Strategy copies. Everything goes through the permission-checked API; buttons follow `ctx.can(permission, clientId)`, the database decides.
-import { h, put, icon, btn, chip, dialog, toast, field, notice, skeleton, emptyState, errorState, noAccessState, seg, tabs, readOnlyNotice, avatar } from '../ui.js';
+import { setCrumbs, h, put, icon, btn, chip, cav, inp, dialog, toast, field, notice, skeleton, emptyState, errorState, noAccessState, seg, tabs, readOnlyNotice, avatar } from '../ui.js';
 import { createBoard, BOARD_MIME } from './whiteboard.js';
 import { builderView } from './formbuilder.js';
 import { emptyDoc, serialize } from './docmodel.js';
@@ -11,7 +11,7 @@ const STATUS = [['lead', 'Lead'], ['proposal', 'Proposal'], ['active', 'Active']
 const KINDS = [['avatars', 'Customer avatar', 'name'], ['offers', 'Offer or product', 'name'], ['stories', 'Story', 'title'], ['brand_kits', 'Brand kit', 'name'], ['strategies', 'Funnel Strategy', 'name'], ['ladders', 'Value Ladder', 'name']];
 const statusLabel = (s) => (STATUS.find(([k]) => k === s) ?? [s, s ?? 'No status'])[1];
 const when = (iso) => (iso ? new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '');
-const statusChip = (s) => chip(statusLabel(s), s === 'active' ? 'ok' : s === 'paused' ? 'warn' : '');
+const statusChip = (s) => chip(statusLabel(s), s === 'active' ? 'act' : s === 'paused' ? 'warn' : s === 'proposal' ? 'brand' : '');
 
 export function clientsView({ api, ctx, route }) {
   const root = h('section', { class: 'cl' }); const main = h('div', { class: 'cl-main' });
@@ -38,13 +38,14 @@ export function clientsView({ api, ctx, route }) {
       if (view === 'grid') return put(body, h('div', { class: 'pj-cards' }, ...rows.map((c) => h('a', { class: 'pj-card', href: hrefs.client(c.id) }, h('div', { class: 'pj-card-top' }, h('strong', {}, c.name), statusChip(c.status)), h('div', { class: 'fine muted' }, c.business_name ?? c.niche ?? ''), h('div', { class: 'pj-card-sub' }, chip(stageLabel(c.stage_key)))))));
       if (view === 'pipeline') return put(body, h('div', { class: 'pj-board' }, ...[...stages.map((s) => [s.key, s.label]), ['', 'No stage']].map(([k, label]) => h('div', { class: 'pj-col', role: 'group', 'aria-label': label }, h('h2', { class: 'pj-gh' }, label, h('span', { class: 'fine muted' }, ` ${rows.filter((c) => (c.stage_key ?? '') === k).length}`)),
         ...rows.filter((c) => (c.stage_key ?? '') === k).map((c) => h('a', { class: 'pj-cardtask', href: hrefs.client(c.id) }, h('strong', {}, c.name), h('span', { class: 'fine muted' }, statusLabel(c.status))))))));
-      put(body, h('div', { class: 'card tbl-wrap' }, h('table', { class: 'tbl' }, h('caption', { class: 'sr' }, 'Clients'), h('thead', {}, h('tr', {}, ...['Client', 'Business', 'Status', 'Stage'].map((t) => h('th', { scope: 'col' }, t)))),
-        h('tbody', {}, ...rows.map((c) => h('tr', {}, h('td', {}, avatar(c.name, 28), ' ', h('a', { href: hrefs.client(c.id) }, c.name)), h('td', {}, c.business_name ?? ''), h('td', {}, statusLabel(c.status)), h('td', {}, stageLabel(c.stage_key))))))));
+      put(body, h('div', { class: 'tblwrap' }, h('table', { class: 'tbl stk' }, h('caption', { class: 'sr' }, 'Clients'), h('thead', {}, h('tr', {}, ...['Client', 'Status', 'Stage'].map((t) => h('th', { scope: 'col' }, t)))),
+        h('tbody', {}, ...rows.map((c) => h('tr', {}, h('td', { class: 't1' }, h('a', { class: 'fname', href: hrefs.client(c.id) }, cav(c.name), h('span', {}, c.name, c.business_name ? h('small', {}, c.business_name) : null))),
+          h('td', { 'data-l': 'Status' }, statusChip(c.status)), h('td', { 'data-l': 'Stage' }, stageLabel(c.stage_key))))))));
     };
     search.addEventListener('input', () => { q = search.value.trim().toLowerCase(); draw(); });
-    const stSel = h('select', { 'aria-label': 'Status' }, h('option', { value: '' }, 'Any status'), ...STATUS.map(([k, t]) => h('option', { value: k }, t))); stSel.addEventListener('change', () => { status = stSel.value; draw(); });
+    const stSel = h('select', { class: 'sel', 'aria-label': 'Status' }, h('option', { value: '' }, 'Any status'), ...STATUS.map(([k, t]) => h('option', { value: k }, t))); stSel.addEventListener('change', () => { status = stSel.value; draw(); });
     put(main, head('Clients', 'Everyone you work for. You see only the clients your access allows.', canCreate ? btn('New client', newClient, 'pri') : null),
-      h('div', { class: 'cl-bar' }, search, stSel, seg([['table', 'Table'], ['grid', 'Grid'], ['pipeline', 'Pipeline']], view, (k) => { view = k; draw(); }, 'View'),
+      h('div', { class: 'toolbar' }, inp(search), stSel, seg([['table', 'Table'], ['grid', 'Grid'], ['pipeline', 'Pipeline']], view, (k) => { view = k; draw(); }, 'View'),
         seg([['active', 'Active'], ['archived', 'Archived']], show, (k) => ctx.go(hrefs.list(k === 'archived' ? '?show=archived' : '')), 'Show')), body); draw();
   }
   function newClient() {
@@ -67,10 +68,11 @@ export function clientsView({ api, ctx, route }) {
     let tab = TABS.some(([k]) => k === route.query.tab) ? route.query.tab : 'overview';
     const body = h('div', { class: 'pj-body' });
     const tabBar = tabs(TABS, tab, (k) => { tab = k; history.replaceState(null, '', hrefs.client(id, k)); draw(); }, 'Client sections');
+    setCrumbs(root, [['Clients', hrefs.list()], [c.name]]);
     const preview = h('a', { class: 'btn', href: `#/portal/${id}` }, 'Preview client portal');
     const share = btn('Manage client sharing', () => dialog({ title: 'Client sharing', body: h('p', {}, 'Sharing with the client goes through the Client Portal, which is locked until its security checks pass. Items marked “Show to client” are saved but nobody outside your team sees them yet.'), actions: [{ label: 'Close', focus: true }] }), '');
     put(main, h('div', { class: 'pj-head' }, h('div', {}, h('div', { class: 'crumbs fine' }, h('a', { href: hrefs.list() }, 'Clients'), ' / ', c.name),
-      h('div', { class: 'cl-title' }, avatar(c.name, 48), h('div', {}, h('h1', { 'data-page-title': true }, c.name), h('div', { class: 'pj-meta' }, statusChip(c.status), chip(stageLabel(c.stage_key)), archived ? chip('Archived', 'warn') : null, c.business_name ? h('span', { class: 'fine muted' }, c.business_name) : null)))),
+      h('div', { class: 'cl-title' }, cav(c.name, 'lg'), h('div', {}, h('h1', { 'data-page-title': true }, c.name), h('div', { class: 'pj-meta' }, statusChip(c.status), chip(stageLabel(c.stage_key)), archived ? chip('Archived', 'warn') : null, c.business_name ? h('span', { class: 'fine muted' }, c.business_name) : null)))),
       h('div', { class: 'pj-actions' }, preview, share, can('clients.client.edit') ? btn('Edit details', edit, '') : null,
         archived ? (ctx.can('clients.client.edit', id) ? btn('Restore client', async () => { const x = await api.call('clients.restore', { id }); if (x.ok) { toast('Client restored.'); client(); } else fail(x, 'restore this client'); }) : null)
           : (ctx.can('clients.client.edit', id) ? btn('Archive', () => dialog({ title: `Archive ${c.name}?`, body: h('p', {}, 'They leave the lists. Nothing is deleted and you can restore them from Archived.'), actions: [{ label: 'Archive', cls: 'pri', on: async () => { const x = await api.call('clients.archive', { id }); if (!x.ok) { fail(x, 'archive this client'); return false; } toast('Client archived.'); ctx.go(hrefs.list()); } }, { label: 'Cancel', focus: true }] })) : null))), tabBar, body);

@@ -88,7 +88,7 @@ export function docView({ api, id, ctx, opts = {} }) {
     const counter = h('span', { class: 'docstat muted' });
     const saveBtn = btn('Save', () => save({ manual: true }), 'pri');
     const titleIn = h('input', { class: 'doctitle', value: meta.name, 'aria-label': 'Document name', maxlength: '200', ...(readOnly ? { readonly: true } : {}) });
-    const crumb = h('nav', { class: 'crumbs fine', 'aria-label': 'Where this document lives' });
+    const crumb = h('nav', { class: 'fpath fine', 'aria-label': 'Where this document lives' });
     const bar = h('div', { class: 'docbar' });
     const tb = h('div', { class: 'doctools', role: 'toolbar', 'aria-label': 'Formatting' });
 

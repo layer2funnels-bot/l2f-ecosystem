@@ -14,5 +14,11 @@
 .drv-dl{display:grid;grid-template-columns:max-content 1fr;gap:var(--space-2) var(--space-4)}
 .drv-dl dt{color:var(--muted)}
 .linklike{border:0;background:transparent;color:var(--action-ink);text-decoration:underline;font:inherit;cursor:pointer;min-height:44px;padding:0;text-align:left}
-.drv .crumbs a{display:inline-flex;align-items:center;min-height:44px}
-.drv .crumbs{display:flex;flex-wrap:wrap;align-items:center}
+.drv .fpath a{display:inline-flex;align-items:center;min-height:44px}
+.drv .fpath{display:flex;flex-wrap:wrap;align-items:center}
+
+.ftile{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex:none;font:700 10.5px/1 var(--font);letter-spacing:.02em;color:#fff;background:var(--c,#7D8190);box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
+.ftile.folder{background:var(--sunk);color:var(--text2);box-shadow:none}
+.ftile svg{width:18px;height:18px}
+.drv .tbl .fname{gap:12px}.drv .tbl .fname a{color:var(--text);font-weight:600;text-decoration:none}.drv .tbl .fname small{margin-left:4px;color:var(--muted);font-weight:400}
+.drv .tbl .fname .linklike{background:none;border:0;padding:0;font:inherit;font-weight:600;color:var(--text);cursor:pointer;text-align:left}

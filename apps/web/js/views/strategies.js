@@ -38,7 +38,7 @@ export function strategiesListView(ctx) {
   const st = h('select', { 'aria-label': 'Status' }, h('option', { value: '' }, 'All statuses'), ...STATUS.map(([k, l]) => h('option', { value: k }, l))); st.addEventListener('change', () => { status = st.value; load(); });
   const sh = h('select', { 'aria-label': 'Show' }, h('option', { value: 'active' }, 'Active'), h('option', { value: 'archived' }, 'Archived')); sh.addEventListener('change', () => { show = sh.value; load(); });
   put(root, h('div', { class: 'crumb' }, 'Office · Funnels'), h('div', { class: 'pj-head' }, h('div', {}, h('h1', { 'data-page-title': true }, 'Funnel Strategies'), h('p', { class: 'sub' }, 'One written strategy per funnel. Maps stay in Funnel Mapper Pro.')), canNew ? btn('New Funnel Strategy', create, 'pri') : null),
-    h('div', { class: 'cl-bar' }, search, st, sh), body);
+    h('div', { class: 'toolbar' }, search, st, sh), body);
   load(); return root;
 }
 

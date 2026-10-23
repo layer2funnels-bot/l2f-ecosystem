@@ -10,13 +10,13 @@ const byKey = Object.fromEntries(FUNNEL_TYPES.map((t) => [t.key, t]));
 // The Office menu (design 04). Pages marked built:false show the shared "not built yet" state until their own design lands.
 export const OFFICE_PAGES = [
   { key: 'home', label: 'Home', icon: 'home', href: '#/office', built: true },
-  { key: 'planner', label: 'Planner', icon: 'clock', href: '#/office/planner', built: false },
-  { key: 'projects', label: 'Projects', icon: 'doc', href: '#/office/projects', built: true },
-  { key: 'funnels', label: 'Funnels', icon: 'star', href: '#/office/funnels', built: true },
+  { key: 'planner', label: 'Planner', icon: 'planner', href: '#/office/planner', built: false },
+  { key: 'projects', label: 'Projects', icon: 'projects', href: '#/office/projects', built: true },
+  { key: 'funnels', label: 'Funnels', icon: 'funnels', href: '#/office/funnels', built: true },
   { key: 'documents', label: 'Documents', icon: 'doc', href: '#/office/documents', built: true },
-  { key: 'team', label: 'Team', icon: 'user', href: '#/office/team', built: true },
-  { key: 'apps', label: 'Apps', icon: 'grid', href: '#/office/apps', built: true },
-  { key: 'admin', label: 'Admin', icon: 'key', href: '#/office/admin', built: true, adminOnly: true },
+  { key: 'team', label: 'Team', icon: 'team', href: '#/office/team', built: true },
+  { key: 'apps', label: 'Apps', icon: 'apps', href: '#/office/apps', built: true },
+  { key: 'admin', label: 'Admin', icon: 'shield', href: '#/office/admin', built: true, adminOnly: true },
 ];
 const OFFICE_OTHER = new Set(['planner', 'projects', 'documents', 'team', 'apps']);
 export const ADMIN_ACCESS_TABS = ['levels', 'assignments', 'effective', 'history'];

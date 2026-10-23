@@ -87,7 +87,7 @@ export function adminView({ api, live, org, role, route, rerender, go, clients }
       h('td', {}, btn(['Manage', h('span', { class: 'sr' }, ` ${name(m)}`)], () => manage(m, owners), '', { 'data-manage': m.user_id ?? m.invitation_id }))));
     setPane(h('div', { style: 'display:flex;justify-content:space-between;align-items:center;gap:var(--space-3);margin-bottom:var(--space-3);flex-wrap:wrap' },
       h('p', { class: 'fine' }, `${list.length} ${list.length === 1 ? 'person' : 'people'}. Joining is by invitation only.`), btn([icon('plus'), 'Invite someone'], invite, 'pri', { id: 'invite' })),
-    list.length ? h('div', { class: 'card tbl-wrap' }, h('table', { class: 'tbl stack' }, h('caption', { class: 'sr' }, `Members of ${org.name}`),
+    list.length ? h('div', { class: 'card tbl-wrap' }, h('table', { class: 'tbl stk' }, h('caption', { class: 'sr' }, `Members of ${org.name}`),
       h('thead', {}, h('tr', {}, h('th', {}, 'Person'), h('th', {}, 'Level'), h('th', {}, 'Status'), h('th', {}, h('span', { class: 'sr' }, 'Actions')))), h('tbody', {}, ...rows)))
       : emptyState({ title: 'No one yet', body: 'Invite someone to get started.', ic: 'user' }));
   }
@@ -175,7 +175,7 @@ export function adminView({ api, live, org, role, route, rerender, go, clients }
         h('p', { class: 'fine' }, `${list.length} ${list.length === 1 ? 'person' : 'people'}. Clients join by invitation only, and only for ${org.name}.`), btn([icon('plus'), 'Invite a client'], inviteClient, 'pri', { id: 'invite-client' })),
       portalLive ? notice('info', 'info', [h('b', {}, 'The Client Portal is open.'), ' Active clients see only what staff have shared with them.'])
         : notice('warn', 'lock', [h('b', {}, 'The Client Portal is locked.'), ' Clients you invite can sign in, but they won’t see anything until an owner opens the Portal. Nothing here opens it.']),
-      list.length ? h('div', { class: 'card tbl-wrap' }, h('table', { class: 'tbl stack' }, h('caption', { class: 'sr' }, `Client access for ${org.name}`),
+      list.length ? h('div', { class: 'card tbl-wrap' }, h('table', { class: 'tbl stk' }, h('caption', { class: 'sr' }, `Client access for ${org.name}`),
         h('thead', {}, h('tr', {}, h('th', {}, 'Client'), h('th', {}, 'Status'), h('th', {}, 'Since'), h('th', {}, h('span', { class: 'sr' }, 'Actions')))), h('tbody', {}, ...rows)))
         : emptyState({ title: 'No client has access yet', body: 'Invite a client by email. The client record is created for you, in this organization only.', ic: 'user' }));
   }
@@ -273,7 +273,7 @@ export function adminView({ api, live, org, role, route, rerender, go, clients }
       ...a.data.filter((x) => x.principal_type === 'user').map((x) => ({ kind: 'allow', person: x.person ?? 'Someone', level: x.level, app: x.app_key, where: where(x), from: 'Direct', remove: () => run('access.assignments.delete', { id: x.id }) })),
       ...d.data.map((x) => ({ kind: 'deny', person: x.person ?? 'Someone', level: x.level, app: x.app_key, where: where(x), from: x.reason ?? 'Direct', remove: () => run('access.denials.delete', { user: x.user_id, level: x.level_id, ...(x.client_id ? { client: x.client_id } : {}) }) }))];
     const people = ms.ok ? ms.data.filter((m) => m.row_kind === 'member' && m.status === 'active') : [];
-    const table = items.length ? h('div', { class: 'card tbl-wrap' }, h('table', { class: 'tbl stack' }, h('caption', { class: 'sr' }, `Assignments in ${org.name}`),
+    const table = items.length ? h('div', { class: 'card tbl-wrap' }, h('table', { class: 'tbl stk' }, h('caption', { class: 'sr' }, `Assignments in ${org.name}`),
       h('thead', {}, h('tr', {}, ...['Person', 'Access', 'Where', 'Comes from'].map((t) => h('th', {}, t)), h('th', {}, h('span', { class: 'sr' }, 'Remove')))),
       h('tbody', {}, ...items.map((x) => h('tr', {}, h('td', {}, h('b', {}, x.person)),
         h('td', { 'data-l': 'Access' }, x.kind === 'deny' ? pill(`Denied: ${x.level}`, 'bad', 'cross') : pill(`${areaName(x.app)} · ${x.level}`, 'pri')),
@@ -317,7 +317,7 @@ export function adminView({ api, live, org, role, route, rerender, go, clients }
       if (!live()) return;
       if (!r.ok) return put(out, errorState(show));
       const rows = foldEffective(r.data); const nm = pick.selectedOptions[0].textContent;
-      put(out, h('div', { class: 'card tbl-wrap' }, h('table', { class: 'tbl stack' }, h('caption', { class: 'sr' }, `Effective access for ${nm}`),
+      put(out, h('div', { class: 'card tbl-wrap' }, h('table', { class: 'tbl stk' }, h('caption', { class: 'sr' }, `Effective access for ${nm}`),
         h('thead', {}, h('tr', {}, h('th', {}, 'Area'), h('th', {}, 'Result'), h('th', {}, 'Why'))),
         h('tbody', {}, ...rows.map((x) => h('tr', {}, h('td', {}, h('b', {}, x.area)),
           h('td', { 'data-l': 'Result' }, x.result === 'edit' ? pill('Can edit', 'ok', 'check') : x.result === 'view' ? pill('Can view', 'pri', 'eye') : pill('No access', 'bad', 'cross')),

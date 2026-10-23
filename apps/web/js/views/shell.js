@@ -1,10 +1,10 @@
 // The ecosystem shell (design 01 + 10 §C): colour bar, header (Launcher, organization switcher, search, notifications, profile),
 // the app menu on top (tablet/desktop) and as a bottom bar (phone), and the content area.
-import { h, icon, orgMark, orgColor, orgInk, roleLabel, initials, dialog } from '../ui.js';
-import { OFFICE_PAGES, officeSection, hrefFor } from '../routes.js';
+import { h, icon, orgMarkEl, roleLabel, initials, dialog } from '../ui.js';
+import { hrefFor, appLabel } from '../routes.js';
 import { plateOf } from '../registry.js';
+import { appNav } from '../appnav.js';
 
-const SHORT = { Documents: 'Docs' };
 let offs = [];      // document-level listeners belong to the shell that is on screen; a new render removes the old ones
 const onDocClick = (fn) => { document.addEventListener('click', fn); offs.push(() => document.removeEventListener('click', fn)); };
 const trap = (menu, button, onClose) => {                 // arrow keys move, Esc closes and returns focus, Tab leaves
@@ -19,9 +19,9 @@ const trap = (menu, button, onClose) => {                 // arrow keys move, Es
 
 function switcher({ orgs, active, onPick }) {
   const menuId = 'org-menu';
-  const sw = h('button', { type: 'button', class: 'sw', id: 'org-switcher', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-controls': menuId, 'data-pending': 'false' },
-    h('span', { class: 'mark', style: `background:${orgColor(active)};color:${orgInk(active)}` }, orgMark(active)),
-    h('span', { class: 't' }, h('small', {}, 'Organization'), h('strong', {}, active.name)), icon('chev', 'chev'), h('span', { class: 'spin', 'aria-hidden': 'true' }));
+  const sw = h('button', { type: 'button', class: 'orgbtn sw', id: 'org-switcher', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-controls': menuId, 'data-pending': 'false' },
+    orgMarkEl(active, 28),
+    h('span', { class: 't' }, h('strong', {}, active.name)), icon('chev', 'chev'), h('span', { class: 'spin', 'aria-hidden': 'true' }));
   const menu = h('div', { class: 'menu', id: menuId, role: 'menu', 'aria-label': 'Switch organization', 'data-open': 'false' });
   const note = h('div', { id: 'org-note' });
   const close = (refocus) => { menu.dataset.open = 'false'; sw.setAttribute('aria-expanded', 'false'); if (refocus) sw.focus(); };
@@ -29,7 +29,7 @@ function switcher({ orgs, active, onPick }) {
     menu.replaceChildren(h('div', { class: 'mh' }, 'Your organizations'), ...orgs.map((o) => {
       const cur = o.org_id === active.org_id;
       return h('button', { type: 'button', role: 'menuitemradio', class: 'opt', 'aria-checked': String(cur), tabindex: '-1', 'data-org': o.org_id, onclick: () => { close(false); if (!cur) onPick(o.org_id); else sw.focus(); } },
-        h('span', { class: 'mk', style: `background:${orgColor(o)};color:${orgInk(o)}` }, orgMark(o)), h('span', { class: 'tx' }, h('strong', {}, o.name), h('small', {}, roleLabel(o.role))),
+        orgMarkEl(o, 36), h('span', { class: 'tx' }, h('strong', {}, o.name), h('small', {}, roleLabel(o.role))),
         cur ? h('span', { class: 'st' }, icon('check'), 'Current') : null);
     }), note, h('div', { class: 'mfoot' }, 'Switching keeps you on the same page where it exists. Nothing is copied between organizations.'));
     menu.dataset.open = 'true'; sw.setAttribute('aria-expanded', 'true');
@@ -38,30 +38,30 @@ function switcher({ orgs, active, onPick }) {
   sw.addEventListener('click', () => (menu.dataset.open === 'true' ? close(true) : open()));
   trap(menu, sw, close);
   onDocClick((e) => { if (menu.dataset.open === 'true' && !e.target.closest('.swwrap')) close(false); });
-  return h('div', { class: 'swwrap' }, sw, menu);
+  return h('div', { class: 'orgwrap swwrap' }, sw, menu);
 }
 
-/** Header grid button: "Back to Launcher" and every app this person may open here (Design v4 section 5). */
-function appSwitcher({ catalog = [], registry, current, launcherCurrent }) {
-  const btn = h('button', { type: 'button', class: 'iconbtn', id: 'app-switcher', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-controls': 'apps-menu', 'aria-label': 'Open the app switcher' }, icon('grid'));
-  const menu = h('div', { class: 'menu apps', id: 'apps-menu', role: 'menu', 'aria-label': 'Apps', 'data-open': 'false' });
+/** The grid button: "Back to Launcher" and every app this person may open here (Design v4 section 5). `suffix` keeps ids unique when the phone header repeats it. */
+function appSwitcher({ catalog = [], registry, launcherCurrent, suffix = '' }) {
+  const btn = h('button', { type: 'button', class: 'launch-btn', id: `app-switcher${suffix}`, 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-controls': `apps-menu${suffix}`, 'aria-label': 'Open the app switcher' }, icon('grid'));
+  const menu = h('div', { class: 'menu appmenu apps', id: `apps-menu${suffix}`, role: 'menu', 'aria-label': 'Apps', 'data-open': 'false' });
   const close = (refocus) => { menu.dataset.open = 'false'; btn.setAttribute('aria-expanded', 'false'); if (refocus) btn.focus(); };
   const usable = catalog.filter((a) => a.state === 'available');
   btn.addEventListener('click', () => {
     if (menu.dataset.open === 'true') return close(true);
     menu.replaceChildren(
-      h('a', { class: 'back', role: 'menuitem', href: '#/launcher', tabindex: '-1', onclick: () => close(false), ...(launcherCurrent ? { 'aria-current': 'page' } : {}) }, icon('arrow'), 'Back to Launcher'),
-      usable.length ? h('div', { class: 'applist' }, ...usable.map((a) => h('a', { class: 'appitem', role: 'menuitem', tabindex: '-1', href: a.app_key === 'office' ? hrefFor.office() : hrefFor.app(a.app_key), 'data-app': a.app_key, onclick: () => close(false), ...(current === a.app_key ? { 'aria-current': 'page' } : {}) },
+      h('a', { class: 'home back', role: 'menuitem', href: '#/launcher', tabindex: '-1', onclick: () => close(false), ...(launcherCurrent ? { 'aria-current': 'page' } : {}) }, h('span', { class: 'mini' }, icon('home')), 'Back to Launcher'),
+      usable.length ? h('div', { class: 'grid applist' }, ...usable.map((a) => h('a', { class: 'appitem', 'data-app': a.app_key, role: 'menuitem', tabindex: '-1', href: a.app_key === 'office' ? hrefFor.office() : hrefFor.app(a.app_key), onclick: () => close(false) },
         plateOf(registry?.get(a.app_key) ?? { id: a.app_key }, 40), a.name))) : h('div', { class: 'mfoot' }, 'No other app is switched on for you here.'));
     menu.dataset.open = 'true'; btn.setAttribute('aria-expanded', 'true'); menu.querySelector('[role=menuitem]').focus();
   });
   trap(menu, btn, close);
-  onDocClick((e) => { if (menu.dataset.open === 'true' && !e.target.closest('.apps-wrap')) close(false); });
-  return h('div', { class: 'swwrap apps-wrap' }, btn, menu);
+  onDocClick((e) => { if (menu.dataset.open === 'true' && !e.target.closest(`.apps-wrap${suffix}`)) close(false); });
+  return h('div', { class: `appsw swwrap apps-wrap apps-wrap${suffix}` }, btn, menu);
 }
 
 function profile({ email, name, onSignOut, theme, weather }) {
-  const btn = h('button', { type: 'button', class: 'who', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-controls': 'profile-menu', 'aria-label': `Your profile: ${name || email}` }, initials(name || email));
+  const btn = h('button', { type: 'button', class: 'who avatar', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-controls': 'profile-menu', 'aria-label': `Your profile: ${name || email}` }, initials(name || email));
   const menu = h('div', { class: 'menu profile-menu', id: 'profile-menu', role: 'menu', 'aria-label': 'Your profile', 'data-open': 'false' });
   const close = (refocus) => { menu.dataset.open = 'false'; btn.setAttribute('aria-expanded', 'false'); if (refocus) btn.focus(); };
   btn.addEventListener('click', () => {
@@ -79,37 +79,61 @@ function profile({ email, name, onSignOut, theme, weather }) {
   return h('div', { class: 'swwrap profile-wrap' }, btn, menu);
 }
 
-export function officeNav(route, isAdmin) {
-  const pages = OFFICE_PAGES.filter((p) => !p.adminOnly || isAdmin);
-  const cur = officeSection(route);
-  const top = h('nav', { class: 'nav has-b', 'aria-label': 'Office sections' }, h('span', { class: 'appname' }, 'Office'),
-    ...pages.map((p) => h('a', { href: p.href, ...(p.key === cur ? { 'aria-current': 'page' } : {}) }, p.label)));
-  const main = pages.length > 5 ? pages.slice(0, 4) : pages; const more = pages.length > 5 ? pages.slice(4) : [];
-  const bottom = h('nav', { class: 'bnav', 'aria-label': 'Office sections' },
-    ...main.map((p) => h('a', { href: p.href, ...(p.key === cur ? { 'aria-current': 'page' } : {}) }, icon(p.icon), h('span', {}, SHORT[p.label] ?? p.label))),
-    more.length ? h('button', { type: 'button', 'aria-haspopup': 'dialog', ...(more.some((p) => p.key === cur) ? { 'aria-current': 'page' } : {}),
+const sideLink = (it, current) => {
+  const a = h('a', { href: it.href, ...(it.key === current && !it.kids ? { 'aria-current': 'page' } : {}), ...(it.kids && it.key === current ? { 'aria-expanded': 'true' } : {}) }, icon(it.icon), h('span', {}, it.label));
+  if (!it.kids) return a;
+  // an item with pages of its own (Office > Funnels) opens its sub-menu while it is the current section
+  return h('div', { class: 'grp' }, a, it.key === current ? h('div', { class: 'sub' }, ...it.kids.map((k) => h('a', { href: k.href, ...(k.key === it.kid ? { 'aria-current': 'page' } : {}) }, icon(k.icon), h('span', {}, k.label)))) : null);
+};
+
+/** The bottom bar on phones: the first four pages, then More (a sheet) when there are more than five. */
+function bottomBar(items, current) {
+  const main = items.length > 5 ? items.slice(0, 4) : items; const more = items.length > 5 ? items.slice(4) : [];
+  return h('nav', { class: 'bbar', 'aria-label': 'Sections' },
+    ...main.map((p) => h('a', { href: p.href, ...(p.key === current ? { 'aria-current': 'page' } : {}) }, h('span', { class: 'pillic' }, icon(p.icon)), p.short)),
+    more.length ? h('button', { type: 'button', 'aria-haspopup': 'dialog', ...(more.some((p) => p.key === current) ? { 'aria-current': 'page' } : {}),
       onclick: () => {
-        const close = dialog({ title: 'More in Office', body: h('div', { class: 'sheet' }, ...more.map((p) => h('a', { class: 'btn', href: p.href, onclick: () => close(), ...(p.key === cur ? { 'aria-current': 'page' } : {}) }, icon(p.icon), p.label))), actions: [{ label: 'Close', focus: true }] });
-      } }, icon('more'), h('span', {}, 'More')) : null);
-  return { top, bottom };
+        const close = dialog({ title: 'More', body: h('div', { class: 'bsheet' }, ...more.map((p) => h('a', { class: 'btn', href: p.href, onclick: () => close(), ...(p.key === current ? { 'aria-current': 'page' } : {}) }, icon(p.icon), p.label))), actions: [{ label: 'Close', focus: true }] });
+      } }, h('span', { class: 'pillic' }, icon('more')), 'More') : null);
 }
 
 export function shellView({ app, orgs, active, email, name, route, content, banner, isAdmin, inOffice, launcherCurrent, catalog, registry, currentApp, theme, weather }) {
   offs.forEach((f) => f()); offs = [];
-  document.body.classList.toggle('hasb', Boolean(inOffice));
-  const nav = inOffice ? officeNav(route, isAdmin) : null;
-  return h('div', { class: 'app', 'data-org': active.slug ?? '' },
-    h('a', { class: 'skip', href: '#main', onclick: (e) => { e.preventDefault(); const m = document.getElementById('main'); m.setAttribute('tabindex', '-1'); m.focus(); } }, 'Skip to content'),      // not a hash link: the address is the route
-    h('div', { class: 'bar4' }),
-    h('header', { class: 'hdr' },
-      appSwitcher({ catalog, registry, current: currentApp, launcherCurrent }),
-      switcher({ orgs, active, onPick: (id) => app.switchOrg(id) }),
-      h('label', { class: 'search' }, icon('search'), h('span', { class: 'sr' }, 'Search this organization'),
-        h('input', { type: 'search', placeholder: `Search ${active.name}`, disabled: true, 'aria-describedby': 'search-why', autocomplete: 'off' })),
-      h('span', { class: 'sr', id: 'search-why' }, 'Search is not available yet. It arrives with the apps it searches.'),
-      h('span', { class: 'iconbtn hide-s', role: 'img', 'aria-label': 'Notifications are not available yet', 'aria-disabled': 'true', title: 'Notifications are not available yet' }, icon('bell')),
-      profile({ email, name, onSignOut: () => app.signOut(), theme, weather })),
-    nav?.top ?? null,
-    h('main', { class: 'content', id: 'main', 'aria-busy': 'false' }, banner ?? null, content),
-    nav?.bottom ?? null);
+  document.body.classList.remove('hasb');
+  const sw = switcher({ orgs, active, onPick: (id) => app.switchOrg(id) });
+  const who = profile({ email, name, onSignOut: () => app.signOut(), theme, weather });
+  const skip = h('a', { class: 'skip', href: '#main', onclick: (e) => { e.preventDefault(); const m = document.getElementById('main'); m.setAttribute('tabindex', '-1'); m.focus(); } }, 'Skip to content');      // not a hash link: the address is the route
+  if (launcherCurrent) {
+    // Design v4 section 8: the Launcher is the sky itself. Its top row carries the organization switcher and the profile; there is no header bar.
+    content.querySelector('[data-slot=org]')?.replaceWith(sw); content.querySelector('[data-slot=who]')?.replaceWith(who);
+    return h('div', { class: 'app in-launcher', 'data-org': active.slug ?? '' }, skip, content, banner ?? null);
+  }
+  const manifest = registry?.get(currentApp);
+  const appName = manifest?.name ?? catalog.find((a) => a.app_key === currentApp)?.name ?? appLabel(currentApp);
+  const { items, current } = appNav(currentApp, route, { isAdmin });
+  const here = items.find((i) => i.key === current);
+  const search = h('label', { class: 'search' }, icon('search'), h('span', { class: 'sr' }, 'Search this organization'),
+    h('input', { type: 'search', placeholder: `Search ${active.name}`, disabled: true, 'aria-describedby': 'search-why', autocomplete: 'off' }));
+  const side = h('aside', { class: 'side' },
+    h('div', { class: 'side-top' }, appSwitcher({ catalog, registry, launcherCurrent: false }), plateOf(manifest ?? { id: currentApp }, 34), h('b', {}, appName)),
+    items.length ? h('nav', { class: 'nav', 'aria-label': appName }, ...items.map((i) => sideLink(i, current))) : null,
+    content.__side ?? null,                  // an app may lift its own list (Projects: the project list) into the rail
+    h('div', { class: 'side-foot' }, h('span', { class: 'avatar', 'aria-hidden': 'true' }, initials(name || email)), h('div', {}, h('b', {}, name || email || ''), h('small', {}, `${roleLabel(active.role)} · ${active.name}`))));
+  const crumb = h('div', { class: 'crumb', 'aria-label': 'You are here' });
+  const paintCrumb = () => {
+    const extra = content.__crumbs ?? (here && items.length > 1 ? [[here.label]] : []);
+    crumb.replaceChildren(h('b', { style: 'white-space:nowrap' }, appName), ...extra.map(([label, href]) => h('span', {}, '/ ', href ? h('a', { href }, label) : label)));
+  };
+  paintCrumb();
+  const onCrumbs = (e) => { if (e.detail.root === content) paintCrumb(); };
+  document.addEventListener('l2f:crumbs', onCrumbs); offs.push(() => document.removeEventListener('l2f:crumbs', onCrumbs));
+  const header = h('header', { class: 'hdr' },
+    h('span', { class: 'only-m' }, appSwitcher({ catalog, registry, launcherCurrent: false, suffix: '-m' })),
+    crumb,
+    search, h('span', { class: 'sr', id: 'search-why' }, 'Search is not available yet. It arrives with the apps it searches.'),
+    h('span', { class: 'iconbtn hide-s', role: 'img', 'aria-label': 'Notifications are not available yet', 'aria-disabled': 'true', title: 'Notifications are not available yet' }, icon('bell')),
+    sw, who);
+  return h('div', { class: 'app', 'data-org': active.slug ?? '' }, skip,
+    h('div', { class: 'shell' }, side, h('div', { class: 'main' }, header, h('main', { class: 'content', id: 'main', 'aria-busy': 'false' }, banner ?? null, content))),
+    items.length ? bottomBar(items, current) : null);
 }

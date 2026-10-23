@@ -1,6 +1,6 @@
 // Value Ladder (v4): the list with mini step charts, and the ladder page (Map, Table, Compare, History). A step REFERENCES an Offers & Products record: its name and
 // price are read from the offer and never edited here; a broken link (archived offer) is flagged. Versions are immutable snapshots; Compare says in words what changed.
-import { h, put, icon, btn, chip, dialog, drawer, toast, field, notice, skeleton, emptyState, errorState, noAccessState, tabs, readOnlyNotice } from '../ui.js';
+import { setCrumbs, h, put, icon, btn, chip, dialog, drawer, toast, field, notice, skeleton, emptyState, errorState, noAccessState, tabs, readOnlyNotice } from '../ui.js';
 import { STEP_TYPES, stepLabel, riseOf, brokenLink, diffLadders, totals, priceOf } from './laddermodel.js';
 
 export const ladderHref = (view, id) => (view === 'l' ? `#/ladder/l/${id}` : '#/ladder');
@@ -31,7 +31,7 @@ export function ladderView({ api, ctx, route }) {
     }
     const search = h('input', { type: 'search', placeholder: 'Search ladders', 'aria-label': 'Search ladders', autocomplete: 'off' }); let t = null; search.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { q = search.value.trim(); load(); }, 200); });
     const sh = h('select', { 'aria-label': 'Show' }, h('option', { value: 'active' }, 'Active'), h('option', { value: 'archived' }, 'Archived')); sh.addEventListener('change', () => { show = sh.value; load(); });
-    put(root, h('div', { class: 'pj-head' }, h('div', {}, h('div', { class: 'crumbs fine' }, 'Value Ladder'), h('h1', { 'data-page-title': true }, 'Value Ladders'), h('p', { class: 'sub' }, 'Map how customers climb from free to premium. Each step links to a real offer.')), canNew ? btn('New ladder', create, 'pri') : null), h('div', { class: 'cl-bar' }, search, sh), body);
+    put(root, h('div', { class: 'pj-head' }, h('div', {}, h('div', { class: 'crumbs fine' }, 'Value Ladder'), h('h1', { 'data-page-title': true }, 'Value Ladders'), h('p', { class: 'sub' }, 'Map how customers climb from free to premium. Each step links to a real offer.')), canNew ? btn('New ladder', create, 'pri') : null), h('div', { class: 'toolbar' }, search, sh), body);
     load();
   }
 
@@ -45,6 +45,7 @@ export function ladderView({ api, ctx, route }) {
     const body = h('div', {}); const bar = tabs([['map', 'Map'], ['table', 'Table'], ['compare', 'Compare'], ['history', 'History']], tab, (k) => { tab = k; keepTab = k; history.replaceState(null, '', `${ladderHref('l', id)}${k === 'map' ? '' : `?tab=${k}`}`); draw(); }, 'Ladder views');
     const [off, team] = await Promise.all([api.call('funnels.offers.list', {}), api.call('team.list', {})]); const offers = (off.ok ? off.data : []).filter((o) => !o.client_id || o.client_id === L.client_id); const people = team.ok ? team.data : [];
     const ownerName = (uid) => people.find((p) => p.user_id === uid)?.display_name ?? 'Someone';
+    setCrumbs(root, [['Value Ladders', ladderHref()], [scope(L.client_id)], [L.name]]);
     put(root, h('div', { class: 'pj-head' }, h('div', {}, h('div', { class: 'crumbs fine' }, h('a', { href: ladderHref() }, 'Value Ladders'), ' / ', scope(L.client_id)), h('h1', { 'data-page-title': true }, L.name), h('div', { class: 'pj-meta' }, chip(L.status === 'approved' ? 'Approved' : 'Draft', L.status === 'approved' ? 'ok' : ''), archived ? chip('Archived', 'warn') : null, ...totals(steps).map((t) => h('span', { class: 'fine muted' }, `Adds up to ${t.total.toLocaleString()} ${t.currency}`)))),
       h('div', { class: 'pj-actions' }, edit ? btn('Save version', saveVersion, 'pri') : null, edit ? btn(L.status === 'approved' ? 'Back to draft' : 'Approve', async () => { const x = await api.call('valueladder.update', { id, status: L.status === 'approved' ? 'draft' : 'approved' }); if (!x.ok) return fail(x, 'change this ladder'); if (L.status !== 'approved') await api.call('valueladder.versions.save', { ladder: id, note: 'Approved' }); toast(L.status === 'approved' ? 'Back to draft.' : 'Approved, and saved as a version.'); page(); }, '') : null,
         ctx.canAnywhere('valueladder.ladder.create') ? btn('Duplicate', duplicate, '') : null, edit ? btn('Archive', () => dialog({ title: `Archive “${L.name}”?`, body: h('p', {}, 'The ladder leaves the list. Nothing is deleted.'), actions: [{ label: 'Archive', cls: 'pri', on: async () => { const x = await api.call('valueladder.archive', { id }); if (!x.ok) { fail(x, 'archive this ladder'); return false; } ctx.go(ladderHref()); } }, { label: 'Cancel', focus: true }] }), '') : null,

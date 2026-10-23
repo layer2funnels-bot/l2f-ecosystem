@@ -3,9 +3,19 @@
 import { h, clear, icon, field, passwordField, notice, btn, link, dialog, toast, plate, roleLabel, orgMark, orgColor, orgInk } from '../ui.js';
 import { MIN_PASSWORD, isEmail } from '../gotrue.js';
 
-const brand = () => h('div', { class: 'brand' }, (() => { const p = plate(); p.setAttribute('width', '44'); p.setAttribute('height', '33'); return p; })(), h('span', {}, 'Layer2Funnels + Aurj'));
-const wrap = (...children) => h('div', { class: 'authwrap' }, h('main', { class: 'auth real', id: 'main' }, brand(), ...children));
-const card = (...c) => h('div', { class: 'card' }, ...c);
+// Design v4 sign-in frame: the dark stage (marks, the layered stack, the promise, five app plates) beside the card.
+import { orgMarkEl } from '../ui.js';
+import { plateOf, loadRegistry } from '../registry.js';
+const stage = () => {
+  const row = h('div', { class: 'float-row' });
+  loadRegistry().then((reg) => { if (!row.isConnected && !row.parentNode) return; row.replaceChildren(...['office', 'clients', 'drive', 'portal', 'planner'].map((id, i) => { const p = plateOf(reg.get(id) ?? { id }, 46, id === 'portal' ? 'locked' : 'available'); p.style.setProperty('--i', String(i)); return p; })); });
+  return h('div', { class: 'auth-stage stage-screen on-stage' },
+    h('div', { style: 'display:flex;align-items:center;gap:10px;font-weight:600' }, orgMarkEl({ slug: 'l2f' }, 30), orgMarkEl({ slug: 'aurj' }, 30), h('span', { style: 'margin-left:4px' }, 'Layer2Funnels + Aurj')),
+    h('div', { class: 'stack-wrap', 'aria-hidden': 'true' }, h('div', { class: 'stack' }, h('div', { class: 'ly a', style: '--i:0' }), h('div', { class: 'ly b', style: '--i:1' }), h('div', { class: 'ly c', style: '--i:2' }), h('div', { class: 'ly d', style: '--i:3' }, h('span', {}, 'L2')))),
+    h('div', {}, h('h2', {}, 'One sign-in. Every app.'), h('p', {}, 'Two organizations, kept completely apart. You only ever see what you’ve been invited to.'), row));
+};
+const wrap = (...children) => h('div', { class: 'auth real' }, stage(), h('main', { class: 'auth-side', id: 'main' }, ...children));
+const card = (...c) => h('div', { class: 'auth-card panel' }, ...c);
 const title = (text) => h('h1', { 'data-page-title': true }, text);
 const submitBtn = (label, extra = '') => h('button', { type: 'submit', class: `btn pri full ${extra}`.trim() }, label);
 const busy = (b, on, label) => { b.disabled = on; if (on) { b.dataset.l = b.textContent; clear(b).append(h('span', { class: 'spin', 'aria-hidden': 'true' }), 'Working…'); } else { b.textContent = label ?? b.dataset.l; } };
@@ -115,9 +125,9 @@ export function inviteView({ app, token, preview, email }) {
   const accept = btn('Accept invitation', async (e) => { const b = e.currentTarget; busy(b, true); const bad = await app.acceptInvitation(token); if (bad) { busy(b, false, 'Accept invitation'); toast(bad, false); } }, 'pri');
   const decline = btn('Decline', () => dialog({ title: 'Decline this invitation?', body: h('p', {}, `You won’t be added to ${org.name}. An owner can send a new invitation later.`),
     actions: [{ label: 'Decline invitation', cls: 'dng', on: async () => { const bad = await app.declineInvitation(token); toast(bad ?? 'Invitation declined.', !bad); } }, { label: 'Keep it', focus: true }] }));
-  return h('div', { class: 'authwrap', 'data-org': org.slug === 'aurj' ? 'aurj' : 'l2f' }, h('main', { class: 'auth real', id: 'main' }, brand(), card(
+  return h('div', { class: 'auth real', 'data-org': org.slug === 'aurj' ? 'aurj' : 'l2f' }, stage(), h('main', { class: 'auth-side', id: 'main' }, card(
     h('div', { style: 'display:flex;gap:var(--space-3);align-items:center;margin-bottom:var(--space-4)' },
-      h('span', { class: 'mark', style: `width:48px;height:48px;font-size:18px;border-radius:12px;background:${orgColor(org)};color:${orgInk(org)}` }, orgMark(org)),
+      orgMarkEl(org, 48),
       h('div', {}, h('div', { class: 'fine' }, 'Invitation'), h('h1', { 'data-page-title': true, style: 'font-size:22px' }, `Join ${org.name}`))),
     h('p', {}, `${preview.inviter_name || 'An owner'} invited you to join `, h('b', {}, org.name), preview.kind === 'client' ? ' as a client.' : [' as ', h('b', {}, `${/^[aeiou]/i.test(roleLabel(preview.role)) ? 'an' : 'a'} ${roleLabel(preview.role)}`), '.']),
     notice('info', 'info', ['Signed in as ', h('b', {}, email), `. This invitation was sent to that email. Accepting adds you to ${org.name} only.`]),

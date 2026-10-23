@@ -110,7 +110,7 @@ await q("insert into app_grants (workspace_id,user_id,app_key) values ($1,$2,'of
 const C1 = (await q('insert into clients (workspace_id,name) values ($1,$2) returning id', [L, `Harry Kaye PT ${stamp}`]))[0].id;
 const C2 = (await q('insert into clients (workspace_id,name) values ($1,$2) returning id', [L, `Victor Audit ${stamp}`]))[0].id;
 await q('insert into clients (workspace_id,name,archived_at) values ($1,$2,now())', [L, `Archived Client ${stamp}`]);
-await page.getByRole('button', { name: 'Check for invitations' }).click(); await wait('Your apps in Layer2Funnels');
+await page.getByRole('button', { name: 'Check for invitations' }).click(); await wait('The sky follows your time of day');
 
 // =============================================================== B. Launcher (design 03)
 check('U9', 'After an admin adds them, "Check for invitations" opens the Launcher in the organization theme with the switcher showing it', (await theme()) === 'l2f' && (await page.locator('#org-switcher strong').innerText()) === 'Layer2Funnels' && (await page.locator('.bar4').count()) === 1);
@@ -133,17 +133,17 @@ await page.keyboard.type('form'); const found = await page.locator('.tile').eval
 await page.keyboard.press('Enter'); await wait('Form Builder: coming soon'); await page.getByRole('button', { name: 'Got it' }).click();
 check('V5', 'Find an app shows only matching apps; a search with no match says so', found.join() === 'forms' && (await (async () => { await page.fill('#app-find', 'zzzz'); return page.getByText('No app matches').count(); })()) === 1);
 await page.fill('#app-find', ''); await page.keyboard.press('Escape');
-await page.locator('#app-switcher').click();
+await page.goto(`${base}/#/office`); await wait('Your work in'); await page.locator('#app-switcher').click();
 const swApps = await page.locator('#apps-menu .appitem').evaluateAll((els) => els.map((e) => e.dataset.app));
 check('V6', 'The app switcher offers Back to Launcher and the apps this person may open here (not the locked or coming-soon ones)', (await page.locator('#apps-menu .back').innerText()).includes('Back to Launcher') && swApps.includes('office') && !swApps.includes('portal') && !swApps.includes('forms'), swApps.join());
-await page.keyboard.press('Escape');
+await page.keyboard.press('Escape'); await page.goto(`${base}/#/launcher`); await wait('The sky follows your time of day');
 // weather opt-out: profile menu, no new location use, no new server call; the chip goes; switching it on again brings it back
 const callsBefore = metCalls.length;
 await page.locator('.who').click(); await page.getByRole('menuitemcheckbox', { name: /Weather on the Launcher/ }).click();
 await page.waitForFunction(() => !document.querySelector('.wxchip'));
 check('V7', 'Switching weather off in the profile menu removes the chip and the weather tint, and stops all weather calls', (await page.locator('.launcher').getAttribute('data-wx')) === 'none' && metCalls.length === callsBefore);
 await page.locator('.who').click(); await page.getByRole('menuitemcheckbox', { name: /Weather on the Launcher/ }).click(); await wait('your location');
-await page.context().clearPermissions(); await page.evaluate(() => sessionStorage.clear()); await page.reload(); await wait('Your apps in');
+await page.context().clearPermissions(); await page.evaluate(() => sessionStorage.clear()); await page.reload(); await wait('The sky follows your time of day');
 check('V8', 'If location is not allowed, the Launcher shows time of day only: no chip, no error', (await page.locator('.wxchip').count()) === 0 && (await page.locator('.launcher').getAttribute('data-wx')) === 'none');
 await page.context().grantPermissions(['geolocation']); await page.reload(); await wait('your location');
 // keyboard: open a dialog from a tile, focus stays inside, Esc closes and focus returns to the tile
@@ -155,7 +155,7 @@ check('U12', 'Dialogs trap focus, close with Esc and return focus to the tile th
 await tile('layer2_agents').click(); await wait('Layer 2 Agents: coming soon'); await page.getByRole('button', { name: 'Got it' }).click();
 await tile('funnel_mapper_pro').click(); await wait('Funnel Mapper Pro (stub)');
 check('U13', 'Funnel Mapper Pro opens in the same tab (a regular app of the ecosystem)', page.url().startsWith('https://example.com/fmp') && page.context().pages().length === 1);
-await page.goBack(); await page.reload(); await wait('Your apps in Layer2Funnels');
+await page.goBack(); await page.reload(); await wait('The sky follows your time of day');
 
 // =============================================================== B2. Docs editor (shared module; opens at #/doc/<id>)
 {
@@ -168,7 +168,7 @@ await page.goBack(); await page.reload(); await wait('Your apps in Layer2Funnels
   await page.goto(`${base}/#/doc/${docId}`); await wait('Quarterly plan');
   check('D1', 'The document opens in the editor with its heading, bold text and list, an outline of its headings, and "Saved" showing', (await editor().locator('h1').innerText()) === 'Quarterly plan' && (await editor().locator('strong').innerText()) === 'the offer' && (await editor().locator('ul li').count()) === 2
     && (await page.locator('.docoutline li').allInnerTexts()).join() === 'Quarterly plan,Traffic' && (await page.locator('.docstate').innerText()).startsWith('Saved'));
-  check('D2', 'The breadcrumb names where it lives (Drive and the organization) and the shell shows Drive as the current app', (await page.locator('.docs .crumbs').innerText()).includes('Drive') && (await page.locator('.docs .crumbs').innerText()).includes('Layer2Funnels'));
+  check('D2', 'The breadcrumb names where it lives (Drive and the organization) and the shell shows Drive as the current app', (await page.locator('.docs .fpath').innerText()).includes('Drive') && (await page.locator('.docs .fpath').innerText()).includes('Layer2Funnels'));
   await shot(page, 'd1-docs');
   await editor().click(); await page.keyboard.press('Control+End'); await page.keyboard.type(' More text.');
   check('D3', 'Typing marks the document "Unsaved changes" and registers the unsaved-work guard', (await page.locator('.docstate').innerText()).includes('Unsaved') && (await page.evaluate(() => !!window.__dirtyProbe || true)));
@@ -225,7 +225,7 @@ await page.goBack(); await page.reload(); await wait('Your apps in Layer2Funnels
   // not a document / not found
   await page.goto(`${base}/#/doc/00000000-0000-0000-0000-000000000000`); await wait('Not here');
   check('D16', 'An id that does not exist (or is not yours) shows the plain "Not here" state, never an error page', (await page.locator('.empty').innerText()).includes('Not here'));
-  await page.goto(`${base}/#/launcher`); await wait('Your apps in');
+  await page.goto(`${base}/#/launcher`); await wait('The sky follows your time of day');
 }
 
 // =============================================================== B3. Whiteboard (shared module; opens at #/board/<id>)
@@ -240,7 +240,7 @@ await page.goBack(); await page.reload(); await wait('Your apps in Layer2Funnels
   const savedNow = () => page.waitForFunction(() => /Saved/.test(document.querySelector('.docstate')?.innerText ?? ''));
   await page.goto(`${base}/#/board/${boardId}`); await editorUp();
   check('W1', 'A board opens in the shared editor with its name, "Saved", an item count and the breadcrumb of where it lives (Drive, the organization, Whiteboards)', (await page.locator('.doctitle').inputValue()) === 'Kickoff workshop' && (await page.locator('.docstate').innerText()).startsWith('Saved') && (await page.locator('.docstat').innerText()).includes('1 item')
-    && (await page.locator('.board .crumbs').innerText()).includes('Whiteboards') && (await page.locator('.board .crumbs').innerText()).includes('Layer2Funnels'));
+    && (await page.locator('.board .fpath').innerText()).includes('Whiteboards') && (await page.locator('.board .fpath').innerText()).includes('Layer2Funnels'));
   await shot(page, 'w1-board');
   // draw a rectangle: focus the canvas, press R, drag
   const canvas = page.locator('.boardsurface canvas.interactive'); const box = await canvas.boundingBox();
@@ -290,7 +290,7 @@ await page.goBack(); await page.reload(); await wait('Your apps in Layer2Funnels
   check('W12', 'A document opened as a board says so and offers to open it as a document', (await page.getByRole('link', { name: 'Open it as a document' }).count()) === 1);
   await page.goto(`${base}/#/board/00000000-0000-0000-0000-000000000000`); await wait('Not here');
   check('W13', 'An id that does not exist (or is not yours) shows the plain "Not here" state', (await page.locator('.empty').innerText()).includes('Not here'));
-  await page.goto(`${base}/#/launcher`); await wait('Your apps in');
+  await page.goto(`${base}/#/launcher`); await wait('The sky follows your time of day');
 }
 
 // =============================================================== B4. Projects (shared module; opens at #/projects)
@@ -327,13 +327,13 @@ await page.goBack(); await page.reload(); await wait('Your apps in Layer2Funnels
   await page.keyboard.press('Escape');
   await page.goto(`${base}/#/projects/p/00000000-0000-0000-0000-000000000000`); await wait('Not here');
   check('P10', 'A project id that does not exist (or is not yours) shows the plain "Not here" state', (await page.locator('.empty').innerText()).includes('Not here'));
-  await page.goto(`${base}/#/launcher`); await wait('Your apps in');
+  await page.goto(`${base}/#/launcher`); await wait('The sky follows your time of day');
 }
 
 // =============================================================== C. Office Home (design 04)
-await tile('office').click(); await wait('Needs your attention'); await wait('Nothing assigned to you.'); await wait('0 invitations waiting');   // the cards fill in after their data loads
+await tile('office').click(); await wait('Needs your attention'); await wait('Nothing assigned to you.'); await wait('Invitations waiting');   // the cards fill in after their data loads
 check('U14', 'Office Home: the eight section menu, Home current, designed empty states, owner/admin card with waiting invitations', (await page.locator('nav.nav a').allInnerTexts()).join() === 'Home,Planner,Projects,Funnels,Documents,Team,Apps,Admin' && (await page.locator('nav.nav a[aria-current=page]').innerText()) === 'Home'
-  && (await page.locator('main').innerText()).includes('Nothing assigned to you.') && await page.getByText('For owners and admins').isVisible() && await page.getByText('0 invitations waiting').isVisible());
+  && (await page.locator('main').innerText()).includes('Nothing assigned to you.') && await page.getByText('For owners and admins').isVisible() && await page.getByText('Invitations waiting').isVisible());
 await shot(page, 'c1-home');
 const hp = (await q("insert into projects (workspace_id,name) values ($1,'Quiz funnel rebuild') returning id", [L]))[0].id;
 await q("insert into project_tasks (workspace_id,project_id,title,assignee_id,due_on) values ($1,$2,'Edit quiz emails',$3,current_date + 3),($1,$2,'Late task',$3,current_date - 2)", [L, hp, uid]);
@@ -351,7 +351,7 @@ check('U16', 'A missing page and a missing record show the same "We couldn’t f
 // =============================================================== D. Funnels (design 06)
 await visit(page, base + '/#/office/funnels'); await wait('Recently changed');
 check('U17', 'Funnels home: four counts, the section pills, and the "Link design pending" note for funnel maps', (await page.locator('.tile2').count()) === 4 && await page.getByText('Link design pending').isVisible());
-await page.locator('.subnav a', { hasText: 'Avatars' }).click(); await wait('No avatars yet');
+await page.locator('.nav .sub a', { hasText: 'Avatars' }).click(); await wait('No avatars yet');
 check('U18', 'First-use empty list has the plate illustration, a create action for owners', await page.getByRole('link', { name: 'New avatar' }).first().isVisible() && (await page.locator('.empty svg').count()) > 0);
 await page.getByRole('link', { name: 'New avatar' }).first().click(); await wait('New avatar'); await page.waitForSelector('#r-client');
 const scope = await page.locator('#r-client option').allInnerTexts();
@@ -367,10 +367,10 @@ await shot(page, 'd1-record');
 await page.click('#edit'); await page.waitForSelector('#r-name');
 await page.fill('#r-name', 'Busy coach (edited)');
 check('U22', 'The edit form shows "Unsaved changes" as soon as something changes', (await page.locator('#ds').innerText()) === 'Unsaved changes');
-await page.locator('nav.nav a', { hasText: 'Home' }).click(); await wait('You have unsaved changes');
+await page.locator('nav.nav > a', { hasText: /^Home$/ }).click(); await wait('You have unsaved changes');
 await page.getByRole('button', { name: 'Keep editing' }).click();
 check('U23', 'Leaving with unsaved changes asks first, and "Keep editing" keeps the text and the page', (await page.inputValue('#r-name')) === 'Busy coach (edited)' && page.url().includes('/funnels/avatars/'));
-await page.locator('nav.nav a', { hasText: 'Home' }).click(); await wait('You have unsaved changes'); await page.getByRole('button', { name: 'Save and leave' }).click(); await wait('Needs your attention');
+await page.locator('nav.nav > a', { hasText: /^Home$/ }).click(); await wait('You have unsaved changes'); await page.getByRole('button', { name: 'Save and leave' }).click(); await wait('Needs your attention');
 check('U24', '"Save and leave" saves the change, then goes', (await q('select name from funnel_avatars where workspace_id = $1', [L]))[0].name === 'Busy coach (edited)');
 // share / unshare / archive / restore / delete
 await visit(page, base + '/#/office/funnels/avatars'); await wait('Busy coach (edited)'); await page.getByRole('link', { name: 'Open Busy coach (edited)' }).click(); await page.waitForSelector('#share');
@@ -495,7 +495,7 @@ const ownerToken = (await (await fetch('http://127.0.0.1:54321/auth/v1/token?gra
 const mk = async (email, role) => (await (await fetch(`${base}/api/invitation.create`, { method: 'POST', headers: { authorization: `Bearer ${ownerToken}`, 'x-org-id': L, 'content-type': 'application/json' }, body: JSON.stringify({ email, kind: 'staff', role }) })).json()).data[0].token;
 const forOther = await mk(`someone.else.${stamp}@example.com`, 'viewer');
 await visit(out, `${base}/#/invite?token=${forOther}`); await out.reload(); await wait('This invitation can’t be used', out);
-check('G5', 'An invitation for a different email address says only that it can’t be used (no name, no organization)', !(await out.locator('.card').innerText()).includes('Layer2Funnels'));
+check('G5', 'An invitation for a different email address says only that it can’t be used (no name, no organization)', !(await out.locator('.auth-card').innerText()).includes('Layer2Funnels'));
 const forOut = await mk(OUTSIDER, 'viewer');
 await visit(out, `${base}/#/invite?token=${forOut}`); await out.reload(); await wait('Join Layer2Funnels', out);
 await out.getByRole('button', { name: 'Decline' }).click(); await out.getByRole('button', { name: 'Decline invitation' }).click(); await wait('not in an organization yet', out);
@@ -565,7 +565,7 @@ await q("update memberships set role = 'editor' where workspace_id = $1 and user
 
 // =============================================================== I. Reduced motion, widths, keyboard
 const rm = await newPage(1280, 800, { reducedMotion: 'reduce' });
-await rm.goto(base + '/'); await wait('Sign in', rm); await rm.fill('#em', EMAIL); await rm.fill('#pw', PW); await rm.click('button[type=submit]'); await wait('Your apps in Layer2Funnels', rm);
+await rm.goto(base + '/'); await wait('Sign in', rm); await rm.fill('#em', EMAIL); await rm.fill('#pw', PW); await rm.click('button[type=submit]'); await wait('The sky follows your time of day', rm);
 const dur = await rm.evaluate(() => [...document.querySelectorAll('.tile')].slice(0, 3).map((e) => parseFloat(getComputedStyle(e).animationDuration)));
 check('I1', 'With reduced motion, tile animations and transitions are effectively off', dur.every((d) => d < 0.01) && parseFloat(await rm.evaluate(() => getComputedStyle(document.querySelector('.tile')).transitionDuration)) < 0.01, dur.join());
 await rm.close();
@@ -577,12 +577,12 @@ await rm.close();
   const [{ user_id: ownerId }] = (await admin.query("select user_id from memberships where workspace_id = $1 and role = 'owner' and kind = 'staff' limit 1", [wsL])).rows;
   const hidden = `Project-owned ${Date.now()}`;
   await admin.query("insert into files (workspace_id, space, uploaded_by, name, kind, mime_type, size_bytes, managed_by) values ($1, 'shared', $2, $3, 'document', 'application/vnd.l2f.doc+json', 10, 'projects')", [wsL, ownerId, hidden]);
-  await page.goto(`${base}/#/drive`); await page.waitForSelector('.drv .crumbs', { timeout: 9000 }); await page.waitForSelector('.drv-main .card', { timeout: 9000 });
+  await page.goto(`${base}/#/drive`); await page.waitForSelector('.drv .fpath', { timeout: 9000 }); await page.waitForSelector('.drv-main .tblwrap', { timeout: 9000 });
   check('D17', 'Drive opens on the organization library with a New button, a search box, and a side menu (library, Personal, Recent, Trash); other apps’ files are not listed', (await page.getByRole('button', { name: 'New', exact: true }).count()) === 1 && (await page.locator('.pj-side a').allInnerTexts()).join('|').includes('Trash') && !(await page.locator('main').innerText()).includes(hidden));
   await page.getByRole('button', { name: 'New', exact: true }).first().click(); await page.getByRole('button', { name: 'Folder', exact: true }).click(); await page.fill('#nf-name', FN); await page.getByRole('button', { name: 'Create', exact: true }).click(); await page.waitForSelector(`a:has-text("${FN}")`, { timeout: 9000 });
   check('D18', 'A new folder is created and listed', (await admin.query("select count(*)::int n from drive_folders where name = $1 and space = 'shared'", [FN])).rows[0].n === 1);
-  await page.locator(`a:has-text("${FN}")`).click(); await page.waitForSelector('.drv .crumbs b', { timeout: 9000 });
-  check('D19', 'Opening a folder shows it in the folder path (breadcrumb) and its empty state', (await page.locator('.drv .crumbs b').innerText()) === FN && (await page.locator('main').innerText()).includes('This folder is empty'));
+  await page.locator(`a:has-text("${FN}")`).click(); await page.waitForSelector('.drv .fpath b', { timeout: 9000 });
+  check('D19', 'Opening a folder shows it in the folder path (breadcrumb) and its empty state', (await page.locator('.drv .fpath b').innerText()) === FN && (await page.locator('main').innerText()).includes('This folder is empty'));
   await page.getByRole('button', { name: 'New', exact: true }).first().click(); await page.getByRole('button', { name: 'Spreadsheet' }).click(); await page.fill('#nd-name', SN); await page.getByRole('button', { name: 'Create', exact: true }).click(); await page.waitForSelector('.sh-grid', { timeout: 9000 });
   check('D20', 'A new spreadsheet opens in the Sheets editor with a formula bar, A1…Z100 grid and a sheet tab; it is stored in the library inside the folder', (await page.locator('.sh-tabs [role=tab]').count()) === 1 && (await page.locator('.sh-fx').count()) === 1 && (await admin.query("select f.in_library, f.folder_id is not null as inf from files f where f.name = $1", [SN])).rows[0].in_library === true);
   await page.locator('td[data-c="0"][data-r="0"]').click(); await page.keyboard.type('10'); await page.keyboard.press('Enter'); await page.keyboard.type('32'); await page.keyboard.press('Enter'); await page.keyboard.type('=SUM(A1:A2)'); await page.keyboard.press('Enter');
@@ -612,7 +612,7 @@ await rm.close();
   check('D30', 'Personal is a separate space that does not show the organization’s files', !(await page.locator('main').innerText()).includes(SN));
   await page.goto(`${base}/#/sheet/00000000-0000-0000-0000-000000000000`); await wait('Not here');
   check('D31', 'A spreadsheet id that does not exist shows the plain "Not here" state', (await page.locator('.empty').innerText()).includes('Not here'));
-  await page.goto(`${base}/#/launcher`); await wait('Your apps in');
+  await page.goto(`${base}/#/launcher`); await wait('The sky follows your time of day');
 }
 
 // =============================================================== C3. Clients (list, client page, Strategy copies, requests, documents, notes)
@@ -620,8 +620,8 @@ await rm.close();
   const [{ id: wsL }] = (await admin.query("select id from workspaces where slug = 'layer2funnels'")).rows;
   const CN = `Acme Fitness ${Date.now()}`, AVN = `Library avatar ${Date.now()}`;
   await admin.query('insert into funnel_avatars (workspace_id, name, pains) values ($1, $2, $3)', [wsL, AVN, 'No time']);
-  await page.goto(`${base}/#/clients`); await page.waitForSelector('.cl-bar', { timeout: 9000 });
-  check('CL1', 'Clients opens as its own app with search, status filter, Table / Grid / Pipeline and a New client action', (await page.locator('.cl-bar').count()) === 1 && (await page.getByRole('button', { name: 'Pipeline' }).count()) === 1 && (await page.getByRole('button', { name: 'New client' }).count()) >= 1);
+  await page.goto(`${base}/#/clients`); await page.waitForSelector('.toolbar', { timeout: 9000 });
+  check('CL1', 'Clients opens as its own app with search, status filter, Table / Grid / Pipeline and a New client action', (await page.locator('.toolbar').count()) === 1 && (await page.getByRole('button', { name: 'Pipeline' }).count()) === 1 && (await page.getByRole('button', { name: 'New client' }).count()) >= 1);
   await page.getByRole('button', { name: 'New client' }).first().click(); await page.fill('#nc-name', CN); await page.getByRole('button', { name: 'Create client' }).click(); await page.waitForSelector('[role=tablist]', { timeout: 9000 });
   check('CL2', 'A new client is created and its page opens with the five sections', (await page.getByRole('tab').count()) === 5 && (await page.locator('h1').innerText()).includes(CN) && (await admin.query('select count(*)::int n from clients where name = $1', [CN])).rows[0].n === 1);
   await page.getByRole('tab', { name: 'Work' }).click(); await page.waitForSelector('text=Copy requirements not yet defined', { timeout: 9000 });
@@ -664,7 +664,7 @@ await rm.close();
   check('CP6', 'Exit preview returns to the client page, which also offers "Preview client portal"', (await page.getByRole('link', { name: 'Preview client portal' }).count()) === 1);
   await page.goto(`${base}/#/clients/c/00000000-0000-0000-0000-000000000000`); await wait('Not here');
   check('CL12', 'A client id that does not exist (or is not yours) shows the plain "Not here" state', (await page.locator('.empty').innerText()).includes('Not here'));
-  await page.goto(`${base}/#/launcher`); await wait('Your apps in');
+  await page.goto(`${base}/#/launcher`); await wait('The sky follows your time of day');
 }
 
 // =============================================================== C5. Forms (builder, preview, submissions, settings, versions, Clients overlay)
@@ -672,7 +672,7 @@ await rm.close();
   const [{ id: wsL }] = (await admin.query("select id from workspaces where slug = 'layer2funnels'")).rows;
   await admin.query("update apps set lifecycle = 'active' where key = 'forms'"); await admin.query("insert into workspace_apps (workspace_id, app_key, enabled) values ($1, 'forms', true) on conflict (workspace_id, app_key) do update set enabled = true", [wsL]);
   const FN = `Intake form ${Date.now()}`, CNAME = `Forms client ${Date.now()}`;
-  await page.reload(); await page.goto(`${base}/#/forms`); await page.waitForSelector('.forms .cl-bar', { timeout: 9000 });
+  await page.reload(); await page.goto(`${base}/#/forms`); await page.waitForSelector('.forms .toolbar', { timeout: 9000 });
   check('FB1', 'Forms opens with search, status filter, Forms / Templates and a New form action', (await page.getByRole('button', { name: 'New form' }).count()) >= 1 && (await page.getByRole('button', { name: 'Templates' }).count()) === 1);
   await page.getByRole('button', { name: 'New form' }).first().click(); await page.fill('#nf-name', FN); await page.getByRole('button', { name: 'Create form' }).click(); await page.waitForSelector('.fb-grid', { timeout: 9000 });
   check('FB2', 'A new form opens in the builder with the eleven question types to add, an empty canvas and Draft status', (await page.locator('.fb-pal button').count()) === 11 && (await page.locator('.fb-head').innerText()).includes('Draft') && (await page.locator('main').innerText()).includes('No questions yet'));
@@ -721,7 +721,7 @@ await rm.close();
   await page.goto(`${base}/#/forms/f/00000000-0000-0000-0000-000000000000`); await wait('Not here');
   check('FB16', 'A form id that does not exist shows the plain "Not here" state', (await page.locator('.empty').innerText()).includes('Not here'));
   await admin.query("update apps set lifecycle = 'coming_soon' where key = 'forms'"); await admin.query("delete from workspace_apps where workspace_id = $1 and app_key = 'forms'", [wsL]);
-  await page.goto(`${base}/#/launcher`); await page.reload(); await wait('Your apps in');
+  await page.goto(`${base}/#/launcher`); await page.reload(); await wait('The sky follows your time of day');
 }
 
 // =============================================================== C6. Value Ladder (map, table, step drawer, versions, compare, approve, duplicate for a client)
@@ -757,7 +757,7 @@ await rm.close();
   await page.goto(`${base}/#/ladder/l/00000000-0000-0000-0000-000000000000`); await wait('Not here');
   check('VL10', 'A ladder id that does not exist shows the plain "Not here" state', (await page.locator('.empty').innerText()).includes('Not here'));
   await admin.query("update apps set lifecycle = 'coming_soon' where key = 'value_ladder'"); await admin.query("delete from workspace_apps where workspace_id = $1 and app_key = 'value_ladder'", [wsL]);
-  await page.goto(`${base}/#/launcher`); await page.reload(); await wait('Your apps in');
+  await page.goto(`${base}/#/launcher`); await page.reload(); await wait('The sky follows your time of day');
 }
 
 // =============================================================== C2. Office pages: Documents, Team, Apps, Projects pointer, Access history
@@ -802,28 +802,28 @@ await rm.close();
   check('O14', 'Funnels home shows the Funnel Strategies summary and keeps its four record tiles', (await page.locator('.tile2').count()) === 4 && (await page.locator('main').innerText()).includes(SN));
   await page.goto(`${base}/#/office/admin/access/history`); await page.waitForSelector('text=Access history', { timeout: 9000 }); await page.waitForSelector('.tbl, .empty', { timeout: 9000 });
   check('O9', 'Admin › Access › Access history shows who changed what and when, with names, never content', (await page.locator('.tbl thead th').allInnerTexts()).join().toLowerCase() === 'when,who,what' && !(await page.locator('main').innerText()).includes('{'));
-  await page.goto(`${base}/#/launcher`); await wait('Your apps in');
+  await page.goto(`${base}/#/launcher`); await wait('The sky follows your time of day');
 }
 
-const routes = [['/#/launcher', 'Your apps in'], ['/#/office', 'Needs your attention'], ['/#/office/funnels', 'Recently changed'], ['/#/office/funnels/avatars', 'Avatar for C1'], ['/#/office/funnels/avatars/new', 'Belongs to'],
+const routes = [['/#/launcher', 'The sky follows your time of day'], ['/#/office', 'Needs your attention'], ['/#/office/funnels', 'Recently changed'], ['/#/office/funnels/avatars', 'Avatar for C1'], ['/#/office/funnels/avatars/new', 'Belongs to'],
   ['/#/office/admin/members', 'Joining is by invitation only.'], ['/#/office/admin/access/levels', 'Deny always wins.'], ['/#/office/admin/access/assignments', 'Add assignment'], ['/#/office/admin/access/effective', 'Show access for'], ['/#/portal', 'The Portal is locked'], ['/#/drive', 'stay with their own app'], ['/#/clients', 'Everyone you work for'], ['/#/office/funnels/strategies', 'One written strategy per funnel'], ['/#/office/documents', 'stay with their own app'], ['/#/office/team', 'only where your own access allows'], ['/#/office/apps', 'Locked and coming-soon apps'], ['/#/office/admin/access/history', 'The last 100 changes'], ['/#/office/planner', 'isn’t built yet']];
 for (const [w, label] of [[1280, 'desktop'], [768, 'tablet'], [390, 'phone']]) {
   const p = await newPage(w, 900);
   await p.goto(base + '/'); await wait('Sign in', p);
   let ok = await layouts(p, `${label} sign in`);
   await p.getByRole('button', { name: 'Create an account' }).click(); await wait('Create your account', p); ok = (await layouts(p, `${label} sign up`)) && ok;
-  await p.goto(base + '/#/signin'); await p.fill('#em', EMAIL); await p.fill('#pw', PW); await p.click('button[type=submit]'); await wait('Your apps in Layer2Funnels', p);
+  await p.goto(base + '/#/signin'); await p.fill('#em', EMAIL); await p.fill('#pw', PW); await p.click('button[type=submit]'); await wait('The sky follows your time of day', p);
   const bad = [];
   for (const [r, t] of routes) { await p.goto(base + r); await p.reload(); await wait(t, p); await p.waitForTimeout(120); if (!(await layouts(p, `${label} ${r}`))) bad.push(r); }
   check(`R-${label}`, `At ${w}px every screen has no sideways scroll and every control is at least 44px (${routes.length + 2} screens)`, ok && bad.length === 0, bad.join(' '));
   if (w === 390) {
     await p.goto(base + '/#/office'); await p.reload(); await wait('Needs your attention', p);
-    const bar = p.locator('nav.bnav'); const labels = await bar.locator('a, button').allInnerTexts();
+    const bar = p.locator('nav.bbar'); const labels = await bar.locator('a, button').allInnerTexts();
     check('R-bar', 'On a phone the Office menu is a bottom bar: four sections plus More, labels always visible, top menu hidden', labels.map((x) => x.trim()).join() === 'Home,Planner,Projects,Funnels,More' && !(await p.locator('nav.nav').isVisible()) && (await bar.boundingBox()).y > 700);
     await bar.getByRole('button', { name: 'More' }).click(); await wait('More in Office', p);
     const more = await p.locator('.sheet a').allInnerTexts(); await p.keyboard.press('Escape');
     check('R-more', 'More opens a sheet with the rest (Docs, Team, Apps, Admin); Esc closes it and focus returns to More', more.map((x) => x.trim()).join() === 'Documents,Team,Apps,Admin' && (await p.evaluate(() => document.activeElement.textContent)).includes('More'));
-    await p.goto(base + '/#/launcher'); await p.reload(); await wait('Your apps in', p);
+    await p.goto(base + '/#/launcher'); await p.reload(); await wait('The sky follows your time of day', p);
     check('R-tiles', 'On a phone the Launcher shows two columns with names only (descriptions hidden)', (await p.locator('.tile').first().evaluate((e) => getComputedStyle(e.querySelector('.d')).display)) === 'none' && new Set(await p.locator('.tile').evaluateAll((els) => els.slice(0, 4).map((e) => Math.round(e.getBoundingClientRect().left)))).size === 2);
     await shot(p, 'i1-phone-launcher'); await p.goto(base + '/#/office/admin/members'); await p.reload(); await wait('Joining is by invitation only.', p); await shot(p, 'i2-phone-members');
     await p.goto(base + '/#/office/funnels/avatars'); await p.reload(); await wait('Avatar for C1', p); await p.evaluate(() => document.querySelector('.hdr .iconbtn')?.focus());
@@ -864,7 +864,7 @@ for (const [w, label] of [[1280, 'desktop'], [768, 'tablet'], [390, 'phone']]) {
   await page.goto(`${base}/#/app/whiteboard`); await page.waitForSelector('.pj-head h1', { timeout: 9000 });
   check('BD9', 'The Whiteboard tile address opens All boards', (await page.locator('.pj-head h1').innerText()) === 'All boards');
   await admin.query("update apps set lifecycle = 'coming_soon' where key = 'whiteboard'"); await admin.query("delete from workspace_apps where workspace_id = $1 and app_key = 'whiteboard'", [wsB]);
-  await page.goto(`${base}/#/launcher`); await page.reload(); await wait('Your apps in');
+  await page.goto(`${base}/#/launcher`); await page.reload(); await wait('The sky follows your time of day');
 }
 
 // =============================================================== C8. Social Planner (calendar, posts, campaigns, channels, manual posting record)
@@ -923,7 +923,7 @@ for (const [w, label] of [[1280, 'desktop'], [768, 'tablet'], [390, 'phone']]) {
   await page.goto(`${base}/#/app/social_planner`); await page.waitForSelector('.pj-head h1', { timeout: 9000 });
   check('SO17', 'The Social Planner tile address opens the planner', (await page.locator('.pj-head h1').innerText()) === 'Social Planner');
   await admin.query("update apps set lifecycle = 'coming_soon' where key = 'social_planner'"); await admin.query("delete from workspace_apps where workspace_id = $1 and app_key = 'social_planner'", [wsS]);
-  await page.goto(`${base}/#/launcher`); await page.reload(); await wait('Your apps in');
+  await page.goto(`${base}/#/launcher`); await page.reload(); await wait('The sky follows your time of day');
 }
 
 // =============================================================== C9. Admin › Client access (invite first; suspend, restore, revoke; Portal stays locked)

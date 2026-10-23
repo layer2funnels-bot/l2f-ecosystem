@@ -1,6 +1,6 @@
 // Social Planner (v4): Calendar, Posts, Campaigns and Channels, and the campaign page. It PLANS. Nothing is published from here: "posted" is a person's own record
 // ("Mark as posted manually"), connecting accounts is switched off and says why. Review goes through Approvals; the post follows the decision.
-import { h, put, icon, btn, chip, dialog, drawer, toast, field, notice, skeleton, emptyState, errorState, noAccessState, tabs, readOnlyNotice } from '../ui.js';
+import { setCrumbs, h, put, icon, btn, chip, dialog, drawer, toast, field, notice, skeleton, emptyState, errorState, noAccessState, tabs, readOnlyNotice } from '../ui.js';
 import { STATES, stateLabel, CAMPAIGN_STATES, postActions, counter, mediaWarning, monthGrid, byDay, progress, campaignMoves, toLocalInput, fromLocalInput, ymd } from './socialmodel.js';
 
 export const socialHref = (view, id) => (view === 'c' ? `#/social/c/${id}` : view && view !== 'calendar' ? `#/social?tab=${view}` : '#/social');
@@ -120,9 +120,9 @@ export function socialView({ api, ctx, route }) {
   async function home() {
     put(root, skeleton(3)); if (!(await boot())) return;
     let tab = TABS.some(([k]) => k === route?.query?.tab) ? route.query.tab : 'calendar';
-    const body = h('div', {}); const strip = tabs(TABS, tab, (k) => { tab = k; ctx.go(socialHref(k)); }, 'Social Planner');
+    const body = h('div', {});     // the four views are the app's side-rail pages (appnav.js)
     const newPost = canCreate ? btn('New post', () => openPost(null), 'pri') : null;
-    put(root, h('div', { class: 'pj-head' }, h('div', {}, h('div', { class: 'crumbs fine' }, 'Social Planner'), h('h1', { 'data-page-title': true }, 'Social Planner'), h('p', { class: 'sub' }, 'Plan posts and campaigns. A person posts them; Planner keeps the record.')), newPost), strip, !canCreate ? readOnlyNotice('Your access level can’t add posts') : null, body);
+    put(root, h('div', { class: 'pj-head' }, h('div', {}, h('div', { class: 'crumbs fine' }, 'Social Planner'), h('h1', { 'data-page-title': true }, 'Social Planner'), h('p', { class: 'sub' }, 'Plan posts and campaigns. A person posts them; Planner keeps the record.')), newPost), !canCreate ? readOnlyNotice('Your access level can’t add posts') : null, body);
     ({ calendar, posts, campaigns: campaignsTab, channels: channelsTab })[tab](body);
   }
 
@@ -130,7 +130,7 @@ export function socialView({ api, ctx, route }) {
     const now = new Date(); let y = now.getFullYear(); let m = now.getMonth(); let ch = ''; const grid = h('div', {}); const head = h('h2', { class: 'sp-month', 'aria-live': 'polite' });
     const chSel = h('select', { 'aria-label': 'Channel' }, h('option', { value: '' }, 'All channels'), ...channels.map((c) => h('option', { value: c.key }, c.label))); chSel.addEventListener('change', () => { ch = chSel.value; load(); });
     const nav = h('div', { class: 'sp-nav' }, btn('Previous month', () => { m -= 1; if (m < 0) { m = 11; y -= 1; } load(); }, '', { 'aria-label': 'Previous month' }), btn('Today', () => { y = now.getFullYear(); m = now.getMonth(); load(); }), btn('Next month', () => { m += 1; if (m > 11) { m = 0; y += 1; } load(); }, '', { 'aria-label': 'Next month' }), chSel);
-    put(body, h('div', { class: 'cl-bar' }, head, nav), grid);
+    put(body, h('div', { class: 'toolbar' }, head, nav), grid);
     async function load() {
       const weeks = monthGrid(y, m); const from = ymd(weeks[0][0]); const to = ymd(weeks.at(-1)[6]);
       put(head, new Date(y, m, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }));
@@ -163,7 +163,7 @@ export function socialView({ api, ctx, route }) {
     const search = h('input', { type: 'search', placeholder: 'Search posts', 'aria-label': 'Search posts', autocomplete: 'off' }); search.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { q = search.value.trim(); load(); }, 200); });
     const st = h('select', { 'aria-label': 'State' }, h('option', { value: '' }, 'Any state'), ...Object.entries(STATES).map(([k, v]) => h('option', { value: k }, v.label))); st.addEventListener('change', () => { status = st.value; load(); });
     const sh = h('select', { 'aria-label': 'Show' }, h('option', { value: 'active' }, 'Active'), h('option', { value: 'archived' }, 'Archived')); sh.addEventListener('change', () => { archived = sh.value === 'archived'; load(); });
-    put(body, h('div', { class: 'cl-bar' }, search, st, sh), list); load();
+    put(body, h('div', { class: 'toolbar' }, search, st, sh), list); load();
   }
 
   async function campaignsTab(body) {
@@ -175,7 +175,7 @@ export function socialView({ api, ctx, route }) {
         : emptyState({ title: archived ? 'Nothing archived' : 'No campaigns yet', body: archived ? '' : 'A campaign groups the posts for one launch or push, with dates and a goal, so you can see how far along it is.', ic: 'soc', first: !archived, action: canCreate && !archived ? btn('New campaign', () => campaignForm(null, (c) => ctx.go(socialHref('c', c.id))), 'pri') : null }));
     };
     const sh = h('select', { 'aria-label': 'Show' }, h('option', { value: 'active' }, 'Active'), h('option', { value: 'archived' }, 'Archived')); sh.addEventListener('change', () => { archived = sh.value === 'archived'; load(); });
-    put(body, h('div', { class: 'cl-bar' }, sh, canCreate ? btn('New campaign', () => campaignForm(null, (c) => ctx.go(socialHref('c', c.id))), 'pri') : null), list); load();
+    put(body, h('div', { class: 'toolbar' }, sh, canCreate ? btn('New campaign', () => campaignForm(null, (c) => ctx.go(socialHref('c', c.id))), 'pri') : null), list); load();
   }
   const bar = (c) => { const p = progress(c); return h('div', { class: 'sp-bar', role: 'img', 'aria-label': `${p}% posted` }, h('i', { style: `width:${p}%` })); };
 
@@ -195,6 +195,7 @@ export function socialView({ api, ctx, route }) {
     const pr = await api.call('social.posts.list', { campaign: id }); if (!live()) return;
     const move = async (to) => { const w = await api.call('social.campaigns.update', { id, status: to }); if (!w.ok) return fail(w); toast('Updated.'); refresh(); };
     const posts_ = pr.ok ? pr.data : [];
+    setCrumbs(root, [['Campaigns', socialHref('campaigns')], [c.name]]);
     put(root, h('div', { class: 'pj-head' }, h('div', {}, h('div', { class: 'crumbs fine' }, h('a', { href: socialHref('campaigns') }, 'Campaigns')), h('h1', { 'data-page-title': true }, c.name), h('p', { class: 'pj-meta' }, chip(CAMPAIGN_STATES[c.status]), ` ${clientName(c.client_id)}`, c.starts_on ? ` · ${day(c.starts_on)}${c.ends_on ? ` to ${day(c.ends_on)}` : ''}` : '', c.archived_at ? ' · Archived' : '')),
       h('div', { class: 'sp-actions' }, ...(canEdit && !c.archived_at ? [...campaignMoves(c.status).map(([to, label]) => btn(label, () => move(to), to === 'active' || to === 'planned' ? 'pri' : '')), btn('Edit', () => campaignForm(c, () => refresh()))] : []),
         canEdit ? btn(c.archived_at ? 'Restore' : 'Archive', async () => { const w = await api.call(c.archived_at ? 'social.campaigns.restore' : 'social.campaigns.archive', { id }); if (!w.ok) return fail(w); toast(c.archived_at ? 'Restored.' : 'Archived.'); refresh(); }) : null)),

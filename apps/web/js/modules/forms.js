@@ -32,6 +32,6 @@ export function formsView({ api, ctx, route }) {
   const st = h('select', { 'aria-label': 'Status' }, h('option', { value: '' }, 'All statuses'), h('option', { value: 'draft' }, 'Draft'), h('option', { value: 'published' }, 'Published')); st.addEventListener('change', () => { status = st.value; load(); });
   const sh = h('select', { 'aria-label': 'Show' }, h('option', { value: 'active' }, 'Active'), h('option', { value: 'archived' }, 'Archived')); sh.addEventListener('change', () => { show = sh.value; load(); });
   put(root, h('div', { class: 'pj-head' }, h('div', {}, h('div', { class: 'crumbs fine' }, 'Forms'), h('h1', { 'data-page-title': true }, templates ? 'Templates' : 'Forms'), h('p', { class: 'sub' }, 'Build forms, record answers and keep every version. Public sharing is switched off until it has been reviewed.')), canNew ? btn('New form', create, 'pri') : null),
-    seg([['list', 'Forms'], ['templates', 'Templates']], templates ? 'templates' : 'list', (k) => ctx.go(k === 'templates' ? formsHref('templates') : formsHref()), 'Forms views'), h('div', { class: 'cl-bar' }, search, st, sh), body);
+    h('div', { class: 'toolbar' }, search, st, sh), body);
   load(); return root;
 }
