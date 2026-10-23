@@ -7,7 +7,9 @@ export async function startFakeSupabaseStorage({ serviceKey = 'server-key', buck
   const server = http.createServer(async (req, res) => {
     const chunks = []; for await (const c of req) chunks.push(c); const body = Buffer.concat(chunks);
     const url = new URL(req.url, `http://${req.headers.host}`); const p = decodeURIComponent(url.pathname);
-    const send = (s, o, h = { 'content-type': 'application/json' }) => { res.writeHead(s, h); res.end(o == null ? undefined : (Buffer.isBuffer(o) ? o : JSON.stringify(o))); };
+    const cors = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET,PUT,POST,HEAD,DELETE,OPTIONS', 'access-control-allow-headers': '*' };   // the real service answers browser uploads from another address the same way
+    if (req.method === 'OPTIONS') { res.writeHead(204, cors); res.end(); return; }
+    const send = (s, o, h = { 'content-type': 'application/json' }) => { res.writeHead(s, { ...cors, ...h }); res.end(o == null ? undefined : (Buffer.isBuffer(o) ? o : JSON.stringify(o))); };
     const authed = req.headers.authorization === `Bearer ${serviceKey}` && req.headers.apikey === serviceKey;
     const base = '/storage/v1';
     const m = (re) => p.startsWith(base) ? re.exec(p.slice(base.length)) : null;

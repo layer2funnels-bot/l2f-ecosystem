@@ -71,7 +71,7 @@
 .cmdk-t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cmdk-empty{color:var(--muted);cursor:default!important}
 @media (max-width:760px){
-  .pj-grid{grid-template-columns:1fr}
+  .pj-grid{grid-template-columns:minmax(0,1fr)}
   .pj-side{position:static;flex-direction:row;flex-wrap:wrap;gap:var(--space-2)}
   .pj-side h2,.pj-side ul{display:none}
   .pj-link{width:auto;border:1px solid var(--line2)}

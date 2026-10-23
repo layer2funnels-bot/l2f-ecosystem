@@ -1,0 +1,21 @@
+// Sheets model: parsing is safe (never runs anything), formulas are exact, errors are shown as errors.
+import { recorder } from './lib.mjs';
+import { parseBook, serializeBook, evaluateSheet, display, emptyBook, parseRef, ref, MAX_CELLS, isError } from '../apps/web/js/modules/sheetmodel.js';
+const { results, check } = recorder();
+const ev = (cells, key) => display(evaluateSheet({ cells }).get(key));
+check('SM1', 'Arithmetic follows the usual order and brackets', ev({ A1: '=1+2*3' }, 'A1') === '7' && ev({ A1: '=(1+2)*3' }, 'A1') === '9' && ev({ A1: '=10/4' }, 'A1') === '2.5' && ev({ A1: '=2^3^2' }, 'A1') === '512' && ev({ A1: '=-2+5' }, 'A1') === '3');
+check('SM2', 'SUM, AVERAGE, MIN, MAX and COUNT over ranges and cells', ev({ A1: '1', A2: '2', A3: '6', B1: '=SUM(A1:A3)', B2: '=AVERAGE(A1:A3)', B3: '=MIN(A1:A3)', B4: '=MAX(A1:A3, 10)', B5: '=COUNT(A1:A3)' }, 'B1') === '9' && ev({ A1: '1', A2: '2', A3: '6', B2: '=AVERAGE(A1:A3)' }, 'B2') === '3' && ev({ A1: '1', A2: '2', A3: '6', B3: '=MIN(A1:A3)' }, 'B3') === '1' && ev({ A1: '1', A2: '2', A3: '6', B4: '=MAX(A1:A3, 10)' }, 'B4') === '10' && ev({ A1: '1', A2: '2', A3: 'x', B5: '=COUNT(A1:A3)' }, 'B5') === '2');
+check('SM3', 'Cell references follow other formulas, and text cells are skipped by SUM', ev({ A1: '5', A2: '=A1*2', A3: '=A2+1', A4: 'note', B1: '=SUM(A1:A4)' }, 'A3') === '11' && ev({ A1: '5', A2: '=A1*2', A4: 'note', B1: '=SUM(A1:A4)' }, 'B1') === '15');
+check('SM4', 'Division by zero, unknown functions, bad syntax and bad references show spreadsheet errors, never crash', ev({ A1: '=1/0' }, 'A1') === '#DIV/0!' && ev({ A1: '=FOO(1)' }, 'A1') === '#NAME?' && ev({ A1: '=1+' }, 'A1') === '#ERR!' && ev({ A1: '=Z999' }, 'A1') === '#REF!' && ev({ A1: '=AVERAGE(B1:B2)' }, 'A1') === '#DIV/0!');
+check('SM5', 'A formula that points at itself, directly or in a loop, is a #CYCLE! error', ev({ A1: '=A1+1' }, 'A1') === '#CYCLE!' && ev({ A1: '=B1', B1: '=A1' }, 'A1') === '#CYCLE!');
+check('SM6', 'An error in one cell flows to the cells that use it', ev({ A1: '=1/0', A2: '=A1+1' }, 'A2') === '#DIV/0!' && isError('#DIV/0!') && !isError('Total'));
+check('SM7', 'Text that merely looks like code is text: nothing is ever executed', ev({ A1: 'alert(1)' }, 'A1') === 'alert(1)' && ev({ A1: '=alert(1)' }, 'A1') === '#NAME?' && ev({ A1: '=constructor.constructor("return 1")()' }, 'A1') !== '1' && ev({ A1: '=window' }, 'A1') === '#NAME?');
+check('SM8', 'Numbers with commas and percentages read as numbers', ev({ A1: '1,250.5', B1: '=A1+1' }, 'B1') === '1251.5' && ev({ A1: '=50%*200' }, 'A1') === '100');
+check('SM9', 'A hostile or broken stored body becomes a safe sheet: junk cells dropped, names cleaned, sizes capped', parseBook('not json').sheets.length === 1 && parseBook('{"sheets":[{"name":"<img onerror=x>","cells":{"A1":5,"ZZ99":"x","B2":"ok","__proto__":"x"}}]}').sheets[0].cells.B2 === 'ok' && Object.keys(parseBook('{"sheets":[{"cells":{"A1":5,"ZZ99":"x"}}]}').sheets[0].cells).length === 0 && Object.keys(parseBook('{"sheets":[{"cells":{"__proto__":"x"}}]}').sheets[0].cells).length === 0 && ({}).x === undefined);
+const many = { sheets: [{ name: 'Big', cells: Object.fromEntries(Array.from({ length: MAX_CELLS + 500 }, (_, i) => [ref(i % 26, Math.floor(i / 26) % 100), `${i}`])) }] };
+check('SM10', 'Cell count is capped when reading a stored body', Object.keys(parseBook(JSON.stringify(many)).sheets[0].cells).length <= MAX_CELLS);
+check('SM11', 'Writing then reading gives the same book, cells in row order, empty cells left out', serializeBook(parseBook(serializeBook({ v: 1, sheets: [{ name: 'S', cells: { B2: '2', A1: '1', C3: '' } }] }))) === '{"v":1,"sheets":[{"name":"S","cells":{"A1":"1","B2":"2"}}]}');
+check('SM12', 'References parse within A1…Z100 only', parseRef('A1')?.col === 0 && parseRef('z100')?.row === 99 && parseRef('A101') === null && parseRef('AA1') === null && parseRef('A0') === null);
+check('SM13', 'A new book is one empty sheet', emptyBook().sheets.length === 1);
+for (const x of results) console.log(`${x.ok ? 'PASS' : 'FAIL'}  ${x.id.padEnd(5)} ${x.name}`);
+const pc = results.filter((x) => x.ok).length; console.log(`\n${pc}/${results.length} checks passed`); process.exit(pc === results.length ? 0 : 1);

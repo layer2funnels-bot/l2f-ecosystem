@@ -20,7 +20,9 @@ export const LOCAL_ENV = {
   SUPABASE_JWT_ISSUER: 'http://127.0.0.1:54321/auth/v1',
 };
 
-export async function startDevServer({ port = 8788, env = { ...LOCAL_ENV, ...process.env }, sink, limits, weatherFetch } = {}) {
+export async function startDevServer({ port = 8788, env = { ...LOCAL_ENV, ...process.env }, sink, limits, weatherFetch, extraConnect } = {}) {
+  const cspKey = Object.keys(pageHeaders).find((k) => k.toLowerCase() === 'content-security-policy');
+  const headersFor = extraConnect && cspKey ? { ...pageHeaders, [cspKey]: pageHeaders[cspKey].replace(/connect-src ([^;]*)/, (m) => `${m} ${extraConnect}`) } : pageHeaders;
   const server = createServer(env, { ...(sink ? { sink } : {}), ...(limits ? { limits } : {}), ...(weatherFetch ? { weatherFetch } : {}) });
   const http_ = http.createServer(async (req, res) => {
     try {
@@ -36,7 +38,7 @@ export async function startDevServer({ port = 8788, env = { ...LOCAL_ENV, ...pro
       let file = normalize(join(base, rel)); if (!file.startsWith(base)) { res.writeHead(404).end(); return; }
       if (url.pathname === '/' || !extname(file)) file = join(root, 'index.html');
       const body = await readFile(file);
-      res.writeHead(200, { ...pageHeaders, 'content-type': TYPES[extname(file)] ?? 'application/octet-stream', 'cache-control': 'no-store' }); res.end(body);
+      res.writeHead(200, { ...headersFor, 'content-type': TYPES[extname(file)] ?? 'application/octet-stream', 'cache-control': 'no-store' }); res.end(body);
     } catch { res.writeHead(404).end(); }
   });
   await new Promise((ok) => http_.listen(port, '127.0.0.1', ok));

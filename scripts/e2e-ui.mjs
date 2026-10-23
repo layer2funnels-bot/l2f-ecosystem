@@ -6,7 +6,8 @@
 import { createRequire } from 'node:module';
 import { mkdirSync } from 'node:fs';
 import pg from 'pg';
-import { startDevServer } from './dev-server.mjs';
+import { startDevServer, LOCAL_ENV } from './dev-server.mjs';
+import { startFakeSupabaseStorage } from '../test/fakes/fake-supabase-storage.mjs';
 
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || '/opt/node22/lib/node_modules/playwright');
@@ -20,7 +21,9 @@ const GUEST = `guest.ui.${stamp}@example.com`, OUTSIDER = `outsider.ui.${stamp}@
 // every page load is several API calls; the browser run loads many pages as one person, so it gets room above the production limits (the limits themselves are tested in api.test)
 // MET Norway is never called from tests: a fake answers in its real format and counts the calls
 const metCalls = []; const weatherFetch = async (url, init) => { metCalls.push({ url: String(url), ua: init?.headers?.['user-agent'] }); return new Response(JSON.stringify({ properties: { timeseries: [{ time: '2026-10-22T10:00:00Z', data: { instant: { details: { air_temperature: 16.4 } }, next_1_hours: { summary: { symbol_code: 'lightrain_day' } } } }] } }), { status: 200, headers: { 'content-type': 'application/json' } }); };
-const s = await startDevServer({ port: 0, sink: () => {}, weatherFetch, limits: { read: { max: 2000, windowMs: 60_000 }, write: { max: 500, windowMs: 60_000 }, sensitive: { max: 100, windowMs: 60_000 } } });
+// the local stack has no Storage service, so a fake Supabase Storage stands in (the real adapter code runs against it)
+const fakeStorage = await startFakeSupabaseStorage({ serviceKey: 'ui-storage-key' });
+const s = await startDevServer({ port: 0, sink: () => {}, weatherFetch, env: { ...LOCAL_ENV, ...process.env, STORAGE_DRIVER: 'supabase', STORAGE_URL: fakeStorage.url, STORAGE_SERVER_KEY: 'ui-storage-key', STORAGE_BUCKET: 'drive' }, extraConnect: fakeStorage.url, limits: { read: { max: 2000, windowMs: 60_000 }, write: { max: 500, windowMs: 60_000 }, sensitive: { max: 100, windowMs: 60_000 } } });
 const base = `http://127.0.0.1:${s.port}`;
 const browser = await chromium.launch();
 const problems = []; const net = [];
@@ -404,7 +407,7 @@ await inMenu(page, 'Aurj'); await wait('That item belongs to Layer2Funnels, so i
 check('E2', 'Outcome 2: a record that is not in the other organization lands on that organization’s list, with a plain notice and a way back', (await page.locator('.notice').innerText()).includes('Switch back to Layer2Funnels') && (await h1()) === 'Customer avatars');
 await page.getByRole('button', { name: 'Switch back to Layer2Funnels' }).click(); await page.waitForFunction(() => document.querySelector('#org-switcher strong')?.textContent === 'Layer2Funnels');
 // 3 app not turned on
-await visit(page, base + '/#/app/drive'); await wait('Drive isn’t built yet');
+await visit(page, base + '/#/drive'); await page.waitForSelector('.drv', { timeout: 9000 });
 await inMenu(page, 'Aurj'); await wait('isn’t turned on for Aurj');
 check('E3', 'Outcome 3: an app that is not on in the other organization is explained in place, with three next steps and nothing from the old organization', (await page.locator('.unavail').innerText()).includes('Nothing from Layer2Funnels is on this screen.')
   && await page.getByRole('button', { name: 'Switch back to Layer2Funnels' }).isVisible() && await page.getByRole('button', { name: 'Ask an Aurj admin' }).isVisible() && await page.getByRole('link', { name: 'Browse all apps' }).isVisible());
@@ -565,6 +568,51 @@ const dur = await rm.evaluate(() => [...document.querySelectorAll('.tile')].slic
 check('I1', 'With reduced motion, tile animations and transitions are effectively off', dur.every((d) => d < 0.01) && parseFloat(await rm.evaluate(() => getComputedStyle(document.querySelector('.tile')).transitionDuration)) < 0.01, dur.join());
 await rm.close();
 
+// =============================================================== C4. Drive (library, folders, upload, sheets, trash)
+{
+  const [{ id: wsL }] = (await admin.query("select id from workspaces where slug = 'layer2funnels'")).rows;
+  const FN = `Folder ${Date.now()}`, SN = `Budget ${Date.now()}`, UN = `note-${Date.now()}.txt`;
+  const [{ user_id: ownerId }] = (await admin.query("select user_id from memberships where workspace_id = $1 and role = 'owner' and kind = 'staff' limit 1", [wsL])).rows;
+  const hidden = `Project-owned ${Date.now()}`;
+  await admin.query("insert into files (workspace_id, space, uploaded_by, name, kind, mime_type, size_bytes, managed_by) values ($1, 'shared', $2, $3, 'document', 'application/vnd.l2f.doc+json', 10, 'projects')", [wsL, ownerId, hidden]);
+  await page.goto(`${base}/#/drive`); await page.waitForSelector('.drv .crumbs', { timeout: 9000 }); await page.waitForSelector('.drv-main .card', { timeout: 9000 });
+  check('D17', 'Drive opens on the organization library with a New button, a search box, and a side menu (library, Personal, Recent, Trash); other apps’ files are not listed', (await page.getByRole('button', { name: 'New', exact: true }).count()) === 1 && (await page.locator('.pj-side a').allInnerTexts()).join('|').includes('Trash') && !(await page.locator('main').innerText()).includes(hidden));
+  await page.getByRole('button', { name: 'New', exact: true }).first().click(); await page.getByRole('button', { name: 'Folder', exact: true }).click(); await page.fill('#nf-name', FN); await page.getByRole('button', { name: 'Create', exact: true }).click(); await page.waitForSelector(`a:has-text("${FN}")`, { timeout: 9000 });
+  check('D18', 'A new folder is created and listed', (await admin.query("select count(*)::int n from drive_folders where name = $1 and space = 'shared'", [FN])).rows[0].n === 1);
+  await page.locator(`a:has-text("${FN}")`).click(); await page.waitForSelector('.drv .crumbs b', { timeout: 9000 });
+  check('D19', 'Opening a folder shows it in the folder path (breadcrumb) and its empty state', (await page.locator('.drv .crumbs b').innerText()) === FN && (await page.locator('main').innerText()).includes('This folder is empty'));
+  await page.getByRole('button', { name: 'New', exact: true }).first().click(); await page.getByRole('button', { name: 'Spreadsheet' }).click(); await page.fill('#nd-name', SN); await page.getByRole('button', { name: 'Create', exact: true }).click(); await page.waitForSelector('.sh-grid', { timeout: 9000 });
+  check('D20', 'A new spreadsheet opens in the Sheets editor with a formula bar, A1…Z100 grid and a sheet tab; it is stored in the library inside the folder', (await page.locator('.sh-tabs [role=tab]').count()) === 1 && (await page.locator('.sh-fx').count()) === 1 && (await admin.query("select f.in_library, f.folder_id is not null as inf from files f where f.name = $1", [SN])).rows[0].in_library === true);
+  await page.locator('td[data-c="0"][data-r="0"]').click(); await page.keyboard.type('10'); await page.keyboard.press('Enter'); await page.keyboard.type('32'); await page.keyboard.press('Enter'); await page.keyboard.type('=SUM(A1:A2)'); await page.keyboard.press('Enter');
+  const a3 = await page.locator('td[data-c="0"][data-r="2"]').innerText();
+  check('D21', 'Typing numbers and a formula calculates it (SUM = 42), Enter moves down, and the formula bar shows the formula of the selected cell', a3 === '42' && (await page.locator('td[data-c="0"][data-r="2"]').click(), await page.locator('.sh-fx').inputValue()) === '=SUM(A1:A2)');
+  await page.locator('td[data-c="1"][data-r="0"]').click(); await page.keyboard.type('=1/0'); await page.keyboard.press('Enter');
+  check('D22', 'A formula error is shown as an error in the cell, not a crash', (await page.locator('td[data-c="1"][data-r="0"]').innerText()) === '#DIV/0!');
+  await page.getByRole('button', { name: 'Save', exact: true }).click(); await page.waitForFunction(() => /Saved/.test(document.querySelector('.docstate')?.innerText ?? ''));
+  const sv = (await admin.query("select (select body from file_versions v where v.file_id = f.id and v.version = f.current_version) b, f.current_version from files f where f.name = $1", [SN])).rows[0];
+  check('D23', 'Save stores a new version as JSON (cells and formulas, not HTML)', sv.current_version === 2 && JSON.parse(sv.b).sheets[0].cells.A3 === '=SUM(A1:A2)' && JSON.parse(sv.b).sheets[0].cells.A1 === '10');
+  await page.reload(); await page.waitForSelector('.sh-grid', { timeout: 9000 });
+  check('D24', 'After a reload the values and the calculation are still there', (await page.locator('td[data-c="0"][data-r="2"]').innerText()) === '42');
+  await page.getByRole('button', { name: 'Add a sheet' }).click(); await page.waitForFunction(() => document.querySelectorAll('.sh-tabs [role=tab]').length === 2);
+  check('D25', 'A second sheet can be added as a new tab', (await page.locator('.sh-tabs [role=tab]').count()) === 2 && (await page.locator('td[data-c="0"][data-r="0"]').innerText()) === '');
+  await page.getByRole('button', { name: 'Save', exact: true }).click(); await page.waitForFunction(() => /Saved/.test(document.querySelector('.docstate')?.innerText ?? ''));
+  await page.goto(`${base}/#/drive`); await page.waitForSelector(`a:has-text("${FN}")`, { timeout: 9000 }).catch(async (e) => { console.log('DRIVE DEBUG', JSON.stringify((await page.locator('main').innerText()).slice(0, 400)), net.slice(-4)); throw e; });
+  await page.locator('input[type=file]').setInputFiles({ name: UN, mimeType: 'text/plain', buffer: Buffer.from('hello drive') }); await page.getByRole('button', { name: `Actions for ${UN}` }).waitFor({ timeout: 15000 }).catch(async (e) => { console.log('UPLOAD DEBUG', problems.slice(-4), net.slice(-4)); throw e; });
+  check('D26', 'Uploading a file stores it in the storage layer under this organization’s prefix and lists it in the library', (await admin.query("select f.kind, f.in_library, v.storage_path from files f join file_versions v on v.file_id = f.id where f.name = $1", [UN])).rows.every((r) => r.kind === 'file' && r.in_library === true && r.storage_path.startsWith(wsL)));
+  await page.getByRole('button', { name: `Actions for ${UN}` }).click(); await page.getByRole('button', { name: 'Details' }).click(); await page.waitForSelector('.drv-dl', { timeout: 9000 });
+  check('D27', 'The details drawer shows type, size, version and location, with Sharing and Versions tabs', (await page.locator('.drv-dl').innerText()).includes('Version') && (await page.getByRole('tab', { name: 'Versions' }).count()) === 1); await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: `Actions for ${UN}` }).click(); await page.getByRole('button', { name: 'Move to Trash' }).click(); await page.waitForFunction((n) => !document.body.innerText.includes(n), UN, { timeout: 9000 });
+  await page.goto(`${base}/#/drive/trash`); await page.waitForSelector(`text=${UN}`, { timeout: 9000 });
+  check('D28', 'A file moved to the Trash leaves the library and waits in the Trash', true);
+  await page.getByRole('button', { name: `Restore ${UN}` }).click(); await page.waitForFunction((n) => !document.body.innerText.includes(n), UN, { timeout: 9000 });
+  check('D29', 'Restoring from the Trash puts it back', (await admin.query("select archived_at is null as ok from files where name = $1", [UN])).rows[0].ok === true);
+  await page.goto(`${base}/#/drive/personal`); await page.waitForSelector('.drv-main', { timeout: 9000 });
+  check('D30', 'Personal is a separate space that does not show the organization’s files', !(await page.locator('main').innerText()).includes(SN));
+  await page.goto(`${base}/#/sheet/00000000-0000-0000-0000-000000000000`); await wait('Not here');
+  check('D31', 'A spreadsheet id that does not exist shows the plain "Not here" state', (await page.locator('.empty').innerText()).includes('Not here'));
+  await page.goto(`${base}/#/launcher`); await wait('Your apps in');
+}
+
 // =============================================================== C3. Clients (list, client page, Strategy copies, requests, documents, notes)
 {
   const [{ id: wsL }] = (await admin.query("select id from workspaces where slug = 'layer2funnels'")).rows;
@@ -646,7 +694,7 @@ await rm.close();
 }
 
 const routes = [['/#/launcher', 'Your apps in'], ['/#/office', 'Needs your attention'], ['/#/office/funnels', 'Recently changed'], ['/#/office/funnels/avatars', 'Avatar for C1'], ['/#/office/funnels/avatars/new', 'Belongs to'],
-  ['/#/office/admin/members', 'Joining is by invitation only.'], ['/#/office/admin/access/levels', 'Deny always wins.'], ['/#/office/admin/access/assignments', 'Add assignment'], ['/#/office/admin/access/effective', 'Show access for'], ['/#/clients', 'Everyone you work for'], ['/#/office/funnels/strategies', 'One written strategy per funnel'], ['/#/office/documents', 'stay with their own app'], ['/#/office/team', 'only where your own access allows'], ['/#/office/apps', 'Locked and coming-soon apps'], ['/#/office/admin/access/history', 'The last 100 changes'], ['/#/office/planner', 'isn’t built yet']];
+  ['/#/office/admin/members', 'Joining is by invitation only.'], ['/#/office/admin/access/levels', 'Deny always wins.'], ['/#/office/admin/access/assignments', 'Add assignment'], ['/#/office/admin/access/effective', 'Show access for'], ['/#/drive', 'stay with their own app'], ['/#/clients', 'Everyone you work for'], ['/#/office/funnels/strategies', 'One written strategy per funnel'], ['/#/office/documents', 'stay with their own app'], ['/#/office/team', 'only where your own access allows'], ['/#/office/apps', 'Locked and coming-soon apps'], ['/#/office/admin/access/history', 'The last 100 changes'], ['/#/office/planner', 'isn’t built yet']];
 for (const [w, label] of [[1280, 'desktop'], [768, 'tablet'], [390, 'phone']]) {
   const p = await newPage(w, 900);
   await p.goto(base + '/'); await wait('Sign in', p);

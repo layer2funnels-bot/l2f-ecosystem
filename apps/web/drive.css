@@ -1,0 +1,18 @@
+/* Drive (v4): list, selection bar, upload progress. Shares row/card/side styles with Projects. */
+.drv{min-width:0;position:relative}
+.drv-tbl td,.drv-tbl th{vertical-align:middle}
+.drv-tbl td:first-child{width:44px}
+.drv-tbl input[type=checkbox]{width:24px;height:24px}
+.drv-sel{display:flex;gap:var(--space-3);align-items:center;flex-wrap:wrap;padding:var(--space-2) var(--space-4);margin:var(--space-3) 0;background:var(--action-tint);border:1px solid var(--line2);border-radius:var(--radius-md)}
+.drv-sel[hidden]{display:none}
+.drv-progress{display:grid;gap:var(--space-2);margin-top:var(--space-3)}
+.drv-up{display:flex;gap:var(--space-3);align-items:center}
+.drv-up progress{flex:1;min-width:0;height:10px}
+.drv-up .err{color:var(--danger)}
+.drv-drop{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--action) 14%,transparent);border:3px dashed var(--action);font-size:22px;font-weight:600;color:var(--action-ink);pointer-events:none}
+.drv-drop[hidden]{display:none}
+.drv-dl{display:grid;grid-template-columns:max-content 1fr;gap:var(--space-2) var(--space-4)}
+.drv-dl dt{color:var(--muted)}
+.linklike{border:0;background:transparent;color:var(--action-ink);text-decoration:underline;font:inherit;cursor:pointer;min-height:44px;padding:0;text-align:left}
+.drv .crumbs a{display:inline-flex;align-items:center;min-height:44px}
+.drv .crumbs{display:flex;flex-wrap:wrap;align-items:center}
