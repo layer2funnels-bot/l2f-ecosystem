@@ -61,7 +61,7 @@ export function checkAnswers(fields, answers) {
     if (['text', 'textarea'].includes(f.type)) { const n = String(v).length; if (f.min !== undefined && n < f.min) bad(`Write at least ${f.min} characters.`); else if (f.max !== undefined && n > f.max) bad(`Write at most ${f.max} characters.`); else if (n > 10000) bad('That is too long.'); }
     else if (f.type === 'email' && !EMAIL.test(String(v))) bad('Enter an email address like name@example.com.');
     else if (f.type === 'phone' && !PHONE.test(String(v))) bad('Enter a phone number (digits, spaces, + ( ) -).');
-    else if (f.type === 'url' && !URL_.test(String(v))) bad('Enter a web address starting with http:// or https://.');
+    else if (f.type === 'url' && !URL_.test(String(v))) bad('Enter a web address that starts with http:// or https:// (for example https://example.com).');
     else if (f.type === 'number') { const n = Number(v); if (!Number.isFinite(n)) bad('Enter a number.'); else if (f.min !== undefined && n < f.min) bad(`Enter ${f.min} or more.`); else if (f.max !== undefined && n > f.max) bad(`Enter ${f.max} or less.`); }
     else if (f.type === 'date' && !DATE.test(String(v))) bad('Pick a date.');
     else if (f.type === 'select' && !(f.options ?? []).includes(v)) bad('Choose one of the options.');
