@@ -288,6 +288,41 @@ await page.goBack(); await page.reload(); await wait('Your apps in Layer2Funnels
   await page.goto(`${base}/#/launcher`); await wait('Your apps in');
 }
 
+// =============================================================== B4. Projects (shared module; opens at #/projects)
+{
+  const PJ = `Website relaunch ${Date.now()}`, T1 = `Write homepage copy ${Date.now()}`, T2 = `Review design ${Date.now()}`;   // unique per run: a re-run on the same local database never collides
+  await admin.query('update time_entries set ended_at = now() where ended_at is null');
+  await page.goto(`${base}/#/projects`); await page.waitForSelector('.pj-cards', { timeout: 9000 }).catch(async (e) => { await shot(page, 'FAILED-pj'); console.log((await page.locator('body').innerText()).slice(0, 600), problems.slice(0, 3), net.slice(-4)); throw e; });
+  check('P1', 'Projects opens as its own app with a sidebar and a New project action', (await page.locator('.pj-side').count()) === 1 && (await page.getByRole('button', { name: 'New project' }).count()) >= 1);
+  await page.getByRole('button', { name: 'New project' }).first().click(); await page.fill('#np-name', PJ); await page.getByRole('button', { name: 'Create project' }).click(); await wait(PJ);
+  const created = (await admin.query("select client_id, name from projects where name = $1", [PJ])).rows;
+  check('P2', 'A new internal project is created (no client) and its workspace opens with the tabs', created.length === 1 && created[0].client_id === null && (await page.getByRole('tab').count()) >= 7);
+  await page.getByRole('tab', { name: 'List', exact: true }).click(); await page.fill('input[name=t]', T1); await page.keyboard.press('Enter'); await wait(T1);
+  await page.fill('input[name=t]', T2); await page.keyboard.press('Enter'); await wait(T2);
+  check('P3', 'Tasks are added from the list and stored', (await admin.query("select count(*)::int n from project_tasks where title in ($1,$2)", [T1, T2])).rows[0].n === 2);
+  await page.getByRole('tab', { name: 'Board', exact: true }).click(); await wait('Drag a card');
+  const card = page.locator('.pj-cardtask', { hasText: T1 }); const target = page.locator('.pj-col[data-status=doing]');
+  await card.dragTo(target); await page.waitForFunction(() => document.querySelector('.pj-col[data-status=doing] .pj-cardtask'));
+  check('P4', 'Dragging a card to another column changes its status in the database', (await admin.query("select status from project_tasks where title = $1", [T1])).rows[0].status === 'doing');
+  await page.locator('.pj-cardtask', { hasText: T2 }).click(); await wait('Subtasks');
+  await page.fill('input[aria-label="Add a subtask"]', 'Check mobile'); await page.keyboard.press('Enter'); await wait('Check mobile');
+  await page.selectOption('#td-prio', 'high'); for (let n = 0; n < 30 && (await admin.query('select priority from project_tasks where title = $1', [T2])).rows[0].priority !== 'high'; n++) await page.waitForTimeout(100);
+  const t2 = (await admin.query("select priority, (select count(*)::int from task_checklist_items c where c.task_id = t.id) n from project_tasks t where title = $1", [T2])).rows[0];
+  check('P5', 'The task drawer saves priority on change and adds a subtask', t2.priority === 'high' && t2.n === 1);
+  await page.getByRole('button', { name: 'Start timer' }).click(); await wait('Timer running');
+  check('P6', 'Starting a timer shows it on every Projects page and stores a running entry using the database clock', (await admin.query('select count(*)::int n from time_entries where ended_at is null')).rows[0].n === 1);
+  await page.getByRole('button', { name: 'Stop timer' }).click(); await page.waitForFunction(() => document.querySelector('.pj-timer')?.hidden);
+  check('P7', 'Stopping the timer ends the entry', (await admin.query('select count(*)::int n from time_entries where ended_at is null')).rows[0].n === 0);
+  await page.keyboard.press('Escape'); await page.goto(`${base}/#/projects/mine`); await page.waitForSelector('.pj-mine', { timeout: 9000 });
+  check('P8', 'My Work opens and shows an empty state when nothing is assigned', (await page.locator('.empty, .pj-mine').count()) >= 1);
+  await page.keyboard.press('Control+k'); await page.fill('.cmdk-in', T1); await wait(T1);
+  check('P9', 'Ctrl+K search finds tasks by words and opens them', (await page.locator('.cmdk-list li[role=option]').count()) >= 1);
+  await page.keyboard.press('Escape');
+  await page.goto(`${base}/#/projects/p/00000000-0000-0000-0000-000000000000`); await wait('Not here');
+  check('P10', 'A project id that does not exist (or is not yours) shows the plain "Not here" state', (await page.locator('.empty').innerText()).includes('Not here'));
+  await page.goto(`${base}/#/launcher`); await wait('Your apps in');
+}
+
 // =============================================================== C. Office Home (design 04)
 await tile('office').click(); await wait('Needs your attention'); await wait('Nothing assigned to you.'); await wait('0 invitations waiting');   // the cards fill in after their data loads
 check('U14', 'Office Home: the eight section menu, Home current, designed empty states, owner/admin card with waiting invitations', (await page.locator('nav.nav a').allInnerTexts()).join() === 'Home,Planner,Projects,Funnels,Documents,Team,Apps,Admin' && (await page.locator('nav.nav a[aria-current=page]').innerText()) === 'Home'
