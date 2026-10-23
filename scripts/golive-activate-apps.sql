@@ -4,3 +4,6 @@ update public.apps set lifecycle = 'active' where key in ('forms', 'value_ladder
 insert into public.workspace_apps (workspace_id, app_key, enabled)
   select w.id, a.key, true from public.workspaces w cross join public.apps a where a.key in ('forms', 'value_ladder', 'social_planner', 'whiteboard')
   on conflict (workspace_id, app_key) do update set enabled = true;
+
+-- Files go to Cloudflare R2 from the start (free tier 10 GB, shared with backups): cap the application at 6 GB so backups and growth fit. Raise it only with the owner's approval.
+update public.storage_settings set cap_bytes = 6000000000;
