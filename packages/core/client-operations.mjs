@@ -159,4 +159,21 @@ const strategyOps = [
   }),
 ];
 
-export const clientsOperations = [...clientOps, ...stageOps, ...childOps, ...strategyOps];
+// ---- client access (migration 0032): who may reach the Client Portal. The functions check the permission `clients.access.manage` and the organization themselves;
+// the invite answers with a plain code instead of an error for the cases a person can fix (see the migration).
+const accessOps = [
+  defineOperation({ name: 'clients.access.list', class: 'read', run: (q) => q('select * from client_access_list()') }),
+  defineOperation({ name: 'clients.access.events', class: 'read', input: { access: { type: 'uuid', required: true } }, run: (q, _c, i) => q('select * from client_access_events_list($1)', [i.access]) }),
+  defineOperation({
+    name: 'clients.access.invite', class: 'sensitive', single: true,
+    input: { email: { type: 'text', required: true, max: 320 }, client: { type: 'uuid' }, client_name: { type: 'text', max: 200 }, person_name: { type: 'text', max: 200 } },
+    run: (q, _c, i) => q('select * from client_access_invite($1, $2, $3, $4)', [i.email, i.client ?? null, i.client_name ?? null, i.person_name ?? null]),
+  }),
+  defineOperation({
+    name: 'clients.access.set_status', class: 'sensitive', single: true,
+    input: { id: { type: 'uuid', required: true }, status: { type: 'enum', values: ['suspended', 'active', 'revoked'], required: true }, note: T(500) },
+    run: (q, _c, i) => q('select client_access_set_status($1, $2, $3) as status', [i.id, i.status, i.note ?? null]),
+  }),
+];
+
+export const clientsOperations = [...clientOps, ...stageOps, ...childOps, ...strategyOps, ...accessOps];

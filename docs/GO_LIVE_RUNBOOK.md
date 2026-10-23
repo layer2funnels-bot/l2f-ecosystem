@@ -44,7 +44,7 @@ Choose the address for the office (for example `office.layer2funnels.com`; the s
 
 ## 4. Create the Supabase project and apply the database (owner + assistant)
 1. Create the project in the region from step 0; strong database password into the password manager; no extra add-ons.
-2. Use database client tools of **version 17** (`pg_dump`, `pg_restore`, `psql`; CI checks this with `npm run check:pg17`). Apply `migrations/0001` … `0025` **in order** through the session pooler connection (one transaction per file; stop on the first error). The same order is used by `npm run stack:migrate` locally.
+2. Use database client tools of **version 17** (`pg_dump`, `pg_restore`, `psql`; CI checks this with `npm run check:pg17`). Apply `migrations/0001` … `0032` **in order** through the session pooler connection (one transaction per file; stop on the first error). The same order is used by `npm run stack:migrate` locally.
 3. Do **not** run `seed/bootstrap.sql` yet.
 *Check (read-only):* (a) `select count(*) from public.workspaces` is 0; (b) as the publishable (anon) key, `GET {project}/rest/v1/clients` is refused and `GET {project}/rest/v1/rpc/…` of any public function is refused (migration 0010 closed the Data API; the permanent test is `test/direct-access.test.mjs`, the HTTP proof is E-series in `scripts/e2e-local.mjs`); (c) the project list shows the intended region.
 *Undo:* delete the project (it is empty at this point).
@@ -73,7 +73,7 @@ Google Cloud → OAuth client (web); authorised redirect = the callback address 
 - Connect the private repository, branch `main` (or the commit recorded in step 0). Build command `npm ci --prefix apps/whiteboard && node scripts/build-web.mjs` (the first part installs the whiteboard editor's build-time dependencies; without it the site builds but boards say the editor is not available), output `dist/web`. `wrangler.toml` already carries `nodejs_compat`.
 - **Build-time (browser-safe) variables:** `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` (the publishable key only; the build refuses a secret or legacy JWT key), `GOOGLE_ENABLED=true`. The build rewrites the page security policy to allow only that project's address.
 - **Encrypted runtime variables (API function):** `DATABASE_URL` (the **session pooler** string, role `postgres`; the API then runs every request as `app_user`), `SUPABASE_JWKS_URL`, `SUPABASE_JWT_ISSUER`, `RATE_LIMIT_STORE=postgres` (shared counters from migration 0009), optional `DB_POOL_MAX` (default 5; keep it small on the free plan).
-- **Weather (optional, free):** `WEATHER_USER_AGENT` = the application name plus a contact, for example `Layer2FunnelsAurjOffice/1.0 ops@your-domain` (MET Norway's rule: an identifying User-Agent with contact details; the default names the repository). Set `WEATHER=off` to switch the Launcher weather off. Nothing else is needed; no key, no account.
+- **Weather (optional, free):** `WEATHER_USER_AGENT` = the application name plus a contact; the built-in default is `Layer2FunnelsAurjOffice/1.0 layer2funnels@gmail.com` (the owner's address), set it only to change it. Example of the form: `Layer2FunnelsAurjOffice/1.0 ops@your-domain` (MET Norway's rule: an identifying User-Agent with contact details; the default names the repository). Set `WEATHER=off` to switch the Launcher weather off. Nothing else is needed; no key, no account.
 - **Storage variables (runtime):** `STORAGE_DRIVER=supabase` with `STORAGE_URL` (the project address), `STORAGE_SERVER_KEY` (the project's server-side secret key; encrypted, never in the browser build) and `STORAGE_BUCKET` (a private bucket, e.g. `drive`). The hard application cap is 8 GB (`storage_settings`, migration 0023); at the limit uploads answer 507 `storage_limit` with a clear message. Usage is shown in Admin → Storage.
 - **One server per request:** the function builds a database connection per request (Workers cannot reuse one across requests; found in the rehearsal, `docs/GO_LIVE_REHEARSAL.md`); `DB_POOL_MAX` is forced to 1 by the function.
 - **Fonts:** Bricolage Grotesque, Geist, Geist Mono and Noto Nastaliq Urdu (Design v4) are self-hosted from `apps/web/fonts` (licences in `LICENSES.txt`); nothing loads from a font service, and the policy allows only the site's own files. Confirm after deploy that the page loads no request to any other host.
@@ -153,3 +153,19 @@ Funnel Mapper Pro hosting and data (separate approvals: docs/FMP_MIGRATION_PLAN.
 
 ## Switching on the v4 apps
 After the migrations (0001 to 0031) are applied, run `scripts/golive-activate-apps.sql` once. It makes Form Builder, Value Ladder, Social Planner and Whiteboard active for both organizations. People still need the app grant (or an access level that includes it) to see each app. Planner and Layer 2 Agents stay "coming soon".
+
+
+## Client onboarding and opening the Client Portal (migration 0032)
+**Before anyone outside the team is invited in a live system**
+1. Supabase Auth → "Confirm email" must be **ON** (the database trusts the e-mail in the sign-in token; confirmation is what makes it true). Custom SMTP set (Brevo) so confirmation and password-reset e-mails are sent.
+2. Written answer from Supabase about external users and testers on the plan in use (`docs/SUPABASE_TERMS_REQUEST.md`). Until then: staff-only live use, testers on synthetic data only, Portal switch OFF.
+3. Run the activation script only for the apps meant to be on; the Portal is not in it.
+
+**Inviting a client (Admin → Client access, by an owner or admin)**
+1. "Invite a client": the client's e-mail, optionally their name, and either an existing client record or a new one. The client record (Onboarding stage) and the invitation are created together; the link is shown once. Send it yourself until e-mail sending is on. A new link replaces the old one.
+2. The client opens the link, creates an account (or signs in) with **that e-mail**, confirms the e-mail, and accepts. The list shows them Active. They still see nothing until the Portal is opened.
+3. Suspend (reversible, immediate), Restore, or Revoke (membership removed; the client record and history stay; "Invite again" reuses the record).
+
+**Opening the Client Portal for one organization (owner decision, only after the Supabase answer and the security checks):** in that project's SQL editor run `update public.workspace_apps set enabled = true where app_key = 'portal' and workspace_id = (select id from public.workspaces where slug = '<organization slug>');` Undo: the same with `false`. Record the date and the Supabase reference in `docs/DECISIONS.md`. Do not open it for both organizations at once the first time.
+
+**Free-tier limits that can touch even 1–5 clients:** Supabase pauses a free project after a week without activity (enable `keepalive.yml`; a paused project means clients see errors); no automatic Supabase backups on Free (enable `backup.yml`); Supabase's own e-mail sender is tiny (use Brevo SMTP); Cloudflare Free is 100,000 requests a day and 10 ms of CPU per request, and per-request database connections are expensive in CPU (see DECISIONS V4-28), so run the live CPU test (`node scripts/weather-cost.mjs` locally, then watch Workers errors "exceeded CPU" in the Cloudflare dashboard) before the first client logs in; the certain fix is Workers Paid at $5 a month, which needs the owner's approval.

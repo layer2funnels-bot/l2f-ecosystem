@@ -64,6 +64,7 @@ export function parseRoute(hash) {
     if (seg.length === 2) return r('admin', { tab: 'members' });
     if (c === 'members' && seg.length === 3) return r('admin', { tab: 'members' });
     if (c === 'storage' && seg.length === 3) return r('admin', { tab: 'storage' });
+    if (c === 'clients' && seg.length === 3) return r('admin', { tab: 'clients' });
     if (c === 'access' && seg.length === 3) return r('admin', { tab: 'access', sub: 'levels' });
     if (c === 'access' && ADMIN_ACCESS_TABS.includes(d) && seg.length === 4) return r('admin', { tab: 'access', sub: d });
   }
@@ -80,7 +81,7 @@ export function parseRoute(hash) {
 export const hrefFor = {
   launcher: () => '#/launcher', office: () => '#/office', funnels: () => '#/office/funnels', page: (p) => `#/office/${p}`,
   doc: (id) => `#/doc/${id}`, board: (id) => `#/board/${id}`, list: (type) => `#/office/funnels/${type}`, record: (type, id) => `#/office/funnels/${type}/${id}`, app: (k) => (k === 'projects' ? '#/projects' : k === 'clients' ? '#/clients' : k === 'drive' ? '#/drive' : k === 'portal' ? '#/portal' : k === 'forms' ? '#/forms' : k === 'value_ladder' ? '#/ladder' : k === 'whiteboard' ? '#/whiteboards' : k === 'social_planner' ? '#/social' : `#/app/${k}`),
-  admin: (tab = 'members', sub) => (tab === 'members' ? '#/office/admin/members' : tab === 'storage' ? '#/office/admin/storage' : `#/office/admin/access/${sub ?? 'levels'}`),
+  admin: (tab = 'members', sub) => (tab === 'members' ? '#/office/admin/members' : tab === 'storage' ? '#/office/admin/storage' : tab === 'clients' ? '#/office/admin/clients' : `#/office/admin/access/${sub ?? 'levels'}`),
 };
 export const AUTH_ROUTES = new Set(['signin', 'signup', 'check-email', 'forgot', 'reset', 'invite', 'expired']);
 

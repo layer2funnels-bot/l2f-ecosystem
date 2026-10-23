@@ -248,6 +248,32 @@ const clientDoc = await admin.query("insert into clients (workspace_id, name) va
 const cd = (await post('drive.files.create', { space: 'client', client: clientDoc.rows[0].id, app: 'clients', name: 'A E2E client doc', kind: 'document', body: 'x' }, { org: A })).body.data?.[0];
 check('E61', 'A client file is stored in the client space, never listed in the shared Drive, and refuses to join the library', cd?.in_library === false && !(await driveIds(A)).has(cd?.id) && (await post('drive.files.setLibrary', { id: cd.id, in_library: true }, { org: A })).status === 422);
 
+// ---- client onboarding, Door A, with REAL sign-ups and real tokens (migration 0032)
+const o2 = await signUp(`owner2.${stamp}@example.com`);   // a second owner: invitations are a sensitive class with a small per-person budget
+await admin.query("insert into memberships (workspace_id,user_id,kind,role) values ($1,$2,'staff','owner'),($3,$2,'staff','owner') on conflict do nothing", [L, o2.id, A]);
+const kEmail = `anna.${stamp}@acme-e2e.example`, k = await signUp(kEmail), stranger = await signUp(`stranger.${stamp}@example.com`);
+await admin.query("update workspace_apps set enabled = false where workspace_id = $1 and app_key = 'portal'", [L]);
+const ci = await post('clients.access.invite', { email: kEmail, client_name: `Acme E2E ${stamp}`, person_name: 'Anna' }, { token: o2.token, org: L });
+const cinv = ci.body.data?.[0];
+check('E62', 'A staff owner invites a client: the client record, invitation and access are created together and the link token comes back once', ci.status === 200 && cinv?.ok === true && cinv.client_created === true && cinv.token?.length > 30);
+check('E63', 'Signing up (the same real Supabase sign-up anyone can do) gives a client nothing: no organization, no access, and the Portal call is refused', (await post('org.list', {}, { token: k.token, org: NIL })).body.data.length === 0 && (await post('portal.me', {}, { token: k.token, org: L })).status === 404 && (await post('clients.list', {}, { token: k.token, org: L })).status === 404);
+check('E64', 'Another real person cannot use the invitation link (their sign-in e-mail does not match)', (await post('invitation.accept', { token: cinv.token }, { token: stranger.token, org: NIL })).status === 404);
+const accepted = await post('invitation.accept', { token: cinv.token }, { token: k.token, org: NIL });
+check('E65', 'The invited person accepts with their own verified e-mail and becomes a client member of that one organization', accepted.status === 200 && (await admin.query("select kind, role, client_id, status from memberships where user_id = $1 and workspace_id = $2", [k.id, L])).rows.some((m) => m.kind === 'client' && m.role === null && m.client_id === cinv.client_id && m.status === 'active'));
+check('E66', 'While the Portal is locked (G2) the active client is still refused every Portal call, and staff calls are refused as not found', (await post('portal.me', {}, { token: k.token, org: L })).status === 404 && (await post('clients.list', {}, { token: k.token, org: L })).status === 404 && (await post('clients.access.list', {}, { token: k.token, org: L })).status === 404);
+check('E67', 'The client cannot see the other organization, and the owner of both sees the access only in the organization asked for', (await post('portal.me', {}, { token: k.token, org: A })).status === 404 && (await post('clients.access.list', {}, { token: o2.token, org: A })).body.data.every((x) => x.email !== kEmail) && (await post('clients.access.list', {}, { token: o2.token, org: L })).body.data.some((x) => x.email === kEmail && x.status === 'active'));
+await admin.query("insert into workspace_apps (workspace_id, app_key, enabled) values ($1, 'portal', true) on conflict (workspace_id, app_key) do update set enabled = true", [L]);
+const pm = await post('portal.me', {}, { token: k.token, org: L });
+check('E68', 'Once the owner opens the Portal for that organization (done directly here, as the go-live step does), the client reaches only their own client record', pm.status === 200 && pm.body.data.length === 1 && pm.body.data[0].id === cinv.client_id && (await post('clients.list', {}, { token: k.token, org: L })).status === 404);
+const caId = cinv.access_id;
+await post('clients.access.set_status', { id: caId, status: 'suspended' }, { token: o2.token, org: L });
+check('E69', 'Suspending cuts the client off at once, even though their sign-in token is still valid', (await post('portal.me', {}, { token: k.token, org: L })).status === 404);
+await post('clients.access.set_status', { id: caId, status: 'active' }, { token: o2.token, org: L });
+check('E70', 'Restoring gives the same access back', (await post('portal.me', {}, { token: k.token, org: L })).status === 200);
+await post('clients.access.set_status', { id: caId, status: 'revoked' }, { token: o2.token, org: L });
+check('E71', 'Revoking removes the membership; the client record stays', (await post('portal.me', {}, { token: k.token, org: L })).status === 404 && (await admin.query("select count(*)::int c from clients where id = $1", [cinv.client_id])).rows[0].c === 1);
+await admin.query("update workspace_apps set enabled = false where workspace_id = $1 and app_key = 'portal'", [L]);
+
 await s.close(); await admin.end();
 for (const x of results) console.log(`${x.ok ? 'PASS' : 'FAIL'}  ${x.id.padEnd(4)} ${x.n}${x.ok ? '' : `  [${x.d}]`}`);
 const p = results.filter((x) => x.ok).length; console.log(`\n${p}/${results.length} checks passed`); process.exit(p === results.length ? 0 : 1);
