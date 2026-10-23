@@ -12,7 +12,7 @@ import { startFakeSupabaseStorage } from '../test/fakes/fake-supabase-storage.mj
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || '/opt/node22/lib/node_modules/playwright');
 const SHOTS = process.env.SHOTS || 'e2e-shots'; mkdirSync(SHOTS, { recursive: true });
-const results = []; const check = (id, n, ok, d = '') => results.push({ id, n, ok: !!ok, d });
+const results = []; const check = (id, n, ok, d = '') => { results.push({ id, n, ok: !!ok, d }); if (!ok) console.log(`FAIL ${id}: ${n} ${d}`); };
 const admin = new pg.Client({ connectionString: 'postgresql://supabase_admin:postgres@127.0.0.1:54322/postgres' }); await admin.connect();
 // the local database keeps what earlier runs created; the client list shows 200 at most, so retire earlier runs' test clients first (archived, never deleted)
 await admin.query("update clients set archived_at = now() where archived_at is null and name ~ '^(Harry Kaye PT|Victor Audit|Acme Fitness|Forms client|E[0-9]+E [Cc]lient|Ladder client|Board client|Acme [0-9]|UI Client|Archived Client)'");
