@@ -294,7 +294,7 @@ await page.goBack(); await page.reload(); await wait('Your apps in Layer2Funnels
   await admin.query('update time_entries set ended_at = now() where ended_at is null');
   await page.goto(`${base}/#/projects`); await page.waitForSelector('.pj-cards', { timeout: 9000 }).catch(async (e) => { await shot(page, 'FAILED-pj'); console.log((await page.locator('body').innerText()).slice(0, 600), problems.slice(0, 3), net.slice(-4)); throw e; });
   check('P1', 'Projects opens as its own app with a sidebar and a New project action', (await page.locator('.pj-side').count()) === 1 && (await page.getByRole('button', { name: 'New project' }).count()) >= 1);
-  await page.getByRole('button', { name: 'New project' }).first().click(); await page.fill('#np-name', PJ); await page.getByRole('button', { name: 'Create project' }).click(); await wait(PJ);
+  await page.getByRole('button', { name: 'New project' }).first().click(); await page.fill('#np-name', PJ); await page.getByRole('button', { name: 'Create project' }).click(); await page.waitForSelector('[role=tablist] [data-k="whiteboards"]', { timeout: 9000 });
   const created = (await admin.query("select client_id, name from projects where name = $1", [PJ])).rows;
   check('P2', 'A new internal project is created (no client) and its workspace opens with the tabs', created.length === 1 && created[0].client_id === null && (await page.getByRole('tab').count()) >= 7);
   await page.getByRole('tab', { name: 'List', exact: true }).click(); await page.fill('input[name=t]', T1); await page.keyboard.press('Enter'); await wait(T1);
