@@ -33,7 +33,7 @@ export function launcherView({ catalog, error, org, orgs, role, name, registry, 
   const head = (sub) => h('div', { class: 'skyhead' }, h('div', {}, h('p', { class: 'hi' }, greeting(part, name)), h('h1', { 'data-page-title': true }, `Your apps in ${org.name}`), h('p', { class: 'sub fine' }, sub)), chipSlot);
   const finish = (...kids) => { root.append(...kids); return root; };
   if (error) return finish(head(''), h('div', { class: 'shelf' }, errorState(retry)));
-  if (!catalog.length) return finish(head(''), h('div', { class: 'shelf' }, emptyState({ title: 'No apps yet', body: 'No app is switched on for you in this organization. Ask an admin.', ic: 'grid' })));
+  if (!catalog.length) return finish(head(''), h('div', { class: 'shelf' }, emptyState({ title: 'No apps yet', body: 'No app is switched on for you in this organization. Ask an admin. If you were invited as a client, your portal opens once the team switches it on.', ic: 'grid' })));
   const sub = role === 'owner' || role === 'admin' ? `You’re ${role === 'owner' ? 'an owner' : 'an admin'} here, so you see every app that is set up.` : 'You see the apps your access level includes. Others aren’t shown.';
   if (getWeather) getWeather().then((w) => { if (!w || !root.isConnected) return; root.dataset.wx = w.condition; chipSlot.replaceChildren(weatherChip(w)); attrib.hidden = false; }).catch(() => {});
   const attrib = h('p', { class: 'attrib', hidden: true }, 'Weather: ', h('a', { href: 'https://www.met.no/en', target: '_blank', rel: 'noopener noreferrer' }, 'Data from MET Norway'), ' (CC BY 4.0). You can switch weather off in your profile menu.');

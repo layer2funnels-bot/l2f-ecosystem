@@ -14,6 +14,8 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || '/opt/node22/lib/n
 const SHOTS = process.env.SHOTS || 'e2e-shots'; mkdirSync(SHOTS, { recursive: true });
 const results = []; const check = (id, n, ok, d = '') => results.push({ id, n, ok: !!ok, d });
 const admin = new pg.Client({ connectionString: 'postgresql://supabase_admin:postgres@127.0.0.1:54322/postgres' }); await admin.connect();
+// the local database keeps what earlier runs created; the client list shows 200 at most, so retire earlier runs' test clients first (archived, never deleted)
+await admin.query("update clients set archived_at = now() where archived_at is null and name ~ '^(Harry Kaye PT|Victor Audit|Acme Fitness|Forms client|E[0-9]+E [Cc]lient|Ladder client|Board client|Acme [0-9]|UI Client|Archived Client)'");
 await admin.query('truncate value_ladder_rungs, funnel_references, funnel_brand_kits, funnel_stories, funnel_offers, funnel_avatars');   // clean slate (local database only)
 const stamp = Date.now(); const EMAIL = `ui.${stamp}@example.com`, PW = 'correct-horse-battery-staple'; const NAME = 'Una Owner';
 const GUEST = `guest.ui.${stamp}@example.com`, OUTSIDER = `outsider.ui.${stamp}@example.com`;
@@ -510,10 +512,10 @@ await page.getByRole('button', { name: 'Manage Gus Guest' }).click(); await page
 await q("update memberships set role = 'editor' where workspace_id = $1 and user_id = (select id from auth.users where email = $2)", [L, GUEST]);
 
 // ---- Access
-await page.getByRole('tab', { name: 'Access' }).click(); await wait('Deny always wins.');
+await page.getByRole('tab', { name: 'Access', exact: true }).click(); await wait('Deny always wins.');
 check('F9', 'Access opens on Levels: a table read from the real permission catalog, four levels, grouped by app', (await page.locator('thead th').evaluateAll((e) => e.map((x) => x.textContent))).join() === 'Can they…,Owner,Admin,Editor,Viewer' && (await page.locator('tbody th[colspan]').count()) >= 4 && await page.getByText('The last owner can’t be removed or demoted.').isVisible());
 await shot(page, 'f2-levels');
-await page.keyboard.press('Shift+Tab'); await page.getByRole('tab', { name: 'Access' }).focus(); await page.keyboard.press('ArrowLeft'); await page.waitForFunction(() => location.hash.endsWith('/admin/members') && document.querySelector('[role=tab][data-k=members]')?.getAttribute('aria-selected') === 'true');
+await page.keyboard.press('Shift+Tab'); await page.getByRole('tab', { name: 'Access', exact: true }).focus(); await page.keyboard.press('ArrowLeft'); await page.waitForFunction(() => location.hash.endsWith('/admin/clients')); await page.waitForSelector('#invite-client'); await page.locator('[role=tab][data-k=clients]').focus(); await page.keyboard.press('ArrowLeft'); await page.waitForFunction(() => location.hash.endsWith('/admin/members') && document.querySelector('[role=tab][data-k=members]')?.getAttribute('aria-selected') === 'true');
 check('F10', 'Tabs work from the keyboard: arrow keys move and switch', (await page.getAttribute('[role=tab][data-k=members]', 'aria-selected')) === 'true' && page.url().endsWith('/admin/members'));
 await visit(page, base + '/#/office/admin/access/assignments'); await wait('Add assignment');
 check('F11', 'Assignments starts empty with an explanation, not a blank table', await page.getByText('No assignments yet').isVisible());
@@ -869,6 +871,7 @@ for (const [w, label] of [[1280, 'desktop'], [768, 'tablet'], [390, 'phone']]) {
 {
   const [{ id: wsS }] = (await admin.query("select id from workspaces where slug = 'layer2funnels'")).rows;
   await admin.query("update apps set lifecycle = 'active' where key = 'social_planner'"); await admin.query("insert into workspace_apps (workspace_id, app_key, enabled) values ($1, 'social_planner', true) on conflict (workspace_id, app_key) do update set enabled = true", [wsS]);
+  await admin.query("update social_posts set archived_at = now() where archived_at is null and (title like 'Teaser %' or title like 'Second %')");   // earlier runs leave posts on today's calendar day
   const CN = `Spring push ${Date.now()}`, PN = `Teaser ${Date.now()}`, PN2 = `Second ${Date.now()}`;
   await page.reload(); await page.goto(`${base}/#/social`); await page.waitForSelector('.pj-head h1', { timeout: 9000 });
   check('SO1', 'Social Planner opens on the calendar with Calendar, Posts, Campaigns and Channels', (await page.getByRole('tab').allInnerTexts()).join() === 'Calendar,Posts,Campaigns,Channels' && (await page.locator('.sp-cal').count()) === 1);
@@ -921,6 +924,47 @@ for (const [w, label] of [[1280, 'desktop'], [768, 'tablet'], [390, 'phone']]) {
   check('SO17', 'The Social Planner tile address opens the planner', (await page.locator('.pj-head h1').innerText()) === 'Social Planner');
   await admin.query("update apps set lifecycle = 'coming_soon' where key = 'social_planner'"); await admin.query("delete from workspace_apps where workspace_id = $1 and app_key = 'social_planner'", [wsS]);
   await page.goto(`${base}/#/launcher`); await page.reload(); await wait('Your apps in');
+}
+
+// =============================================================== C9. Admin › Client access (invite first; suspend, restore, revoke; Portal stays locked)
+{
+  const [{ id: wsX }] = (await admin.query("select id from workspaces where slug = 'layer2funnels'")).rows;
+  const EMAIL = `anna.${Date.now()}@acme-test.example`, CNAME = `Acme ${Date.now()}`, PERSON = 'Anna Test';
+  await page.goto(`${base}/#/office/admin/clients`); await page.reload(); await page.waitForSelector('#invite-client', { timeout: 12000 });
+  check('CX1', 'Admin has a Client access tab that says the Client Portal is locked and that nothing here opens it', (await page.getByRole('tab', { name: 'Client access' }).count()) === 1 && (await page.locator('main').innerText()).includes('The Client Portal is locked'));
+  await page.click('#invite-client'); await page.fill('#ci-email', 'not an email'); await page.getByRole('button', { name: 'Create invitation' }).click();
+  check('CX2', 'A bad email is refused in the form, and nothing is created', (await page.locator('#ci-email-e').innerText()).includes('Enter an email') && (await admin.query("select count(*)::int c from client_access where workspace_id = $1 and email = 'not an email'", [wsX])).rows[0].c === 0);
+  await page.fill('#ci-email', EMAIL); await page.fill('#ci-person', PERSON); await page.fill('#ci-name', CNAME); await page.getByRole('button', { name: 'Create invitation' }).click(); await page.waitForSelector('#cl-link', { timeout: 12000 });
+  const link = await page.inputValue('#cl-link'); const token = decodeURIComponent(link.split('token=')[1] ?? '');
+  const q1 = (await admin.query("select a.status, a.person_name, c.name, p.email, p.stage_key from client_access a join clients c on c.id = a.client_id join client_profiles p on p.client_id = c.id where a.workspace_id = $1 and a.email = $2", [wsX, EMAIL])).rows;
+  check('CX3', 'Inviting shows a one-time link and creates, in one step, the client record (Onboarding stage), the invitation and an "invited" access', link.includes('#/invite?token=') && token.length > 30 && q1.length === 1 && q1[0].status === 'invited' && q1[0].name === CNAME && q1[0].email === EMAIL && q1[0].stage_key === 'onboarding');
+  await page.getByRole('button', { name: 'Done' }).click(); await page.waitForSelector(`[data-manage-client]`, { timeout: 9000 });
+  await page.locator('[data-manage-client]').first().click(); await page.getByRole('button', { name: 'Send a new link' }).click(); await page.waitForSelector('#cl-link', { timeout: 9000 });
+  const token2 = decodeURIComponent((await page.inputValue('#cl-link')).split('token=')[1] ?? '');
+  check('CX4', 'Asking for a new link keeps the same client record, replaces the old link and does not create a second client', token2 !== token && (await admin.query("select count(*)::int c from clients where workspace_id = $1 and name = $2", [wsX, CNAME])).rows[0].c === 1 && (await admin.query("select count(*)::int c from invitations where workspace_id = $1 and email = $2 and revoked_at is null and accepted_at is null", [wsX, EMAIL])).rows[0].c === 1);
+  await page.getByRole('button', { name: 'Done' }).click();
+  // the client accepts (done in the database exactly as the API does it: as the invited person, with the invited email in the sign-in token)
+  const kid = (await admin.query('select gen_random_uuid() id')).rows[0].id;
+  await admin.query('begin'); await admin.query('set local role app_user'); await admin.query("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ sub: kid, email: EMAIL, role: 'authenticated' })]); await admin.query('select accept_invitation($1)', [token2]); await admin.query('commit');
+  await page.reload(); await page.waitForSelector('[data-manage-client]', { timeout: 12000 });
+  check('CX5', 'After the client accepts, the list shows them as Active, and the Portal is still locked', (await page.locator('tbody tr', { hasText: EMAIL }).innerText()).includes('Active') && (await page.locator('main').innerText()).includes('The Client Portal is locked'));
+  await page.locator('tbody tr', { hasText: EMAIL }).getByRole('button', { name: /Manage/ }).click(); await page.getByRole('button', { name: 'Suspend access' }).click(); await page.getByRole('button', { name: 'Suspend', exact: true }).click();
+  await page.waitForFunction((e) => [...document.querySelectorAll('tbody tr')].some((r) => r.innerText.includes(e) && r.innerText.includes('Suspended')), EMAIL, { timeout: 9000 });
+  check('CX6', 'Suspend switches the client\'s membership off straight away', (await admin.query("select status from memberships where user_id = $1", [kid])).rows[0].status === 'deactivated');
+  await page.locator('tbody tr', { hasText: EMAIL }).getByRole('button', { name: /Manage/ }).click(); await page.getByRole('button', { name: 'Restore access' }).click(); await page.getByRole('button', { name: 'Restore', exact: true }).click();
+  await page.waitForFunction((e) => [...document.querySelectorAll('tbody tr')].some((r) => r.innerText.includes(e) && r.innerText.includes('Active')), EMAIL, { timeout: 9000 });
+  check('CX7', 'Restore brings back the same access', (await admin.query("select status from memberships where user_id = $1", [kid])).rows[0].status === 'active');
+  await page.locator('tbody tr', { hasText: EMAIL }).getByRole('button', { name: /Manage/ }).click(); await page.waitForFunction(() => /Access suspended/.test(document.querySelector('ol[aria-label=History]')?.innerText ?? ''), null, { timeout: 9000 });
+  const histText = await page.locator('ol[aria-label=History]').innerText();
+  check('CX8', 'The history lists the steps in plain words, without the email', histText.includes('Access suspended') && !histText.includes('@'), histText);
+  await page.getByRole('button', { name: 'Revoke access' }).click(); await page.getByRole('button', { name: 'Revoke', exact: true }).click();
+  await page.waitForFunction((e) => [...document.querySelectorAll('tbody tr')].some((r) => r.innerText.includes(e) && r.innerText.includes('Revoked')), EMAIL, { timeout: 9000 });
+  const after = (await admin.query("select (select count(*)::int from memberships where user_id = $1) m, (select count(*)::int from clients where name = $2 and workspace_id = $3) c", [kid, CNAME, wsX])).rows[0];
+  check('CX9', 'Revoke removes the membership but keeps the client record', after.m === 0 && after.c === 1, JSON.stringify(after));
+  await page.locator('tbody tr', { hasText: EMAIL }).getByRole('button', { name: /Manage/ }).click(); await page.getByRole('button', { name: 'Invite again' }).click(); await page.waitForSelector('#cl-link', { timeout: 9000 });
+  check('CX10', 'Inviting a revoked person again reuses their client record', (await admin.query("select count(*)::int c from clients where name = $1 and workspace_id = $2", [CNAME, wsX])).rows[0].c === 1 && (await admin.query("select count(*)::int c from client_access where email = $1 and workspace_id = $2", [EMAIL, wsX])).rows[0].c === 2);
+  await page.getByRole('button', { name: 'Done' }).click();
+  check('CX11', 'Client access is not in the staff Members list', !(await (async () => { await page.getByRole('tab', { name: 'Members' }).click(); await page.waitForSelector('#invite', { timeout: 9000 }); return (await page.locator('main').innerText()).includes(EMAIL); })()));
 }
 
 check('J1', 'No script errors, warnings or Content-Security-Policy violations during the whole run (deliberate 4xx answers excluded)', problems.length === 0, problems.slice(0, 4).join(' | '));
