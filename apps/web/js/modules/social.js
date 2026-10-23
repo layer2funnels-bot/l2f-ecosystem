@@ -10,7 +10,7 @@ const TABS = [['calendar', 'Calendar'], ['posts', 'Posts'], ['campaigns', 'Campa
 const NO_CONNECT = 'Connecting accounts isn’t available yet. Posts are planned here and published by a person.';
 
 export function socialView({ api, ctx, route }) {
-  const root = h('section', { class: 'sp' }); const live = () => ctx.live() && root.isConnected;
+  const root = h('section', { class: 'soc' }); const live = () => ctx.live() && root.isConnected;
   const canCreate = ctx.canAnywhere('social.post.create'); const canEdit = ctx.canAnywhere('social.post.edit'); const canSched = ctx.canAnywhere('social.post.schedule');
   let channels = []; let campaigns = [];
   const chan = (k) => channels.find((c) => c.key === k); const chLabel = (k) => chan(k)?.label ?? k;
