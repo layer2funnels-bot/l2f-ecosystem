@@ -44,8 +44,3 @@ create trigger audit_client_strategy_copies after insert or delete on public.cli
 create index client_strategy_copies_client on public.client_strategy_copies (workspace_id, client_id);
 
 grant select, insert, delete on public.client_strategy_copies to app_user;
-do $$
-begin
-  if exists (select 1 from pg_roles where rolname = 'authenticated') then grant select, insert, delete on public.client_strategy_copies to authenticated; end if;
-  if exists (select 1 from pg_roles where rolname = 'anon') then revoke all on public.client_strategy_copies from anon; end if;
-end $$;
