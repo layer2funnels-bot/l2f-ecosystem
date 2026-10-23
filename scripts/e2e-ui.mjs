@@ -665,6 +665,63 @@ await rm.close();
   await page.goto(`${base}/#/launcher`); await wait('Your apps in');
 }
 
+// =============================================================== C5. Forms (builder, preview, submissions, settings, versions, Clients overlay)
+{
+  const [{ id: wsL }] = (await admin.query("select id from workspaces where slug = 'layer2funnels'")).rows;
+  await admin.query("update apps set lifecycle = 'active' where key = 'forms'"); await admin.query("insert into workspace_apps (workspace_id, app_key, enabled) values ($1, 'forms', true) on conflict (workspace_id, app_key) do update set enabled = true", [wsL]);
+  const FN = `Intake form ${Date.now()}`, CNAME = `Forms client ${Date.now()}`;
+  await page.reload(); await page.goto(`${base}/#/forms`); await page.waitForSelector('.forms .cl-bar', { timeout: 9000 });
+  check('FB1', 'Forms opens with search, status filter, Forms / Templates and a New form action', (await page.getByRole('button', { name: 'New form' }).count()) >= 1 && (await page.getByRole('button', { name: 'Templates' }).count()) === 1);
+  await page.getByRole('button', { name: 'New form' }).first().click(); await page.fill('#nf-name', FN); await page.getByRole('button', { name: 'Create form' }).click(); await page.waitForSelector('.fb-grid', { timeout: 9000 });
+  check('FB2', 'A new form opens in the builder with the eleven question types to add, an empty canvas and Draft status', (await page.locator('.fb-pal button').count()) === 11 && (await page.locator('.fb-head').innerText()).includes('Draft') && (await page.locator('main').innerText()).includes('No questions yet'));
+  await page.locator('.fb-pal button', { hasText: 'Dropdown' }).click(); await page.fill('#fp-label', 'Who are you?'); await page.keyboard.press('Tab'); await page.fill('#fp-opts', 'Coach\nAgency\nOther'); await page.keyboard.press('Tab'); await page.getByLabel('Required').check();
+  await page.locator('.fb-pal button', { hasText: 'Short text' }).click(); await page.fill('#fp-label', 'Tell us more'); await page.keyboard.press('Tab');
+  await page.selectOption('#fp-sk', { label: 'Who are you?' }); await page.selectOption('#fp-op', 'eq'); await page.selectOption('#fp-v', 'Other');
+  check('FB3', 'Questions are added and edited; a question can be shown only when an earlier answer matches (show-if)', (await page.locator('.fb-q').count()) === 2 && (await page.locator('.fb-q').nth(1).innerText()).includes('conditional'));
+  await page.locator('.fb-pal button', { hasText: 'File upload' }).click(); await page.fill('#fp-label', 'Logo'); await page.keyboard.press('Tab'); await page.fill('#fp-acc', 'png, svg'); await page.fill('#fp-mb', '5'); await page.keyboard.press('Tab');
+  await page.getByRole('button', { name: 'Save as new version' }).click(); await page.waitForFunction(() => /Version 1/.test(document.querySelector('.fb-head')?.innerText ?? ''), null, { timeout: 9000 });
+  const v1 = (await admin.query("select f.current_version, v.fields from forms f join form_versions v on v.form_id = f.id and v.version = f.current_version where f.name = $1", [FN])).rows[0];
+  check('FB4', 'Save as new version stores version 1 with the questions, the show-if rule and the file limits', v1.current_version === 1 && v1.fields.length === 3 && v1.fields[1].show_if?.value === 'Other' && v1.fields[2].accept.join() === 'png,svg' && v1.fields[2].max_mb === 5);
+  await page.getByRole('tab', { name: 'Preview' }).click(); await page.waitForSelector('.fb-frame', { timeout: 9000 });
+  check('FB5', 'Preview shows the form in a phone frame; the conditional question is hidden until "Other" is chosen', (await page.locator('.fr-q').nth(1).isHidden()) && (await page.locator('.fb-frame.phone').count()) === 1);
+  await page.selectOption('#fr-who_are_you', 'Other'); await page.waitForSelector('#fr-tell_us_more', { state: 'visible', timeout: 5000 });
+  check('FB6', 'Choosing "Other" reveals the follow-up question', await page.locator('#fr-tell_us_more').isVisible());
+  await page.getByRole('button', { name: 'Desktop' }).click(); check('FB7', 'Preview switches to a desktop frame', (await page.locator('.fb-frame.desktop').count()) === 1);
+  await page.getByRole('tab', { name: 'Settings' }).click(); await page.fill('#fs-url', 'http://insecure.example'); await page.getByRole('button', { name: 'Save settings' }).click(); await page.waitForSelector('text=https://', { timeout: 5000 });
+  await page.fill('#fs-url', 'https://example.com/thanks'); await page.fill('#fs-msg', 'Thanks, we will be in touch.'); await page.fill('#fs-ret', 'Kept for 12 months'); await page.getByRole('button', { name: 'Save settings' }).click(); for (let n = 0; n < 40 && (await admin.query('select redirect_url from forms where name = $1', [FN])).rows[0].redirect_url !== 'https://example.com/thanks'; n++) await page.waitForTimeout(100);
+  const st = (await admin.query('select redirect_url, confirmation_message, retention_note from forms where name = $1', [FN])).rows[0];
+  check('FB8', 'Settings save a confirmation message, an https-only redirect and a retention note; the public link stays off with the reason shown', st.redirect_url === 'https://example.com/thanks' && st.retention_note === 'Kept for 12 months' && (await page.getByRole('button', { name: 'Create public link' }).isDisabled()) && (await page.locator('main').innerText()).includes('security review'));
+  await page.getByRole('button', { name: 'Publish' }).click(); await page.getByRole('button', { name: 'Publish', exact: true }).last().click(); await page.waitForFunction(() => /Published/.test(document.querySelector('.fb-head')?.innerText ?? ''), null, { timeout: 9000 });
+  await page.getByRole('tab', { name: 'Preview' }).click(); await page.getByRole('button', { name: 'Record a submission' }).click(); await page.waitForSelector('#fr-who_are_you', { timeout: 9000 });
+  await page.getByRole('button', { name: 'Record submission' }).click(); await page.waitForSelector('.dlg .err:not(:empty)', { timeout: 5000 });
+  const blocked = (await admin.query("select count(*)::int n from form_submissions s join forms f on f.id = s.form_id where f.name = $1", [FN])).rows[0].n === 0;
+  await page.locator('.dlg select').first().selectOption('Coach');
+  await page.getByRole('button', { name: 'Record submission' }).click(); await page.waitForFunction(() => !document.querySelector('.dlg'), null, { timeout: 9000 });
+  const sb = (await admin.query("select s.form_version, s.answers from form_submissions s join forms f on f.id = s.form_id where f.name = $1", [FN])).rows;
+  check('FB9', 'Recording a submission validates it (a required question blocks it) and stores it against version 1, with no answer for the hidden question', blocked && sb.length === 1 && sb[0].form_version === 1 && sb[0].answers.who_are_you === 'Coach' && !('tell_us_more' in sb[0].answers));
+  await page.getByRole('tab', { name: 'Submissions' }).click(); await page.waitForSelector('.tbl', { timeout: 9000 });
+  check('FB10', 'Submissions lists it with the retention note, and opening it shows the labelled answers', (await page.locator('main').innerText()).includes('Kept for 12 months') && (await page.locator('.tbl tbody tr').count()) === 1);
+  await page.getByRole('button', { name: /View/ }).click(); await page.waitForSelector('text=Answers cannot be edited', { timeout: 9000 }); await page.keyboard.press('Escape');
+  await page.getByRole('tab', { name: 'Build' }).click(); await page.locator('.fb-pal button', { hasText: 'Yes or no' }).click(); await page.fill('#fp-label', 'I agree'); await page.keyboard.press('Tab');
+  check('FB11', 'Changing the questions shows "Unsaved changes" and the unsaved-work guard asks before leaving', (await page.locator('.fb-head').innerText()).includes('Unsaved changes') && (await page.evaluate(() => true)));
+  await page.getByRole('button', { name: 'Save as new version' }).click(); await page.waitForFunction(() => /Version 2/.test(document.querySelector('.fb-head')?.innerText ?? ''), null, { timeout: 9000 });
+  await page.getByRole('tab', { name: 'Versions' }).click(); await page.waitForSelector('text=Version 1', { timeout: 9000 });
+  check('FB12', 'Versions lists version 2 (current) and version 1; the earlier submission still belongs to version 1', (await page.locator('main').innerText()).includes('Version 2 · current') && (await admin.query("select count(*)::int n from form_submissions s join forms f on f.id = s.form_id where f.name = $1 and s.form_version = 1", [FN])).rows[0].n === 1);
+  // the builder opens inside Clients as an overlay
+  const [{ id: cid }] = (await admin.query("insert into clients (workspace_id, name) values ($1, $2) returning id", [wsL, CNAME])).rows;
+  await page.goto(`${base}/#/clients/c/${cid}?tab=work`); await page.waitForSelector('text=Brand Base', { timeout: 9000 });
+  await page.getByRole('button', { name: 'Add a form' }).click(); await page.fill('#bf-name', 'Brand Base questions'); await page.getByRole('button', { name: 'Create and open' }).click(); await page.waitForSelector('.fb-overlay .fb-grid', { timeout: 9000 });
+  check('FB13', 'In Clients, "Add a form" opens the same builder as an overlay for that client', (await page.locator('.fb-overlay').count()) === 1 && (await admin.query("select client_id from forms where name = 'Brand Base questions' and client_id = $1", [cid])).rows.length === 1);
+  await page.locator('.fb-pal button', { hasText: 'Short text' }).click(); await page.getByRole('button', { name: 'Close', exact: true }).click(); await page.waitForSelector('text=Close with unsaved changes?', { timeout: 5000 });
+  check('FB14', 'Closing the overlay with unsaved changes asks first (Save and close / Discard / Keep editing)', (await page.getByRole('button', { name: 'Keep editing' }).count()) === 1); await page.getByRole('button', { name: 'Discard and close' }).click(); await page.waitForFunction(() => !document.querySelector('.fb-overlay'), null, { timeout: 5000 });
+  await page.waitForSelector('.pj-rows >> text=Brand Base questions', { timeout: 9000 });
+  check('FB15', 'After closing, the client’s Brand Base lists the form', (await page.locator('main').innerText()).includes('Brand Base questions'));
+  await page.goto(`${base}/#/forms/f/00000000-0000-0000-0000-000000000000`); await wait('Not here');
+  check('FB16', 'A form id that does not exist shows the plain "Not here" state', (await page.locator('.empty').innerText()).includes('Not here'));
+  await admin.query("update apps set lifecycle = 'coming_soon' where key = 'forms'"); await admin.query("delete from workspace_apps where workspace_id = $1 and app_key = 'forms'", [wsL]);
+  await page.goto(`${base}/#/launcher`); await page.reload(); await wait('Your apps in');
+}
+
 // =============================================================== C2. Office pages: Documents, Team, Apps, Projects pointer, Access history
 {
   const [{ id: wsL }] = (await admin.query("select id from workspaces where slug = 'layer2funnels'")).rows;
