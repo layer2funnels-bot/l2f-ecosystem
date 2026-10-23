@@ -23,6 +23,14 @@ export const shellOperations = [
     run: async (_q, ctx, i) => { if (!ctx.weather) throw { code: 'WEATHER_OFF' }; return [await ctx.weather.get(i.lat, i.lon)]; },
   }),
 
+  // ---- Office → Team (every active staff member; e-mail only for owners and admins) and Admin → Access history
+  defineOperation({ name: 'team.list', class: 'read', audience: 'staff', run: (q) => q('select user_id, display_name, email, role, is_you from team_list()') }),
+  defineOperation({
+    // names and kinds only, never content; the table's own policy limits it to owners and admins of the organization in the header
+    name: 'audit.recent', class: 'read', audience: 'staff', input: { limit: { type: 'int', min: 1, max: 200 } },
+    run: (q, _c, i) => q('select id, actor_id, action, subject_type, subject_id, created_at from audit_events order by id desc limit $1', [i.limit ?? 100]),
+  }),
+
   // ---- Admin → Members
   defineOperation({ name: 'members.list', class: 'read', run: (q) => q('select row_kind, user_id, invitation_id, display_name, email, role, status, since, is_you from members_list()') }),
   defineOperation({ name: 'members.setRole', class: 'write', single: true, input: { user: { type: 'uuid', required: true }, role: { type: 'enum', values: ROLES, required: true } }, run: (q, _c, i) => q('select member_set_role($1, $2) as done', [i.user, i.role]) }),

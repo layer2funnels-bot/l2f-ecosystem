@@ -1,7 +1,7 @@
 // Office → Funnels (design 06): home, list, record, edit, share with a client, archive / restore, delete permanently (type the name).
 // The business records live here in Office; Funnel Mapper Pro keeps its own data in this phase. The database decides who may do what; the
 // buttons only follow `ctx.can`, which comes from the same permission engine (organization-wide or on one client).
-import { h, put, icon, pill, btn, link, dialog, toast, field, notice, skeleton, errorState, emptyState, notFoundState, readOnlyNotice, plate } from '../ui.js';
+import { h, put, icon, pill, btn, link, dialog, toast, field, notice, skeleton, errorState, emptyState, notFoundState, readOnlyNotice, plate, initials } from '../ui.js';
 import { FUNNEL_TYPES, hrefFor } from '../routes.js';
 import { fieldLabel, messageFor } from '../messages.js';
 import { dirty } from '../dirty.js';
@@ -47,6 +47,17 @@ const subnav = (current) => h('div', { class: 'subnav', role: 'group', 'aria-lab
   ...FUNNEL_TYPES.map((t) => h('a', { class: 'btn', href: hrefFor.list(t.key), ...(current === t.key ? { 'aria-current': 'page' } : {}), style: current === t.key ? 'background:var(--primary);color:var(--on-primary);border-color:var(--primary)' : '' }, t.label)));
 const pageHead = (crumb, title, sub, right) => [h('div', { class: 'crumb' }, crumb),
   h('div', { class: 'page-actions' }, h('div', {}, h('h1', { 'data-page-title': true }, title), sub ? h('p', { class: 'sub' }, sub) : null), right ? h('div', { class: 'acts' }, ...right) : null)];
+
+// ---- Customer Avatar: the portrait profile (v4). Only the fields this record really has are shown; nothing is invented.
+const portraitTone = (name) => `av-${[...String(name ?? '')].reduce((n, ch) => (n * 31 + ch.charCodeAt(0)) % 6, 0)}`;
+function portrait(r, sections) {
+  const col = (f) => h('div', { class: 'sec' }, h('h4', {}, f.label), r[f.k] ? h('p', {}, r[f.k]) : h('p', { class: 'muted' }, 'Not filled in yet.'));
+  const pains = sections.filter((f) => ['pains', 'objections'].includes(f.k)); const wants = sections.filter((f) => !['pains', 'objections'].includes(f.k) && f.k !== 'summary');
+  return h('section', { class: 'card portrait', 'aria-label': `Profile of ${r.name}` },
+    h('div', { class: `pcard ${portraitTone(r.name)}` }, h('span', { class: 'pface', 'aria-hidden': 'true' }, initials(r.name)), h('b', {}, r.name), h('span', { class: 'role' }, 'Customer avatar'),
+      r.summary ? h('q', {}, r.summary) : h('span', { class: 'fine muted' }, 'No summary yet.')),
+    h('div', { class: 'pcol' }, ...pains.map(col)), h('div', { class: 'pcol' }, ...wants.map(col)));
+}
 
 // ---- Funnels home
 export function funnelsHomeView(ctx) {
@@ -155,7 +166,7 @@ export function funnelRecordView(ctx, typeKey, id) {
       archived ? notice('warn', 'archive', [h('b', {}, `This ${t.one.toLowerCase()} is archived.`), ` It’s hidden from lists and clients can’t see it. ${canDelete ? 'You can restore it, or delete it permanently.' : 'An owner can delete it permanently.'}`],
         canDelete ? [btn([icon('trash'), 'Delete permanently'], () => del(r), 'dng', { id: 'delete' })] : []) : null,
       h('div', { class: 'split' },
-        h('section', { class: 'card' }, ...sections.map((f) => h('div', { class: 'sec' }, h('h4', {}, f.label), showValue(f, r, refs) ? h('p', {}, showValue(f, r, refs)) : h('p', { class: 'muted' }, 'Not filled in yet.')))),
+        typeKey === 'avatars' ? portrait(r, sections) : h('section', { class: 'card' }, ...sections.map((f) => h('div', { class: 'sec' }, h('h4', {}, f.label), showValue(f, r, refs) ? h('p', {}, showValue(f, r, refs)) : h('p', { class: 'muted' }, 'Not filled in yet.')))),
         h('div', { class: 'grid', style: 'align-content:start' }, h('section', { class: 'card pad' }, h('h3', {}, 'Shared with clients'),
           clientName ? (r.client_visible && !archived
             ? h('ul', { class: 'rows', style: 'margin:var(--space-2) calc(var(--space-5)*-1) 0' }, h('li', {}, h('span', {}, clientName), canShare ? btn(['Stop sharing', h('span', { class: 'sr' }, ` with ${clientName}`)], () => unshare(r, clientName)) : null))

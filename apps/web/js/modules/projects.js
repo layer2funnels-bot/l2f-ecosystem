@@ -1,7 +1,7 @@
 // Projects: the shared Projects experience (home list, My Work, project workspace with List / Board / Calendar / Timeline / Docs / Whiteboards,
 // task drawer with timer, smart search). One module so that the Projects app and, later, Office > Projects (V4-2) mount the very same screens and data.
 // Everything goes through the permission-checked API; buttons follow `ctx.can`, the database decides. Logic lives in projectmodel.js (tested without a browser).
-import { h, icon, btn, chip, dialog, drawer, toast, field, notice, skeleton, emptyState, errorState, noAccessState, seg, tabs, readOnlyNotice } from '../ui.js';
+import { h, put, icon, btn, chip, dialog, drawer, toast, field, notice, skeleton, emptyState, errorState, noAccessState, seg, tabs, readOnlyNotice } from '../ui.js';
 import { PROJECT_STATUS, TASK_STATUS, PRIORITY, label, byStatus, progress, monthGrid, monthTitle, shiftMonth, timeline, dueLabel, myWorkGroups, parseSearch, searchInput, duration, clock } from './projectmodel.js';
 import { createBoard, BOARD_MIME } from './whiteboard.js';
 import { emptyDoc, serialize } from './docmodel.js';
@@ -69,10 +69,10 @@ export function projectsView({ api, ctx, route }) {
 
   // ---------------------------------------------------------------- home
   async function home() {
-    main.replaceChildren(h('div', { class: 'pj-head' }, h('div', {}, h('div', { class: 'crumbs fine' }, 'Projects'), h('h1', { 'data-page-title': true }, 'Projects')), ctx.canAnywhere('projects.project.create') ? btn('New project', newProject, 'pri') : null), skeleton(4));
+    put(main, h('div', { class: 'pj-head' }, h('div', {}, h('div', { class: 'crumbs fine' }, 'Projects'), h('h1', { 'data-page-title': true }, 'Projects')), ctx.canAnywhere('projects.project.create') ? btn('New project', newProject, 'pri') : null), skeleton(4));
     const r = await loadProjects(); if (!live()) return;
-    if (!r.ok) return main.replaceChildren(errorState(home));
-    const head = main.firstChild; main.replaceChildren(head);
+    if (!r.ok) return put(main, errorState(home));
+    const head = main.firstChild; put(main, head);
     let filter = 'open';
     const list = h('div', { class: 'pj-cards' });
     const draw = () => {
@@ -85,9 +85,9 @@ export function projectsView({ api, ctx, route }) {
 
   // ---------------------------------------------------------------- my work
   async function mine() {
-    main.replaceChildren(h('div', { class: 'pj-head' }, h('div', {}, h('div', { class: 'crumbs fine' }, 'Projects'), h('h1', { 'data-page-title': true }, 'My Work'))), skeleton(4));
+    put(main, h('div', { class: 'pj-head' }, h('div', {}, h('div', { class: 'crumbs fine' }, 'Projects'), h('h1', { 'data-page-title': true }, 'My Work'))), skeleton(4));
     await loadProjects(); const r = await api.call('my.work', {}); if (!live()) return;
-    if (!r.ok) return main.replaceChildren(errorState(mine));
+    if (!r.ok) return put(main, errorState(mine));
     const groups = myWorkGroups(r.data, todayIso()); const body = h('div', { class: 'pj-mine' });
     const done = async (row, li) => { const x = await api.call('tasks.update', { id: row.id, status: 'done' }); if (x.ok) { li.remove(); toast('Marked done.'); } else fail(x, 'change that task'); };
     body.append(...(groups.length ? groups.map(([k, title, rows]) => h('section', {}, h('h2', { class: `pj-gh ${k}` }, title, h('span', { class: 'fine muted' }, ` ${rows.length}`)), h('ul', { class: 'pj-rows' }, ...rows.map((row) => { const li = h('li', { class: 'pj-row' },
@@ -98,9 +98,9 @@ export function projectsView({ api, ctx, route }) {
 
   // ---------------------------------------------------------------- project workspace
   async function project() {
-    main.replaceChildren(skeleton(4)); await loadProjects();
+    put(main, skeleton(4)); await loadProjects();
     const r = await api.call('projects.get', { id: route.id }); if (!live()) return;
-    if (!r.ok) return main.replaceChildren(r.status === 404 ? noAccessState({ action: h('a', { class: 'btn', href: hrefs.home() }, 'Back to Projects') }) : errorState(project));
+    if (!r.ok) return put(main, r.status === 404 ? noAccessState({ action: h('a', { class: 'btn', href: hrefs.home() }, 'Back to Projects') }) : errorState(project));
     const p = r.data[0]; paintSide(p.id);
     const tr = await api.call('tasks.list', { project: p.id, archived: false }); if (!live()) return;
     let tasks = tr.ok ? tr.data : []; const archived = Boolean(p.archived_at); const editable = canProject(p) && !archived; const tasksOk = canTask() && !archived;
@@ -132,17 +132,17 @@ export function projectsView({ api, ctx, route }) {
       const open = tasks.filter((t) => t.status !== 'done'); const late = open.filter((t) => t.due_on && t.due_on < todayIso()); const next = open.filter((t) => t.due_on).sort((a, b) => a.due_on.localeCompare(b.due_on)).slice(0, 5);
       const stat = (n, t, cls = '') => h('div', { class: `pj-stat ${cls}` }, h('b', {}, String(n)), h('span', {}, t));
       const hours = h('b', {}, '…'); api.call('time.summary', { project: p.id, from: '2000-01-01', to: '2999-12-31' }).then((x) => { if (live()) hours.textContent = duration((x.ok ? x.data : []).reduce((a, r2) => a + r2.seconds, 0)); });
-      body.replaceChildren(archived ? readOnlyNotice('This project is archived') : null, h('div', { class: 'pj-stats' }, stat(open.length, 'open tasks'), stat(tasks.length - open.length, 'done'), stat(late.length, 'overdue', late.length ? 'late' : ''), h('div', { class: 'pj-stat' }, hours, h('span', {}, 'time logged'))),
+      put(body, archived ? readOnlyNotice('This project is archived') : null, h('div', { class: 'pj-stats' }, stat(open.length, 'open tasks'), stat(tasks.length - open.length, 'done'), stat(late.length, 'overdue', late.length ? 'late' : ''), h('div', { class: 'pj-stat' }, hours, h('span', {}, 'time logged'))),
         bar(p), h('section', { class: 'pj-sec' }, h('h2', {}, 'About'), h('p', { class: p.description ? '' : 'muted' }, p.description || 'No description yet.')),
         h('section', { class: 'pj-sec' }, h('h2', {}, 'Coming up'), next.length ? h('ul', { class: 'pj-rows' }, ...next.map(taskRow)) : h('p', { class: 'muted' }, 'No dated tasks.')));
     }
     function list() {
-      body.replaceChildren(archived ? readOnlyNotice('This project is archived') : null, ...TASK_STATUS.map(([k, title]) => { const rows = byStatus(tasks)[k];
+      put(body, archived ? readOnlyNotice('This project is archived') : null, ...TASK_STATUS.map(([k, title]) => { const rows = byStatus(tasks)[k];
         return h('section', { class: 'pj-sec' }, h('h2', { class: 'pj-gh' }, title, h('span', { class: 'fine muted' }, ` ${rows.length}`)), rows.length ? h('ul', { class: 'pj-rows' }, ...rows.map(taskRow)) : h('p', { class: 'fine muted' }, 'Nothing here.'), addBox(k)); }));
     }
     function board() {
       const cols = byStatus(tasks); let dragId = null;
-      body.replaceChildren(archived ? readOnlyNotice('This project is archived') : null, h('p', { class: 'fine muted pj-hint' }, tasksOk ? 'Drag a card to another column, or open it to change its status.' : 'You can look at the board but not change it.'),
+      put(body, archived ? readOnlyNotice('This project is archived') : null, h('p', { class: 'fine muted pj-hint' }, tasksOk ? 'Drag a card to another column, or open it to change its status.' : 'You can look at the board but not change it.'),
         h('div', { class: 'pj-board' }, ...TASK_STATUS.map(([k, title]) => { const col = h('div', { class: 'pj-col', 'data-status': k, role: 'group', 'aria-label': title },
           h('h2', { class: 'pj-gh' }, title, h('span', { class: 'fine muted' }, ` ${cols[k].length}`)),
           ...cols[k].map((t) => h('button', { type: 'button', class: 'pj-cardtask', draggable: tasksOk ? 'true' : 'false', 'data-id': t.id, onclick: () => openTask(t), ondragstart: (e) => { dragId = t.id; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', t.id); } },
@@ -153,20 +153,20 @@ export function projectsView({ api, ctx, route }) {
     }
     function calendar() {
       const grid = monthGrid(month.year, month.month, tasks, { today: todayIso() });
-      body.replaceChildren(archived ? readOnlyNotice('This project is archived') : null, h('div', { class: 'pj-calbar' }, btn('Previous month', () => { month = shiftMonth(month.year, month.month, -1); calendar(); }), h('h2', { 'aria-live': 'polite' }, monthTitle(month.year, month.month)), btn('Next month', () => { month = shiftMonth(month.year, month.month, 1); calendar(); })),
+      put(body, archived ? readOnlyNotice('This project is archived') : null, h('div', { class: 'pj-calbar' }, btn('Previous month', () => { month = shiftMonth(month.year, month.month, -1); calendar(); }), h('h2', { 'aria-live': 'polite' }, monthTitle(month.year, month.month)), btn('Next month', () => { month = shiftMonth(month.year, month.month, 1); calendar(); })),
         h('div', { class: 'pj-cal', role: 'grid', 'aria-label': monthTitle(month.year, month.month) }, ...['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => h('div', { class: 'pj-dow', role: 'columnheader' }, d)),
           ...grid.flat().map((c) => h('div', { class: `pj-day${c.inMonth ? '' : ' out'}${c.today ? ' today' : ''}`, role: 'gridcell', 'aria-label': c.date }, h('span', { class: 'pj-dn' }, String(Number(c.date.slice(8)))), ...c.tasks.slice(0, 3).map((t) => h('button', { type: 'button', class: `pj-chipt ${t.status}`, onclick: () => openTask(t), title: t.title }, t.title)), c.tasks.length > 3 ? h('span', { class: 'fine muted' }, `+${c.tasks.length - 3} more`) : null))));
     }
     function timelineTab() {
       const tl = timeline(p, tasks, todayIso());
-      body.replaceChildren(archived ? readOnlyNotice('This project is archived') : null, !tl ? emptyState({ title: 'No dates yet', body: 'Give the project a start and due date, or add due dates to tasks, to see the timeline.', ic: 'clock' })
+      put(body, archived ? readOnlyNotice('This project is archived') : null, !tl ? emptyState({ title: 'No dates yet', body: 'Give the project a start and due date, or add due dates to tasks, to see the timeline.', ic: 'clock' })
         : h('div', { class: 'pj-tl', role: 'img', 'aria-label': 'Project timeline' }, h('div', { class: 'pj-ticks' }, ...tl.ticks.map((t) => h('span', { style: `left:${t.left}%` }, t.date.slice(5)))),
           h('div', { class: 'pj-track' }, tl.today != null ? h('i', { class: 'pj-today', style: `left:${tl.today}%`, title: 'Today' }) : null, tl.project ? h('b', { class: 'pj-pbar', style: `left:${tl.project.left}%;width:${tl.project.width}%` }, p.name) : null),
           ...tl.marks.map((m) => h('div', { class: 'pj-track' }, h('button', { type: 'button', class: `pj-mark ${m.status}${m.overdue ? ' late' : ''}`, style: `left:${m.left}%`, onclick: () => openTask(tasks.find((x) => x.id === m.id)) }, m.title)))));
     }
     async function files(kind) {
-      body.replaceChildren(skeleton(3)); const r2 = await api.call('drive.project.files', { project: p.id, kind: 'document', mime: kind === 'board' ? BOARD_MIME : DOC_MIME }); if (!live()) return;
-      if (!r2.ok) return body.replaceChildren(errorState(() => files(kind)));
+      put(body, skeleton(3)); const r2 = await api.call('drive.project.files', { project: p.id, kind: 'document', mime: kind === 'board' ? BOARD_MIME : DOC_MIME }); if (!live()) return;
+      if (!r2.ok) return put(body, errorState(() => files(kind)));
       const rows = r2.data.filter((f) => (kind === 'board') === (f.mime_type === BOARD_MIME));
       const mk = async () => {
         const nm = field({ id: 'nf-name', label: kind === 'board' ? 'Whiteboard name' : 'Document name', value: kind === 'board' ? 'New whiteboard' : 'Untitled document', maxlength: 200 });
@@ -177,12 +177,12 @@ export function projectsView({ api, ctx, route }) {
           if (!x.ok) { fail(x, 'add files'); return false; } go(kind === 'board' ? `#/board/${x.data[0].id}` : `#/doc/${x.data[0].id}`);
         } }, { label: 'Cancel' }] });
       };
-      body.replaceChildren(archived ? readOnlyNotice('This project is archived') : null, h('div', { class: 'pj-calbar' }, h('h2', {}, kind === 'board' ? 'Whiteboards' : 'Docs'), tasksOk && ctx.canAnywhere('drive.file.upload') ? btn(kind === 'board' ? 'New whiteboard' : 'New document', mk, 'pri') : null),
+      put(body, archived ? readOnlyNotice('This project is archived') : null, h('div', { class: 'pj-calbar' }, h('h2', {}, kind === 'board' ? 'Whiteboards' : 'Docs'), tasksOk && ctx.canAnywhere('drive.file.upload') ? btn(kind === 'board' ? 'New whiteboard' : 'New document', mk, 'pri') : null),
         rows.length ? h('ul', { class: 'pj-rows' }, ...rows.map((f) => h('li', { class: 'pj-row' }, icon(kind === 'board' ? 'wb' : 'doc'), h('a', { class: 'pj-title', href: kind === 'board' ? `#/board/${f.id}` : `#/doc/${f.id}` }, f.name), h('span', { class: 'fine muted' }, `Version ${f.current_version}`), h('span', { class: 'fine muted' }, new Date(f.updated_at).toLocaleDateString()))))
           : emptyState({ title: kind === 'board' ? 'No whiteboards yet' : 'No documents yet', body: `${kind === 'board' ? 'Boards' : 'Documents'} made here belong to this project and open inside it. They are not listed in Drive unless you add them there.`, ic: kind === 'board' ? 'wb' : 'doc', first: true }));
     }
     const docs = () => files('doc'), whiteboards = () => files('board');
-    main.replaceChildren(head, tabBar, body); draw();
+    put(main, head, tabBar, body); draw();
     if (route.query.task) { const t = tasks.find((x) => x.id === route.query.task); if (t) openTask(t); }
   }
 
@@ -210,12 +210,12 @@ export function projectsView({ api, ctx, route }) {
     const notes = h('textarea', { id: 'td-notes', rows: 5, maxlength: '20000', ...(canEdit ? {} : { readonly: true }) }); notes.value = t.notes ?? ''; notes.addEventListener('change', () => save({ notes: notes.value }));
     const checklist = h('div', { class: 'pj-check-list' });
     const drawChecklist = async () => { const r = await api.call('checklist.list', { task: t.id }); if (!r.ok) return;
-      checklist.replaceChildren(h('ul', { class: 'pj-rows' }, ...r.data.map((c) => h('li', { class: 'pj-row' }, h('input', { type: 'checkbox', checked: c.done, 'aria-label': c.label, ...(canEdit ? { onchange: async (e) => { await api.call('checklist.update', { id: c.id, done: e.target.checked }); onChange(); } } : { disabled: true }) }), h('span', {}, c.label), canEdit ? btn(['Remove', h('span', { class: 'sr' }, ` ${c.label}`)], async () => { await api.call('checklist.delete', { id: c.id }); drawChecklist(); onChange(); }, 'link') : null))),
+      put(checklist, h('ul', { class: 'pj-rows' }, ...r.data.map((c) => h('li', { class: 'pj-row' }, h('input', { type: 'checkbox', checked: c.done, 'aria-label': c.label, ...(canEdit ? { onchange: async (e) => { await api.call('checklist.update', { id: c.id, done: e.target.checked }); onChange(); } } : { disabled: true }) }), h('span', {}, c.label), canEdit ? btn(['Remove', h('span', { class: 'sr' }, ` ${c.label}`)], async () => { await api.call('checklist.delete', { id: c.id }); drawChecklist(); onChange(); }, 'link') : null))),
         canEdit ? h('form', { class: 'pj-add', onsubmit: async (e) => { e.preventDefault(); const i = e.target.elements.l; const v = i.value.trim(); if (!v) return; i.value = ''; await api.call('checklist.add', { task: t.id, label: v }); drawChecklist(); onChange(); } }, h('input', { name: 'l', placeholder: 'Add a subtask', 'aria-label': 'Add a subtask', maxlength: 500 }), btn('Add', null, '', { type: 'submit' })) : null); };
     // timer for this task + logged time
     const timeBox = h('div', { class: 'pj-time' });
     const drawTime = async () => { const r = await api.call('time.list', { task: t.id }); const secs = (r.ok ? r.data : []).reduce((a, e) => a + (e.seconds ?? 0), 0); const running = state.timer && state.timer.task_id === t.id;
-      timeBox.replaceChildren(h('div', {}, h('b', {}, duration(secs)), h('span', { class: 'fine muted' }, ' logged on this task')),
+      put(timeBox, h('div', {}, h('b', {}, duration(secs)), h('span', { class: 'fine muted' }, ' logged on this task')),
         canTime() ? h('div', { class: 'pj-timeacts' }, running ? btn('Stop timer', async () => { const x = await api.call('time.stop', {}); if (x.ok) { state.timer = null; paintTimer(); drawTime(); } else fail(x, 'stop that timer'); }, 'pri') : btn('Start timer', async () => { const x = await api.call('time.start', { project: p.id, task: t.id }); if (x.ok) { await loadTimer(); drawTime(); } else if (x.status === 409 || x.status === 422) toast('A timer is already running. Stop it first.', false); else fail(x, 'start a timer'); }, ''),
           btn('Log time by hand', () => logTime(t, p, drawTime), '')) : null); };
     const share = p.client_id && ctx.can('projects.record.share', p.client_id) ? h('label', { class: 'pj-share' }, h('input', { type: 'checkbox', checked: t.client_visible, onchange: async (e) => { const r = await api.call('tasks.share', { id: t.id, visible: e.target.checked }); if (!r.ok) { e.target.checked = !e.target.checked; fail(r, 'share that task'); } else onChange(); } }), ' Show this task to the client') : null;

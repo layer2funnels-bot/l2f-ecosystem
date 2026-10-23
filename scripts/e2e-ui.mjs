@@ -299,7 +299,7 @@ await page.goBack(); await page.reload(); await wait('Your apps in Layer2Funnels
   check('P2', 'A new internal project is created (no client) and its workspace opens with the tabs', created.length === 1 && created[0].client_id === null && (await page.getByRole('tab').count()) >= 7);
   await page.getByRole('tab', { name: 'List', exact: true }).click(); await page.fill('input[name=t]', T1); await page.keyboard.press('Enter'); await wait(T1);
   await page.fill('input[name=t]', T2); await page.keyboard.press('Enter'); await wait(T2);
-  check('P3', 'Tasks are added from the list and stored', (await admin.query("select count(*)::int n from project_tasks where title in ($1,$2)", [T1, T2])).rows[0].n === 2);
+  check('P3', 'Tasks are added from the list and stored, and no stray “null” text is drawn on the page', !/\bnull\b/.test(await page.locator('main').innerText()) && (await admin.query("select count(*)::int n from project_tasks where title in ($1,$2)", [T1, T2])).rows[0].n === 2);
   await page.getByRole('tab', { name: 'Board', exact: true }).click(); await wait('Drag a card');
   const card = page.locator('.pj-cardtask', { hasText: T1 }); const target = page.locator('.pj-col[data-status=doing]');
   await card.dragTo(target); await page.waitForFunction(() => document.querySelector('.pj-col[data-status=doing] .pj-cardtask'));
@@ -354,6 +354,7 @@ check('U20', 'Saving without a name is explained next to the field', (await page
 await page.fill('#r-name', 'Busy coach, 35–45'); await page.fill('#r-pains', 'No time to follow up'); await page.selectOption('#r-client', { label: `Harry Kaye PT ${stamp}` });
 await page.click('button[type=submit]'); await wait('Not filled in yet.');
 check('U21', 'Creating an avatar opens its record page with sections, the client it belongs to, and the owner’s buttons', (await h1()) === 'Busy coach, 35–45' && await page.locator('#edit').isVisible() && await page.locator('#share').isVisible() && await page.locator('#archive').isVisible() && (await page.locator('main').innerText()).includes('No time to follow up'));
+check('O1', 'A customer avatar opens as a portrait profile: a portrait card with name and role, and the pains in their own column', (await page.locator('.portrait .pcard').count()) === 1 && (await page.locator('.portrait .pcard').innerText()).toLowerCase().includes('customer avatar') && (await page.locator('.portrait .pcol').first().innerText()).includes('No time to follow up'));
 await shot(page, 'd1-record');
 // edit, leave with unsaved changes
 await page.click('#edit'); await page.waitForSelector('#r-name');
@@ -562,8 +563,37 @@ const dur = await rm.evaluate(() => [...document.querySelectorAll('.tile')].slic
 check('I1', 'With reduced motion, tile animations and transitions are effectively off', dur.every((d) => d < 0.01) && parseFloat(await rm.evaluate(() => getComputedStyle(document.querySelector('.tile')).transitionDuration)) < 0.01, dur.join());
 await rm.close();
 
+// =============================================================== C2. Office pages: Documents, Team, Apps, Projects pointer, Access history
+{
+  const [{ id: wsL }] = (await admin.query("select id from workspaces where slug = 'layer2funnels'")).rows;
+  const [{ user_id: ownerId }] = (await admin.query("select user_id from memberships where workspace_id = $1 and role = 'owner' and kind = 'staff' limit 1", [wsL])).rows;
+  const libName = `Library note ${Date.now()}`, hidName = `Project-only note ${Date.now()}`;
+  const [{ id: libId }] = (await admin.query("insert into files (workspace_id, space, uploaded_by, name, kind, mime_type, size_bytes) values ($1, 'shared', $2, $3, 'document', 'application/vnd.l2f.doc+json', 10) returning id", [wsL, ownerId, libName])).rows;
+  await admin.query('insert into file_versions (workspace_id, file_id, body) values ($1, $2, $3)', [wsL, libId, JSON.stringify({ v: 1, blocks: [{ t: 'p', c: [{ x: 'hello' }] }] })]);
+  await admin.query("insert into files (workspace_id, space, uploaded_by, name, kind, mime_type, size_bytes, managed_by) values ($1, 'shared', $2, $3, 'document', 'application/vnd.l2f.doc+json', 10, 'projects')", [wsL, ownerId, hidName]);
+  await page.goto(`${base}/#/office/documents`); await wait(libName);
+  check('O2', 'Documents lists the organization library and nothing that belongs to another app (a project-only file is not there)', (await page.locator('main').innerText()).includes(libName) && !(await page.locator('main').innerText()).includes(hidName) && (await page.getByRole('button', { name: 'New document' }).count()) >= 1);
+  await page.locator('main a', { hasText: libName }).click(); await page.waitForSelector('.docpage', { timeout: 9000 });
+  check('O3', 'A library document opens in the editor', page.url().includes('/#/doc/'));
+  await page.goto(`${base}/#/office/documents`); await page.getByRole('button', { name: 'New document' }).first().click(); await page.fill('#nd-name', `Made here ${Date.now()}`); await page.getByRole('button', { name: 'Create', exact: true }).click(); await page.waitForSelector('.docpage', { timeout: 9000 });
+  const made = (await admin.query("select in_library, managed_by from files where name like 'Made here %' order by created_at desc limit 1")).rows[0];
+  check('O4', 'A document made in Office › Documents lands in the library (visible in Drive) and opens for editing', made.in_library === true && made.managed_by === null);
+  await page.goto(`${base}/#/office/team`); await page.waitForSelector('.team li', { timeout: 9000 });
+  check('O5', 'Team lists the organization’s active people with their levels, and marks you', (await page.locator('.team li').count()) >= 1 && (await page.locator('main').innerText()).includes('(you)') && (await page.locator('main').innerText()).includes('Owner'));
+  await page.locator('.team li .pj-title').first().click(); await page.waitForSelector('text=Open work you can see', { timeout: 9000 });
+  check('O6', 'A person’s profile drawer opens and says what work you can see (or that none is visible)', (await page.locator('.drawer, [role=dialog]').first().innerText()).includes('Open work you can see'));
+  await page.keyboard.press('Escape');
+  await page.goto(`${base}/#/office/apps`); await wait('Locked and coming-soon apps');
+  check('O7', 'Apps lists every app with its state: open links for available apps and the reason for locked or coming-soon ones', (await page.locator('.app-row').count()) >= 10 && (await page.locator('main').innerText()).includes('Coming soon') && (await page.locator('main a', { hasText: 'Open' }).count()) >= 3);
+  await page.goto(`${base}/#/office/projects`); await wait('Projects has its own app');
+  check('O8', 'Office › Projects points to the Projects app instead of a dead end', (await page.getByRole('link', { name: 'Open Projects' }).count()) === 1);
+  await page.goto(`${base}/#/office/admin/access/history`); await page.waitForSelector('text=Access history', { timeout: 9000 }); await page.waitForSelector('.tbl, .empty', { timeout: 9000 });
+  check('O9', 'Admin › Access › Access history shows who changed what and when, with names, never content', (await page.locator('.tbl thead th').allInnerTexts()).join().toLowerCase() === 'when,who,what' && !(await page.locator('main').innerText()).includes('{'));
+  await page.goto(`${base}/#/launcher`); await wait('Your apps in');
+}
+
 const routes = [['/#/launcher', 'Your apps in'], ['/#/office', 'Needs your attention'], ['/#/office/funnels', 'Recently changed'], ['/#/office/funnels/avatars', 'Avatar for C1'], ['/#/office/funnels/avatars/new', 'Belongs to'],
-  ['/#/office/admin/members', 'Joining is by invitation only.'], ['/#/office/admin/access/levels', 'Deny always wins.'], ['/#/office/admin/access/assignments', 'Add assignment'], ['/#/office/admin/access/effective', 'Show access for'], ['/#/office/planner', 'isn’t built yet']];
+  ['/#/office/admin/members', 'Joining is by invitation only.'], ['/#/office/admin/access/levels', 'Deny always wins.'], ['/#/office/admin/access/assignments', 'Add assignment'], ['/#/office/admin/access/effective', 'Show access for'], ['/#/office/documents', 'stay with their own app'], ['/#/office/team', 'only where your own access allows'], ['/#/office/apps', 'Locked and coming-soon apps'], ['/#/office/admin/access/history', 'The last 100 changes'], ['/#/office/planner', 'isn’t built yet']];
 for (const [w, label] of [[1280, 'desktop'], [768, 'tablet'], [390, 'phone']]) {
   const p = await newPage(w, 900);
   await p.goto(base + '/'); await wait('Sign in', p);
