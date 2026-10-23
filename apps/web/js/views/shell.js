@@ -87,13 +87,13 @@ const sideLink = (it, current) => {
 };
 
 /** The bottom bar on phones: the first four pages, then More (a sheet) when there are more than five. */
-function bottomBar(items, current) {
+function bottomBar(items, current, appName = '') {
   const main = items.length > 5 ? items.slice(0, 4) : items; const more = items.length > 5 ? items.slice(4) : [];
   return h('nav', { class: 'bbar', 'aria-label': 'Sections' },
     ...main.map((p) => h('a', { href: p.href, ...(p.key === current ? { 'aria-current': 'page' } : {}) }, h('span', { class: 'pillic' }, icon(p.icon)), p.short)),
     more.length ? h('button', { type: 'button', 'aria-haspopup': 'dialog', ...(more.some((p) => p.key === current) ? { 'aria-current': 'page' } : {}),
       onclick: () => {
-        const close = dialog({ title: 'More', body: h('div', { class: 'bsheet' }, ...more.map((p) => h('a', { class: 'btn', href: p.href, onclick: () => close(), ...(p.key === current ? { 'aria-current': 'page' } : {}) }, icon(p.icon), p.label))), actions: [{ label: 'Close', focus: true }] });
+        const close = dialog({ title: `More in ${appName}`, body: h('div', { class: 'bsheet' }, ...more.map((p) => h('a', { class: 'btn', href: p.href, onclick: () => close(), ...(p.key === current ? { 'aria-current': 'page' } : {}) }, icon(p.icon), p.label))), actions: [{ label: 'Close', focus: true }] });
       } }, h('span', { class: 'pillic' }, icon('more')), 'More') : null);
 }
 
@@ -135,5 +135,5 @@ export function shellView({ app, orgs, active, email, name, route, content, bann
     sw, who);
   return h('div', { class: 'app', 'data-org': active.slug ?? '' }, skip,
     h('div', { class: 'shell' }, side, h('div', { class: 'main' }, header, h('main', { class: 'content', id: 'main', 'aria-busy': 'false' }, banner ?? null, content))),
-    items.length ? bottomBar(items, current) : null);
+    items.length ? bottomBar(items, current, appName) : null);
 }
