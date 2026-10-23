@@ -865,6 +865,64 @@ for (const [w, label] of [[1280, 'desktop'], [768, 'tablet'], [390, 'phone']]) {
   await page.goto(`${base}/#/launcher`); await page.reload(); await wait('Your apps in');
 }
 
+// =============================================================== C8. Social Planner (calendar, posts, campaigns, channels, manual posting record)
+{
+  const [{ id: wsS }] = (await admin.query("select id from workspaces where slug = 'layer2funnels'")).rows;
+  await admin.query("update apps set lifecycle = 'active' where key = 'social_planner'"); await admin.query("insert into workspace_apps (workspace_id, app_key, enabled) values ($1, 'social_planner', true) on conflict (workspace_id, app_key) do update set enabled = true", [wsS]);
+  const CN = `Spring push ${Date.now()}`, PN = `Teaser ${Date.now()}`, PN2 = `Second ${Date.now()}`;
+  await page.reload(); await page.goto(`${base}/#/social`); await page.waitForSelector('.pj-head h1', { timeout: 9000 });
+  check('SO1', 'Social Planner opens on the calendar with Calendar, Posts, Campaigns and Channels', (await page.getByRole('tab').allInnerTexts()).join() === 'Calendar,Posts,Campaigns,Channels' && (await page.locator('.sp-cal').count()) === 1);
+  await page.getByRole('tab', { name: 'Channels' }).click(); await page.waitForSelector('.tbl', { timeout: 9000 });
+  check('SO2', 'Channels lists what each channel takes and every Connect button is switched off with the reason', (await page.locator('.tbl tbody tr').count()) === 9 && (await page.getByRole('button', { name: 'Connect' }).evaluateAll((b) => b.every((x) => x.disabled))) && (await page.locator('main').innerText()).includes('280 characters'));
+  await page.getByRole('tab', { name: 'Campaigns' }).click(); await page.waitForSelector('.empty, .pj-cards', { timeout: 9000 });
+  await page.getByRole('button', { name: 'New campaign' }).first().click(); await page.fill('#sc-name', CN); await page.fill('#sc-goal', 'Get 200 sign-ups'); await page.getByRole('button', { name: 'Create', exact: true }).click(); await page.waitForSelector('.pj-head h1', { timeout: 9000 }); await page.waitForFunction((n) => document.querySelector('h1')?.innerText === n, CN, { timeout: 9000 });
+  const camp = (await admin.query("select id, status, goal from social_campaigns where name = $1", [CN])).rows[0];
+  check('SO3', 'A campaign is created as a draft with its goal and opens its own page with an empty progress', camp?.status === 'draft' && camp.goal === 'Get 200 sign-ups' && (await page.locator('main').innerText()).includes('0% posted') && (await page.locator('main').innerText()).includes('No posts in this campaign yet'));
+  await page.getByRole('button', { name: 'New post in this campaign' }).first().click(); await page.fill('#sp-title', PN); await page.selectOption('#sp-channel', 'x'); await page.fill('#sp-caption', 'y'.repeat(300));
+  const over = await page.locator('.sp-count').innerText();
+  check('SO4', 'The caption counter says how far over the channel limit it is (X takes 280)', /20 over/.test(over));
+  await page.fill('#sp-caption', 'Big news is coming'); await page.getByRole('button', { name: 'Create post' }).click(); await page.waitForSelector('.tbl tbody tr', { timeout: 9000 });
+  const p1 = (await admin.query("select id, status, campaign_id, channel from social_posts where title = $1", [PN])).rows[0];
+  check('SO5', 'The post is created as a draft inside the campaign', p1?.status === 'draft' && p1.campaign_id === camp.id && p1.channel === 'x');
+  await page.getByRole('button', { name: PN }).click(); await page.waitForSelector('.drawer', { timeout: 9000 }); await page.getByRole('button', { name: 'Send for review' }).click(); await page.getByRole('button', { name: 'Send', exact: true }).click(); await page.waitForFunction(async () => true);
+  for (let n = 0; n < 40 && (await admin.query("select status from social_posts where id = $1", [p1.id])).rows[0].status !== 'in_review'; n += 1) await page.waitForTimeout(250);
+  check('SO6', 'Sending for review makes an approval and puts the post in review', (await admin.query("select status from social_posts where id = $1", [p1.id])).rows[0].status === 'in_review');
+  await admin.query("update approvals set status = 'approved' where subject_type = 'post' and subject_id = $1", [p1.id]);
+  await page.reload(); await page.waitForSelector('.tbl tbody tr', { timeout: 9000 });
+  check('SO7', 'The campaign list shows the approved state after the decision', (await page.locator('.tbl tbody tr').first().innerText()).includes('Approved'));
+  const local = await page.evaluate(() => { const d = new Date(); const p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T10:00`; });
+  await page.getByRole('button', { name: PN }).click(); await page.waitForSelector('.drawer', { timeout: 9000 }); await page.getByRole('button', { name: 'Schedule', exact: true }).click(); await page.fill('#sp-sch', local); await page.getByRole('button', { name: 'Schedule', exact: true }).last().click();
+  for (let n = 0; n < 40 && (await admin.query("select status from social_posts where id = $1", [p1.id])).rows[0].status !== 'scheduled'; n += 1) await page.waitForTimeout(250);
+  check('SO8', 'An approved post is scheduled for a date and time', (await admin.query("select status from social_posts where id = $1", [p1.id])).rows[0].status === 'scheduled');
+  await page.getByRole('button', { name: PN }).click(); await page.waitForSelector('.drawer', { timeout: 9000 }); await page.getByRole('button', { name: 'Mark as failed' }).click(); await page.getByRole('button', { name: 'Mark as failed', exact: true }).last().click();
+  check('SO9', 'Marking a post failed without saying why is refused in the form', (await page.locator('#sp-why-e').innerText()).includes('Say what went wrong'));
+  await page.fill('#sp-why', 'Login expired'); await page.getByRole('button', { name: 'Mark as failed', exact: true }).last().click();
+  for (let n = 0; n < 40 && (await admin.query("select status from social_posts where id = $1", [p1.id])).rows[0].status !== 'failed'; n += 1) await page.waitForTimeout(250);
+  check('SO10', 'A failed post keeps the reason and can be retried', (await admin.query("select failure_reason from social_posts where id = $1", [p1.id])).rows[0].failure_reason === 'Login expired');
+  await page.getByRole('button', { name: PN }).click(); await page.waitForSelector('.drawer', { timeout: 9000 });
+  check('SO11', 'The drawer shows what went wrong and offers retry and mark as posted', (await page.locator('.drawer').innerText()).includes('Login expired') && (await page.getByRole('button', { name: 'Schedule again' }).count()) === 1);
+  await page.getByRole('button', { name: 'Mark as posted manually' }).click(); await page.fill('#sp-url', 'https://example.org/post/1'); await page.getByRole('button', { name: 'Mark as posted', exact: true }).click();
+  for (let n = 0; n < 40 && (await admin.query("select status from social_posts where id = $1", [p1.id])).rows[0].status !== 'published'; n += 1) await page.waitForTimeout(250);
+  const pub = (await admin.query("select status, published_by, post_url, failure_reason from social_posts where id = $1", [p1.id])).rows[0];
+  check('SO12', 'Mark as posted manually records who did it and the link, and clears the failure', pub.status === 'published' && pub.published_by !== null && pub.post_url === 'https://example.org/post/1' && pub.failure_reason === null);
+  await page.reload(); await page.waitForSelector('.sp-prog', { timeout: 9000 });
+  check('SO13', 'The campaign page shows 100% posted', (await page.locator('.sp-prog').innerText()).includes('100%'));
+  await page.getByRole('button', { name: 'Start now' }).click(); await page.waitForFunction(() => /Active/.test(document.querySelector('.pj-meta')?.innerText ?? ''), null, { timeout: 9000 });
+  await page.getByRole('button', { name: 'Mark completed' }).click(); await page.waitForFunction(() => /Completed/.test(document.querySelector('.pj-meta')?.innerText ?? ''), null, { timeout: 9000 });
+  check('SO14', 'With every post posted the campaign can be started and then completed', (await admin.query("select status from social_campaigns where id = $1", [camp.id])).rows[0].status === 'completed');
+  await page.goto(`${base}/#/social?tab=posts`); await page.waitForSelector('.tbl, .empty', { timeout: 9000 }); await page.getByRole('button', { name: 'New post' }).first().click(); await page.fill('#sp-title', PN2); await page.fill('#sp-caption', 'Hello everyone'); await page.getByRole('button', { name: 'Create post' }).click(); await page.waitForSelector('.tbl tbody tr', { timeout: 9000 });
+  await page.getByRole('button', { name: PN2 }).click(); await page.waitForSelector('.drawer', { timeout: 9000 }); await page.getByRole('button', { name: 'Write it for other channels' }).click(); await page.locator('#vr-linkedin').check(); await page.getByRole('button', { name: 'Make drafts' }).click();
+  for (let n = 0; n < 40 && (await admin.query("select count(*)::int c from social_posts where title = $1", [PN2])).rows[0].c < 2; n += 1) await page.waitForTimeout(250);
+  const vr = (await admin.query("select channel, variant_of is not null v from social_posts where title = $1 order by channel", [PN2])).rows;
+  check('SO15', 'Writing it for LinkedIn makes a second draft that points back at the first', vr.length === 2 && vr.some((x) => x.channel === 'linkedin' && x.v));
+  await page.goto(`${base}/#/social`); await page.waitForSelector('.sp-cal', { timeout: 9000 }); await page.waitForSelector('.sp-chip', { timeout: 9000 });
+  check('SO16', 'The calendar shows the post that was scheduled for today', (await page.locator('.sp-chip', { hasText: PN }).count()) >= 1 && (await page.locator('.sp-undated').innerText()).includes(PN2));
+  await page.goto(`${base}/#/app/social_planner`); await page.waitForSelector('.pj-head h1', { timeout: 9000 });
+  check('SO17', 'The Social Planner tile address opens the planner', (await page.locator('.pj-head h1').innerText()) === 'Social Planner');
+  await admin.query("update apps set lifecycle = 'coming_soon' where key = 'social_planner'"); await admin.query("delete from workspace_apps where workspace_id = $1 and app_key = 'social_planner'", [wsS]);
+  await page.goto(`${base}/#/launcher`); await page.reload(); await wait('Your apps in');
+}
+
 check('J1', 'No script errors, warnings or Content-Security-Policy violations during the whole run (deliberate 4xx answers excluded)', problems.length === 0, problems.slice(0, 4).join(' | '));
 await browser.close(); await s.close(); await admin.end();
 for (const x of results) console.log(`${x.ok ? 'PASS' : 'FAIL'}  ${x.id.padEnd(8)} ${x.n}${x.ok ? '' : `  [${x.d}]`}`);

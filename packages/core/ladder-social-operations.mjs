@@ -125,17 +125,24 @@ ladderOperations.push(
 
 // ------------------------------------------------------------------ social planner
 const CHANNELS = ['facebook', 'instagram', 'linkedin', 'x', 'tiktok', 'youtube', 'pinterest', 'email', 'other'];
-const POST_STATUS = ['idea', 'draft', 'in_review', 'approved', 'scheduled', 'published'];
-const POST = `select p.id, p.client_id, p.channel, p.title, p.caption, p.scheduled_for, p.status, p.published_at, p.archived_at, p.created_at, p.updated_at,
+const POST_STATUS = ['idea', 'draft', 'in_review', 'approved', 'scheduled', 'published', 'failed', 'cancelled'];
+const CAMPAIGN_STATUS = ['draft', 'planned', 'active', 'paused', 'completed'];
+const POST = `select p.id, p.client_id, p.channel, p.title, p.caption, p.scheduled_for, p.status, p.published_at, p.archived_at, p.created_at, p.updated_at, p.campaign_id, p.variant_of, p.failure_reason, p.published_by, p.post_url,
     coalesce((select json_agg(f.file_id order by f.position, f.created_at) from social_post_files f where f.post_id = p.id), '[]'::json) as files from social_posts p`;
+const CAMPAIGN = `select c.id, c.client_id, c.name, c.goal, c.status, c.starts_on, c.ends_on, c.owner_id, c.archived_at, c.created_at, c.updated_at,
+    (select count(*)::int from social_posts p where p.campaign_id = c.id and p.archived_at is null) as posts,
+    (select count(*)::int from social_posts p where p.campaign_id = c.id and p.archived_at is null and p.status = 'published') as published,
+    (select count(*)::int from social_posts p where p.campaign_id = c.id and p.archived_at is null and p.status = 'scheduled') as scheduled,
+    (select count(*)::int from social_posts p where p.campaign_id = c.id and p.archived_at is null and p.status = 'failed') as failed,
+    (select count(*)::int from social_posts p where p.campaign_id = c.id and p.archived_at is null and p.status = 'cancelled') as cancelled from social_campaigns c`;
 const PIN = { channel: { type: 'enum', values: CHANNELS }, title: { type: 'text', max: 200 }, caption: T(5000), scheduled_for: { type: 'timestamp' } };
 
 export const socialOperations = [
   defineOperation({
     name: 'social.posts.list', class: 'read',
-    input: { client: { type: 'uuid' }, channel: PIN.channel, status: { type: 'enum', values: POST_STATUS }, archived: { type: 'bool' }, q: { type: 'text', max: 100 } },
+    input: { client: { type: 'uuid' }, channel: PIN.channel, status: { type: 'enum', values: POST_STATUS }, archived: { type: 'bool' }, q: { type: 'text', max: 100 }, campaign: { type: 'uuid' } },
     run: (q, _c, i) => q(`${POST} where ($1::uuid is null or p.client_id = $1) and ($2::text is null or p.channel = $2) and ($3::text is null or p.status = $3) and ((p.archived_at is not null) = $4)
-      and ($5::text is null or p.title ilike $5) order by p.scheduled_for nulls last, p.created_at desc limit 300`, [i.client ?? null, i.channel ?? null, i.status ?? null, i.archived ?? false, i.q ? like(i.q) : null]),
+      and ($5::text is null or p.title ilike $5) and ($6::uuid is null or p.campaign_id = $6) order by p.scheduled_for nulls last, p.created_at desc limit 300`, [i.client ?? null, i.channel ?? null, i.status ?? null, i.archived ?? false, i.q ? like(i.q) : null, i.campaign ?? null]),
   }),
   defineOperation({
     // the calendar: posts planned between two dates (inclusive), by planned time
@@ -146,26 +153,27 @@ export const socialOperations = [
   defineOperation({ name: 'social.posts.get', class: 'read', single: true, input: id, run: (q, _c, i) => q(`${POST} where p.id = $1`, [i.id]) }),
   defineOperation({
     name: 'social.posts.create', class: 'write', single: true,
-    input: { channel: { ...PIN.channel, required: true }, title: { ...PIN.title, required: true }, caption: PIN.caption, scheduled_for: PIN.scheduled_for, client: { type: 'uuid' }, status: { type: 'enum', values: ['idea', 'draft'] } },
+    input: { channel: { ...PIN.channel, required: true }, title: { ...PIN.title, required: true }, caption: PIN.caption, scheduled_for: PIN.scheduled_for, client: { type: 'uuid' }, campaign: { type: 'uuid' }, status: { type: 'enum', values: ['idea', 'draft'] } },
     run: async (q, ctx, i) => {
-      const [r] = await q('insert into social_posts (workspace_id, channel, title, caption, scheduled_for, client_id, status) values ($1, $2, $3, $4, $5, $6, $7) returning id',
-        [ctx.orgId, i.channel, i.title, i.caption ?? null, i.scheduled_for ?? null, i.client ?? null, i.status ?? 'idea']);
+      const [r] = await q('insert into social_posts (workspace_id, channel, title, caption, scheduled_for, client_id, status, campaign_id) values ($1, $2, $3, $4, $5, $6, $7, $8) returning id',
+        [ctx.orgId, i.channel, i.title, i.caption ?? null, i.scheduled_for ?? null, i.client ?? null, i.status ?? 'idea', i.campaign ?? null]);
       return q(`${POST} where p.id = $1`, [r.id]);
     },
   }),
   defineOperation({
-    name: 'social.posts.update', class: 'write', single: true, input: { ...id, ...PIN },
+    name: 'social.posts.update', class: 'write', single: true, input: { ...id, ...PIN, campaign: { type: 'uuid' }, clear_campaign: { type: 'bool' }, post_url: { type: 'text', max: 500 } },
     run: async (q, _c, i) => {
-      if (!(await q(`update social_posts set channel = coalesce($2, channel), title = coalesce($3, title), caption = coalesce($4, caption), scheduled_for = coalesce($5, scheduled_for)
-        where id = $1 and archived_at is null returning id`, [i.id, i.channel ?? null, i.title ?? null, i.caption ?? null, i.scheduled_for ?? null])).length) return [];
+      if (!(await q(`update social_posts set channel = coalesce($2, channel), title = coalesce($3, title), caption = coalesce($4, caption), scheduled_for = coalesce($5, scheduled_for),
+        campaign_id = case when $7::boolean then null else coalesce($6, campaign_id) end, post_url = case when status = 'published' then coalesce(nullif($8, ''), post_url) else post_url end
+        where id = $1 and archived_at is null returning id`, [i.id, i.channel ?? null, i.title ?? null, i.caption ?? null, i.scheduled_for ?? null, i.campaign ?? null, i.clear_campaign ?? false, i.post_url ?? null])).length) return [];
       return q(`${POST} where p.id = $1`, [i.id]);
     },
   }),
   defineOperation({
     // plan moves: idea/draft, unschedule back to approved, schedule (needs a time), mark published. Review and approval come from the approval.
-    name: 'social.posts.set_status', class: 'write', single: true, input: { ...id, status: { type: 'enum', values: ['idea', 'draft', 'approved', 'scheduled', 'published'], required: true }, scheduled_for: PIN.scheduled_for },
+    name: 'social.posts.set_status', class: 'write', single: true, input: { ...id, status: { type: 'enum', values: ['idea', 'draft', 'approved', 'scheduled', 'published', 'failed', 'cancelled'], required: true }, scheduled_for: PIN.scheduled_for, failure_reason: T(500), post_url: { type: 'text', max: 500 } },
     run: async (q, ctx, i) => {
-      if (!(await q('update social_posts set status = $2, scheduled_for = coalesce($3, scheduled_for) where id = $1 and archived_at is null returning id', [i.id, i.status, i.scheduled_for ?? null])).length) return [];
+      if (!(await q('update social_posts set status = $2, scheduled_for = coalesce($3, scheduled_for), failure_reason = $4, post_url = $5 where id = $1 and archived_at is null returning id', [i.id, i.status, i.scheduled_for ?? null, i.failure_reason ?? null, i.post_url ?? null])).length) return [];
       return q(`${POST} where p.id = $1`, [i.id]);
     },
   }),
@@ -188,6 +196,51 @@ export const socialOperations = [
       return q(`${POST} where p.id = $1`, [i.id]);
     },
   }),
+  defineOperation({ name: 'social.channels', class: 'read', input: {}, run: (q) => q('select key, label, max_text, max_media, media_types, can_schedule, connect_state from social_channels order by label') }),
+  defineOperation({
+    // the same post written for other channels: new drafts that start from this post's words and media and point back at it
+    name: 'social.posts.variants', class: 'write', input: { ...id, channels: { type: 'list', items: 'text', required: true, max: 8 } },
+    run: async (q, ctx, i) => {
+      const [p] = await q('select id, client_id, channel, title, caption, scheduled_for, campaign_id, variant_of from social_posts where id = $1 and archived_at is null', [i.id]);
+      if (!p) return [];
+      const root = p.variant_of ?? p.id; const made = [];
+      for (const ch of [...new Set(i.channels)]) {
+        if (!CHANNELS.includes(ch) || ch === p.channel) continue;
+        const [n] = await q("insert into social_posts (workspace_id, channel, title, caption, scheduled_for, client_id, status, campaign_id, variant_of) values ($1, $2, $3, $4, $5, $6, 'draft', $7, $8) returning id", [ctx.orgId, ch, p.title, p.caption, p.scheduled_for, p.client_id, p.campaign_id, root]);
+        await q('insert into social_post_files (workspace_id, post_id, file_id, position) select workspace_id, $2, file_id, position from social_post_files where post_id = $1', [p.id, n.id]);
+        made.push(n.id);
+      }
+      return made.length ? q(`${POST} where p.id = any($1::uuid[]) order by p.channel`, [made]) : [];
+    },
+  }),
+  defineOperation({
+    name: 'social.campaigns.list', class: 'read',
+    input: { client: { type: 'uuid' }, status: { type: 'enum', values: CAMPAIGN_STATUS }, archived: { type: 'bool' }, q: { type: 'text', max: 100 } },
+    run: (q, _c, i) => q(`${CAMPAIGN} where ($1::uuid is null or c.client_id = $1) and ($2::text is null or c.status = $2) and ((c.archived_at is not null) = $3) and ($4::text is null or c.name ilike $4)
+      order by c.starts_on nulls last, c.created_at desc limit 200`, [i.client ?? null, i.status ?? null, i.archived ?? false, i.q ? like(i.q) : null]),
+  }),
+  defineOperation({ name: 'social.campaigns.get', class: 'read', single: true, input: id, run: (q, _c, i) => q(`${CAMPAIGN} where c.id = $1`, [i.id]) }),
+  defineOperation({
+    name: 'social.campaigns.create', class: 'write', single: true,
+    input: { name: { type: 'text', max: 200, required: true }, goal: T(1000), starts_on: { type: 'date' }, ends_on: { type: 'date' }, client: { type: 'uuid' }, owner: { type: 'uuid' } },
+    run: async (q, ctx, i) => {
+      const [r] = await q('insert into social_campaigns (workspace_id, name, goal, starts_on, ends_on, client_id, owner_id) values ($1, $2, $3, $4, $5, $6, $7) returning id', [ctx.orgId, i.name, i.goal ?? null, i.starts_on ?? null, i.ends_on ?? null, i.client ?? null, i.owner ?? ctx.userId]);
+      return q(`${CAMPAIGN} where c.id = $1`, [r.id]);
+    },
+  }),
+  defineOperation({
+    name: 'social.campaigns.update', class: 'write', single: true,
+    input: { ...id, name: { type: 'text', max: 200 }, goal: T(1000), starts_on: { type: 'date' }, ends_on: { type: 'date' }, clear_dates: { type: 'bool' }, status: { type: 'enum', values: CAMPAIGN_STATUS }, owner: { type: 'uuid' } },
+    run: async (q, _c, i) => {
+      if (!(await q(`update social_campaigns set name = coalesce($2, name), goal = case when $3::text is null then goal else nullif($3, '') end,
+        starts_on = case when $7::boolean then null else coalesce($4, starts_on) end, ends_on = case when $7::boolean then null else coalesce($5, ends_on) end,
+        status = coalesce($6, status), owner_id = coalesce($8, owner_id) where id = $1 and archived_at is null returning id`,
+      [i.id, i.name ?? null, i.goal ?? null, i.starts_on ?? null, i.ends_on ?? null, i.status ?? null, i.clear_dates ?? false, i.owner ?? null])).length) return [];
+      return q(`${CAMPAIGN} where c.id = $1`, [i.id]);
+    },
+  }),
+  defineOperation({ name: 'social.campaigns.archive', class: 'write', single: true, input: id, run: (q, _c, i) => q('update social_campaigns set archived_at = now() where id = $1 and archived_at is null returning id, archived_at', [i.id]) }),
+  defineOperation({ name: 'social.campaigns.restore', class: 'write', single: true, input: id, run: (q, _c, i) => q('update social_campaigns set archived_at = null where id = $1 and archived_at is not null returning id, archived_at', [i.id]) }),
   defineOperation({ name: 'social.posts.archive', class: 'write', single: true, input: id, run: (q, _c, i) => q('update social_posts set archived_at = now() where id = $1 and archived_at is null returning id, archived_at', [i.id]) }),
   defineOperation({ name: 'social.posts.restore', class: 'write', single: true, input: id, run: (q, _c, i) => q('update social_posts set archived_at = null where id = $1 and archived_at is not null returning id, archived_at', [i.id]) }),
   defineOperation({ name: 'social.posts.delete', class: 'write', single: true, input: id, run: (q, _c, i) => q('delete from social_posts where id = $1 returning id', [i.id]) }),
