@@ -19,7 +19,7 @@ import { createWeather } from './weather.mjs';
 // Weather: on unless WEATHER=off. MET Norway wants an identifying User-Agent with a contact: WEATHER_USER_AGENT (the default names the project).
 export function weatherFromEnv(env, fetcher) {
   if (env.WEATHER === 'off') return null;
-  return createWeather({ userAgent: env.WEATHER_USER_AGENT || 'Layer2FunnelsAurjOffice/1.0 github.com/layer2funnels-bot/l2f-ecosystem', ...(fetcher ? { fetcher } : {}) });
+  return createWeather({ userAgent: env.WEATHER_USER_AGENT || 'Layer2FunnelsAurjOffice/1.0 layer2funnels@gmail.com', ...(fetcher ? { fetcher } : {}) });
 }
 export function createSharedState(env, { limits, weatherFetch } = {}) {
   return { weather: weatherFromEnv(env, weatherFetch), local: createRateLimiter(limits ? { limits } : {}), jwks: env.SUPABASE_JWKS_URL ? createJwksProvider({ url: env.SUPABASE_JWKS_URL }) : null };

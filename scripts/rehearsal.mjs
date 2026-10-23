@@ -75,7 +75,7 @@ ok('R8c', 'The page policy allows only our own files and the live project (no lo
 const walk = (d) => readdirSync(d, { withFileTypes: true }).flatMap((e) => e.isDirectory() ? walk(join(d, e.name)) : [join(d, e.name)]);
 const files = walk(dist).filter((f) => /\.(html|js|css|mjs)$/.test(f) && !f.includes('/whiteboard/'));          // the editor bundle has its own check (R8i)
 const hosts = new Set(); for (const f of files) for (const m of readFileSync(f, 'utf8').matchAll(/https?:\/\/([a-z0-9.-]+)/gi)) hosts.add(m[1].toLowerCase());
-const allowedHosts = new Set(['rehearsalref.supabase.co', 'www.w3.org', 'openfontlicense.org', 'scripts.sil.org', 'fonts.google.com', 'github.com', 'www.met.no', 'example.com', 'office.example', 'layer2funnels.com', 'www.layer2funnels.com']);
+const allowedHosts = new Set(['rehearsalref.supabase.co', 'www.w3.org', 'openfontlicense.org', 'scripts.sil.org', 'fonts.google.com', 'github.com', 'www.met.no', 'creativecommons.org', 'example.com', 'office.example', 'layer2funnels.com', 'www.layer2funnels.com']);
 const stray = [...hosts].filter((h) => !allowedHosts.has(h) && !h.endsWith('.example.com'));
 ok('R8d', 'The built site loads nothing from any other host (fonts, scripts, styles are our own); only licence/namespace text mentions other hosts', stray.length === 0, stray.join(','));
 // The whiteboard editor (Excalidraw) mentions many web addresses in its code (help links, embed lists, a collaboration service this app never turns on).

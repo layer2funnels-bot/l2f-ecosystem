@@ -3,7 +3,7 @@
 import { randomUUID as id } from 'node:crypto';
 import { recorder, openDb, migrate } from './lib.mjs';
 import { startFakeMet } from './fakes/fake-met.mjs';
-import { createWeather, condition, labelFor, ATTRIBUTION } from '../packages/core/weather.mjs';
+import { createWeather, condition, labelFor, ATTRIBUTION, ATTRIBUTION_LINKS } from '../packages/core/weather.mjs';
 import { createApi, NO_ORG } from '../packages/core/api.mjs';
 import { createPgExecutor } from '../packages/core/pg-executor.mjs';
 import { createRateLimiter } from '../packages/core/rate-limit.mjs';
@@ -43,6 +43,25 @@ met.state.fail = 0; met.state.status = 503;
 check('WX11', 'Bad places are refused before any request: NaN, out of range', (await thrown(() => wx.get(NaN, 1))) === 'bad_place' && (await thrown(() => wx.get(91, 1))) === 'bad_place' && (await thrown(() => wx.get(1, 181))) === 'bad_place');
 const before = met.calls.length; await thrown(() => wx.get(95, 0));
 check('WX12', 'A refused place never reaches MET', met.calls.length === before);
+
+// ---- MET's Expires time decides when we may ask again (their terms)
+const ewx2 = createWeather({ userAgent: UA, now, base: met.base, fetcher: (u, o) => fetch(u, o) }); met.state.status = 200; met.state.fail = 0; met.state.lastModified = 'Fri, 23 Oct 2026 08:00:00 GMT'; met.calls.length = 0;
+t = 5_000_000_000; met.state.expires = new Date(t + 10 * 60_000).toUTCString();
+await ewx2.get(24.86, 67.01); t += 9 * 60_000; await ewx2.get(24.86, 67.01);
+check('WX14', 'With an Expires 10 minutes ahead MET is not asked again before then (not even at 9 minutes)', met.calls.length === 1);
+t += 2 * 60_000; met.state.expires = new Date(t + 20 * 60_000).toUTCString(); await ewx2.get(24.86, 67.01);
+check('WX15', 'After Expires it asks again with If-Modified-Since, and the 304\'s new Expires extends the freshness', met.calls.length === 2 && met.calls[1].headers['if-modified-since'] === met.state.lastModified && (t += 19 * 60_000, await ewx2.get(24.86, 67.01), met.calls.length === 2));
+met.calls.length = 0; ewx2.size(); const ewx3 = createWeather({ userAgent: UA, now, base: met.base, fetcher: (u, o) => fetch(u, o) });
+met.state.lastModified = 'Fri, 23 Oct 2026 09:00:00 GMT'; met.state.expires = new Date(t + 5_000).toUTCString(); await ewx3.get(25.0, 67.0); t += 30_000; await ewx3.get(25.0, 67.0);
+check('WX16', 'An Expires only seconds away is held to a one-minute minimum (no hammering)', met.calls.length === 1);
+met.calls.length = 0; met.state.lastModified = 'Fri, 23 Oct 2026 10:00:00 GMT'; met.state.expires = new Date(t + 10 * 3_600_000).toUTCString(); const ewx4 = createWeather({ userAgent: UA, now, base: met.base, fetcher: (u, o) => fetch(u, o) });
+await ewx4.get(26.0, 67.0); t += 2 * 3_600_000 + 60_000; await ewx4.get(26.0, 67.0);
+check('WX17', 'An Expires many hours away is capped at two hours so the Launcher never shows a stale sky for a day', met.calls.length === 2);
+met.state.expires = 'not a date'; met.calls.length = 0; const ewx5 = createWeather({ userAgent: UA, now, base: met.base, fetcher: (u, o) => fetch(u, o) }); met.state.lastModified = 'Fri, 23 Oct 2026 11:00:00 GMT';
+await ewx5.get(27.0, 67.0); t += 29 * 60_000; await ewx5.get(27.0, 67.0); t += 2 * 60_000; await ewx5.get(27.0, 67.0);
+check('WX18', 'A missing or unreadable Expires falls back to 30 minutes', met.calls.length === 2);
+const ew6 = await ewx5.get(27.0, 67.0);
+check('WX19', 'The answer carries the credit, the licence link and the note that the data was changed', ew6.source === 'Data from MET Norway' && ew6.licence === ATTRIBUTION_LINKS.licence && /CC BY 4\.0|creativecommons/.test(ATTRIBUTION_LINKS.licence + ATTRIBUTION_LINKS.licenceName) && /Changed/.test(ew6.changes));
 check('WX13', 'The client will not start without an identifying contact in the User-Agent (their terms)', (() => { try { createWeather({ userAgent: 'x' }); return false; } catch { return true; } })() && (() => { try { createWeather({}); return false; } catch { return true; } })());
 const bad = createWeather({ userAgent: UA, now, base: met.base, fetcher: async () => new Response(JSON.stringify({ properties: { timeseries: [] } }), { status: 200 }) });
 check('WX14', 'An answer in an unexpected shape is "unavailable", not a crash', (await thrown(() => bad.get(1, 1))) === 'weather_unavailable');
