@@ -11,7 +11,7 @@ const byKey = Object.fromEntries(FUNNEL_TYPES.map((t) => [t.key, t]));
 export const OFFICE_PAGES = [
   { key: 'home', label: 'Home', icon: 'home', href: '#/office', built: true },
   { key: 'planner', label: 'Planner', icon: 'clock', href: '#/office/planner', built: false },
-  { key: 'projects', label: 'Projects', icon: 'doc', href: '#/office/projects', built: false },
+  { key: 'projects', label: 'Projects', icon: 'doc', href: '#/office/projects', built: true },
   { key: 'funnels', label: 'Funnels', icon: 'star', href: '#/office/funnels', built: true },
   { key: 'documents', label: 'Documents', icon: 'doc', href: '#/office/documents', built: true },
   { key: 'team', label: 'Team', icon: 'user', href: '#/office/team', built: true },
@@ -40,6 +40,9 @@ export function parseRoute(hash) {
   if (a === 'doc' && b && seg.length === 2) return r('doc', { id: b });
   if (a === 'board' && b && seg.length === 2) return r('board', { id: b });
   if (a === 'office' && seg.length === 1) return r('office');
+  if (a === 'office' && b === 'projects' && c === 'mine' && seg.length === 3) return r('office-page', { page: 'projects', view: 'mine' });
+  if (a === 'office' && b === 'projects' && c === 'p' && d && seg.length === 4) return r('office-page', { page: 'projects', view: 'project', id: d });
+  if (a === 'office' && b === 'projects' && seg.length === 2) return r('office-page', { page: 'projects', view: 'home' });
   if (a === 'office' && OFFICE_OTHER.has(b) && seg.length === 2) return r('office-page', { page: b });
   if (a === 'office' && b === 'admin') {
     if (seg.length === 2) return r('admin', { tab: 'members' });
@@ -50,6 +53,8 @@ export function parseRoute(hash) {
   }
   if (a === 'office' && b === 'funnels') {
     if (seg.length === 2) return r('funnels');
+    if (c === 'strategies' && seg.length === 3) return r('strategies');
+    if (c === 'strategy' && d && seg.length === 4) return r('strategy', { id: d });
     if (byKey[c] && seg.length === 3) return r('funnel-list', { type: c });
     if (byKey[c] && d === 'new' && seg.length === 4) return r('funnel-record', { type: c, id: 'new' });
     if (byKey[c] && d && seg.length === 4) return r('funnel-record', { type: c, id: d });
@@ -79,7 +84,7 @@ export function pageKeyFor(route) {
   switch (route.name) {
     case 'office': return { app: 'office', page: 'home' };
     case 'office-page': return { app: 'office', page: route.params.page };
-    case 'funnels': return { app: 'office', page: 'funnels' };
+    case 'funnels': case 'strategies': case 'strategy': return { app: 'office', page: 'funnels' };
     case 'funnel-list': return { app: 'office', page: byKey[route.params.type].page };
     case 'funnel-record': return { app: 'office', page: route.params.id === 'new' ? byKey[route.params.type].page : byKey[route.params.type].record };
     case 'admin': return { app: 'office', page: route.params.tab === 'access' ? 'admin.access' : 'admin.members' };

@@ -44,7 +44,8 @@ const showValue = (f, r, refs) => {
 const run = (ctx, op, input) => ctx.api.call(op, input);
 const subnav = (current) => h('div', { class: 'subnav', role: 'group', 'aria-label': 'Funnels sections' },
   h('a', { class: 'btn', href: hrefFor.funnels(), ...(current === 'home' ? { 'aria-current': 'page' } : {}), style: current === 'home' ? 'background:var(--primary);color:var(--on-primary);border-color:var(--primary)' : '' }, 'Home'),
-  ...FUNNEL_TYPES.map((t) => h('a', { class: 'btn', href: hrefFor.list(t.key), ...(current === t.key ? { 'aria-current': 'page' } : {}), style: current === t.key ? 'background:var(--primary);color:var(--on-primary);border-color:var(--primary)' : '' }, t.label)));
+  ...FUNNEL_TYPES.map((t) => h('a', { class: 'btn', href: hrefFor.list(t.key), ...(current === t.key ? { 'aria-current': 'page' } : {}), style: current === t.key ? 'background:var(--primary);color:var(--on-primary);border-color:var(--primary)' : '' }, t.label)),
+  h('a', { class: 'btn', href: '#/office/funnels/strategies' }, 'Funnel Strategies'));
 const pageHead = (crumb, title, sub, right) => [h('div', { class: 'crumb' }, crumb),
   h('div', { class: 'page-actions' }, h('div', {}, h('h1', { 'data-page-title': true }, title), sub ? h('p', { class: 'sub' }, sub) : null), right ? h('div', { class: 'acts' }, ...right) : null)];
 
@@ -62,6 +63,9 @@ function portrait(r, sections) {
 // ---- Funnels home
 export function funnelsHomeView(ctx) {
   const box = h('div', {}, skeleton(3));
+  const stratBox = h('section', { class: 'card pad', 'aria-labelledby': 'fs-h' }, h('h3', { id: 'fs-h' }, 'Funnel Strategies'), skeleton(1));
+  run(ctx, 'funnels.strategies.list', { library: true }).then((r) => { if (!ctx.live()) return; const list = r.ok ? r.data.slice(0, 4) : [];
+    put(stratBox, h('h3', { id: 'fs-h' }, 'Funnel Strategies'), list.length ? h('ul', { class: 'rows', style: 'margin:var(--space-2) calc(var(--space-5)*-1) 0' }, ...list.map((x) => h('li', {}, h('a', { href: `#/office/funnels/strategy/${x.id}` }, x.name), pill(x.status === 'approved' ? 'Approved' : x.status === 'in_review' ? 'In review' : 'Draft')))) : h('p', { class: 'fine', style: 'margin:var(--space-2) 0' }, 'No strategies yet. Write one per funnel.'), h('a', { class: 'btn link', href: '#/office/funnels/strategies' }, 'See all Funnel Strategies')); });
   (async () => {
     const [ov, ...lists] = await Promise.all([run(ctx, 'funnels.overview'), ...FUNNEL_TYPES.map((t) => run(ctx, `funnels.${t.key}.list`, {}).then((r) => [t, r]))]);
     if (!ctx.live()) return;
@@ -74,6 +78,7 @@ export function funnelsHomeView(ctx) {
       h('section', { class: 'card' }, h('h3', { style: 'padding:var(--space-4) var(--space-5) 0' }, 'Recently changed'),
         recent.length ? h('ul', { class: 'rows' }, ...recent.map(({ t, x }) => h('li', {}, h('span', {}, h('b', {}, nameOf(t.key, x) || '(untitled)'), h('br'), h('span', { class: 'fine' }, `${t.one.toLowerCase()} · ${when(x.updated_at)}`)), h('a', { class: 'btn', href: hrefFor.record(t.key, x.id) }, 'Open'))))
           : emptyState({ title: 'Nothing here yet', body: 'Records you create appear here.', ic: 'doc' })),
+      stratBox,
       h('section', { class: 'card pad' }, h('h3', {}, 'Funnel maps'), h('p', { class: 'fine', style: 'margin:var(--space-2) 0 var(--space-3)' }, 'Funnel maps live in the Funnel Mapper Pro app. How they appear here needs a deliberate design first.'), pill('Link design pending', 'warn'))));
   })();
   return h('section', {}, subnav('home'), ...pageHead('Office · Funnels', 'Funnels', `Your ${ctx.orgName} funnel assets in one place.`), box);

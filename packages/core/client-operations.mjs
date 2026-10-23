@@ -120,6 +120,7 @@ const COPY = {
   offers: { table: 'funnel_offers', cols: 'kind, name, promise, description, price_amount, currency', label: 'name' },
   stories: { table: 'funnel_stories', cols: 'kind, title, body', label: 'title' },
   brand_kits: { table: 'funnel_brand_kits', cols: 'name, voice, colors, fonts, logo_file_id, notes', label: 'name' },
+  strategies: { table: 'funnel_strategies', label: 'name' },       // copied with its document (see below)
 };
 const strategyOps = [
   defineOperation({
@@ -134,6 +135,16 @@ const strategyOps = [
     input: { client: { type: 'uuid', required: true }, kind: { type: 'enum', values: Object.keys(COPY), required: true }, source: { type: 'uuid', required: true } },
     run: async (q, ctx, i) => {
       const c = COPY[i.kind];
+      if (i.kind === 'strategies') {   // the strategy row and its Drive document are copied together; the document lands in the client's own space
+        const [src] = await q('select s.id, s.name, s.file_id from funnel_strategies s where s.id = $1 and s.client_id is null and s.archived_at is null', [i.source]);
+        if (!src) return [];
+        const [file] = await q(`insert into files (workspace_id, space, client_id, name, kind, mime_type, size_bytes, uploaded_by, managed_by)
+          select f.workspace_id, 'client', $2, f.name, 'document', f.mime_type, f.size_bytes, $3, 'funnels' from files f where f.id = $1 returning id`, [src.file_id, i.client, ctx.userId]);
+        await q(`insert into file_versions (workspace_id, file_id, body, size_bytes, note) select v.workspace_id, $2, v.body, v.size_bytes, 'Copied from the organization library' from file_versions v
+          join files f on f.id = v.file_id and f.current_version = v.version where v.file_id = $1`, [src.file_id, file.id]);
+        const [copy] = await q('insert into funnel_strategies (workspace_id, client_id, name, file_id) values ($1,$2,$3,$4) returning id', [ctx.orgId, i.client, src.name, file.id]);
+        return q('insert into client_strategy_copies (workspace_id, client_id, kind, source_id, copy_id) values ($1,$2,$3,$4,$5) returning id, kind, source_id, copy_id, created_at', [ctx.orgId, i.client, i.kind, i.source, copy.id]);
+      }
       const [made] = await q(`insert into ${c.table} (workspace_id, client_id, ${c.cols}) select workspace_id, $2, ${c.cols} from ${c.table} where id = $1 and client_id is null and archived_at is null returning id`, [i.source, i.client]);
       if (!made) return [];
       return q('insert into client_strategy_copies (workspace_id, client_id, kind, source_id, copy_id) values ($1,$2,$3,$4,$5) returning id, kind, source_id, copy_id, created_at', [ctx.orgId, i.client, i.kind, i.source, made.id]);

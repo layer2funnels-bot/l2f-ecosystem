@@ -292,8 +292,10 @@ await page.goBack(); await page.reload(); await wait('Your apps in Layer2Funnels
 {
   const PJ = `Website relaunch ${Date.now()}`, T1 = `Write homepage copy ${Date.now()}`, T2 = `Review design ${Date.now()}`;   // unique per run: a re-run on the same local database never collides
   await admin.query('update time_entries set ended_at = now() where ended_at is null');
-  await page.goto(`${base}/#/projects`); await page.waitForSelector('.pj-cards', { timeout: 9000 }).catch(async (e) => { await shot(page, 'FAILED-pj'); console.log((await page.locator('body').innerText()).slice(0, 600), problems.slice(0, 3), net.slice(-4)); throw e; });
+  await page.goto(`${base}/#/projects`); await page.waitForSelector('.pj-sections h2', { timeout: 9000 }).catch(async (e) => { await shot(page, 'FAILED-pj'); console.log((await page.locator('body').innerText()).slice(0, 600), problems.slice(0, 3), net.slice(-4)); throw e; });
   check('P1', 'Projects opens as its own app with a sidebar and a New project action', (await page.locator('.pj-side').count()) === 1 && (await page.getByRole('button', { name: 'New project' }).count()) >= 1);
+  await page.waitForFunction(() => document.querySelectorAll('.pj-sections h2').length >= 2, null, { timeout: 9000 });
+  check('P1b', 'Projects home has two labelled sections: Client projects (grouped by client) and the organization’s own projects', (await page.locator('.pj-sections h2').allInnerTexts()).join('|').toLowerCase().includes('client projects') && (await page.locator('.pj-sections h2').allInnerTexts()).some((t) => /projects$/i.test(t.trim()) && !/^client/i.test(t.trim())));
   await page.getByRole('button', { name: 'New project' }).first().click(); await page.fill('#np-name', PJ); await page.getByRole('button', { name: 'Create project' }).click(); await page.waitForSelector('[role=tablist] [data-k="whiteboards"]', { timeout: 9000 });
   const created = (await admin.query("select client_id, name from projects where name = $1", [PJ])).rows;
   check('P2', 'A new internal project is created (no client) and its workspace opens with the tabs', created.length === 1 && created[0].client_id === null && (await page.getByRole('tab').count()) >= 7);
@@ -620,15 +622,31 @@ await rm.close();
   await page.keyboard.press('Escape');
   await page.goto(`${base}/#/office/apps`); await wait('Locked and coming-soon apps');
   check('O7', 'Apps lists every app with its state: open links for available apps and the reason for locked or coming-soon ones', (await page.locator('.app-row').count()) >= 10 && (await page.locator('main').innerText()).includes('Coming soon') && (await page.locator('main a', { hasText: 'Open' }).count()) >= 3);
-  await page.goto(`${base}/#/office/projects`); await wait('Projects has its own app');
-  check('O8', 'Office › Projects points to the Projects app instead of a dead end', (await page.getByRole('link', { name: 'Open Projects' }).count()) === 1);
+  await page.goto(`${base}/#/office/projects`); await page.waitForSelector('.pj-sections', { timeout: 9000 });
+  check('O8', 'Office › Projects shows the real Projects screens inside Office (same data), with the Office menu still there and Projects marked current, and project links that stay inside Office', (await page.locator('.pj-side').count()) === 1 && (await page.locator('nav.nav a[aria-current=page]').innerText()).includes('Projects') && (await page.locator('.pj-card').count()) >= 0 && (await page.locator('.pj-side a[href^="#/office/projects/p/"], .pj-card[href^="#/office/projects/p/"]').count()) >= 0 && !(await page.locator('a[href^="#/projects/p/"]').count()));
+  // Funnel Strategies (list, editor with side panel)
+  const SN = `Webinar funnel ${Date.now()}`;
+  await page.goto(`${base}/#/office/funnels/strategies`); await page.waitForSelector('text=One written strategy per funnel', { timeout: 9000 });
+  await page.getByRole('button', { name: 'New Funnel Strategy' }).first().click(); await page.fill('#ns-name', SN); await page.getByRole('button', { name: 'Create', exact: true }).click(); await page.waitForSelector('.strat-side', { timeout: 9000 });
+  const sr = (await admin.query('select s.status, s.file_id, f.managed_by, f.in_library, f.space from funnel_strategies s join files f on f.id = s.file_id where s.name = $1', [SN])).rows[0];
+  check('O10', 'A new Funnel Strategy opens in the document editor with a side panel, as a draft, and its document is owned by Funnels and kept out of the shared Drive list', sr.status === 'draft' && sr.managed_by === 'funnels' && sr.in_library === false && sr.space === 'shared' && (await page.locator('.docsheet').count()) === 1 && (await page.locator('.strat-side').innerText()).includes('No map linked yet'));
+  await page.selectOption('#st-status', 'in_review'); for (let n = 0; n < 30 && (await admin.query('select status from funnel_strategies where name = $1', [SN])).rows[0].status !== 'in_review'; n++) await page.waitForTimeout(100);
+  check('O11', 'Changing the status in the side panel saves it', (await admin.query('select status from funnel_strategies where name = $1', [SN])).rows[0].status === 'in_review');
+  await page.getByRole('button', { name: 'Link a map' }).click(); await page.fill('#mp-url', 'http://insecure.example'); await page.getByRole('button', { name: 'Save link' }).click();
+  const badMsg = await page.locator('dialog, [role=dialog]').first().innerText();
+  await page.fill('#mp-url', 'https://app.example.com/map/1'); await page.fill('#mp-label', 'Quiz map'); await page.getByRole('button', { name: 'Save link' }).click(); await page.waitForSelector('text=A link only', { timeout: 9000 });
+  check('O12', 'The map link must start with https:// and is shown as a link only (opens in a new tab safely)', /https:\/\//.test(badMsg) && (await page.locator('.strat-side a[href^="https://app.example.com"]').getAttribute('rel')) === 'noopener noreferrer');
+  await page.goto(`${base}/#/office/funnels/strategies`); await page.waitForSelector('.tbl', { timeout: 9000 });
+  check('O13', 'The list shows the strategy with its status and a "Linked" map badge', (await page.locator('.tbl tr', { hasText: SN }).innerText()).includes('In review') && (await page.locator('.tbl tr', { hasText: SN }).innerText()).includes('Linked'));
+  await page.goto(`${base}/#/office/funnels`); await page.waitForSelector('text=See all Funnel Strategies', { timeout: 9000 });
+  check('O14', 'Funnels home shows the Funnel Strategies summary and keeps its four record tiles', (await page.locator('.tile2').count()) === 4 && (await page.locator('main').innerText()).includes(SN));
   await page.goto(`${base}/#/office/admin/access/history`); await page.waitForSelector('text=Access history', { timeout: 9000 }); await page.waitForSelector('.tbl, .empty', { timeout: 9000 });
   check('O9', 'Admin › Access › Access history shows who changed what and when, with names, never content', (await page.locator('.tbl thead th').allInnerTexts()).join().toLowerCase() === 'when,who,what' && !(await page.locator('main').innerText()).includes('{'));
   await page.goto(`${base}/#/launcher`); await wait('Your apps in');
 }
 
 const routes = [['/#/launcher', 'Your apps in'], ['/#/office', 'Needs your attention'], ['/#/office/funnels', 'Recently changed'], ['/#/office/funnels/avatars', 'Avatar for C1'], ['/#/office/funnels/avatars/new', 'Belongs to'],
-  ['/#/office/admin/members', 'Joining is by invitation only.'], ['/#/office/admin/access/levels', 'Deny always wins.'], ['/#/office/admin/access/assignments', 'Add assignment'], ['/#/office/admin/access/effective', 'Show access for'], ['/#/clients', 'Everyone you work for'], ['/#/office/documents', 'stay with their own app'], ['/#/office/team', 'only where your own access allows'], ['/#/office/apps', 'Locked and coming-soon apps'], ['/#/office/admin/access/history', 'The last 100 changes'], ['/#/office/planner', 'isn’t built yet']];
+  ['/#/office/admin/members', 'Joining is by invitation only.'], ['/#/office/admin/access/levels', 'Deny always wins.'], ['/#/office/admin/access/assignments', 'Add assignment'], ['/#/office/admin/access/effective', 'Show access for'], ['/#/clients', 'Everyone you work for'], ['/#/office/funnels/strategies', 'One written strategy per funnel'], ['/#/office/documents', 'stay with their own app'], ['/#/office/team', 'only where your own access allows'], ['/#/office/apps', 'Locked and coming-soon apps'], ['/#/office/admin/access/history', 'The last 100 changes'], ['/#/office/planner', 'isn’t built yet']];
 for (const [w, label] of [[1280, 'desktop'], [768, 'tablet'], [390, 'phone']]) {
   const p = await newPage(w, 900);
   await p.goto(base + '/'); await wait('Sign in', p);

@@ -63,7 +63,8 @@ export function readDoc(root) {
 }
 
 // ---- the view
-export function docView({ api, id, ctx }) {
+/** `opts.crumbs(meta)` replaces the breadcrumb parts; `opts.side(meta)` adds a side panel next to the page (Funnel Strategies use both). */
+export function docView({ api, id, ctx, opts = {} }) {
   const root = h('section', { class: 'docs' }, skeleton(4));
   const load = async () => {
     const f = await api.call('drive.files.get', { id });
@@ -204,7 +205,8 @@ export function docView({ api, id, ctx }) {
     };
     (async () => {
       let parts = [];
-      if (meta.project_id) { const p = await api.call('projects.get', { id: meta.project_id }); parts = [h('a', { href: '#/projects' }, 'Projects'), p.ok ? p.data[0].name : 'Project', 'Docs']; }
+      if (opts.crumbs) parts = opts.crumbs(meta);
+      else if (meta.project_id) { const p = await api.call('projects.get', { id: meta.project_id }); parts = [h('a', { href: '#/projects' }, 'Projects'), p.ok ? p.data[0].name : 'Project', 'Docs']; }
       else if (meta.client_id) parts = [h('a', { href: '#/clients' }, 'Clients'), h('a', { href: `#/clients/c/${meta.client_id}?tab=documents` }, ctx.clients?.get?.(meta.client_id) ?? 'Client'), 'Documents'];
       else parts = [h('a', { href: '#/app/drive' }, 'Drive'), meta.space === 'personal' ? 'Personal' : ctx.orgName];
       if (gone()) return; crumb.replaceChildren(...parts.flatMap((x, i) => (i ? [h('span', { 'aria-hidden': 'true' }, ' / '), x] : [x])));
@@ -214,7 +216,7 @@ export function docView({ api, id, ctx }) {
     const banners = [];
     if (meta.archived_at) banners.push(notice('info', 'eye', [h('b', {}, 'Archived.'), ' This document is read only. ', btn('Restore', async () => { const r = await api.call('drive.files.restore', { id }); if (r.ok) { toast('Restored.'); load(); } else toast('You can’t restore this document.', false); }, 'link')]));
     else if (readOnly) banners.push(readOnlyNotice('You can read this document but not change it'));
-    root.replaceChildren(...banners, bar, tb, h('div', { class: 'docbody' }, h('details', { class: 'docoutline-wrap', open: window.innerWidth >= 900 }, h('summary', {}, 'Outline'), outlineEl), h('article', { class: 'docsheet' }, page)));
+    root.replaceChildren(...banners, bar, tb, h('div', { class: opts.side ? 'docbody has-side' : 'docbody' }, h('details', { class: 'docoutline-wrap', open: window.innerWidth >= 900 }, h('summary', {}, 'Outline'), outlineEl), h('article', { class: 'docsheet' }, page), opts.side ? opts.side(meta) : null));
     document.title = `${meta.name} · Docs`;
     paintStatus(); paintOutline(); if (readOnly) { status = 'readonly'; paintStatus(); }
     if (!readOnly && isEmpty(model())) page.focus();

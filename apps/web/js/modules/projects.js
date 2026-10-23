@@ -2,17 +2,19 @@
 // task drawer with timer, smart search). One module so that the Projects app and, later, Office > Projects (V4-2) mount the very same screens and data.
 // Everything goes through the permission-checked API; buttons follow `ctx.can`, the database decides. Logic lives in projectmodel.js (tested without a browser).
 import { h, put, icon, btn, chip, dialog, drawer, toast, field, notice, skeleton, emptyState, errorState, noAccessState, seg, tabs, readOnlyNotice } from '../ui.js';
-import { PROJECT_STATUS, TASK_STATUS, PRIORITY, label, byStatus, progress, monthGrid, monthTitle, shiftMonth, timeline, dueLabel, myWorkGroups, parseSearch, searchInput, duration, clock } from './projectmodel.js';
+import { splitProjects, PROJECT_STATUS, TASK_STATUS, PRIORITY, label, byStatus, progress, monthGrid, monthTitle, shiftMonth, timeline, dueLabel, myWorkGroups, parseSearch, searchInput, duration, clock } from './projectmodel.js';
 import { createBoard, BOARD_MIME } from './whiteboard.js';
 import { emptyDoc, serialize } from './docmodel.js';
 const DOC_MIME = 'application/vnd.l2f.doc+json';
 
-export const hrefs = { home: () => '#/projects', mine: () => '#/projects/mine', project: (id, tab) => `#/projects/p/${id}${tab && tab !== 'overview' ? `?tab=${tab}` : ''}`, task: (id, task, tab) => `#/projects/p/${id}?${tab ? `tab=${tab}&` : ''}task=${task}` };
+export const makeHrefs = (base = '#/projects') => ({ home: () => base, mine: () => `${base}/mine`, project: (id, tab) => `${base}/p/${id}${tab && tab !== 'overview' ? `?tab=${tab}` : ''}`, task: (id, task, tab) => `${base}/p/${id}?${tab ? `tab=${tab}&` : ''}task=${task}` });
+export const hrefs = makeHrefs();
 const todayIso = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 const reduced = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 const opts = (list, cur) => list.map(([k, t]) => h('option', { value: k, ...(k === cur ? { selected: true } : {}) }, t));
 
-export function projectsView({ api, ctx, route }) {
+export function projectsView({ api, ctx, route, base = '#/projects', embedded = false }) {
+  const hrefs = makeHrefs(base);
   const root = h('section', { class: 'pj' });
   const main = h('div', { class: 'pj-main', id: 'pj-main' });
   const state = { people: null, projects: [], timer: null, tick: null };
@@ -43,13 +45,22 @@ export function projectsView({ api, ctx, route }) {
 
   // ---------------------------------------------------------------- sidebar (active projects) and header
   const side = h('nav', { class: 'pj-side', 'aria-label': 'Projects' });
+  // the sidebar and the home list use the same two labelled sections: client projects (grouped by client) and the organization's own (internal) projects
+  const sideGroups = (cur) => {
+    const sp = splitProjects(state.projects.filter((p) => !p.archived_at && p.status !== 'done'), clientName, ctx.orgName);
+    const link = (p) => h('li', {}, h('a', { class: 'pj-link', href: hrefs.project(p.id), ...(cur === p.id ? { 'aria-current': 'page' } : {}) }, p.name));
+    return [
+      h('h2', {}, 'Client projects'),
+      sp.clients.length ? h('div', {}, ...sp.clients.map((g) => h('div', { class: 'pj-group' }, h('h3', { class: 'pj-gname' }, g.name), h('ul', {}, ...g.projects.slice(0, 15).map(link))))) : h('p', { class: 'fine muted pj-none' }, 'None yet'),
+      h('h2', {}, sp.internalTitle),
+      sp.internal.length ? h('ul', {}, ...sp.internal.slice(0, 30).map(link)) : h('p', { class: 'fine muted pj-none' }, 'None yet')];
+  };
   const paintSide = (cur) => {
     side.replaceChildren(
       h('a', { class: 'pj-link', href: hrefs.home(), ...(route.view === 'home' ? { 'aria-current': 'page' } : {}) }, icon('prj'), 'Projects'),
       h('a', { class: 'pj-link', href: hrefs.mine(), ...(route.view === 'mine' ? { 'aria-current': 'page' } : {}) }, icon('check'), 'My Work'),
       h('button', { type: 'button', class: 'pj-link', onclick: () => openSearch() }, icon('search'), 'Search', h('kbd', { 'aria-hidden': 'true' }, 'Ctrl K')),
-      h('h2', {}, 'Active projects'),
-      h('ul', {}, ...state.projects.filter((p) => !p.archived_at && p.status !== 'done').slice(0, 30).map((p) => h('li', {}, h('a', { class: 'pj-link', href: hrefs.project(p.id), ...(cur === p.id ? { 'aria-current': 'page' } : {}) }, p.name)))));
+      ...sideGroups(cur));
   };
   const loadProjects = async () => { const r = await api.call('projects.list', { scope: 'all' }); if (live()) { state.projects = r.ok ? r.data : []; paintSide(route.id); } return r; };
 
@@ -74,11 +85,17 @@ export function projectsView({ api, ctx, route }) {
     if (!r.ok) return put(main, errorState(home));
     const head = main.firstChild; put(main, head);
     let filter = 'open';
-    const list = h('div', { class: 'pj-cards' });
+    const list = h('div', { class: 'pj-sections' });
+    const card = (p) => h('a', { class: 'pj-card', href: hrefs.project(p.id) }, h('div', { class: 'pj-card-top' }, h('strong', {}, p.name), statusChip(p.status)), h('div', { class: 'pj-card-sub' }, projectChip(p), p.due_on ? h('span', { class: 'fine muted' }, `Due ${dueLabel(p.due_on, todayIso())}`) : null), bar(p), h('div', { class: 'fine muted' }, `${p.tasks_done} of ${p.tasks_total} tasks done`));
     const draw = () => {
       const shown = state.projects.filter((p) => !p.archived_at && (filter === 'all' || (filter === 'open' ? p.status !== 'done' : p.status === filter)));
-      list.replaceChildren(...(shown.length ? shown.map((p) => h('a', { class: 'pj-card', href: hrefs.project(p.id) }, h('div', { class: 'pj-card-top' }, h('strong', {}, p.name), statusChip(p.status)), h('div', { class: 'pj-card-sub' }, projectChip(p), p.due_on ? h('span', { class: 'fine muted' }, `Due ${dueLabel(p.due_on, todayIso())}`) : null), bar(p), h('div', { class: 'fine muted' }, `${p.tasks_done} of ${p.tasks_total} tasks done`)))
-        : [state.projects.length ? emptyState({ title: 'No projects match', body: 'Try another filter, or search for archived work with Ctrl K.', ic: 'search' }) : emptyState({ title: 'No projects yet', body: ctx.canAnywhere('projects.project.create') ? 'Create the first project to start planning work.' : 'Nothing has been shared with you yet.', ic: 'prj', first: true, action: ctx.canAnywhere('projects.project.create') ? btn('New project', newProject, 'pri') : null })]));
+      if (!shown.length) return put(list, state.projects.length ? emptyState({ title: 'No projects match', body: 'Try another filter, or search for archived work with Ctrl K.', ic: 'search' }) : emptyState({ title: 'No projects yet', body: ctx.canAnywhere('projects.project.create') ? 'Create the first project to start planning work.' : 'Nothing has been shared with you yet.', ic: 'prj', first: true, action: ctx.canAnywhere('projects.project.create') ? btn('New project', newProject, 'pri') : null }));
+      const sp = splitProjects(shown, clientName, ctx.orgName);
+      put(list,
+        h('section', { 'aria-labelledby': 'pj-cp' }, h('h2', { id: 'pj-cp', class: 'pj-gh' }, 'Client projects'),
+          sp.clients.length ? sp.clients.map((g) => h('div', { class: 'pj-group' }, h('h3', { class: 'pj-gname' }, g.name), h('div', { class: 'pj-cards' }, ...g.projects.map(card)))) : h('p', { class: 'muted' }, 'No client projects match.')),
+        h('section', { 'aria-labelledby': 'pj-ip' }, h('h2', { id: 'pj-ip', class: 'pj-gh' }, sp.internalTitle),
+          sp.internal.length ? h('div', { class: 'pj-cards' }, ...sp.internal.map(card)) : h('p', { class: 'muted' }, `No ${ctx.orgName} projects match.`)));
     };
     main.append(seg([['open', 'Open'], ['all', 'All'], ['done', 'Done']], filter, (k) => { filter = k; draw(); }, 'Show projects'), list); draw();
   }
