@@ -53,6 +53,7 @@ const q = async (sql, args = []) => (await admin.query(sql, args)).rows;
 async function layout(p, label) {
   const r = await p.evaluate(() => {
     const out = { over: document.documentElement.scrollWidth - document.documentElement.clientWidth, small: [] };
+    if (out.over > 0) out.who = [...document.querySelectorAll('body *')].filter((e) => e.getBoundingClientRect().right > innerWidth + 1).slice(0, 4).map((e) => `${e.tagName}.${String(e.className).slice(0, 24)}`).join(' ');
     for (const e of document.querySelectorAll('button, a[href], select, input:not([type=hidden]), textarea, [role=tab]')) {
       if (e.closest('.sr, .skip, .search, .chk, .toast') || e.matches('input[type=checkbox]')) continue;
       const b = e.getBoundingClientRect(); if (!b.width || !b.height) continue;
@@ -61,7 +62,7 @@ async function layout(p, label) {
     }
     return out;
   });
-  return { ok: r.over <= 1 && r.small.length === 0, d: `${label}: overflow ${r.over}px; small: ${r.small.slice(0, 4).join(' | ')}` };
+  return { ok: r.over <= 1 && r.small.length === 0, d: `${label}: overflow ${r.over}px; small: ${r.small.slice(0, 4).join(' | ')}${r.who ? ` [wide: ${r.who}]` : ''}` };
 }
 async function layouts(p, label) { const a = await layout(p, label); if (!a.ok) console.log('  layout:', a.d); return a.ok; }
 
@@ -821,10 +822,10 @@ for (const [w, label] of [[1280, 'desktop'], [768, 'tablet'], [390, 'phone']]) {
     const bar = p.locator('nav.bbar'); const labels = await bar.locator('a, button').allInnerTexts();
     check('R-bar', 'On a phone the Office menu is a bottom bar: four sections plus More, labels always visible, top menu hidden', labels.map((x) => x.trim()).join() === 'Home,Planner,Projects,Funnels,More' && !(await p.locator('nav.nav').isVisible()) && (await bar.boundingBox()).y > 700);
     await bar.getByRole('button', { name: 'More' }).click(); await wait('More in Office', p);
-    const more = await p.locator('.sheet a').allInnerTexts(); await p.keyboard.press('Escape');
+    const more = await p.locator('.bsheet a').allInnerTexts(); await p.keyboard.press('Escape');
     check('R-more', 'More opens a sheet with the rest (Docs, Team, Apps, Admin); Esc closes it and focus returns to More', more.map((x) => x.trim()).join() === 'Documents,Team,Apps,Admin' && (await p.evaluate(() => document.activeElement.textContent)).includes('More'));
     await p.goto(base + '/#/launcher'); await p.reload(); await wait('The sky follows your time of day', p);
-    check('R-tiles', 'On a phone the Launcher shows two columns with names only (descriptions hidden)', (await p.locator('.tile').first().evaluate((e) => getComputedStyle(e.querySelector('.d')).display)) === 'none' && new Set(await p.locator('.tile').evaluateAll((els) => els.slice(0, 4).map((e) => Math.round(e.getBoundingClientRect().left)))).size === 2);
+    check('R-tiles', 'On a phone the Launcher shows two columns with names only (descriptions hidden)', (await p.locator('.tile').first().evaluate((e) => getComputedStyle(e.querySelector('.t-desc')).display)) === 'none' && new Set(await p.locator('.tile').evaluateAll((els) => els.slice(0, 4).map((e) => Math.round(e.getBoundingClientRect().left)))).size === 2);
     await shot(p, 'i1-phone-launcher'); await p.goto(base + '/#/office/admin/members'); await p.reload(); await wait('Joining is by invitation only.', p); await shot(p, 'i2-phone-members');
     await p.goto(base + '/#/office/funnels/avatars'); await p.reload(); await wait('Avatar for C1', p); await p.evaluate(() => document.querySelector('.hdr .iconbtn')?.focus());
     await p.click('#org-switcher'); const sheet = await p.locator('#org-menu').boundingBox();

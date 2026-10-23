@@ -183,6 +183,7 @@ details.support{margin-top:12px;font-size:13px;color:var(--muted)}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
 /* input borders keep the stronger --control colour (WCAG 1.4.11): the one deliberate departure from the prototype's softer line colour */
 .inp,.sel,.tools select,.tbl select,.pj-add input,.cmdk-in{border-color:var(--control)}
+.inp input,.inp{min-height:44px}.office-docs .findwrap input,.office-team .findwrap input{min-height:44px}
 .toolbar>input[type=search],.toolbar>input[type=text]{flex:1 1 220px;min-width:0;min-height:44px;padding:0 14px;border-radius:12px;border:var(--bw) solid var(--control);background:var(--surface)}
 .toolbar>select,.toolbar select{min-height:44px;padding:0 12px;border-radius:12px;border:var(--bw) solid var(--control);background:var(--surface)}
 .toolbar>input:focus,.toolbar>select:focus{outline:none;border-color:var(--action);box-shadow:0 0 0 4px var(--action-tint)}
