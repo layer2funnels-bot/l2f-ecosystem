@@ -18,3 +18,4 @@
 .pcard.av-4{--tone:#C9B8F0;--tone-bg:color-mix(in srgb,#C9B8F0 14%,var(--surface))}
 .pcard.av-5{--tone:#E3DB8F;--tone-bg:color-mix(in srgb,#E3DB8F 14%,var(--surface))}
 @media (min-width:900px){.portrait{grid-template-columns:minmax(0,1fr) 260px minmax(0,1fr);align-items:start}.portrait .pcard{order:2}.portrait .pcol:nth-of-type(2){order:1}.portrait .pcol:nth-of-type(3){order:3}}
+.tbl td a{display:inline-flex;align-items:center;min-height:44px}

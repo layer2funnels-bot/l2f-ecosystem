@@ -73,6 +73,3 @@ export function appsView({ catalog, registry, org, orgs, onSwitch }) {
     rows.length ? h('ul', { class: 'rows card' }, ...rows) : emptyState({ title: 'No apps yet', body: 'No app is switched on for you here. Ask an admin.', ic: 'grid' }));
 }
 
-// Office > Projects: the in-Office layout waits for the updated design (V4-2), but the app itself is built, so this page points to it instead of a dead end.
-export const projectsPointerView = (org) => h('section', {}, head(org.name, 'Projects', null),
-  emptyState({ title: 'Projects has its own app', body: 'Plan work, track tasks and time, and see deadlines in the Projects app. Showing it inside Office is planned and waits for its design.', ic: 'prj', action: h('a', { class: 'btn pri', href: '#/projects' }, 'Open Projects') }));

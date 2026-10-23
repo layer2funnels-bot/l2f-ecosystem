@@ -12,7 +12,8 @@ import { docView } from './modules/docs.js';
 import { boardView } from './modules/whiteboard.js';
 import { projectsView } from './modules/projects.js';
 import { clientsView } from './modules/clients.js';
-import { documentsView, teamView, appsView, projectsPointerView } from './views/office.js';
+import { strategiesListView, strategyView } from './views/strategies.js';
+import { documentsView, teamView, appsView } from './views/office.js';
 import { loadWeather, weatherOff, setWeatherOff } from './sky.js';
 import { permissionSet, canWith, canAnywhereWith } from './perm.js';
 import { switchOrganization } from '/packages/core/org-switch.mjs';
@@ -275,7 +276,7 @@ async function render(opts = {}) {
     can: (p, clientId) => canWith(ctx.mine, p, clientId), canAnywhere: (p) => canAnywhereWith(ctx.mine, p),
     clientsWhere: (p) => [...ctx.clients].filter(([cid]) => canWith(ctx.mine, p, cid)),
   };
-  const inOffice = ['office', 'office-page', 'funnels', 'funnel-list', 'funnel-record', 'admin'].includes(route.name);
+  const inOffice = ['office', 'office-page', 'funnels', 'strategies', 'strategy', 'funnel-list', 'funnel-record', 'admin'].includes(route.name);
   let content;
   if (unavailable && route.name !== 'launcher') {
     const u = unavailable;
@@ -293,11 +294,13 @@ async function render(opts = {}) {
         if (pg === 'documents') content = documentsView({ api, ctx: c });
         else if (pg === 'team') content = teamView({ api, ctx: c });
         else if (pg === 'apps') content = appsView({ catalog: ctx.catalog, registry: await loadRegistry(), org, orgs: ctx.orgs });
-        else if (pg === 'projects') content = projectsPointerView(org);
+        else if (pg === 'projects') content = projectsView({ api, ctx: c, base: '#/office/projects', embedded: true, route: { view: route.params.view ?? 'home', id: route.params.id, query: route.query } });
         else content = appNotBuiltView(OFFICE_PAGES.find((p) => p.key === pg)?.label ?? 'This page');
         break;
       }
       case 'funnels': content = funnelsHomeView(c); break;
+      case 'strategies': content = strategiesListView(c); break;
+      case 'strategy': content = strategyView(c, route.params.id); break;
       case 'funnel-list': content = funnelListView(c, route.params.type); break;
       case 'funnel-record': content = funnelRecordView(c, route.params.type, route.params.id); break;
       case 'doc': content = docView({ api, id: route.params.id, ctx: c }); break;

@@ -79,3 +79,7 @@
   .pj-day{min-height:64px}
 }
 @media (prefers-reduced-motion:reduce){.pj *{transition:none!important}}
+.pj-group{margin-bottom:var(--space-4)}
+.pj-gname{font-size:14px;margin:var(--space-3) 0 var(--space-1);color:var(--text2)}
+.pj-side h3.pj-gname{padding:0 var(--space-3);font-size:12px;margin:var(--space-2) 0 2px}
+.pj-none{padding:0 var(--space-3)}
