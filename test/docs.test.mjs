@@ -25,7 +25,7 @@ check('DC13', 'The size the saved text will take is measurable against the 200,0
 check('DC14', 'Serialising is stable: the same document always gives the same text (no spurious "unsaved changes")', serialize(doc) === serialize(parseBody(serialize(doc))));
 import { parseRoute, hrefFor, pageKeyFor, routeForPage } from '../apps/web/js/routes.js';
 check('DC15', 'The document address #/doc/<id> is a route; after an organization switch it lands on the Drive app, never on a record of the other organization', parseRoute('#/doc/abc').name === 'doc' && parseRoute('#/doc/abc').params.id === 'abc' && hrefFor.doc('abc') === '#/doc/abc' && parseRoute('#/doc').name === 'not-found'
-  && pageKeyFor(parseRoute('#/doc/abc')).app === 'drive' && routeForPage('drive', null) === '#/app/drive');
+  && pageKeyFor(parseRoute('#/doc/abc')).app === 'drive' && routeForPage('drive', null) === '#/drive');
 for (const x of results) console.log(`${x.ok ? 'PASS' : 'FAIL'}  ${x.id.padEnd(5)} ${x.name}`);
 const pc = results.filter((x) => x.ok).length; console.log(`\n${pc}/${results.length} checks passed`);
 process.exit(pc === results.length ? 0 : 1);

@@ -58,6 +58,13 @@ const folderOps = [
       return q(`${DSELECT} where d.id = $1`, [i.id]);
     },
   }),
+  defineOperation({
+    // the folder and every folder above it, root first (the breadcrumb); row security still decides what is readable
+    name: 'drive.folders.path', class: 'read', input: id,
+    run: (q, _c, i) => q(`with recursive up as (select d.id, d.name, d.parent_id, 0 as depth from drive_folders d where d.id = $1
+      union all select p.id, p.name, p.parent_id, up.depth + 1 from drive_folders p join up on p.id = up.parent_id where up.depth < 30)
+      select id, name, parent_id from up order by depth desc`, [i.id]),
+  }),
   defineOperation({ name: 'drive.folders.archive', class: 'write', single: true, input: id, run: (q, _c, i) => q('update drive_folders set archived_at = now() where id = $1 and archived_at is null returning id, archived_at', [i.id]) }),
   defineOperation({ name: 'drive.folders.restore', class: 'write', single: true, input: id, run: (q, _c, i) => q('update drive_folders set archived_at = null where id = $1 and archived_at is not null returning id, archived_at', [i.id]) }),
   defineOperation({ name: 'drive.folders.delete', class: 'write', single: true, input: id, run: (q, _c, i) => q('delete from drive_folders where id = $1 returning id', [i.id]) }),

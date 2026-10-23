@@ -96,7 +96,7 @@ Google Cloud → OAuth client (web); authorised redirect = the callback address 
 
 ## 10a. Switch Drive files from Supabase Storage to Cloudflare R2 (later; owner creates the account)
 Nothing here is done now: no Cloudflare account or card exists. The adapter (`packages/core/storage-adapter.mjs`) already speaks S3 (SigV4), tested against a fake S3 server and real local Supabase Storage. **Unverified against real R2:** presigned PUT signs `content-length`; run the smoke test in step 5 before trusting it.
-1. Owner: create the Cloudflare account and an R2 bucket (private); create an R2 API token limited to that bucket (Object Read & Write); note the account endpoint `https://<account>.r2.cloudflarestorage.com`.
+1. Owner: create the Cloudflare account and an R2 bucket (private), and add a **CORS rule** on the bucket allowing `PUT`, `GET`, `HEAD` from the app's web address with any request header (browser uploads and downloads go straight to the bucket); create an R2 API token limited to that bucket (Object Read & Write); note the account endpoint `https://<account>.r2.cloudflarestorage.com`.
 2. Set runtime variables: `STORAGE_DRIVER=s3`, `S3_ENDPOINT`, `S3_REGION=auto`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`. Add the bucket's CORS rule for the office address (PUT, GET).
 3. Copy existing objects (same keys) from Supabase Storage to R2 (`rclone` or a small script using the adapter's `list/get/put`); compare counts and bytes with Admin → Storage.
 4. Run `node scripts/storage-smoke.mjs` with the new variables (upload, download, size check, delete). Then run the storage backup once and restore it (step 10).
