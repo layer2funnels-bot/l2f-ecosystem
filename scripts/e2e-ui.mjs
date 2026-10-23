@@ -563,6 +563,41 @@ const dur = await rm.evaluate(() => [...document.querySelectorAll('.tile')].slic
 check('I1', 'With reduced motion, tile animations and transitions are effectively off', dur.every((d) => d < 0.01) && parseFloat(await rm.evaluate(() => getComputedStyle(document.querySelector('.tile')).transitionDuration)) < 0.01, dur.join());
 await rm.close();
 
+// =============================================================== C3. Clients (list, client page, Strategy copies, requests, documents, notes)
+{
+  const [{ id: wsL }] = (await admin.query("select id from workspaces where slug = 'layer2funnels'")).rows;
+  const CN = `Acme Fitness ${Date.now()}`, AVN = `Library avatar ${Date.now()}`;
+  await admin.query('insert into funnel_avatars (workspace_id, name, pains) values ($1, $2, $3)', [wsL, AVN, 'No time']);
+  await page.goto(`${base}/#/clients`); await page.waitForSelector('.cl-bar', { timeout: 9000 });
+  check('CL1', 'Clients opens as its own app with search, status filter, Table / Grid / Pipeline and a New client action', (await page.locator('.cl-bar').count()) === 1 && (await page.getByRole('button', { name: 'Pipeline' }).count()) === 1 && (await page.getByRole('button', { name: 'New client' }).count()) >= 1);
+  await page.getByRole('button', { name: 'New client' }).first().click(); await page.fill('#nc-name', CN); await page.getByRole('button', { name: 'Create client' }).click(); await page.waitForSelector('[role=tablist]', { timeout: 9000 });
+  check('CL2', 'A new client is created and its page opens with the five sections', (await page.getByRole('tab').count()) === 5 && (await page.locator('h1').innerText()).includes(CN) && (await admin.query('select count(*)::int n from clients where name = $1', [CN])).rows[0].n === 1);
+  await page.getByRole('tab', { name: 'Work' }).click(); await page.waitForSelector('text=Copy requirements not yet defined', { timeout: 9000 });
+  check('CL3', 'Work shows the stages, the Strategy section with its "never synced" note, and the Copy stage with the honest "Copy requirements not yet defined" banner and disabled actions', (await page.locator('.cl-steps li').count()) >= 3 && (await page.locator('main').innerText()).includes('never synced') && (await page.getByRole('button', { name: 'Send for approval' }).isDisabled()));
+  await page.getByRole('button', { name: 'Start a copy' }).click(); await page.selectOption('#sc-kind', 'avatars'); await page.waitForFunction((n) => [...document.querySelectorAll('#sc-src option')].some((o) => o.textContent === n), AVN, { timeout: 9000 });
+  await page.selectOption('#sc-src', { label: AVN }); await page.getByRole('button', { name: 'Start copy' }).click(); await page.waitForSelector('.pj-row', { timeout: 9000 });
+  const cp = (await admin.query("select c.client_id, c.name from funnel_avatars c join client_strategy_copies k on k.copy_id = c.id join clients cl on cl.id = k.client_id where cl.name = $1", [CN])).rows;
+  check('CL4', 'Starting a copy of a library avatar creates the client’s own record and lists it under Strategy', cp.length === 1 && cp[0].name === AVN && (await page.locator('main').innerText()).includes(AVN));
+  await page.getByRole('button', { name: 'Start a copy' }).click(); await page.selectOption('#sc-kind', 'avatars'); await page.waitForTimeout(600);
+  check('CL5', 'A library record that was already copied is no longer offered for this client', !(await page.locator('#sc-src option').allInnerTexts()).includes(AVN)); await page.keyboard.press('Escape');
+  await page.getByRole('tab', { name: 'Requests & Approvals' }).click(); await page.getByRole('button', { name: 'New request' }).click(); await page.fill('#rq-title', 'Send logo files'); await page.getByRole('button', { name: 'Create request' }).click(); await page.waitForSelector('text=Send logo files', { timeout: 9000 });
+  check('CL6', 'A request is created for the client and listed with its status', (await admin.query("select count(*)::int n from client_requests r join clients c on c.id = r.client_id where c.name = $1 and r.title = 'Send logo files'", [CN])).rows[0].n === 1);
+  await page.getByRole('tab', { name: 'Documents' }).click(); await page.getByRole('button', { name: 'New document' }).click(); await page.fill('#cd-name', `Brief ${Date.now()}`); await page.getByRole('button', { name: 'Create', exact: true }).click(); await page.waitForSelector('.docpage', { timeout: 9000 });
+  const fd = (await admin.query("select f.space, f.in_library, f.managed_by from files f join clients c on c.id = f.client_id where c.name = $1 order by f.created_at desc limit 1", [CN])).rows[0];
+  check('CL7', 'A client document is stored in the client’s own space, owned by Clients, and is not part of the shared Drive library', fd.space === 'client' && fd.in_library === false && fd.managed_by === 'clients');
+  await page.goBack(); await page.getByRole('tab', { name: 'Team Notes' }).click(); await page.fill('textarea[aria-label="New note"]', 'Prefers email'); await page.getByRole('button', { name: 'Add note' }).click(); await page.waitForSelector('text=Prefers email', { timeout: 9000 });
+  check('CL8', 'A team note is added and shown, with the reminder that notes are internal and can never be shared', (await page.locator('main').innerText()).includes('can never be shared'));
+  await page.getByRole('button', { name: 'Edit details' }).click(); await page.fill('#ec-biz', 'Acme Ltd'); await page.getByRole('button', { name: 'Save', exact: true }).click(); await page.waitForSelector('text=Acme Ltd', { timeout: 9000 });
+  check('CL9', 'Editing details saves the business name', (await admin.query("select p.business_name from client_profiles p join clients c on c.id = p.client_id where c.name = $1", [CN])).rows[0].business_name === 'Acme Ltd');
+  await page.getByRole('button', { name: 'Manage client sharing' }).click(); await page.waitForSelector('text=locked until its security checks pass', { timeout: 9000 });
+  check('CL10', 'Manage client sharing explains that the Client Portal is locked instead of pretending to share', true); await page.keyboard.press('Escape');
+  await page.goto(`${base}/#/clients`); await page.waitForSelector('.tbl', { timeout: 9000 }); await page.getByRole('button', { name: 'Pipeline' }).click();
+  check('CL11', 'Pipeline groups clients in columns by stage (with a "No stage" column)', (await page.locator('.pj-col').count()) >= 2 && (await page.locator('.pj-col a', { hasText: CN }).count()) === 1);
+  await page.goto(`${base}/#/clients/c/00000000-0000-0000-0000-000000000000`); await wait('Not here');
+  check('CL12', 'A client id that does not exist (or is not yours) shows the plain "Not here" state', (await page.locator('.empty').innerText()).includes('Not here'));
+  await page.goto(`${base}/#/launcher`); await wait('Your apps in');
+}
+
 // =============================================================== C2. Office pages: Documents, Team, Apps, Projects pointer, Access history
 {
   const [{ id: wsL }] = (await admin.query("select id from workspaces where slug = 'layer2funnels'")).rows;
@@ -593,7 +628,7 @@ await rm.close();
 }
 
 const routes = [['/#/launcher', 'Your apps in'], ['/#/office', 'Needs your attention'], ['/#/office/funnels', 'Recently changed'], ['/#/office/funnels/avatars', 'Avatar for C1'], ['/#/office/funnels/avatars/new', 'Belongs to'],
-  ['/#/office/admin/members', 'Joining is by invitation only.'], ['/#/office/admin/access/levels', 'Deny always wins.'], ['/#/office/admin/access/assignments', 'Add assignment'], ['/#/office/admin/access/effective', 'Show access for'], ['/#/office/documents', 'stay with their own app'], ['/#/office/team', 'only where your own access allows'], ['/#/office/apps', 'Locked and coming-soon apps'], ['/#/office/admin/access/history', 'The last 100 changes'], ['/#/office/planner', 'isn’t built yet']];
+  ['/#/office/admin/members', 'Joining is by invitation only.'], ['/#/office/admin/access/levels', 'Deny always wins.'], ['/#/office/admin/access/assignments', 'Add assignment'], ['/#/office/admin/access/effective', 'Show access for'], ['/#/clients', 'Everyone you work for'], ['/#/office/documents', 'stay with their own app'], ['/#/office/team', 'only where your own access allows'], ['/#/office/apps', 'Locked and coming-soon apps'], ['/#/office/admin/access/history', 'The last 100 changes'], ['/#/office/planner', 'isn’t built yet']];
 for (const [w, label] of [[1280, 'desktop'], [768, 'tablet'], [390, 'phone']]) {
   const p = await newPage(w, 900);
   await p.goto(base + '/'); await wait('Sign in', p);
