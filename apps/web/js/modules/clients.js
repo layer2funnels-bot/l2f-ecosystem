@@ -8,7 +8,7 @@ import { emptyDoc, serialize } from './docmodel.js';
 const DOC_MIME = 'application/vnd.l2f.doc+json';
 export const hrefs = { list: (q = '') => `#/clients${q}`, client: (id, tab) => `#/clients/c/${id}${tab && tab !== 'overview' ? `?tab=${tab}` : ''}` };
 const STATUS = [['lead', 'Lead'], ['proposal', 'Proposal'], ['active', 'Active'], ['paused', 'Paused'], ['past', 'Past']];
-const KINDS = [['avatars', 'Customer avatar', 'name'], ['offers', 'Offer or product', 'name'], ['stories', 'Story', 'title'], ['brand_kits', 'Brand kit', 'name'], ['strategies', 'Funnel Strategy', 'name']];
+const KINDS = [['avatars', 'Customer avatar', 'name'], ['offers', 'Offer or product', 'name'], ['stories', 'Story', 'title'], ['brand_kits', 'Brand kit', 'name'], ['strategies', 'Funnel Strategy', 'name'], ['ladders', 'Value Ladder', 'name']];
 const statusLabel = (s) => (STATUS.find(([k]) => k === s) ?? [s, s ?? 'No status'])[1];
 const when = (iso) => (iso ? new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '');
 const statusChip = (s) => chip(statusLabel(s), s === 'active' ? 'ok' : s === 'paused' ? 'warn' : '');
@@ -105,7 +105,7 @@ export function clientsView({ api, ctx, route }) {
       const copies = cp.ok ? cp.data : [];
       const strategy = h('section', { class: 'card pad' }, h('div', { class: 'pj-calbar' }, h('h2', { class: 'pj-gh' }, 'Strategy'), can('clients.client.edit') ? btn('Start a copy', startCopy, 'pri') : null),
         notice('info', 'info', 'These are client-specific copies, started from Office › Funnels. They are never synced: changing the library later does not change them, and editing a copy does not change the library.'),
-        copies.length ? h('ul', { class: 'pj-rows' }, ...copies.map((k) => h('li', { class: 'pj-row' }, icon('doc'), h('a', { class: 'pj-title', href: k.kind === 'strategies' ? `#/office/funnels/strategy/${k.copy_id}` : `#/office/funnels/${k.kind}/${k.copy_id}` }, k.copy_name ?? 'Copy'), chip(KINDS.find(([x]) => x === k.kind)?.[1] ?? k.kind), h('span', { class: 'fine muted' }, `from “${k.source_name ?? 'a library record'}” · ${when(k.created_at)}`))))
+        copies.length ? h('ul', { class: 'pj-rows' }, ...copies.map((k) => h('li', { class: 'pj-row' }, icon('doc'), h('a', { class: 'pj-title', href: k.kind === 'strategies' ? `#/office/funnels/strategy/${k.copy_id}` : k.kind === 'ladders' ? `#/ladder/l/${k.copy_id}` : `#/office/funnels/${k.kind}/${k.copy_id}` }, k.copy_name ?? 'Copy'), chip(KINDS.find(([x]) => x === k.kind)?.[1] ?? k.kind), h('span', { class: 'fine muted' }, `from “${k.source_name ?? 'a library record'}” · ${when(k.created_at)}`))))
           : emptyState({ title: 'No copies yet', body: 'Start a copy of an avatar, offer, story or the brand kit from the organization library for this client.', ic: 'doc' }));
       const later = (title, why) => h('section', { class: 'card pad' }, h('h2', { class: 'pj-gh' }, title), h('p', { class: 'muted' }, why));
       const fr = await api.call('forms.list', { client: id });
@@ -134,7 +134,7 @@ export function clientsView({ api, ctx, route }) {
     async function startCopy() {
       const kind = h('select', { id: 'sc-kind', 'aria-label': 'What to copy' }, ...KINDS.map(([k, t]) => h('option', { value: k }, t))); const pick = h('select', { id: 'sc-src', 'aria-label': 'Library record' }); const hint = h('p', { class: 'fine muted' });
       const cp = await api.call('clients.strategy.list', { client: id }); const done = new Set((cp.ok ? cp.data : []).map((k) => k.source_id));
-      const fill = async () => { put(pick, h('option', { value: '' }, 'Loading…')); const r = kind.value === 'strategies' ? await api.call('funnels.strategies.list', { library: true }) : await api.call(`funnels.${kind.value}.list`, {}); const key = KINDS.find(([k]) => k === kind.value)[2];
+      const fill = async () => { put(pick, h('option', { value: '' }, 'Loading…')); const r = kind.value === 'strategies' ? await api.call('funnels.strategies.list', { library: true }) : kind.value === 'ladders' ? await api.call('valueladder.list', {}) : await api.call(`funnels.${kind.value}.list`, {}); const key = KINDS.find(([k]) => k === kind.value)[2];
         const opts = (r.ok ? r.data : []).filter((x) => !x.client_id && !done.has(x.id)); put(pick, ...(opts.length ? opts.map((x) => h('option', { value: x.id }, x[key])) : [h('option', { value: '' }, 'Nothing left to copy')]));
         hint.textContent = kind.value === 'brand_kits' ? 'A client has one brand kit.' : ''; };
       kind.addEventListener('change', fill); fill();

@@ -7,13 +7,15 @@ const id = { id: { type: 'uuid', required: true } };
 const like = (q) => `%${String(q).replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
 
 // ------------------------------------------------------------------ value ladder
-const STAGES = ['lead_magnet', 'tripwire', 'core', 'upsell', 'continuity', 'premium'];
+const STAGES = ['lead_magnet', 'tripwire', 'core', 'upsell', 'downsell', 'continuity', 'premium'];
 const RUNG = `select r.id, r.ladder_id, r.position, r.stage, r.name, r.description, r.offer_id, o.name as offer_name,
-    coalesce(o.price_amount, r.price_amount)::float8 as price_amount, coalesce(o.currency, r.currency) as currency, r.archived_at
+    coalesce(o.price_amount, r.price_amount)::float8 as price_amount, coalesce(o.currency, r.currency) as currency, o.archived_at as offer_archived_at,
+    r.audience, r.conversion_pct::float8 as conversion_pct, r.assumption_notes, r.owner_id, r.archived_at
   from value_ladder_rungs r left join funnel_offers o on o.workspace_id = r.workspace_id and o.id = r.offer_id`;
-const LADDER = `select l.id, l.client_id, l.name, l.description, l.archived_at, l.created_at, l.updated_at,
+const LADDER = `select l.id, l.client_id, l.name, l.description, l.status, l.archived_at, l.created_at, l.updated_at,
     (select count(*)::int from value_ladder_rungs r where r.ladder_id = l.id and r.archived_at is null) as rungs from value_ladders l`;
-const RUNG_IN = { stage: { type: 'enum', values: STAGES }, name: { type: 'text', max: 200 }, description: T(), offer: { type: 'uuid' }, price_amount: { type: 'number', min: 0, max: 1e9 }, currency: { type: 'currency' } };
+const RUNG_IN = { stage: { type: 'enum', values: STAGES }, name: { type: 'text', max: 200 }, description: T(), offer: { type: 'uuid' }, price_amount: { type: 'number', min: 0, max: 1e9 }, currency: { type: 'currency' },
+  audience: T(500), conversion_pct: { type: 'number', min: 0, max: 100 }, assumption_notes: T(2000), owner: { type: 'uuid' } };
 
 export const ladderOperations = [
   defineOperation({
@@ -37,9 +39,9 @@ export const ladderOperations = [
     },
   }),
   defineOperation({
-    name: 'valueladder.update', class: 'write', single: true, input: { ...id, name: { type: 'text', max: 200 }, description: T() },
+    name: 'valueladder.update', class: 'write', single: true, input: { ...id, name: { type: 'text', max: 200 }, description: T(), status: { type: 'enum', values: ['draft', 'approved'] } },
     run: async (q, _c, i) => {
-      if (!(await q('update value_ladders set name = coalesce($2, name), description = coalesce($3, description) where id = $1 and archived_at is null returning id', [i.id, i.name ?? null, i.description ?? null])).length) return [];
+      if (!(await q('update value_ladders set name = coalesce($2, name), description = coalesce($3, description), status = coalesce($4, status) where id = $1 and archived_at is null returning id', [i.id, i.name ?? null, i.description ?? null, i.status ?? null])).length) return [];
       return q(`${LADDER} where l.id = $1`, [i.id]);
     },
   }),
@@ -49,19 +51,22 @@ export const ladderOperations = [
   defineOperation({
     name: 'valueladder.rungs.add', class: 'write', single: true, input: { ladder: { type: 'uuid', required: true }, ...RUNG_IN, stage: { ...RUNG_IN.stage, required: true }, name: { ...RUNG_IN.name, required: true } },
     run: async (q, ctx, i) => {
-      const [r] = await q('insert into value_ladder_rungs (workspace_id, ladder_id, stage, name, description, offer_id, price_amount, currency) values ($1, $2, $3, $4, $5, $6, $7, $8) returning id',
-        [ctx.orgId, i.ladder, i.stage, i.name, i.description ?? null, i.offer ?? null, i.price_amount ?? null, i.currency ?? null]);
+      const [r] = await q('insert into value_ladder_rungs (workspace_id, ladder_id, stage, name, description, offer_id, price_amount, currency, audience, conversion_pct, assumption_notes, owner_id) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) returning id',
+        [ctx.orgId, i.ladder, i.stage, i.name, i.description ?? null, i.offer ?? null, i.price_amount ?? null, i.currency ?? null, i.audience || null, i.conversion_pct ?? null, i.assumption_notes || null, i.owner ?? null]);
       return q(`${RUNG} where r.id = $1`, [r.id]);
     },
   }),
   defineOperation({
-    name: 'valueladder.rungs.update', class: 'write', single: true, input: { ...id, ...RUNG_IN, clear_offer: { type: 'bool' }, clear_price: { type: 'bool' } },
+    name: 'valueladder.rungs.update', class: 'write', single: true, input: { ...id, ...RUNG_IN, clear_offer: { type: 'bool' }, clear_price: { type: 'bool' }, clear_conversion: { type: 'bool' }, clear_owner: { type: 'bool' } },
     run: async (q, _c, i) => {
       const sets = []; const p = [i.id];
       const add = (col, v) => { p.push(v); sets.push(`${col} = $${p.length}`); };
-      for (const [k, col] of [['stage', 'stage'], ['name', 'name'], ['description', 'description'], ['offer', 'offer_id'], ['price_amount', 'price_amount'], ['currency', 'currency']]) if (i[k] !== undefined) add(col, i[k]);
+      for (const [k, col] of [['stage', 'stage'], ['name', 'name'], ['description', 'description'], ['offer', 'offer_id'], ['price_amount', 'price_amount'], ['currency', 'currency'], ['conversion_pct', 'conversion_pct'], ['owner', 'owner_id']]) if (i[k] !== undefined) add(col, i[k]);
+      for (const [k, col] of [['audience', 'audience'], ['assumption_notes', 'assumption_notes']]) if (i[k] !== undefined) add(col, i[k] === '' ? null : i[k]);   // an empty text clears it
       if (i.clear_offer) sets.push('offer_id = null');
       if (i.clear_price) sets.push('price_amount = null', 'currency = null');
+      if (i.clear_conversion) sets.push('conversion_pct = null');
+      if (i.clear_owner) sets.push('owner_id = null');
       if (sets.length && !(await q(`update value_ladder_rungs set ${sets.join(', ')} where id = $1 and archived_at is null returning id`, p)).length) return [];
       return q(`${RUNG} where r.id = $1`, [i.id]);
     },
@@ -80,6 +85,43 @@ export const ladderOperations = [
   defineOperation({ name: 'valueladder.rungs.restore', class: 'write', single: true, input: id, run: (q, _c, i) => q('update value_ladder_rungs set archived_at = null, position = null where id = $1 and archived_at is not null returning id, position', [i.id]) }),
   defineOperation({ name: 'valueladder.rungs.delete', class: 'write', single: true, input: id, run: (q, _c, i) => q('delete from value_ladder_rungs where id = $1 returning id', [i.id]) }),
 ];
+
+
+// A copy of a ladder with all its active rungs, optionally for a client (a client-specific copy, V4-1). Rungs keep pointing at the same offers (references).
+export async function duplicateLadder(q, ctx, sourceId, clientId, name) {
+  const [src] = await q('select l.name, l.description from value_ladders l where l.id = $1 and l.archived_at is null', [sourceId]);
+  if (!src) return null;
+  const [r] = await q('insert into value_ladders (workspace_id, name, description, client_id) values ($1, $2, $3, $4) returning id', [ctx.orgId, name ?? src.name, src.description, clientId ?? null]);
+  const rungs = await q('select stage, name, description, offer_id, price_amount, currency, audience, conversion_pct, assumption_notes from value_ladder_rungs where ladder_id = $1 and archived_at is null order by position', [sourceId]);
+  for (const g of rungs) await q('insert into value_ladder_rungs (workspace_id, ladder_id, stage, name, description, offer_id, price_amount, currency, audience, conversion_pct, assumption_notes) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)', [ctx.orgId, r.id, g.stage, g.name, g.description, g.offer_id, g.price_amount, g.currency, g.audience, g.conversion_pct, g.assumption_notes]);
+  return r.id;
+}
+const SNAP_RUNGS = `coalesce((select json_agg(json_build_object('id', x.id, 'stage', x.stage, 'name', x.name, 'description', x.description, 'offer_id', x.offer_id, 'offer_name', x.offer_name, 'price_amount', x.price_amount, 'currency', x.currency, 'audience', x.audience, 'conversion_pct', x.conversion_pct, 'assumption_notes', x.assumption_notes) order by x.position)
+  from (${RUNG} where r.ladder_id = $1 and r.archived_at is null) x), '[]'::json)`;
+ladderOperations.push(
+  defineOperation({
+    name: 'valueladder.duplicate', class: 'write', single: true, input: { ...id, name: { type: 'text', max: 200 }, client: { type: 'uuid' } },
+    run: async (q, ctx, i) => { const nid = await duplicateLadder(q, ctx, i.id, i.client, i.name ?? null); return nid ? q(`${LADDER} where l.id = $1`, [nid]) : []; },
+  }),
+  defineOperation({
+    // a snapshot of the ladder as it is now (name, status and every active step with the offer's name and price at that moment)
+    name: 'valueladder.versions.save', class: 'write', single: true, input: { ladder: { type: 'uuid', required: true }, note: T(300) },
+    run: async (q, ctx, i) => {
+      const [l] = await q('select l.name, l.description, l.status from value_ladders l where l.id = $1 and l.archived_at is null', [i.ladder]);
+      if (!l) return [];
+      const [r] = await q(`insert into value_ladder_versions (workspace_id, ladder_id, name, description, status, rungs, note) select $2, $1, $3, $4, $5, ${SNAP_RUNGS}, $6 returning ladder_id, version, name, status, note, created_at`, [i.ladder, ctx.orgId, l.name, l.description, l.status, i.note || null]);
+      return [r];
+    },
+  }),
+  defineOperation({
+    name: 'valueladder.versions.list', class: 'read', input: { ladder: { type: 'uuid', required: true } },
+    run: (q, _c, i) => q('select v.version, v.name, v.status, v.note, jsonb_array_length(v.rungs)::int as rungs, v.created_by, v.created_at from value_ladder_versions v where v.ladder_id = $1 order by v.version desc limit 200', [i.ladder]),
+  }),
+  defineOperation({
+    name: 'valueladder.versions.get', class: 'read', single: true, input: { ladder: { type: 'uuid', required: true }, version: { type: 'int', required: true, min: 1 } },
+    run: (q, _c, i) => q('select v.version, v.name, v.description, v.status, v.rungs, v.note, v.created_at from value_ladder_versions v where v.ladder_id = $1 and v.version = $2', [i.ladder, i.version]),
+  }),
+);
 
 // ------------------------------------------------------------------ social planner
 const CHANNELS = ['facebook', 'instagram', 'linkedin', 'x', 'tiktok', 'youtube', 'pinterest', 'email', 'other'];

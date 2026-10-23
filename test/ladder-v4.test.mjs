@@ -1,0 +1,65 @@
+// Value Ladder v4 (migration 0030): downsell step, per-step assumptions and owner, status, immutable snapshots (history and compare), duplicate and client copy.
+import { randomUUID as id } from 'node:crypto';
+import { openDb, migrate, recorder } from './lib.mjs';
+import { createApi } from '../packages/core/api.mjs';
+import { createPgExecutor } from '../packages/core/pg-executor.mjs';
+import { createRateLimiter } from '../packages/core/rate-limit.mjs';
+import { createSafeLogger } from '../packages/core/safe-log.mjs';
+
+const db = await openDb(); await migrate(db);
+const { results, check } = recorder();
+const rows = async (s, p = []) => (await db.query(s, p)).rows;
+let chain = Promise.resolve();
+const acquire = () => { const prev = chain; let release; chain = new Promise((r) => { release = r; }); return prev.then(() => ({ query: (s, p) => db.query(s, p), release })); };
+const BIG = { read: { max: 1e6, windowMs: 6e4 }, write: { max: 1e6, windowMs: 6e4 }, sensitive: { max: 1e6, windowMs: 6e4 } };
+const api = createApi({ executor: createPgExecutor({ acquire, role: 'app_user' }), logger: createSafeLogger(() => {}), limiter: createRateLimiter({ limits: BIG }) });
+const J = async (op, input, u, org) => { const r = await api.handle({ operation: op, input, auth: { userId: u, email: 'x@example.com' }, headers: { 'x-org-id': org } }); return { ...r, row: r.body?.data?.[0], rows: r.body?.data ?? [] }; };
+await db.exec('reset role');
+const ORG = { L: id(), A: id() }; const U = { LO: id(), LED: id(), LVW: id(), AO: id(), BOTH: id() };
+await db.query("insert into workspaces (id,slug,name) values ($1,'layer2funnels','L'),($2,'aurj','A')", [ORG.L, ORG.A]);
+const staff = (u, ws, r) => db.query("insert into memberships (workspace_id,user_id,kind,role) values ($1,$2,'staff',$3)", [ws, u, r]);
+await staff(U.LO, ORG.L, 'owner'); await staff(U.LED, ORG.L, 'editor'); await staff(U.LVW, ORG.L, 'viewer'); await staff(U.AO, ORG.A, 'owner'); await staff(U.BOTH, ORG.L, 'owner'); await staff(U.BOTH, ORG.A, 'owner');
+for (const u of [U.LED, U.LVW]) for (const a of ['value_ladder', 'office', 'clients']) await db.query('insert into app_grants (workspace_id,user_id,app_key) values ($1,$2,$3)', [ORG.L, u, a]);
+await db.query("update apps set lifecycle = 'active' where key = 'value_ladder'");
+for (const w of [ORG.L, ORG.A]) await db.query("insert into workspace_apps (workspace_id, app_key, enabled) values ($1, 'value_ladder', true) on conflict (workspace_id, app_key) do update set enabled = true", [w]);
+const C1 = id(); await db.query("insert into clients (id,workspace_id,name) values ($1,$2,'One')", [C1, ORG.L]);
+const OFF = (await J('funnels.offers.create', { name: 'Starter pack', price_amount: 47, currency: 'USD' }, U.LO, ORG.L)).row;
+const OFF2 = (await J('funnels.offers.create', { name: 'Coaching', price_amount: 2000, currency: 'USD' }, U.LO, ORG.L)).row;
+
+const LD = (await J('valueladder.create', { name: 'Main ladder' }, U.LO, ORG.L)).row;
+const add = (input, u = U.LO, org = ORG.L, ladder = LD.id) => J('valueladder.rungs.add', { ladder, ...input }, u, org);
+const r1 = await add({ stage: 'lead_magnet', name: 'Free guide', audience: 'Cold traffic', conversion_pct: 35, assumption_notes: 'Needs a landing page' });
+const r2 = await add({ stage: 'tripwire', name: 'Starter', offer: OFF.id, conversion_pct: 8 });
+const r3 = await add({ stage: 'downsell', name: 'Lite plan', price_amount: 19, currency: 'USD' });
+const r4 = await add({ stage: 'premium', name: 'Coaching', offer: OFF2.id, owner: U.LED });
+check('LV1', 'Steps can be a downsell, and carry an audience, a conversion % and notes; a step takes its price from the offer it references', r3.row?.stage === 'downsell' && r1.row?.audience === 'Cold traffic' && r1.row?.conversion_pct === 35 && r2.row?.price_amount === 47 && r4.row?.owner_id === U.LED);
+check('LV2', 'A conversion % outside 0 to 100 is refused', (await add({ stage: 'core', name: 'x', conversion_pct: 140 })).status !== 200 && (await add({ stage: 'core', name: 'x', conversion_pct: -1 })).status !== 200);
+check('LV2b', 'An unknown step type is refused', (await add({ stage: 'bonus', name: 'x' })).status !== 200);
+check('LV3', 'Changing a step: an empty audience clears it, the conversion can be cleared, the owner can be removed', (await J('valueladder.rungs.update', { id: r1.row.id, audience: '' }, U.LO, ORG.L)).row?.audience === null && (await J('valueladder.rungs.update', { id: r1.row.id, clear_conversion: true }, U.LO, ORG.L)).row?.conversion_pct === null && (await J('valueladder.rungs.update', { id: r4.row.id, clear_owner: true }, U.LO, ORG.L)).row?.owner_id === null);
+await J('valueladder.rungs.update', { id: r1.row.id, audience: 'Cold traffic', conversion_pct: 35 }, U.LO, ORG.L);
+check('LV4', 'A ladder starts as a draft and can be approved; a made-up status is refused', LD.status === 'draft' && (await J('valueladder.update', { id: LD.id, status: 'approved' }, U.LO, ORG.L)).row?.status === 'approved' && (await J('valueladder.update', { id: LD.id, status: 'done' }, U.LO, ORG.L)).status !== 200);
+const v1 = await J('valueladder.versions.save', { ladder: LD.id, note: 'First approved plan' }, U.LO, ORG.L);
+check('LV5', 'Saving a version snapshots the ladder: name, status and every step with the offer name and price at that moment', v1.row?.version === 1 && (await J('valueladder.versions.get', { ladder: LD.id, version: 1 }, U.LO, ORG.L)).row.rungs.length === 4 && (await J('valueladder.versions.get', { ladder: LD.id, version: 1 }, U.LO, ORG.L)).row.rungs[1].offer_name === 'Starter pack');
+await J('funnels.offers.update', { id: OFF.id, price_amount: 97, currency: 'USD', name: 'Starter pack v2' }, U.LO, ORG.L);
+await J('valueladder.rungs.update', { id: r3.row.id, name: 'Lite plan renamed' }, U.LO, ORG.L); await J('valueladder.rungs.archive', { id: r4.row.id }, U.LO, ORG.L);
+const v2 = await J('valueladder.versions.save', { ladder: LD.id }, U.LO, ORG.L);
+const g1 = (await J('valueladder.versions.get', { ladder: LD.id, version: 1 }, U.LO, ORG.L)).row; const g2 = (await J('valueladder.versions.get', { ladder: LD.id, version: 2 }, U.LO, ORG.L)).row;
+check('LV6', 'Versions are immutable and comparable: version 1 still shows the old price and all four steps; version 2 shows the new price, the rename and three steps', v2.row?.version === 2 && g1.rungs[1].price_amount === 47 && g1.rungs.length === 4 && g2.rungs[1].price_amount === 97 && g2.rungs.length === 3 && g2.rungs.some((x) => x.name === 'Lite plan renamed'));
+check('LV7', 'The history lists both versions, newest first, with note and step count', (await J('valueladder.versions.list', { ladder: LD.id }, U.LO, ORG.L)).rows.map((x) => `${x.version}:${x.rungs}`).join() === '2:3,1:4');
+let upd = ''; try { await db.query('update value_ladder_versions set note = $1 where ladder_id = $2', ['hacked', LD.id]); } catch (e) { upd = e.message; }
+let del = ''; try { await db.query('delete from value_ladder_versions where ladder_id = $1', [LD.id]); } catch (e) { del = e.message; }
+check('LV8', 'A saved version cannot be edited or deleted, even directly in the database', /cannot be changed/.test(upd) && /cannot be changed/.test(del));
+await J('funnels.offers.archive', { id: OFF.id }, U.LO, ORG.L);
+check('LV9', 'A step whose offer was archived is flagged so the screen can warn about the broken link', (await J('valueladder.get', { id: LD.id }, U.LO, ORG.L)).row.rung_list.find((x) => x.name === 'Starter').offer_archived_at !== null);
+await J('funnels.offers.restore', { id: OFF.id }, U.LO, ORG.L);
+const dup = await J('valueladder.duplicate', { id: LD.id, name: 'Copy of main' }, U.LED, ORG.L);
+check('LV10', 'Duplicating makes a new draft ladder with the same active steps (archived ones are left out), in the same order', dup.row?.name === 'Copy of main' && dup.row.status === 'draft' && dup.row.rungs === 3 && (await J('valueladder.get', { id: dup.row.id }, U.LO, ORG.L)).row.rung_list.map((x) => x.stage).join() === 'lead_magnet,tripwire,downsell');
+const cp = await J('clients.strategy.copy', { client: C1, kind: 'ladders', source: LD.id }, U.LO, ORG.L);
+const cl = cp.row ? (await rows('select client_id, status from value_ladders where id = $1', [cp.row.copy_id]))[0] : null;
+check('LV11', 'A client copy of a ladder is a new draft ladder that belongs to the client, with its steps, started once and listed under the client’s Strategy', cp.status === 200 && cl.client_id === C1 && cl.status === 'draft' && (await J('valueladder.get', { id: cp.row.copy_id }, U.LO, ORG.L)).row.rungs === 3 && (await J('clients.strategy.copy', { client: C1, kind: 'ladders', source: LD.id }, U.LO, ORG.L)).status !== 200 && (await J('clients.strategy.list', { client: C1 }, U.LO, ORG.L)).rows.some((x) => x.kind === 'ladders' && x.copy_name === 'Main ladder'));
+check('LV12', 'A client-owned ladder cannot itself be a copy source', (await J('clients.strategy.copy', { client: C1, kind: 'ladders', source: cp.row.copy_id }, U.LO, ORG.L)).rows.length === 0);
+check('LV13', 'A viewer reads the ladder and its history but cannot save a version, duplicate, approve or change a step', (await J('valueladder.versions.list', { ladder: LD.id }, U.LVW, ORG.L)).rows.length === 2 && (await J('valueladder.versions.save', { ladder: LD.id }, U.LVW, ORG.L)).rows.length === 0 && (await J('valueladder.duplicate', { id: LD.id }, U.LVW, ORG.L)).rows.length === 0 && (await J('valueladder.update', { id: LD.id, status: 'draft' }, U.LVW, ORG.L)).rows.length === 0);
+check('LV14', 'Another organization cannot see the ladder, its history or copy it', (await J('valueladder.get', { id: LD.id }, U.AO, ORG.A)).rows.length === 0 && (await J('valueladder.versions.list', { ladder: LD.id }, U.AO, ORG.A)).rows.length === 0 && (await J('valueladder.duplicate', { id: LD.id }, U.AO, ORG.A)).rows.length === 0 && (await J('valueladder.versions.list', { ladder: LD.id }, U.BOTH, ORG.A)).rows.length === 0 && (await J('valueladder.versions.list', { ladder: LD.id }, U.BOTH, ORG.L)).rows.length === 2);
+check('LV15', 'Versions are audited by ladder id, number and status only', (await rows("select detail::text d from audit_events where action like 'value_ladder_versions.%'")).every((r) => !/Starter|Free guide|Cold traffic/.test(r.d ?? '')));
+for (const x of results) console.log(`${x.ok ? 'PASS' : 'FAIL'}  ${x.id.padEnd(5)} ${x.name}`);
+const pc = results.filter((x) => x.ok).length; console.log(`\n${pc}/${results.length} checks passed`); await db.close(); process.exit(pc === results.length ? 0 : 1);

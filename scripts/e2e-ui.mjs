@@ -722,6 +722,42 @@ await rm.close();
   await page.goto(`${base}/#/launcher`); await page.reload(); await wait('Your apps in');
 }
 
+// =============================================================== C6. Value Ladder (map, table, step drawer, versions, compare, approve, duplicate for a client)
+{
+  const [{ id: wsL }] = (await admin.query("select id from workspaces where slug = 'layer2funnels'")).rows;
+  await admin.query("update apps set lifecycle = 'active' where key = 'value_ladder'"); await admin.query("insert into workspace_apps (workspace_id, app_key, enabled) values ($1, 'value_ladder', true) on conflict (workspace_id, app_key) do update set enabled = true", [wsL]);
+  const LN = `Main ladder ${Date.now()}`, ON = `Starter pack ${Date.now()}`, CNAME = `Ladder client ${Date.now()}`;
+  await admin.query("insert into funnel_offers (workspace_id, name, price_amount, currency) values ($1, $2, 47, 'USD')", [wsL, ON]);
+  const [{ id: lcid }] = (await admin.query("insert into clients (workspace_id, name) values ($1, $2) returning id", [wsL, CNAME])).rows;
+  await page.reload(); await page.goto(`${base}/#/ladder`); await page.waitForSelector('.vl, .pj-head', { timeout: 9000 });
+  await page.getByRole('button', { name: 'New ladder' }).first().click(); await page.fill('#nl-name', LN); await page.getByRole('button', { name: 'Create', exact: true }).click(); await page.waitForSelector('.pj-head h1', { timeout: 9000 }); await page.waitForSelector('text=No steps yet', { timeout: 9000 });
+  check('VL1', 'A new ladder opens as a draft with the Map, Table, Compare and History views and an empty state', (await page.getByRole('tab').count()) === 4 && (await page.locator('.pj-meta').innerText()).includes('Draft'));
+  for (const [kind, name, offer] of [['lead_magnet', 'Free guide', ''], ['tripwire', 'Starter', ON], ['premium', 'Coaching', '']]) { await page.getByRole('button', { name: 'Add a step' }).first().click(); await page.selectOption('#as-kind', kind); await page.fill('#as-name', name); if (offer) await page.selectOption('#as-offer', { label: new RegExp(offer.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) }).catch(async () => { await page.locator('#as-offer').selectOption({ index: 1 }); }); await page.getByRole('button', { name: 'Add step' }).click(); await page.waitForFunction((n) => document.body.innerText.includes(n), name, { timeout: 9000 }).catch(async (e) => { console.log('LADDER DEBUG', name, JSON.stringify((await page.locator('main').innerText()).slice(0, 500)), net.slice(-3)); throw e; }); }
+  check('VL2', 'Steps are added in order and shown as a rising map from free to premium, the linked offer read from Offers & Products', (await page.locator('.vl-step').count()) === 3 && (await page.locator('.vl-step').nth(1).innerText()).includes('47 USD') && (await page.locator('main').innerText()).includes('More value, higher price'));
+  await page.locator('.vl-step').nth(0).click(); await page.waitForSelector('#sd-aud', { timeout: 9000 }); await page.fill('#sd-aud', 'Cold traffic'); await page.fill('#sd-conv', '35'); await page.getByRole('button', { name: 'Save step' }).click(); for (let n = 0; n < 40 && (await admin.query("select r.audience from value_ladder_rungs r join value_ladders l on l.id = r.ladder_id where l.name = $1 and r.name = 'Free guide'", [LN])).rows[0].audience !== 'Cold traffic'; n++) await page.waitForTimeout(100);
+  const st = (await admin.query("select r.audience, r.conversion_pct::float8 c from value_ladder_rungs r join value_ladders l on l.id = r.ladder_id where l.name = $1 and r.name = 'Free guide'", [LN])).rows[0];
+  check('VL3', 'The step drawer saves audience and conversion %', st.audience === 'Cold traffic' && st.c === 35);
+  await page.getByRole('button', { name: 'Save version' }).click(); await page.fill('#sv-note', 'First draft'); await page.getByRole('button', { name: 'Save version' }).last().click(); await page.waitForFunction(() => document.body.innerText.includes('Saved as version 1'), null, { timeout: 9000 }).catch(() => {});
+  await page.getByRole('tab', { name: 'Table' }).click(); await page.waitForSelector('.tbl', { timeout: 9000 }); await page.getByRole('button', { name: /Move earlier Coaching/ }).click(); await page.waitForFunction(() => /Coaching/.test(document.querySelector('.tbl tbody tr:nth-child(2)')?.innerText ?? ''), null, { timeout: 9000 });
+  check('VL4', 'The table lists the steps with type, offer, price, conversion and owner; a step can be moved earlier or later', (await page.locator('.tbl tbody tr').count()) === 3 && (await page.locator('.tbl tbody tr').nth(1).innerText()).includes('Coaching'));
+  await page.getByRole('tab', { name: 'Compare' }).click(); await page.waitForSelector('.vl-diff', { timeout: 9000 });
+  check('VL5', 'Compare says in words what changed since version 1 (here: the steps were reordered)', (await page.locator('.vl-diff').allInnerTexts()).join(' ').includes('Position'));
+  await page.getByRole('button', { name: 'Approve' }).click(); await page.waitForFunction(() => /Approved/.test(document.querySelector('.pj-meta')?.innerText ?? ''), null, { timeout: 9000 });
+  const ap = (await admin.query("select l.status, (select count(*)::int from value_ladder_versions v where v.ladder_id = l.id) n from value_ladders l where l.name = $1", [LN])).rows[0];
+  check('VL6', 'Approve marks the ladder approved and saves a version of it (two versions now)', ap.status === 'approved' && ap.n === 2);
+  await page.getByRole('tab', { name: 'History' }).click(); await page.waitForSelector('text=Version 2', { timeout: 9000 });
+  check('VL7', 'History lists the versions with their notes', (await page.locator('main').innerText()).includes('First draft') && (await page.locator('main').innerText()).includes('Version 1'));
+  await admin.query("update funnel_offers set archived_at = now() where name = $1", [ON]); await page.getByRole('tab', { name: 'Map' }).click(); await page.reload(); await page.waitForSelector('.vl-step', { timeout: 9000 });
+  check('VL8', 'If a linked offer is archived, the step shows a broken-link warning', (await page.locator('.vl-step.broken').count()) === 1 && (await page.locator('.vl-step.broken').innerText()).includes('archived'));
+  await page.getByRole('button', { name: 'Duplicate' }).click(); await page.selectOption('#dp-scope', { label: `For ${CNAME}` }); await page.getByRole('button', { name: 'Duplicate', exact: true }).last().click(); await page.waitForFunction((n) => document.querySelector('.pj-head h1')?.innerText.includes('(copy)') ?? false, null, { timeout: 9000 }).catch(() => {});
+  const dp = (await admin.query("select l.client_id, l.status, (select count(*)::int from value_ladder_rungs r where r.ladder_id = l.id) n from value_ladders l where l.name like $1 order by created_at desc limit 1", [`${LN}%(copy)`])).rows[0];
+  check('VL9', 'Duplicating for a client makes a draft ladder that belongs to that client with the same steps', dp && dp.client_id === lcid && dp.status === 'draft' && dp.n === 3);
+  await page.goto(`${base}/#/ladder/l/00000000-0000-0000-0000-000000000000`); await wait('Not here');
+  check('VL10', 'A ladder id that does not exist shows the plain "Not here" state', (await page.locator('.empty').innerText()).includes('Not here'));
+  await admin.query("update apps set lifecycle = 'coming_soon' where key = 'value_ladder'"); await admin.query("delete from workspace_apps where workspace_id = $1 and app_key = 'value_ladder'", [wsL]);
+  await page.goto(`${base}/#/launcher`); await page.reload(); await wait('Your apps in');
+}
+
 // =============================================================== C2. Office pages: Documents, Team, Apps, Projects pointer, Access history
 {
   const [{ id: wsL }] = (await admin.query("select id from workspaces where slug = 'layer2funnels'")).rows;
