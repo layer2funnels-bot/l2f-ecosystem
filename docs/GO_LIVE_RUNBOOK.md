@@ -150,3 +150,6 @@ Each of steps 1, 3 (slot), 4, 5, 6, 7, 8, 10, 11 and 12 changes something outsid
 
 ## Not covered here
 Funnel Mapper Pro hosting and data (separate approvals: docs/FMP_MIGRATION_PLAN.md, docs/FMP_CLOUDFLARE_SPIKE.md); the independent-account sign-up path; Drive file storage buckets and their backup; the design-awaiting areas (Clients redesign, Funnel Strategies).
+
+## Switching on the v4 apps
+After the migrations (0001 to 0031) are applied, run `scripts/golive-activate-apps.sql` once. It makes Form Builder, Value Ladder, Social Planner and Whiteboard active for both organizations. People still need the app grant (or an access level that includes it) to see each app. Planner and Layer 2 Agents stay "coming soon".
