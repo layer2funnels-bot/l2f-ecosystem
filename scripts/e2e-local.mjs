@@ -221,6 +221,33 @@ const phase6 = ['approvals', 'approval_events', 'portal_messages', 'forms', 'for
 const directP6 = (await Promise.all(phase6.flatMap((t) => [owner.token, clientUser.token].map((tok) => fetch(`http://127.0.0.1:54321/rest/v1/${t}?select=*`, { headers: { apikey: KEY, authorization: `Bearer ${tok}` } }).then(async (x) => ({ t, status: x.status, rows: x.ok ? (await x.json()).length : null })))))).flat();
 check('E57', 'SECURITY: the Data API shows no approval, portal message, form, ladder or post row to an owner or a client account', directP6.every((d) => d.status >= 400 || d.rows === 0), JSON.stringify(directP6.filter((d) => !(d.status >= 400 || d.rows === 0))));
 
+// ---- Storage and Drive visibility are separate, in both organizations (migration 0025), through the real stack and real tokens
+await admin.query("update memberships set role = 'owner' where workspace_id = $1 and user_id = $2", [A, owner.id]);
+const driveIds = async (org2) => new Set((await post('drive.files.list', { space: 'shared', anywhere: true }, { org: org2 })).body.data.map((x) => x.id));
+const mkProj = async (org2, name) => (await admin.query("insert into projects (workspace_id, name) values ($1, $2) returning id", [org2, name])).rows[0].id;
+const pL = await mkProj(L, 'E2E internal L'), pA = await mkProj(A, 'E2E internal A');
+const made2 = {};
+for (const [k, o2, pj] of [['L', L, pL], ['A', A, pA]]) {
+  made2[k] = {
+    lib: (await post('drive.files.create', { space: 'shared', name: `${k} E2E library doc`, kind: 'document', body: 'x' }, { org: o2 })).body.data[0],
+    proj: (await post('drive.files.create', { space: 'shared', project: pj, name: `${k} E2E project doc`, kind: 'document', body: 'x' }, { org: o2 })).body.data[0],
+    board: (await post('drive.files.create', { space: 'shared', app: 'whiteboard', name: `${k} E2E board`, kind: 'document', mime_type: 'application/vnd.excalidraw+json', body: '{}' }, { org: o2 })).body.data[0],
+  };
+}
+const dL = await driveIds(L), dA = await driveIds(A);
+check('E58', 'Both organizations: a library document is listed in Drive; project documents and boards are stored but not listed, through the real stack',
+  dL.has(made2.L.lib.id) && dA.has(made2.A.lib.id) && !dL.has(made2.L.proj.id) && !dL.has(made2.L.board.id) && !dA.has(made2.A.proj.id) && !dA.has(made2.A.board.id) && made2.L.proj.in_library === false && made2.A.board.in_library === false && made2.L.proj.managed_by === 'projects' && made2.A.board.managed_by === 'whiteboard');
+check('E59', 'Neither organization’s Drive lists the other’s files, and the owning apps reach the hidden ones in their own organization only',
+  !dL.has(made2.A.lib.id) && !dA.has(made2.L.lib.id) && (await post('drive.project.files', { project: pL }, { org: L })).body.data.some((x) => x.id === made2.L.proj.id) && (await post('drive.project.files', { project: pL }, { org: A })).body.data.length === 0
+  && (await post('drive.boards.list', {}, { org: A })).body.data.some((x) => x.id === made2.A.board.id) && !(await post('drive.boards.list', {}, { org: A })).body.data.some((x) => x.id === made2.L.board.id) && (await post('drive.files.get', { id: made2.L.board.id }, { org: A })).status === 404);
+r = await post('drive.files.setLibrary', { id: made2.A.board.id, in_library: true }, { org: A });
+const dA2 = await driveIds(A), dL2 = await driveIds(L);
+check('E60', 'Adding a hidden file to the library lists it in that organization’s Drive only; the other organization’s Drive does not change',
+  r.status === 200 && dA2.has(made2.A.board.id) && !dL2.has(made2.A.board.id) && dL2.size === dL.size);
+const clientDoc = await admin.query("insert into clients (workspace_id, name) values ($1, 'E2E client') returning id", [A]);
+const cd = (await post('drive.files.create', { space: 'client', client: clientDoc.rows[0].id, app: 'clients', name: 'A E2E client doc', kind: 'document', body: 'x' }, { org: A })).body.data?.[0];
+check('E61', 'A client file is stored in the client space, never listed in the shared Drive, and refuses to join the library', cd?.in_library === false && !(await driveIds(A)).has(cd?.id) && (await post('drive.files.setLibrary', { id: cd.id, in_library: true }, { org: A })).status === 422);
+
 await s.close(); await admin.end();
 for (const x of results) console.log(`${x.ok ? 'PASS' : 'FAIL'}  ${x.id.padEnd(4)} ${x.n}${x.ok ? '' : `  [${x.d}]`}`);
 const p = results.filter((x) => x.ok).length; console.log(`\n${p}/${results.length} checks passed`); process.exit(p === results.length ? 0 : 1);

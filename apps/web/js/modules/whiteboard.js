@@ -23,7 +23,7 @@ const timeOf = (d) => new Date(d).toLocaleTimeString([], { hour: '2-digit', minu
 
 /** Creates a board in a context. context: { space: 'shared' } | { space: 'client', client } | { space: 'client'|'shared', project[, client] }. Returns the API result. */
 export const createBoard = (api, name, context = { space: 'shared' }) =>
-  api.call('drive.files.create', { space: context.space, ...(context.client ? { client: context.client } : {}), ...(context.project ? { project: context.project } : {}), name, kind: 'document', mime_type: BOARD_MIME, body: emptyBoard() });
+  api.call('drive.files.create', { app: 'whiteboard', space: context.space, ...(context.client ? { client: context.client } : {}), ...(context.project ? { project: context.project } : {}), name, kind: 'document', mime_type: BOARD_MIME, body: emptyBoard() });
 
 export function boardView({ api, id, ctx }) {
   const root = h('section', { class: 'board', 'aria-busy': 'true' }, skeleton(4));
