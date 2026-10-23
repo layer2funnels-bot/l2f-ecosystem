@@ -73,7 +73,7 @@ check('CA13', 'The same e-mail can no longer be invited while the access is acti
 await asUser(U.K1, { email: EM[U.K1], org: ORG.L }); const apps0 = (await rows('select app_key from launcher_apps($1)', [ORG.L])).map((x) => x.app_key); await asSuper();
 check('CA16', 'While the Portal is locked (G2) an active client is offered no app at all', apps0.length === 0);
 check('CA16b', 'While the Portal is locked, even an active client\'s Portal calls are refused', (await J('portal.me', {}, U.K1, ORG.L)).status === 404);
-await db.query("update apps set lifecycle = 'active' where key = 'portal'"); await db.query("insert into workspace_apps (workspace_id, app_key, enabled) values ($1, 'portal', true) on conflict (workspace_id, app_key) do update set enabled = true", [ORG.L]);
+await db.query("insert into workspace_apps (workspace_id, app_key, enabled) values ($1, 'portal', true) on conflict (workspace_id, app_key) do update set enabled = true", [ORG.L]);   // gate G2: the owner's per-organization switch
 const me = await J('portal.me', {}, U.K1, ORG.L);
 check('CA14', 'The client account reaches only the Portal family, and only its own client record', me.status === 200 && me.rows.length === 1 && me.rows[0].id === a1.client_id && (await J('clients.list', {}, U.K1, ORG.L)).status === 404 && (await J('clients.access.list', {}, U.K1, ORG.L)).status === 404 && (await inv('k@x.test', {}, U.K1, ORG.L)).status === 404 && (await J('invitation.create', { email: 'k2@x.test', kind: 'staff', role: 'admin' }, U.K1, ORG.L)).status === 404);
 check('CA15', 'The client account cannot see the other organization', (await J('portal.me', {}, U.K1, ORG.A)).status === 404);
@@ -95,7 +95,7 @@ check('CA23', 'Revoking removes the membership and the client loses access; the 
 check('CA24', 'A revoked access cannot be revived by the status call (invite again instead)', (await J('clients.access.set_status', { id: a1.access_id, status: 'active' }, U.LAD, ORG.L)).status === 422);
 const again = await inv('anna@acme.test', { person_name: 'Anna' });
 check('CA25', 'Inviting a revoked person again reuses their client record, starts a new access, and keeps the old one as history', again.row?.ok === true && again.row.client_id === a1.client_id && again.row.client_created === false && again.row.access_id !== a1.access_id && (await count("select count(*)::int c from client_access where workspace_id = $1 and email = 'anna@acme.test'", [ORG.L])) === 2 && (await count("select count(*)::int c from clients where workspace_id = $1 and name = 'Acme Ltd'", [ORG.L])) === 1);
-await db.query("update apps set lifecycle = 'coming_soon' where key = 'portal'"); await db.query("delete from workspace_apps where workspace_id = $1 and app_key = 'portal'", [ORG.L]);
+await db.query("update workspace_apps set enabled = false where workspace_id = $1 and app_key = 'portal'", [ORG.L]);
 check('CA25b', 'The list says the Portal is not open again once it is locked (the access itself is unchanged)', (await J('clients.access.list', {}, U.LAD, ORG.L)).rows.every((x) => x.portal_live === false));
 const hist = (await J('clients.access.events', { access: a1.access_id }, U.LAD, ORG.L)).rows.map((x) => x.event);
 check('CA26', 'The history lists each step in order (created, invited, reinvited, accepted, suspended, restored, revoked) without any e-mail or name', ['created_client', 'invited', 'reinvited', 'accepted', 'suspended', 'restored', 'revoked'].every((e, n) => hist[n] === e) && (await rows("select detail from client_access_events")).every((x) => !x.detail || !/@/.test(x.detail)));
