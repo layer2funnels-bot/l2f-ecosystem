@@ -40,7 +40,10 @@ button.who{width:44px;height:44px;border-radius:50%;font:700 13px/1 var(--font);
 .side-foot .avatar{--av:var(--brand)}
 @media (max-width:760px){.hdr .hide-s{display:none!important}.hdr .search{margin-left:auto}.hdr .appsw{display:block}}
 .hdr .only-m{display:none}
-@media (max-width:760px){.hdr .only-m{display:inline-block}}
+.hdr .crumb{flex:0 1 auto;min-width:0;overflow:hidden;white-space:nowrap}
+.hdr .search{flex:1 1 120px;width:auto;max-width:360px;min-width:0}
+.hdr{flex-wrap:nowrap}
+@media (max-width:760px){.hdr .only-m{display:inline-block}.hdr{-webkit-backdrop-filter:none;backdrop-filter:none}}
 .menu{opacity:0;transform:translateY(-4px);pointer-events:none;visibility:hidden;transition:opacity .14s ease-out,transform .14s ease-out,visibility 0s linear .14s;animation:none}
 .menu[data-open=true]{opacity:1;transform:none;pointer-events:auto;visibility:visible;transition-delay:0s}
 .menu.apps,.menu.appmenu{width:min(360px,calc(100vw - 24px));left:0;right:auto}

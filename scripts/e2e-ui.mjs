@@ -114,12 +114,12 @@ await q('insert into clients (workspace_id,name,archived_at) values ($1,$2,now()
 await page.getByRole('button', { name: 'Check for invitations' }).click(); await wait('The sky follows your time of day');
 
 // =============================================================== B. Launcher (design 03)
-check('U9', 'After an admin adds them, "Check for invitations" opens the Launcher in the organization theme with the switcher showing it', (await theme()) === 'l2f' && (await page.locator('#org-switcher strong').innerText()) === 'Layer2Funnels' && (await page.locator('.bar4').count()) === 1);
+check('U9', 'After an admin adds them, "Check for invitations" opens the Launcher in the organization theme with the switcher showing it', (await theme()) === 'l2f' && (await page.locator('#org-switcher strong').innerText()) === 'Layer2Funnels' && (await page.locator('.launcher.lx').count()) === 1);
 const tile = (k) => page.locator(`.tile[data-app=${k}]`);
 const keys = await page.locator('.tile').evaluateAll((els) => els.map((e) => e.dataset.app));
 check('U10', 'Owner sees the twelve apps grouped Everyday then Studio in the v4 order, Funnel Mapper Pro among them as a normal tile', keys.join() === 'office,projects,clients,drive,planner,portal,forms,value_ladder,social_planner,whiteboard,funnel_mapper_pro,layer2_agents', keys.join());
 const state = async (k) => (await tile(k).getAttribute('class')).split(' ')[1];
-check('U11', 'Tile states come from the real catalog: Client Portal locked, five apps coming soon', (await state('portal')) === 'locked' && (await tile('portal').innerText()).includes('Locked') && (await state('forms')) === 'soon' && (await tile('layer2_agents').innerText()).includes('Coming soon') && (await state('office')) === 'ok');
+check('U11', 'Tile states come from the real catalog: Client Portal locked, five apps coming soon', (await state('portal')) === 'locked' && (await tile('portal').innerText()).includes('Locked') && (await state('forms')) === 'soon' && (await tile('layer2_agents').innerText()).includes('Soon') && (await state('office')) === 'ok');
 await wait('your location');
 await shot(page, 'b1-launcher');
 const sky = await page.locator('.launcher').evaluate((e) => ({ part: e.dataset.part, wx: e.dataset.wx }));
@@ -340,7 +340,7 @@ const hp = (await q("insert into projects (workspace_id,name) values ($1,'Quiz f
 await q("insert into project_tasks (workspace_id,project_id,title,assignee_id,due_on) values ($1,$2,'Edit quiz emails',$3,current_date + 3),($1,$2,'Late task',$3,current_date - 2)", [L, hp, uid]);
 await q("insert into planner_reviews (workspace_id,title,due_on) values ($1,'Q4 review', current_date + 2)", [L]);
 await visit(page, base + '/#/office'); await wait('Edit quiz emails');
-check('U14b', 'Office Home fills "My work", "Deadlines" and the review notice from Projects and Planner (overdue task flagged, project name shown, review coming up)', (await page.locator('main').innerText()).includes('Quiz funnel rebuild') && (await page.locator('main').innerText()).includes('Overdue') && await page.getByText('Coming up:').isVisible() && !(await page.locator('main').innerText()).includes('Nothing assigned to you.'));
+check('U14b', 'Office Home fills "My work", "Deadlines" and the review notice from Projects and Planner (overdue task flagged, project name shown, review coming up)', (await page.locator('main').innerText()).includes('Quiz funnel rebuild') && (await page.locator('main').innerText()).includes('Overdue') && await page.getByText('Coming up.').isVisible() && !(await page.locator('main').innerText()).includes('Nothing assigned to you.'));
 
 await page.locator('nav.nav a', { hasText: 'Planner' }).click(); await wait('Planner isn’t built yet');
 check('U15', 'A section whose screens are not built yet says so honestly instead of showing a fake page', (await page.locator('main').innerText()).includes('Go to Office Home'));
@@ -362,7 +362,7 @@ check('U20', 'Saving without a name is explained next to the field', (await page
 await page.fill('#r-name', 'Busy coach, 35–45'); await page.fill('#r-pains', 'No time to follow up'); await page.selectOption('#r-client', { label: `Harry Kaye PT ${stamp}` });
 await page.click('button[type=submit]'); await wait('Not filled in yet.');
 check('U21', 'Creating an avatar opens its record page with sections, the client it belongs to, and the owner’s buttons', (await h1()) === 'Busy coach, 35–45' && await page.locator('#edit').isVisible() && await page.locator('#share').isVisible() && await page.locator('#archive').isVisible() && (await page.locator('main').innerText()).includes('No time to follow up'));
-check('O1', 'A customer avatar opens as a portrait profile: a portrait card with name and role, and the pains in their own column', (await page.locator('.portrait .pcard').count()) === 1 && (await page.locator('.portrait .pcard').innerText()).toLowerCase().includes('customer avatar') && (await page.locator('.portrait .pcol').first().innerText()).includes('No time to follow up'));
+check('O1', 'A customer avatar opens as a portrait profile: a portrait card with name and role, and the pains in their own column', (await page.locator('.ava-center .portrait').count()) === 1 && (await page.locator('.ava-center').innerText()).toLowerCase().includes('customer avatar') && (await page.locator('.ava .specs.left').innerText()).includes('No time to follow up'));
 await shot(page, 'd1-record');
 // edit, leave with unsaved changes
 await page.click('#edit'); await page.waitForSelector('#r-name');
@@ -579,7 +579,7 @@ await rm.close();
   const hidden = `Project-owned ${Date.now()}`;
   await admin.query("insert into files (workspace_id, space, uploaded_by, name, kind, mime_type, size_bytes, managed_by) values ($1, 'shared', $2, $3, 'document', 'application/vnd.l2f.doc+json', 10, 'projects')", [wsL, ownerId, hidden]);
   await page.goto(`${base}/#/drive`); await page.waitForSelector('.drv .fpath', { timeout: 9000 }); await page.waitForSelector('.drv-main .tblwrap', { timeout: 9000 });
-  check('D17', 'Drive opens on the organization library with a New button, a search box, and a side menu (library, Personal, Recent, Trash); other apps’ files are not listed', (await page.getByRole('button', { name: 'New', exact: true }).count()) === 1 && (await page.locator('.pj-side a').allInnerTexts()).join('|').includes('Trash') && !(await page.locator('main').innerText()).includes(hidden));
+  check('D17', 'Drive opens on the organization library with a New button, a search box, and a side menu (library, Personal, Recent, Trash); other apps’ files are not listed', (await page.getByRole('button', { name: 'New', exact: true }).count()) === 1 && (await page.locator('.side .nav a').allInnerTexts()).join('|').includes('Trash') && !(await page.locator('main').innerText()).includes(hidden));
   await page.getByRole('button', { name: 'New', exact: true }).first().click(); await page.getByRole('button', { name: 'Folder', exact: true }).click(); await page.fill('#nf-name', FN); await page.getByRole('button', { name: 'Create', exact: true }).click(); await page.waitForSelector(`a:has-text("${FN}")`, { timeout: 9000 });
   check('D18', 'A new folder is created and listed', (await admin.query("select count(*)::int n from drive_folders where name = $1 and space = 'shared'", [FN])).rows[0].n === 1);
   await page.locator(`a:has-text("${FN}")`).click(); await page.waitForSelector('.drv .fpath b', { timeout: 9000 });
@@ -674,7 +674,7 @@ await rm.close();
   await admin.query("update apps set lifecycle = 'active' where key = 'forms'"); await admin.query("insert into workspace_apps (workspace_id, app_key, enabled) values ($1, 'forms', true) on conflict (workspace_id, app_key) do update set enabled = true", [wsL]);
   const FN = `Intake form ${Date.now()}`, CNAME = `Forms client ${Date.now()}`;
   await page.reload(); await page.goto(`${base}/#/forms`); await page.waitForSelector('.forms .toolbar', { timeout: 9000 });
-  check('FB1', 'Forms opens with search, status filter, Forms / Templates and a New form action', (await page.getByRole('button', { name: 'New form' }).count()) >= 1 && (await page.getByRole('button', { name: 'Templates' }).count()) === 1);
+  check('FB1', 'Forms opens with search, status filter, Forms / Templates and a New form action', (await page.getByRole('button', { name: 'New form' }).count()) >= 1 && (await page.locator('.side .nav a', { hasText: 'Templates' }).count()) === 1);
   await page.getByRole('button', { name: 'New form' }).first().click(); await page.fill('#nf-name', FN); await page.getByRole('button', { name: 'Create form' }).click(); await page.waitForSelector('.fb-grid', { timeout: 9000 });
   check('FB2', 'A new form opens in the builder with the eleven question types to add, an empty canvas and Draft status', (await page.locator('.fb-pal button').count()) === 11 && (await page.locator('.fb-head').innerText()).includes('Draft') && (await page.locator('main').innerText()).includes('No questions yet'));
   await page.locator('.fb-pal button', { hasText: 'Dropdown' }).click(); await page.fill('#fp-label', 'Who are you?'); await page.keyboard.press('Tab'); await page.fill('#fp-opts', 'Coach\nAgency\nOther'); await page.keyboard.press('Tab'); await page.getByLabel('Required').check();
@@ -875,10 +875,10 @@ for (const [w, label] of [[1280, 'desktop'], [768, 'tablet'], [390, 'phone']]) {
   await admin.query("update social_posts set archived_at = now() where archived_at is null and (title like 'Teaser %' or title like 'Second %')");   // earlier runs leave posts on today's calendar day
   const CN = `Spring push ${Date.now()}`, PN = `Teaser ${Date.now()}`, PN2 = `Second ${Date.now()}`;
   await page.reload(); await page.goto(`${base}/#/social`); await page.waitForSelector('.pj-head h1', { timeout: 9000 });
-  check('SO1', 'Social Planner opens on the calendar with Calendar, Posts, Campaigns and Channels', (await page.getByRole('tab').allInnerTexts()).join() === 'Calendar,Posts,Campaigns,Channels' && (await page.locator('.sp-cal').count()) === 1);
-  await page.getByRole('tab', { name: 'Channels' }).click(); await page.waitForSelector('.tbl', { timeout: 9000 });
+  check('SO1', 'Social Planner opens on the calendar with Calendar, Posts, Campaigns and Channels', (await page.locator('.side .nav a').allInnerTexts()).join() === 'Calendar,Posts,Campaigns,Channels' && (await page.locator('.sp-cal').count()) === 1);
+  await page.locator('.side .nav a', { hasText: 'Channels' }).click(); await page.waitForSelector('.tbl', { timeout: 9000 });
   check('SO2', 'Channels lists what each channel takes and every Connect button is switched off with the reason', (await page.locator('.tbl tbody tr').count()) === 9 && (await page.getByRole('button', { name: 'Connect' }).evaluateAll((b) => b.every((x) => x.disabled))) && (await page.locator('main').innerText()).includes('280 characters'));
-  await page.getByRole('tab', { name: 'Campaigns' }).click(); await page.waitForSelector('.empty, .pj-cards', { timeout: 9000 });
+  await page.locator('.side .nav a', { hasText: 'Campaigns' }).click(); await page.waitForSelector('.empty, .pj-cards', { timeout: 9000 });
   await page.getByRole('button', { name: 'New campaign' }).first().click(); await page.fill('#sc-name', CN); await page.fill('#sc-goal', 'Get 200 sign-ups'); await page.getByRole('button', { name: 'Create', exact: true }).click(); await page.waitForSelector('.pj-head h1', { timeout: 9000 }); await page.waitForFunction((n) => document.querySelector('h1')?.innerText === n, CN, { timeout: 9000 });
   const camp = (await admin.query("select id, status, goal from social_campaigns where name = $1", [CN])).rows[0];
   check('SO3', 'A campaign is created as a draft with its goal and opens its own page with an empty progress', camp?.status === 'draft' && camp.goal === 'Get 200 sign-ups' && (await page.locator('main').innerText()).includes('0% posted') && (await page.locator('main').innerText()).includes('No posts in this campaign yet'));
