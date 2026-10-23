@@ -20,9 +20,11 @@ const PSELECT = `select p.id, p.client_id, p.name, p.description, p.status, p.ow
 const projectOps = [
   defineOperation({
     name: 'projects.list', class: 'read',
-    input: { client: { type: 'uuid' }, status: { type: 'enum', values: PROJECT_STATUS }, archived: { type: 'bool' }, q: { type: 'text', max: 100 } },
+    // scope: 'client' = projects tied to a client, 'internal' = the organization's own projects (no client). Never mixed unless 'all' is asked for.
+    input: { client: { type: 'uuid' }, scope: { type: 'enum', values: ['all', 'client', 'internal'] }, status: { type: 'enum', values: PROJECT_STATUS }, archived: { type: 'bool' }, q: { type: 'text', max: 100 } },
     run: (q, _c, i) => q(`${PSELECT} where ($1::uuid is null or p.client_id = $1) and ($2::text is null or p.status = $2) and ((p.archived_at is not null) = $3)
-      and ($4::text is null or p.name ilike $4) order by p.name limit 200`, [i.client ?? null, i.status ?? null, i.archived ?? false, i.q ? like(i.q) : null]),
+      and ($4::text is null or p.name ilike $4) and ($5::text is null or $5 = 'all' or ($5 = 'client' and p.client_id is not null) or ($5 = 'internal' and p.client_id is null)) order by p.name limit 200`,
+    [i.client ?? null, i.status ?? null, i.archived ?? false, i.q ? like(i.q) : null, i.scope ?? null]),
   }),
   defineOperation({ name: 'projects.get', class: 'read', single: true, input: id, run: (q, _c, i) => q(`${PSELECT} where p.id = $1`, [i.id]) }),
   defineOperation({
@@ -48,6 +50,39 @@ const projectOps = [
   defineOperation({
     name: 'projects.overview', class: 'read',
     run: (q) => q(`select status, count(*)::int as n from projects where archived_at is null group by status order by status`),
+  }),
+];
+
+// ------------------------------------------------------------------ smart search (Projects header, Ctrl/Cmd-K): projects, tasks and project documents in one list
+// Active records only unless `archived` is true (archived projects, and everything inside them, are found only when asked for). Row policies decide what is visible.
+const searchOps = [
+  defineOperation({
+    name: 'projects.search', class: 'read',
+    input: { q: { type: 'text', max: 100 }, kind: { type: 'enum', values: ['all', 'projects', 'tasks', 'docs'] }, archived: { type: 'bool' }, mine: { type: 'bool' }, overdue: { type: 'bool' } },
+    run: (q, ctx, i) => q(`select * from (
+        select 'project' as kind, p.id, p.id as project_id, p.name as label, p.status as sub, p.client_id, (p.archived_at is not null) as archived, p.updated_at, null::text as mime_type
+          from projects p where $2::text in ('all', 'projects') and ((p.archived_at is not null) = $3) and ($1::text is null or p.name ilike $1) and not $4 and not $5
+        union all
+        select 'task', t.id, t.project_id, t.title, p.name, t.client_id, (t.archived_at is not null or p.archived_at is not null), t.updated_at, null::text
+          from project_tasks t join projects p on p.workspace_id = t.workspace_id and p.id = t.project_id
+         where $2::text in ('all', 'tasks') and (($3 and (t.archived_at is not null or p.archived_at is not null)) or (not $3 and t.archived_at is null and p.archived_at is null))
+           and ($1::text is null or t.title ilike $1) and (not $4 or t.assignee_id = $6) and (not $5 or (t.due_on < current_date and t.status <> 'done'))
+        union all
+        select 'doc', f.id, f.project_id, f.name, p.name, f.client_id, (f.archived_at is not null or p.archived_at is not null), f.updated_at, f.mime_type
+          from files f join projects p on p.workspace_id = f.workspace_id and p.id = f.project_id
+         where $2::text in ('all', 'docs') and f.kind = 'document' and (($3 and (f.archived_at is not null or p.archived_at is not null)) or (not $3 and f.archived_at is null and p.archived_at is null))
+           and ($1::text is null or f.name ilike $1) and not $4 and not $5
+      ) r order by case kind when 'project' then 0 when 'task' then 1 else 2 end, updated_at desc limit 50`,
+    [i.q ? like(i.q) : null, i.kind ?? 'all', i.archived ?? false, i.mine ?? false, i.overdue ?? false, ctx.userId]),
+  }),
+];
+
+// People who can be given work: the active staff of the organization (names from their profiles). Only for people who may see projects.
+const peopleOps = [
+  defineOperation({
+    name: 'projects.people', class: 'read',
+    run: (q, ctx) => q(`select m.user_id, coalesce(nullif(pr.display_name, ''), 'Member ' || left(m.user_id::text, 4)) as display_name, (m.user_id = $1) as is_you
+      from memberships m left join profiles pr on pr.id = m.user_id where m.kind = 'staff' and m.status = 'active' order by (m.user_id = $1) desc, lower(coalesce(pr.display_name, '')) limit 200`, [ctx.userId]),
   }),
 ];
 
@@ -177,4 +212,4 @@ const timeOps = [
   }),
 ];
 
-export const projectsOperations = [...projectOps, ...taskOps, ...checklistOps, ...timeOps];
+export const projectsOperations = [...projectOps, ...searchOps, ...peopleOps, ...taskOps, ...checklistOps, ...timeOps];

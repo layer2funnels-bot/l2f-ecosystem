@@ -204,7 +204,7 @@ export function docView({ api, id, ctx }) {
     };
     (async () => {
       let parts = [];
-      if (meta.project_id) { const p = await api.call('projects.get', { id: meta.project_id }); parts = [h('a', { href: '#/app/projects' }, 'Projects'), p.ok ? p.data[0].name : 'Project', 'Docs']; }
+      if (meta.project_id) { const p = await api.call('projects.get', { id: meta.project_id }); parts = [h('a', { href: '#/projects' }, 'Projects'), p.ok ? p.data[0].name : 'Project', 'Docs']; }
       else if (meta.client_id) parts = [h('a', { href: '#/app/clients' }, 'Clients'), ctx.clients?.get?.(meta.client_id) ?? 'Client', 'Documents'];
       else parts = [h('a', { href: '#/app/drive' }, 'Drive'), meta.space === 'personal' ? 'Personal' : ctx.orgName];
       if (gone()) return; crumb.replaceChildren(...parts.flatMap((x, i) => (i ? [h('span', { 'aria-hidden': 'true' }, ' / '), x] : [x])));
