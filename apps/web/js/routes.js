@@ -13,13 +13,13 @@ export const OFFICE_PAGES = [
   { key: 'planner', label: 'Planner', icon: 'clock', href: '#/office/planner', built: false },
   { key: 'projects', label: 'Projects', icon: 'doc', href: '#/office/projects', built: false },
   { key: 'funnels', label: 'Funnels', icon: 'star', href: '#/office/funnels', built: true },
-  { key: 'documents', label: 'Documents', icon: 'doc', href: '#/office/documents', built: false },
-  { key: 'team', label: 'Team', icon: 'user', href: '#/office/team', built: false },
-  { key: 'apps', label: 'Apps', icon: 'grid', href: '#/office/apps', built: false },
+  { key: 'documents', label: 'Documents', icon: 'doc', href: '#/office/documents', built: true },
+  { key: 'team', label: 'Team', icon: 'user', href: '#/office/team', built: true },
+  { key: 'apps', label: 'Apps', icon: 'grid', href: '#/office/apps', built: true },
   { key: 'admin', label: 'Admin', icon: 'key', href: '#/office/admin', built: true, adminOnly: true },
 ];
 const OFFICE_OTHER = new Set(['planner', 'projects', 'documents', 'team', 'apps']);
-export const ADMIN_ACCESS_TABS = ['levels', 'assignments', 'effective'];
+export const ADMIN_ACCESS_TABS = ['levels', 'assignments', 'effective', 'history'];
 
 // '#/office/funnels/avatars/abc?x=1' -> { name, params, query }
 export function parseRoute(hash) {

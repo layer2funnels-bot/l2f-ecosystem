@@ -11,6 +11,7 @@ import { loadRegistry } from './registry.js';
 import { docView } from './modules/docs.js';
 import { boardView } from './modules/whiteboard.js';
 import { projectsView } from './modules/projects.js';
+import { documentsView, teamView, appsView, projectsPointerView } from './views/office.js';
 import { loadWeather, weatherOff, setWeatherOff } from './sky.js';
 import { permissionSet, canWith, canAnywhereWith } from './perm.js';
 import { switchOrganization } from '/packages/core/org-switch.mjs';
@@ -286,7 +287,15 @@ async function render(opts = {}) {
       case 'home': case 'launcher': case 'signin': case 'signup': case 'check-email': case 'forgot': case 'invite':
         content = launcherView({ catalog: ctx.catalog, error: ctx.catalogError, org, orgs: ctx.orgs, role, name: session.get()?.name, registry: await loadRegistry(), loadWeather: () => loadWeather({ api, store: localStorage }), onSwitch: (i) => switchFlow(i), retry: async () => { await loadOrgContext(org); render(); } }); break;
       case 'office': content = officeHomeView({ org, role, isAdmin, api, live, portalState: ctx.catalog.find((a) => a.app_key === 'portal')?.state }); break;
-      case 'office-page': content = appNotBuiltView(OFFICE_PAGES.find((p) => p.key === route.params.page)?.label ?? 'This page'); break;
+      case 'office-page': {
+        const pg = route.params.page;
+        if (pg === 'documents') content = documentsView({ api, ctx: c });
+        else if (pg === 'team') content = teamView({ api, ctx: c });
+        else if (pg === 'apps') content = appsView({ catalog: ctx.catalog, registry: await loadRegistry(), org, orgs: ctx.orgs });
+        else if (pg === 'projects') content = projectsPointerView(org);
+        else content = appNotBuiltView(OFFICE_PAGES.find((p) => p.key === pg)?.label ?? 'This page');
+        break;
+      }
       case 'funnels': content = funnelsHomeView(c); break;
       case 'funnel-list': content = funnelListView(c, route.params.type); break;
       case 'funnel-record': content = funnelRecordView(c, route.params.type, route.params.id); break;

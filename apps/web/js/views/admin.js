@@ -152,11 +152,27 @@ export function adminView({ api, live, org, role, route, rerender, go, clients }
 
   // ------------------------------------------------------------ Access
   async function access() {
-    const strip = h('div', { style: 'margin-bottom:var(--space-4)' }, seg([['levels', 'Levels'], ['assignments', 'Assignments'], ['effective', 'Effective access']], sub, (k) => go(hrefFor.admin('access', k)), 'Access views'));
+    const strip = h('div', { style: 'margin-bottom:var(--space-4)' }, seg([['levels', 'Levels'], ['assignments', 'Assignments'], ['effective', 'Effective access'], ['history', 'Access history']], sub, (k) => go(hrefFor.admin('access', k)), 'Access views'));
     const body = h('div', {}, skeleton(4)); setPane(strip, body);
     if (sub === 'levels') return levels(body);
     if (sub === 'assignments') return assignments(body);
+    if (sub === 'history') return history(body);
     return effective(body);
+  }
+
+  // Who changed what, when: names and kinds only (the log never stores content). The table's own rule limits it to owners and admins of this organization.
+  const WHAT = { insert: 'added', update: 'changed', delete: 'removed' };
+  async function history(body) {
+    const [r, team] = await Promise.all([run('audit.recent', { limit: 100 }), run('team.list', {})]);
+    if (!live()) return;
+    if (!r.ok) return put(body, errorState(access));
+    const who = new Map((team.ok ? team.data : []).map((m) => [m.user_id, m.display_name]));
+    const kind = (t) => String(t).replace(/_/g, ' ');
+    put(body, h('p', { class: 'fine', style: 'margin-bottom:var(--space-3)' }, 'The last 100 changes in this organization. It shows who and what kind of record, never the content.'),
+      r.data.length ? h('div', { class: 'card tbl-wrap' }, h('table', { class: 'tbl' }, h('caption', { class: 'sr' }, 'Recent changes'),
+        h('thead', {}, h('tr', {}, h('th', {}, 'When'), h('th', {}, 'Who'), h('th', {}, 'What'))),
+        h('tbody', {}, ...r.data.map((e) => h('tr', {}, h('td', {}, new Date(e.created_at).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })), h('td', {}, e.actor_id ? (who.get(e.actor_id) ?? 'A former member') : 'The system'), h('td', {}, `${WHAT[String(e.action).split('.').pop()] ?? String(e.action).split('.').pop()} ${kind(e.subject_type)}`))))))
+        : emptyState({ title: 'No changes recorded yet', body: 'Changes to records, access and files appear here.', ic: 'clock' }));
   }
 
   async function levels(body) {
