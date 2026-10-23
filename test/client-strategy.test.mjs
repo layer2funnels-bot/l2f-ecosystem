@@ -1,0 +1,72 @@
+// Clients > Strategy copies (migration 0027, V4-1): a client's own copy of a library record, started once, never synced, never crossing clients or organizations.
+import { randomUUID as id } from 'node:crypto';
+import { openDb, migrate, recorder } from './lib.mjs';
+import { createApi } from '../packages/core/api.mjs';
+import { createPgExecutor } from '../packages/core/pg-executor.mjs';
+import { createRateLimiter } from '../packages/core/rate-limit.mjs';
+import { createSafeLogger } from '../packages/core/safe-log.mjs';
+
+const db = await openDb(); await migrate(db);
+const { results, check } = recorder();
+const rows = async (s, p = []) => (await db.query(s, p)).rows;
+let chain = Promise.resolve();
+const acquire = () => { const prev = chain; let release; chain = new Promise((r) => { release = r; }); return prev.then(() => ({ query: (s, p) => db.query(s, p), release })); };
+const BIG = { read: { max: 1e6, windowMs: 6e4 }, write: { max: 1e6, windowMs: 6e4 }, sensitive: { max: 1e6, windowMs: 6e4 } };
+const api = createApi({ executor: createPgExecutor({ acquire, role: 'app_user' }), logger: createSafeLogger(() => {}), limiter: createRateLimiter({ limits: BIG }) });
+const J = async (op, input, u, org) => { const r = await api.handle({ operation: op, input, auth: { userId: u, email: 'x@example.com' }, headers: { 'x-org-id': org } }); return { ...r, row: r.body?.data?.[0], rows: r.body?.data ?? [] }; };
+
+await db.exec('reset role');
+const ORG = { L: id(), A: id() }; const U = { LO: id(), LED: id(), LC1: id(), LVW: id(), AO: id(), BOTH: id() };
+await db.query("insert into workspaces (id,slug,name) values ($1,'layer2funnels','L'),($2,'aurj','A')", [ORG.L, ORG.A]);
+const staff = (u, ws, r) => db.query("insert into memberships (workspace_id,user_id,kind,role) values ($1,$2,'staff',$3)", [ws, u, r]);
+await staff(U.LO, ORG.L, 'owner'); await staff(U.LED, ORG.L, 'editor'); await staff(U.LC1, ORG.L, 'editor'); await staff(U.LVW, ORG.L, 'viewer'); await staff(U.AO, ORG.A, 'owner'); await staff(U.BOTH, ORG.L, 'owner'); await staff(U.BOTH, ORG.A, 'owner');
+for (const u of [U.LED, U.LC1, U.LVW]) for (const app of ['clients', 'office']) await db.query('insert into app_grants (workspace_id,user_id,app_key) values ($1,$2,$3)', [ORG.L, u, app]);
+const C1 = id(), C2 = id(), CA = id();
+await db.query("insert into clients (id,workspace_id,name) values ($1,$4,'One'),($2,$4,'Two'),($3,$5,'Aurj client')", [C1, C2, CA, ORG.L, ORG.A]);
+const lvl = async (ws, n) => (await rows('select id from access_levels where workspace_id=$1 and name=$2', [ws, n]))[0].id;
+const assign = (u, level, client = null) => db.query("insert into access_assignments (workspace_id,access_level_id,principal_type,principal_id,client_id) values ($1,$2,'user',$3,$4)", [ORG.L, level, u, client]);
+await assign(U.LED, await lvl(ORG.L, 'All clients · edit')); await assign(U.LVW, await lvl(ORG.L, 'All clients · read')); await assign(U.LC1, await lvl(ORG.L, 'Client team'), C1);
+
+const mk = async (op, input, u = U.LO, org = ORG.L) => (await J(op, input, u, org)).row;
+const AV = await mk('funnels.avatars.create', { name: 'Busy coach', summary: 'Short on time', pains: 'No follow-up', desires: 'Calm', objections: 'Price' });
+const AV2 = await mk('funnels.avatars.create', { name: 'Gym owner' });
+const OF = await mk('funnels.offers.create', { name: '12-week programme', price_amount: 997, currency: 'USD', avatar_id: AV.id });
+const BK = await mk('funnels.brand_kits.create', { name: 'House brand', voice: 'Warm', colors: ['#10B981'] });
+const BK2 = await mk('funnels.brand_kits.create', { name: 'Alt brand' });
+const ARCH = await mk('funnels.avatars.create', { name: 'Old avatar' }); await J('funnels.avatars.archive', { id: ARCH.id }, U.LO, ORG.L);
+const OTHER_CLIENT_AV = await mk('funnels.avatars.create', { name: 'Two-only avatar', client: C2 });
+const AAV = await mk('funnels.avatars.create', { name: 'Aurj avatar' }, U.AO, ORG.A);
+
+const copy = (client, kind, source, u = U.LO, org = ORG.L) => J('clients.strategy.copy', { client, kind, source }, u, org);
+const c1 = await copy(C1, 'avatars', AV.id);
+check('CS1', 'The owner starts a client copy of a library avatar: a new record that belongs to the client, with the same text', c1.status === 200 && (await rows('select client_id, name, pains, desires from funnel_avatars where id = $1', [c1.row.copy_id]))[0].client_id === C1 && (await rows('select pains from funnel_avatars where id = $1', [c1.row.copy_id]))[0].pains === 'No follow-up');
+check('CS2', 'A record is copied once per client: a second copy of the same one is refused', [409, 422].includes((await copy(C1, 'avatars', AV.id)).status) && (await rows('select count(*)::int n from client_strategy_copies where client_id = $1', [C1]))[0].n === 1);
+check('CS3', 'The list names the copy and the library record it was started from', (await J('clients.strategy.list', { client: C1 }, U.LO, ORG.L)).rows.some((r) => r.kind === 'avatars' && r.copy_name === 'Busy coach' && r.source_name === 'Busy coach'));
+await J('funnels.avatars.update', { id: AV.id, pains: 'Changed in the library' }, U.LO, ORG.L);
+check('CS4', 'Never synced: changing the library record later leaves the client copy as it was', (await rows('select pains from funnel_avatars where id = $1', [c1.row.copy_id]))[0].pains === 'No follow-up');
+await J('funnels.avatars.update', { id: c1.row.copy_id, pains: 'Client-specific' }, U.LO, ORG.L);
+check('CS5', 'And the other way: editing the copy leaves the library record alone', (await rows('select pains from funnel_avatars where id = $1', [AV.id]))[0].pains === 'Changed in the library');
+check('CS6', 'Only library records can be copied: another client’s record is not found', (await copy(C1, 'avatars', OTHER_CLIENT_AV.id)).status === 404 || (await copy(C1, 'avatars', OTHER_CLIENT_AV.id)).rows.length === 0);
+check('CS7', 'An archived library record cannot be copied', (await copy(C1, 'avatars', ARCH.id)).rows.length === 0);
+const o1 = await copy(C1, 'offers', OF.id);
+check('CS8', 'An offer is copied with its price, and its link to a library avatar is left empty (the copy points at nothing in the library)', o1.status === 200 && (await rows('select price_amount, currency, avatar_id from funnel_offers where id = $1', [o1.row.copy_id]))[0].price_amount === '997.00' && (await rows('select avatar_id from funnel_offers where id = $1', [o1.row.copy_id]))[0].avatar_id === null);
+const b1 = await copy(C1, 'brand_kits', BK.id);
+check('CS9', 'A client has one brand kit: the first copy works, a copy of another kit is refused', b1.status === 200 && [409, 422].includes((await copy(C1, 'brand_kits', BK2.id)).status));
+check('CS10', 'The copy shows up in the client’s own Funnels list (and keeps all the usual record rules, such as sharing and archiving)', (await J('funnels.avatars.list', { client: C1 }, U.LO, ORG.L)).rows.some((r) => r.id === c1.row.copy_id));
+const edC1 = await copy(C1, 'avatars', AV2.id, U.LC1, ORG.L);
+check('CS11', 'Someone whose edit rights are limited to client One can start copies for One', edC1.status === 200);
+check('CS12', 'But not for client Two (plain not found)', (await copy(C2, 'avatars', AV2.id, U.LC1, ORG.L)).status === 404 || (await copy(C2, 'avatars', AV2.id, U.LC1, ORG.L)).rows.length === 0);
+check('CS13', 'A viewer reads the list but cannot start a copy', (await J('clients.strategy.list', { client: C1 }, U.LVW, ORG.L)).rows.length >= 3 && (await copy(C2, 'avatars', AV2.id, U.LVW, ORG.L)).rows.length === 0 && (await copy(C2, 'avatars', AV2.id, U.LVW, ORG.L)).status !== 200);
+await copy(C2, 'avatars', AV2.id);
+check('CS14', 'Someone with access to client One only sees nothing for client Two', (await J('clients.strategy.list', { client: C2 }, U.LC1, ORG.L)).rows.length === 0);
+check('CS15', 'The other organization cannot copy or list across organizations', (await copy(CA, 'avatars', AV.id, U.AO, ORG.A)).rows.length === 0 && (await J('clients.strategy.list', { client: C1 }, U.AO, ORG.A)).rows.length === 0 && (await copy(C1, 'avatars', AAV.id, U.AO, ORG.L)).status !== 200);
+const aurj = await copy(CA, 'avatars', AAV.id, U.AO, ORG.A);
+check('CS15b', 'A person who belongs to both organizations sees only the organization named in the request: with the Aurj header, Layer2Funnels’ copies are not there', (await J('clients.strategy.list', { client: C1 }, U.BOTH, ORG.L)).rows.length >= 3 && (await J('clients.strategy.list', { client: C1 }, U.BOTH, ORG.A)).rows.length === 0);
+check('CS16', 'The same works inside Aurj, with Aurj’s own records', aurj.status === 200 && (await J('clients.strategy.list', { client: CA }, U.AO, ORG.A)).rows.length === 1);
+let guard = ''; try { await db.query("insert into client_strategy_copies (workspace_id, client_id, kind, source_id, copy_id) values ($1,$2,'avatars',$3,$4)", [ORG.L, C1, OTHER_CLIENT_AV.id, AV2.id]); } catch (e) { guard = e.message; }
+check('CS17', 'Even a direct insert is refused by the database when the source is not a library record or the copy is not the client’s', /copy must belong/.test(guard));
+const aud = await rows("select action, detail::text d from audit_events where action like 'client_strategy_copies.%' and workspace_id = $1", [ORG.L]);
+check('CS18', 'Copies are audited by names of kinds and ids, never by content', aud.length >= 3 && aud.every((r) => !/Client-specific|No follow-up|Changed in the library|Warm/.test(r.d ?? '')));
+check('CS19', 'Records of both organizations stay separate in the copy table', (await rows('select count(distinct workspace_id)::int n from client_strategy_copies'))[0].n === 2);
+for (const x of results) console.log(`${x.ok ? 'PASS' : 'FAIL'}  ${x.id.padEnd(5)} ${x.name}`);
+const pc = results.filter((x) => x.ok).length; console.log(`\n${pc}/${results.length} checks passed`); await db.close(); process.exit(pc === results.length ? 0 : 1);

@@ -1,4 +1,4 @@
-# App specs v4 (design, awaiting owner approval)
+# App specs v4 (FINAL: approved by the owner on 23 Oct 2026)
 
 Read with `DESIGN_SYSTEM.md`. Every screen below exists in `ecosystem-v4.html`; open it and use the bottom-right **Prototype** button to switch organization, theme, Launcher time and weather. Routes in brackets are prototype routes (`nav('office/home')`). Product specs (`01_office…11_layer2_agents`) and the corrected `.md` files remain the source of truth for behaviour; this file is the source of truth for look and layout.
 
@@ -69,7 +69,7 @@ Calendar (posts coloured by channel), Posts, Queue, Approvals, Channels (Connect
 
 ---
 # Appendix: feature completeness and decisions (added 23 Oct 2026)
-Marks: **[existing]** = approved v4/prototype; **[addition]** = proposed addition from the owner's list (screen waits for design approval, backend may proceed). Decisions V4-1 to V4-12 are in `docs/DECISIONS.md`.
+Marks: **[existing]** = approved v4/prototype; **[addition]** = addition from the owner's list (design approved as final on 23 Oct 2026, built from this text). Decisions V4-1 to V4-12 are in `docs/DECISIONS.md`.
 
 ## Changes by decision
 - **Office > Projects [existing menu, changed by V4-2]:** opens the Projects overview and workspace inside Office by mounting the shared Projects module (same data, permissions, breadcrumbs). No redirect. The Projects tile stays.

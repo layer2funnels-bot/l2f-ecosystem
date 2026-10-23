@@ -30,7 +30,10 @@ export function parseRoute(hash) {
   if (!seg.length) return r('home');
   const [a, b, c, d] = seg;
   if (['signin', 'signup', 'check-email', 'forgot', 'reset', 'invite', 'no-org', 'expired', 'launcher'].includes(a) && seg.length === 1) return r(a);
+  if (a === 'app' && b === 'clients' && seg.length === 2) return r('clients', { view: 'list' });
   if (a === 'app' && b && seg.length === 2 && b !== 'projects') return r('app', { app: b });
+  if (a === 'clients' && !b) return r('clients', { view: 'list' });
+  if (a === 'clients' && b === 'c' && c && seg.length === 3) return r('clients', { view: 'client', id: c });
   if ((a === 'projects' && !b) || (a === 'app' && b === 'projects' && seg.length === 2)) return r('projects', { view: 'home' });
   if (a === 'projects' && b === 'mine' && seg.length === 2) return r('projects', { view: 'mine' });
   if (a === 'projects' && b === 'p' && c && seg.length === 3) return r('projects', { view: 'project', id: c });
@@ -55,7 +58,7 @@ export function parseRoute(hash) {
 }
 export const hrefFor = {
   launcher: () => '#/launcher', office: () => '#/office', funnels: () => '#/office/funnels', page: (p) => `#/office/${p}`,
-  doc: (id) => `#/doc/${id}`, board: (id) => `#/board/${id}`, list: (type) => `#/office/funnels/${type}`, record: (type, id) => `#/office/funnels/${type}/${id}`, app: (k) => (k === 'projects' ? '#/projects' : `#/app/${k}`),
+  doc: (id) => `#/doc/${id}`, board: (id) => `#/board/${id}`, list: (type) => `#/office/funnels/${type}`, record: (type, id) => `#/office/funnels/${type}/${id}`, app: (k) => (k === 'projects' ? '#/projects' : k === 'clients' ? '#/clients' : `#/app/${k}`),
   admin: (tab = 'members', sub) => (tab === 'members' ? '#/office/admin/members' : tab === 'storage' ? '#/office/admin/storage' : `#/office/admin/access/${sub ?? 'levels'}`),
 };
 export const AUTH_ROUTES = new Set(['signin', 'signup', 'check-email', 'forgot', 'reset', 'invite', 'expired']);
@@ -83,6 +86,7 @@ export function pageKeyFor(route) {
     case 'app': return { app: route.params.app, page: null };
     case 'doc': return { app: 'drive', page: null };
     case 'projects': return { app: 'projects', page: null };
+    case 'clients': return { app: 'clients', page: null };
     case 'board': return { app: 'whiteboard', page: null };        // a document belongs to one organization: after a switch the person lands on the app, not on a record
     default: return { app: 'office', page: 'home' };
   }

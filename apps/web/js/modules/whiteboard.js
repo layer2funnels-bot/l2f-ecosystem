@@ -90,7 +90,7 @@ export function boardView({ api, id, ctx }) {
     (async () => {
       let parts;
       if (meta.project_id) { const p = await api.call('projects.get', { id: meta.project_id }); parts = [h('a', { href: '#/projects' }, 'Projects'), p.ok ? p.data[0].name : 'Project', 'Whiteboards']; }
-      else if (meta.client_id) parts = [h('a', { href: '#/app/clients' }, 'Clients'), ctx.clients?.get?.(meta.client_id) ?? 'Client', 'Whiteboards'];
+      else if (meta.client_id) parts = [h('a', { href: '#/clients' }, 'Clients'), h('a', { href: `#/clients/c/${meta.client_id}?tab=documents` }, ctx.clients?.get?.(meta.client_id) ?? 'Client'), 'Whiteboards'];
       else parts = [h('a', { href: '#/app/drive' }, 'Drive'), meta.space === 'personal' ? 'Personal' : ctx.orgName, 'Whiteboards'];
       if (root.isConnected) crumb.replaceChildren(...parts.flatMap((x, i) => (i ? [h('span', { 'aria-hidden': 'true' }, ' / '), x] : [x])));
     })();

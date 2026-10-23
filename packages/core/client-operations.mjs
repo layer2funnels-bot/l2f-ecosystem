@@ -113,4 +113,32 @@ const childOps = Object.entries(CHILD).flatMap(([plural, { table, fields, share 
   ];
 });
 
-export const clientsOperations = [...clientOps, ...stageOps, ...childOps];
+// ---- Strategy copies (migration 0027, V4-1): a client's own copy of a library avatar, offer, story or brand kit, started once, never synced.
+// The copy is a normal Funnels record owned by the client; fields that point at other library records (avatar_id, offer_id) are left empty on purpose.
+const COPY = {
+  avatars: { table: 'funnel_avatars', cols: 'name, summary, pains, desires, objections', label: 'name' },
+  offers: { table: 'funnel_offers', cols: 'kind, name, promise, description, price_amount, currency', label: 'name' },
+  stories: { table: 'funnel_stories', cols: 'kind, title, body', label: 'title' },
+  brand_kits: { table: 'funnel_brand_kits', cols: 'name, voice, colors, fonts, logo_file_id, notes', label: 'name' },
+};
+const strategyOps = [
+  defineOperation({
+    name: 'clients.strategy.list', class: 'read', input: { client: { type: 'uuid', required: true } },
+    run: (q, _c, i) => q(`select k.id, k.kind, k.source_id, k.copy_id, k.created_at,
+        case k.kind ${Object.entries(COPY).map(([kind, c]) => `when '${kind}' then (select x.${c.label} from ${c.table} x where x.id = k.copy_id)`).join(' ')} end as copy_name,
+        case k.kind ${Object.entries(COPY).map(([kind, c]) => `when '${kind}' then (select x.${c.label} from ${c.table} x where x.id = k.source_id)`).join(' ')} end as source_name
+      from client_strategy_copies k where k.client_id = $1 order by k.created_at desc limit 200`, [i.client]),
+  }),
+  defineOperation({
+    name: 'clients.strategy.copy', class: 'write', single: true,
+    input: { client: { type: 'uuid', required: true }, kind: { type: 'enum', values: Object.keys(COPY), required: true }, source: { type: 'uuid', required: true } },
+    run: async (q, ctx, i) => {
+      const c = COPY[i.kind];
+      const [made] = await q(`insert into ${c.table} (workspace_id, client_id, ${c.cols}) select workspace_id, $2, ${c.cols} from ${c.table} where id = $1 and client_id is null and archived_at is null returning id`, [i.source, i.client]);
+      if (!made) return [];
+      return q('insert into client_strategy_copies (workspace_id, client_id, kind, source_id, copy_id) values ($1,$2,$3,$4,$5) returning id, kind, source_id, copy_id, created_at', [ctx.orgId, i.client, i.kind, i.source, made.id]);
+    },
+  }),
+];
+
+export const clientsOperations = [...clientOps, ...stageOps, ...childOps, ...strategyOps];

@@ -1,0 +1,13 @@
+/* Clients (v4): list bar, client title and stage steps. Shares the Projects row/card/board styles. */
+.cl-bar{display:flex;gap:var(--space-3);flex-wrap:wrap;align-items:center;margin-bottom:var(--space-4)}
+.cl-bar input[type=search]{flex:1 1 220px;min-height:44px}
+.cl-bar select{min-height:44px}
+.cl-title{display:flex;gap:var(--space-4);align-items:center}
+.cl-steps{list-style:none;margin:var(--space-3) 0;padding:0;display:flex;gap:var(--space-2);flex-wrap:wrap}
+.cl-steps li{display:flex;flex-direction:column;gap:2px}
+.cl-steps button,.cl-steps span{min-height:44px;padding:0 var(--space-4);border:1px solid var(--line2);border-radius:var(--radius-md);background:var(--surface);color:var(--text);font:inherit;display:inline-flex;align-items:center;cursor:pointer}
+.cl-steps span{cursor:default}
+.cl-steps li.now button,.cl-steps li.now span{background:var(--action-tint);border-color:var(--action);color:var(--action-ink);font-weight:600}
+.cl-note p{white-space:pre-wrap}
+@media (max-width:760px){.cl-title h1{font-size:22px}}
+.cl .tbl td a{display:inline-flex;align-items:center;min-height:44px}
