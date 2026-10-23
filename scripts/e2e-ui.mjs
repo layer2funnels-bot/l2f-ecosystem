@@ -833,6 +833,38 @@ for (const [w, label] of [[1280, 'desktop'], [768, 'tablet'], [390, 'phone']]) {
 }
 
 // =============================================================== J. Whole-run hygiene
+// =============================================================== C7. Whiteboard "All boards"
+{
+  const [{ id: wsB }] = (await admin.query("select id from workspaces where slug = 'layer2funnels'")).rows;
+  await admin.query("update apps set lifecycle = 'active' where key = 'whiteboard'"); await admin.query("insert into workspace_apps (workspace_id, app_key, enabled) values ($1, 'whiteboard', true) on conflict (workspace_id, app_key) do update set enabled = true", [wsB]);
+  const BN = `Team board ${Date.now()}`, BC = `Board client ${Date.now()}`, BCN = `Client wall ${Date.now()}`;
+  const [{ id: bcid }] = (await admin.query("insert into clients (workspace_id, name) values ($1, $2) returning id", [wsB, BC])).rows;
+  await page.reload(); await page.goto(`${base}/#/whiteboards`); await page.waitForSelector('.pj-head h1', { timeout: 9000 });
+  check('BD1', 'All boards opens with the search, location and active/archived filters', (await page.locator('.pj-head h1').innerText()) === 'All boards' && (await page.getByRole('searchbox', { name: 'Search boards' }).count()) === 1);
+  await page.getByRole('button', { name: 'New whiteboard' }).first().click(); await page.fill('#nb-name', BN); await page.getByRole('button', { name: 'Create', exact: true }).click(); await page.waitForSelector('.boardsurface', { timeout: 15000 });
+  const sh = (await admin.query("select space, client_id, managed_by, in_library from files where name = $1", [BN])).rows[0];
+  check('BD2', 'A board made here asks where it belongs; an organization board is app-owned and is not put in the Drive library', sh && sh.space === 'shared' && sh.client_id === null && sh.managed_by === 'whiteboard' && sh.in_library === false);
+  await page.goto(`${base}/#/whiteboards`); await page.waitForSelector('.pj-head h1', { timeout: 9000 });
+  await page.getByRole('button', { name: 'New whiteboard' }).first().click(); await page.fill('#nb-name', BCN); await page.selectOption('#nb-kind', 'client'); await page.selectOption('#nb-client', bcid); await page.getByRole('button', { name: 'Create', exact: true }).click(); await page.waitForSelector('.boardsurface', { timeout: 15000 });
+  const cb = (await admin.query("select space, client_id from files where name = $1", [BCN])).rows[0];
+  check('BD3', 'A board made for a client belongs to that client', cb && cb.space === 'client' && cb.client_id === bcid);
+  await page.goto(`${base}/#/whiteboards`); await page.waitForSelector('.tbl', { timeout: 9000 });
+  const txt = await page.locator('.tbl').innerText();
+  check('BD4', 'Both boards are listed with where each one lives', txt.includes(BN) && txt.includes(BCN) && txt.includes(BC));
+  await page.getByRole('searchbox', { name: 'Search boards' }).fill(BCN); await page.waitForFunction((n) => document.querySelectorAll('.tbl tbody tr').length === 1 && document.querySelector('.tbl').innerText.includes(n), BCN, { timeout: 9000 });
+  check('BD5', 'Search narrows the list to the matching board', !(await page.locator('.tbl').innerText()).includes(BN));
+  await page.getByRole('searchbox', { name: 'Search boards' }).fill('zzz no such board'); await page.waitForSelector('.empty', { timeout: 9000 });
+  check('BD6', 'No match shows a plain empty state', (await page.locator('.empty').innerText()).includes('No board matches'));
+  await page.getByRole('searchbox', { name: 'Search boards' }).fill(''); await page.selectOption('select[aria-label="Where it lives"]', 'client'); await page.waitForFunction((n) => document.querySelector('.tbl')?.innerText.includes(n) && !document.querySelector('.tbl').innerText.includes('Team board'), BCN, { timeout: 9000 });
+  check('BD7', 'The location filter separates client boards from organization boards', true);
+  const hr = await page.locator('.tbl a', { hasText: BCN }).first().getAttribute('href');
+  check('BD8', 'A row opens its board', /#\/board\//.test(hr));
+  await page.goto(`${base}/#/app/whiteboard`); await page.waitForSelector('.pj-head h1', { timeout: 9000 });
+  check('BD9', 'The Whiteboard tile address opens All boards', (await page.locator('.pj-head h1').innerText()) === 'All boards');
+  await admin.query("update apps set lifecycle = 'coming_soon' where key = 'whiteboard'"); await admin.query("delete from workspace_apps where workspace_id = $1 and app_key = 'whiteboard'", [wsB]);
+  await page.goto(`${base}/#/launcher`); await page.reload(); await wait('Your apps in');
+}
+
 check('J1', 'No script errors, warnings or Content-Security-Policy violations during the whole run (deliberate 4xx answers excluded)', problems.length === 0, problems.slice(0, 4).join(' | '));
 await browser.close(); await s.close(); await admin.end();
 for (const x of results) console.log(`${x.ok ? 'PASS' : 'FAIL'}  ${x.id.padEnd(8)} ${x.n}${x.ok ? '' : `  [${x.d}]`}`);
