@@ -134,7 +134,7 @@ check('FN31', 'Restricting offers for one person leaves avatars editable', (awai
   && (await affected("update funnel_avatars set name='n' where id=$1", [org.funnel_avatars])) === 1);
 await asUser(U.ED);
 const eff = await rows('select permission_key, allowed from effective_access($1)', [L]);
-check('FN32', 'Effective-access review lists funnels.* permissions with the restriction shown', eff.filter((e) => e.permission_key.startsWith('funnels.')).length === 19 && eff.find((e) => e.permission_key === 'funnels.offer.edit').allowed === false);
+check('FN32', 'Effective-access review lists funnels.* permissions with the restriction shown', eff.filter((e) => e.permission_key.startsWith('funnels.')).length === 23 && eff.find((e) => e.permission_key === 'funnels.offer.edit').allowed === false);
 
 // ---- G. audit
 await asUser(U.ED);
