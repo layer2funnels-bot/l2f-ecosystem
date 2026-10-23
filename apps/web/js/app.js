@@ -13,6 +13,8 @@ import { boardView } from './modules/whiteboard.js';
 import { projectsView } from './modules/projects.js';
 import { clientsView } from './modules/clients.js';
 import { driveView } from './modules/drive.js';
+import { portalView } from './modules/portal.js';
+import { formsView } from './modules/forms.js';
 import { sheetView } from './modules/sheets.js';
 import { strategiesListView, strategyView } from './views/strategies.js';
 import { documentsView, teamView, appsView } from './views/office.js';
@@ -306,6 +308,8 @@ async function render(opts = {}) {
       case 'funnel-list': content = funnelListView(c, route.params.type); break;
       case 'funnel-record': content = funnelRecordView(c, route.params.type, route.params.id); break;
       case 'doc': content = docView({ api, id: route.params.id, ctx: c }); break;
+      case 'forms': content = formsView({ api, ctx: c, route: { view: route.params.view, id: route.params.id } }); break;
+      case 'portal': content = portalView({ api, ctx: c, route: { client: route.params.client, page: route.params.page } }); break;
       case 'drive': content = driveView({ api, ctx: c, route: { view: route.params.view, space: route.params.space, folder: route.params.folder } }); break;
       case 'sheet': content = sheetView({ api, id: route.params.id, ctx: c }); break;
       case 'clients': content = clientsView({ api, ctx: c, route: { view: route.params.view, id: route.params.id, query: route.query } }); break;
@@ -317,7 +321,7 @@ async function render(opts = {}) {
     }
   }
   const view = shellView({ app: appApi, orgs: ctx.orgs, active: org, email: session.get()?.email, name: session.get()?.name, route, content, banner: bannerEl(), isAdmin, inOffice, launcherCurrent: route.name === 'launcher' || route.name === 'home',
-    catalog: ctx.catalog, registry: await loadRegistry(), currentApp: inOffice ? 'office' : route.name === 'doc' || route.name === 'sheet' || route.name === 'drive' ? 'drive' : route.name === 'board' ? 'whiteboard' : route.name === 'projects' ? 'projects' : route.name === 'clients' ? 'clients' : route.name === 'app' ? route.params.app : null, theme,
+    catalog: ctx.catalog, registry: await loadRegistry(), currentApp: inOffice ? 'office' : route.name === 'doc' || route.name === 'sheet' || route.name === 'drive' ? 'drive' : route.name === 'board' ? 'whiteboard' : route.name === 'projects' ? 'projects' : route.name === 'clients' ? 'clients' : route.name === 'portal' ? 'portal' : route.name === 'forms' ? 'forms' : route.name === 'app' ? route.params.app : null, theme,
     weather: { on: () => !weatherOff(localStorage), set: (on) => { setWeatherOff(localStorage, !on); try { sessionStorage.removeItem('l2f.wx'); } catch { /* none */ } render(); } } });
   put(root, view, designBadge('Built to design'));
   document.title = `${pageLabel(route)} · ${org.name}`;

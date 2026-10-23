@@ -1,0 +1,9 @@
+/* Client Portal preview (v4). Tokens only. */
+.portal-prev .p-ribbon{display:flex;gap:var(--space-2);align-items:center;padding:var(--space-2) var(--space-4);background:var(--action-tint);border:1px solid var(--line2);border-radius:var(--radius-md);margin-bottom:var(--space-3)}
+.portal-prev .pbar{display:flex;gap:var(--space-4);align-items:center;flex-wrap:wrap;justify-content:space-between;margin-bottom:var(--space-4)}
+.portal-prev .p-brand{display:flex;gap:var(--space-3);align-items:center}
+.portal-prev .pnav{display:flex;gap:var(--space-1);flex-wrap:wrap}
+.portal-prev .pnav .btn[aria-current=page]{background:var(--action-tint);border-color:var(--action);color:var(--action-ink);font-weight:600}
+.portal-prev .bd{margin-left:6px;background:var(--action);color:#fff;border-radius:10px;padding:0 7px;font-size:12px}
+.portal-prev .portal{display:grid;gap:var(--space-4)}
+.portal-prev .p-hero h1{margin:0 0 var(--space-1)}

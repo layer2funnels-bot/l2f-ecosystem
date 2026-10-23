@@ -1,0 +1,27 @@
+/* Form Builder (v4). Tokens only. */
+.fb-head{display:flex;justify-content:space-between;gap:var(--space-3);flex-wrap:wrap;align-items:flex-start;margin-bottom:var(--space-3)}
+.fb-embedded .fb-head h1{font-size:22px}
+.fb-grid{display:grid;grid-template-columns:200px minmax(0,1fr) 300px;gap:var(--space-4);align-items:start}
+.fb-pal{display:grid;gap:var(--space-2)}
+.fb-pal .btn{justify-content:flex-start;gap:var(--space-2)}
+.fb-list{list-style:none;margin:0;padding:0;display:grid;gap:var(--space-2)}
+.fb-q{border:1px solid var(--line2);border-radius:var(--radius-md);background:var(--surface);padding:var(--space-2) var(--space-3);display:flex;gap:var(--space-2);align-items:center;flex-wrap:wrap}
+.fb-q.on{border-color:var(--action);background:var(--action-tint)}
+.fb-pick{flex:1 1 200px;display:grid;gap:2px;text-align:left;border:0;background:transparent;color:var(--text);font:inherit;min-height:44px;cursor:pointer;padding:0}
+.fb-acts{display:flex;gap:2px;flex-wrap:wrap}
+.fb-props{border:1px solid var(--line2);border-radius:var(--radius-md);padding:var(--space-4);background:var(--surface);display:grid;gap:var(--space-2)}
+.fb-two{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2)}
+.fb-frame{margin:var(--space-4) auto;border:1px solid var(--line2);border-radius:var(--radius-lg);padding:var(--space-5);background:var(--bg);display:grid;gap:var(--space-3)}
+.fb-frame.phone{max-width:390px}.fb-frame.desktop{max-width:760px}
+.fr{display:grid;gap:var(--space-3)}
+.fr-q[hidden]{display:none}
+.fr .req{color:var(--muted);font-weight:400}
+.fr-opt{display:flex;gap:var(--space-2);align-items:center;min-height:44px}
+.fr-group{border:0;padding:0;margin:0}
+.fr-files{list-style:none;margin:var(--space-2) 0 0;padding:0}
+.fr .err:empty{display:none}
+@media (max-width:1000px){.fb-grid{grid-template-columns:minmax(0,1fr)}.fb-two{grid-template-columns:1fr}}
+.fb-overlay{position:fixed;inset:0;z-index:60;background:color-mix(in srgb,var(--bg) 70%,transparent);backdrop-filter:blur(2px);display:flex;align-items:stretch;justify-content:center;padding:var(--space-4)}
+.fb-ov-panel{width:min(1200px,100%);overflow:auto;background:var(--bg);border:1px solid var(--line2);border-radius:var(--radius-lg);padding:var(--space-5);box-shadow:var(--sh2)}
+body.noscroll{overflow:hidden}
+@media (max-width:760px){.fb-overlay{padding:0}.fb-ov-panel{border-radius:0;padding:var(--space-3)}}

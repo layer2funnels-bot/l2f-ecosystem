@@ -2,6 +2,7 @@
 // client-specific Strategy copies. Everything goes through the permission-checked API; buttons follow `ctx.can(permission, clientId)`, the database decides.
 import { h, put, icon, btn, chip, dialog, toast, field, notice, skeleton, emptyState, errorState, noAccessState, seg, tabs, readOnlyNotice, avatar } from '../ui.js';
 import { createBoard, BOARD_MIME } from './whiteboard.js';
+import { builderView } from './formbuilder.js';
 import { emptyDoc, serialize } from './docmodel.js';
 
 const DOC_MIME = 'application/vnd.l2f.doc+json';
@@ -66,10 +67,11 @@ export function clientsView({ api, ctx, route }) {
     let tab = TABS.some(([k]) => k === route.query.tab) ? route.query.tab : 'overview';
     const body = h('div', { class: 'pj-body' });
     const tabBar = tabs(TABS, tab, (k) => { tab = k; history.replaceState(null, '', hrefs.client(id, k)); draw(); }, 'Client sections');
+    const preview = h('a', { class: 'btn', href: `#/portal/${id}` }, 'Preview client portal');
     const share = btn('Manage client sharing', () => dialog({ title: 'Client sharing', body: h('p', {}, 'Sharing with the client goes through the Client Portal, which is locked until its security checks pass. Items marked “Show to client” are saved but nobody outside your team sees them yet.'), actions: [{ label: 'Close', focus: true }] }), '');
     put(main, h('div', { class: 'pj-head' }, h('div', {}, h('div', { class: 'crumbs fine' }, h('a', { href: hrefs.list() }, 'Clients'), ' / ', c.name),
       h('div', { class: 'cl-title' }, avatar(c.name, 48), h('div', {}, h('h1', { 'data-page-title': true }, c.name), h('div', { class: 'pj-meta' }, statusChip(c.status), chip(stageLabel(c.stage_key)), archived ? chip('Archived', 'warn') : null, c.business_name ? h('span', { class: 'fine muted' }, c.business_name) : null)))),
-      h('div', { class: 'pj-actions' }, share, can('clients.client.edit') ? btn('Edit details', edit, '') : null,
+      h('div', { class: 'pj-actions' }, preview, share, can('clients.client.edit') ? btn('Edit details', edit, '') : null,
         archived ? (ctx.can('clients.client.edit', id) ? btn('Restore client', async () => { const x = await api.call('clients.restore', { id }); if (x.ok) { toast('Client restored.'); client(); } else fail(x, 'restore this client'); }) : null)
           : (ctx.can('clients.client.edit', id) ? btn('Archive', () => dialog({ title: `Archive ${c.name}?`, body: h('p', {}, 'They leave the lists. Nothing is deleted and you can restore them from Archived.'), actions: [{ label: 'Archive', cls: 'pri', on: async () => { const x = await api.call('clients.archive', { id }); if (!x.ok) { fail(x, 'archive this client'); return false; } toast('Client archived.'); ctx.go(hrefs.list()); } }, { label: 'Cancel', focus: true }] })) : null))), tabBar, body);
 
@@ -106,9 +108,28 @@ export function clientsView({ api, ctx, route }) {
         copies.length ? h('ul', { class: 'pj-rows' }, ...copies.map((k) => h('li', { class: 'pj-row' }, icon('doc'), h('a', { class: 'pj-title', href: k.kind === 'strategies' ? `#/office/funnels/strategy/${k.copy_id}` : `#/office/funnels/${k.kind}/${k.copy_id}` }, k.copy_name ?? 'Copy'), chip(KINDS.find(([x]) => x === k.kind)?.[1] ?? k.kind), h('span', { class: 'fine muted' }, `from “${k.source_name ?? 'a library record'}” · ${when(k.created_at)}`))))
           : emptyState({ title: 'No copies yet', body: 'Start a copy of an avatar, offer, story or the brand kit from the organization library for this client.', ic: 'doc' }));
       const later = (title, why) => h('section', { class: 'card pad' }, h('h2', { class: 'pj-gh' }, title), h('p', { class: 'muted' }, why));
-      put(body, banner(), h('section', { class: 'card pad' }, h('h2', { class: 'pj-gh' }, 'Stage'), steps, !stages.length ? h('p', { class: 'muted' }, 'No stages are set up for this organization.') : null), later('Brand Base', 'The client questionnaire opens in the form builder. It arrives with Form Builder.'), strategy,
+      const fr = await api.call('forms.list', { client: id });
+      const forms = fr.ok ? fr.data : [];
+      const brand = h('section', { class: 'card pad' }, h('div', { class: 'pj-calbar' }, h('h2', { class: 'pj-gh' }, 'Brand Base'), can('forms.form.create') ? btn('Add a form', addForm, 'pri') : null),
+        h('p', { class: 'fine muted' }, 'The client’s questionnaire. Forms for this client open here in the builder, and answers are recorded against the version they answered. The Brand Kit itself lives in Strategy.'),
+        fr.ok ? (forms.length ? h('ul', { class: 'pj-rows' }, ...forms.map((f) => h('li', { class: 'pj-row' }, icon('frm'), h('button', { type: 'button', class: 'pj-title', onclick: () => overlay(f.id) }, f.name), chip(f.status === 'published' ? 'Published' : 'Draft', f.status === 'published' ? 'ok' : ''), h('span', { class: 'fine muted' }, f.current_version ? `v${f.current_version}` : 'no version yet')))) : emptyState({ title: 'No forms yet', body: 'Add a form to ask this client for information. Nothing reaches them until the Portal is on.', ic: 'frm' }))
+          : notice('info', 'info', 'Forms isn’t switched on for you yet, so Brand Base forms can’t be listed.'));
+      put(body, banner(), h('section', { class: 'card pad' }, h('h2', { class: 'pj-gh' }, 'Stage'), steps, !stages.length ? h('p', { class: 'muted' }, 'No stages are set up for this organization.') : null), brand, strategy,
         h('section', { class: 'card pad' }, h('h2', { class: 'pj-gh' }, 'Copy'), notice('warn', 'info', [h('b', {}, 'Copy requirements not yet defined.'), ' Versions, internal review, sending an exact version and the client’s approve or request-changes answer will be built on Approvals once the requirements are written.']), h('div', { class: 'pj-actions' }, btn('Add a version', null, '', { disabled: true, 'aria-disabled': 'true', title: 'Waiting for the Copy requirements' }), btn('Send for approval', null, '', { disabled: true, 'aria-disabled': 'true', title: 'Waiting for the Copy requirements' }))),
         later('Build', 'Progress only: the funnel is built elsewhere and moved here by stage.'), later('Marketing', 'Placeholder: Marketing will connect to Social Planner and reporting later.'));
+    }
+    function overlay(formId) {
+      const prev = document.activeElement; const root2 = h('div', { class: 'fb-overlay', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Form builder' });
+      const close = () => { root2.remove(); document.body.classList.remove('noscroll'); prev?.focus?.(); work(); };
+      root2.append(h('div', { class: 'fb-ov-panel' }, builderView({ api, ctx, id: formId, embedded: true, onClose: close }))); document.body.append(root2); document.body.classList.add('noscroll');
+      root2.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); root2.querySelector('.pj-actions .btn:last-child')?.click(); } });
+      root2.querySelector('button, input')?.focus();
+    }
+    async function addForm() {
+      const name = field({ id: 'bf-name', label: 'Form name', value: 'Brand Base questions', maxlength: 200 });
+      const tr = await api.call('forms.list', { templates: true }); const tpl = h('select', { id: 'bf-tpl', 'aria-label': 'Start from' }, h('option', { value: '' }, 'A blank form'), ...(tr.ok ? tr.data : []).map((x) => h('option', { value: x.id }, `Template: ${x.name}`)));
+      dialog({ title: 'Add a form', body: [name.el, h('div', { class: 'fld' }, h('label', { for: 'bf-tpl' }, 'Start from'), tpl)], actions: [{ label: 'Create and open', cls: 'pri', on: async () => { const n = name.input.value.trim(); if (!n) return name.error('Give the form a name.');
+        const r = tpl.value ? await api.call('forms.duplicate', { id: tpl.value, name: n, client: id }) : await api.call('forms.create', { name: n, client: id }); if (!r.ok) { fail(r, 'add forms'); return false; } overlay(r.data[0].id); } }, { label: 'Cancel' }] });
     }
     async function startCopy() {
       const kind = h('select', { id: 'sc-kind', 'aria-label': 'What to copy' }, ...KINDS.map(([k, t]) => h('option', { value: k }, t))); const pick = h('select', { id: 'sc-src', 'aria-label': 'Library record' }); const hint = h('p', { class: 'fine muted' });
