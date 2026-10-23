@@ -24,7 +24,11 @@ insert into public.social_channels (key, label, max_text, max_media, media_types
   ('email', 'Email', null, 10, '{image}'),
   ('other', 'Other', null, 10, '{image,video,document}');
 alter table public.social_channels enable row level security; alter table public.social_channels force row level security;
-create policy social_channels_read on public.social_channels for select using (true);
+create or replace function private.is_staff_anywhere() returns boolean
+language sql stable security definer set search_path = '' as $$
+  select exists (select 1 from public.memberships m where m.user_id = private.current_user_id() and m.kind = 'staff' and m.status = 'active')
+$$;
+create policy social_channels_read on public.social_channels for select using (private.is_staff_anywhere());
 
 -- ---- campaigns
 create table public.social_campaigns (
@@ -160,3 +164,4 @@ end $$;
 revoke all on all functions in schema private from public;
 grant select, insert, update, delete on public.social_campaigns to app_user;
 grant select on public.social_channels to app_user;
+grant execute on function private.is_staff_anywhere() to app_user;
