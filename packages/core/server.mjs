@@ -31,7 +31,7 @@ export function createServer(env, { sink = (l) => console.log(JSON.stringify(l))
   const pool = new pg.Pool({ connectionString: env.DATABASE_URL, max: Number(env.DB_POOL_MAX ?? 5) });
   const executor = createPgExecutor({
     role: env.DB_ROLE ?? 'app_user',   // NOT authenticated: that role has no privileges on our tables (migration 0010)
-    acquire: async () => { const c = await pool.connect(); return { query: (s, p) => c.query(s, p), release: () => c.release() }; },
+    acquire: async () => { const c = await pool.connect(); return { query: (s, p) => c.query(s, p), simple: (s) => c.query(s), escapeLiteral: (t) => c.escapeLiteral(t), release: () => c.release() }; },
   });
   const logger = createSafeLogger(sink);
   // RATE_LIMIT_STORE=postgres shares counters across instances (migration 0009). Default: per-instance memory only.
