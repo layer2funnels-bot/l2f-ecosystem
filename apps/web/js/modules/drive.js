@@ -49,9 +49,9 @@ export function driveView({ api, ctx, route }) {
   const list = h('div', { class: 'tblwrap' });
   function paint() {
     const rows = [...state.folders.map((d) => ({ folder: d })), ...state.files.map((f) => ({ file: f }))];
-    put(list, rows.length ? h('table', { class: 'tbl drv-tbl' }, h('caption', { class: 'sr' }, 'Folders and files'),
+    put(list, rows.length ? h('div', { class: 'tblwrap' }, h('table', { class: 'tbl drv-tbl' }, h('caption', { class: 'sr' }, 'Folders and files'),
       h('thead', {}, h('tr', {}, h('th', { scope: 'col' }, h('span', { class: 'sr' }, 'Select')), ...['Name', 'Type', 'Size', 'Updated'].map((x) => h('th', { scope: 'col' }, x)), h('th', { scope: 'col' }, h('span', { class: 'sr' }, 'Actions')))),
-      h('tbody', {}, ...rows.map(rowEl)))
+      h('tbody', {}, ...rows.map(rowEl))))
       : emptyState({ title: state.q ? 'No file matches' : folderId ? 'This folder is empty' : space === 'personal' ? 'Your personal space is empty' : `${ctx.orgName} library is empty`, body: state.q ? 'Try another word.' : canWrite ? 'Drop files anywhere on this page, or use New.' : 'Nothing has been added here yet.', ic: 'drv', first: !state.q && !folderId, action: canWrite && !state.q ? btn('New', newMenu, 'pri') : null }));
     paintSel();
   }
