@@ -98,9 +98,10 @@ async function boot() {
   if (back && AUTH_ROUTES.has(r.name)) { try { return go(JSON.parse(back).hash); } catch { /* fall through */ } }
   go(AUTH_ROUTES.has(r.name) || r.name === 'home' || r.name === 'no-org' ? hrefFor.launcher() : location.hash);
 }
+let bootFailure = null;     // which call failed and how (status and error code only): shown on the load-error screen so a failure can be reported precisely
 async function loadOrgs() {
   const res = await api.call('org.list', {}, { org: NO_ORG });
-  if (!res.ok) { if (res.error?.code === 'session_expired') { ready = true; goExpired(); return 'expired'; } return null; }
+  if (!res.ok) { if (res.error?.code === 'session_expired') { ready = true; goExpired(); return 'expired'; } bootFailure = `org.list · ${res.status || 'no answer'} · ${res.error?.code ?? 'failed'}`; return null; }
   return res.data;
 }
 async function refreshNow() { const c = session.get(); if (!c?.refresh) return false; const r = await auth.refresh(c.refresh); if (r.ok && r.data?.access_token) { session.set(r.data); return true; } return false; }
@@ -248,7 +249,7 @@ async function render(opts = {}) {
   document.body.classList.remove('hasb');
   theme.setOrg(null);
   if (!ready) { put(root, centered(skeleton(3))); return; }
-  if (opts.bootError) { put(root, centered(h('h1', { 'data-page-title': true }, 'We couldn’t load this'), h('p', { class: 'sub' }, 'Your work is safe. Check your connection and try again.'), btn('Try again', () => boot(), 'pri'))); return focusTitle(root); }
+  if (opts.bootError) { put(root, centered(h('h1', { 'data-page-title': true }, 'We couldn’t load this'), h('p', { class: 'sub' }, 'Your work is safe. Check your connection and try again.'), bootFailure ? h('p', { class: 'fine muted' }, `Reference: ${bootFailure}`) : null, btn('Try again', () => boot(), 'pri'))); return focusTitle(root); }
 
   // signed-out and account screens
   if (!session.signedIn()) {
