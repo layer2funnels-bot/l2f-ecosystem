@@ -24,7 +24,7 @@ svg.i{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-widt
 .app{min-height:100vh;display:block;background:var(--bg)}
 .app.in-launcher{background:var(--stage)}
 .shell>.main{min-width:0;display:flex;flex-direction:column}
-.shell .content{width:100%;flex:1}
+.shell .content{width:100%;flex:1;min-width:0}
 .side .nav a{display:flex;align-items:center;gap:12px;min-height:44px;padding:0 12px;border-radius:12px;color:var(--text2);font-weight:550;font-size:14.5px;position:relative;text-decoration:none;transition:background 200ms,color 200ms}
 .side-top .launch-btn{flex:none}
 .side-top .appsw{position:relative}
