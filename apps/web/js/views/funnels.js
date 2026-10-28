@@ -112,14 +112,14 @@ export function funnelListView(ctx, typeKey) {
   const canNew = ctx.canAnywhere(`funnels.${o}.create`);
   const q = h('input', { id: 'q', type: 'search', placeholder: `Search ${t.label.toLowerCase()}`, autocomplete: 'off', oninput: (e) => { state.q = e.target.value; paint(); } });
   const sel = h('select', { id: 'fl', 'aria-label': 'Show', onchange: (e) => { state.show = e.target.value; load(); } }, ...[['active', 'Active'], ['archived', 'Archived'], ['all', 'All']].map(([v, l]) => h('option', { value: v }, l)));
-  const scopeText = (r) => (r.client_id ? (r.client_visible ? pill(`Shared · ${ctx.clients.get(r.client_id) ?? 'client'}`, 'pri', 'share') : pill(ctx.clients.get(r.client_id) ?? 'Client')) : pill('Internal'));
+  const scopeText = (r) => (r.client_id ? (r.client_visible ? pill(`Shared · ${ctx.clients.get(r.client_id) ?? 'client'}`, 'primary', 'share') : pill(ctx.clients.get(r.client_id) ?? 'Client')) : pill('Internal'));
   function paint() {
     const list = rows.filter((r) => `${nameOf(typeKey, r)} ${r.summary ?? r.promise ?? ''}`.toLowerCase().includes(state.q.toLowerCase()));
     if (!list.length) {
       put(body, h('div', { class: 'card pad' }, emptyState({ first: !state.q && state.show === 'active',
         title: state.q ? 'No matches' : state.show === 'archived' ? 'Nothing archived' : `No ${t.label.toLowerCase()} yet`,
         body: state.q ? 'Try a different word, or clear the search.' : state.show === 'archived' ? 'Archived items wait here until you restore or delete them.' : canNew ? `Create your first ${t.one.toLowerCase()} to start building your library.` : 'When someone adds one, you’ll see it here.',
-        action: state.q ? btn('Clear search', () => { state.q = ''; q.value = ''; paint(); }) : canNew && state.show === 'active' ? h('a', { class: 'btn pri', href: hrefFor.record(typeKey, 'new') }, `New ${t.one.toLowerCase()}`) : null })));
+        action: state.q ? btn('Clear search', () => { state.q = ''; q.value = ''; paint(); }) : canNew && state.show === 'active' ? h('a', { class: 'btn primary', href: hrefFor.record(typeKey, 'new') }, `New ${t.one.toLowerCase()}`) : null })));
       return;
     }
     put(body, h('div', { class: 'card tbl-wrap' }, h('table', { class: 'tbl stk' }, h('caption', { class: 'sr' }, t.full),
@@ -140,7 +140,7 @@ export function funnelListView(ctx, typeKey) {
   }
   function confirmArchive(r) {
     dialog({ title: `Archive “${nameOf(typeKey, r)}”?`, body: h('p', {}, `It disappears from lists${r.client_visible ? ` and ${ctx.clients.get(r.client_id) ?? 'the client'} can no longer see it` : ''}. Nothing is deleted. You can restore it any time.`),
-      actions: [{ label: 'Archive', cls: 'pri', on: () => act(r, 'archive', 'Archived. Restore it from the Archived list.') }, { label: 'Cancel', focus: true }] });
+      actions: [{ label: 'Archive', cls: 'primary', on: () => act(r, 'archive', 'Archived. Restore it from the Archived list.') }, { label: 'Cancel', focus: true }] });
   }
   async function act(r, verb, done) {
     const res = await run(ctx, `funnels.${typeKey}.${verb}`, { id: r.id });
@@ -148,7 +148,7 @@ export function funnelListView(ctx, typeKey) {
     toast(res.ok ? done : messageFor(res.error?.code), res.ok); load();
   }
   load();
-  return h('section', {}, subnav(typeKey), ...pageHead(`Office · Funnels · ${t.label}`, t.full, null, canNew ? [h('a', { class: 'btn pri', href: hrefFor.record(typeKey, 'new') }, icon('plus'), `New ${t.one.toLowerCase()}`)] : null),
+  return h('section', {}, subnav(typeKey), ...pageHead(`Office · Funnels · ${t.label}`, t.full, null, canNew ? [h('a', { class: 'btn primary', href: hrefFor.record(typeKey, 'new') }, icon('plus'), `New ${t.one.toLowerCase()}`)] : null),
     !canNew ? readOnlyNotice('You can view these', 'Ask an editor to change them.') : null,
     h('div', { class: 'tools' }, h('label', { class: 'search' }, icon('search'), h('span', { class: 'sr' }, `Search ${t.label}`), q), h('label', { class: 'sr', for: 'fl' }, 'Show'), sel), body);
 }
@@ -219,7 +219,7 @@ export function funnelRecordView(ctx, typeKey, id) {
       fl[f.k] = x; return x;
     });
     const status = h('span', { class: 'fine', role: 'status', id: 'ds' }, 'No changes yet');
-    const saveBtn = h('button', { type: 'submit', class: 'btn pri' }, 'Save');
+    const saveBtn = h('button', { type: 'submit', class: 'btn primary' }, 'Save');
     const msg = h('div', { id: 'form-msg' });
     const mark = () => { status.textContent = 'Unsaved changes'; dirty.set(t.label, () => save(true)); };
     async function save(quiet) {
@@ -266,14 +266,14 @@ export function funnelRecordView(ctx, typeKey, id) {
   }
   function confirmArchive(r) {
     dialog({ title: `Archive “${nameOf(typeKey, r)}”?`, body: h('p', {}, `It disappears from lists${r.client_visible ? ` and ${ctx.clients.get(r.client_id) ?? 'the client'} can no longer see it` : ''}. Nothing is deleted. You can restore it any time.`),
-      actions: [{ label: 'Archive', cls: 'pri', on: () => act(r, 'archive', 'Archived. Restore it from the Archived list.') }, { label: 'Cancel', focus: true }] });
+      actions: [{ label: 'Archive', cls: 'primary', on: () => act(r, 'archive', 'Archived. Restore it from the Archived list.') }, { label: 'Cancel', focus: true }] });
   }
   function share(r) {
     if (!r.client_id) return dialog({ title: 'Share with a client', body: h('p', {}, 'Only a record that belongs to a client can be shared with that client. This one belongs to the organization. Create it under a client to share it.'), actions: [{ label: 'Got it', focus: true }] });
     const cn = ctx.clients.get(r.client_id) ?? 'the client';
     dialog({ title: `Share with ${cn}`, wide: true, body: [h('p', { style: 'margin-bottom:var(--space-3)' }, `${cn} sees only what you share, and only in their Client Portal. They can view it, not change it.`),
       notice('info', 'info', 'The Client Portal is locked for now. This saves the choice; nothing is visible to the client until the Portal is turned on.')],
-    actions: [{ label: 'Share', cls: 'pri', on: async () => { const x = await run(ctx, `funnels.${typeKey}.share`, { id: r.id, visible: true }); if (!x.ok) return toast(messageFor(x.error?.code), false); toast(`Shared with ${cn}.`); view(x.data[0]); } }, { label: 'Cancel', focus: true }] });
+    actions: [{ label: 'Share', cls: 'primary', on: async () => { const x = await run(ctx, `funnels.${typeKey}.share`, { id: r.id, visible: true }); if (!x.ok) return toast(messageFor(x.error?.code), false); toast(`Shared with ${cn}.`); view(x.data[0]); } }, { label: 'Cancel', focus: true }] });
   }
   function unshare(r, cn) {
     dialog({ title: `Stop sharing with ${cn}?`, body: h('p', {}, `${cn} loses access right away. Your team’s copy isn’t affected.`),

@@ -38,7 +38,7 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
   const paintTimer = () => {
     const t = state.timer; timerBar.hidden = !t; clearInterval(state.tick); if (!t) return;
     const clk = h('b', { class: 'mono' }, clock(t.started_at, Date.now()));
-    timerBar.replaceChildren(icon('clock'), 'Timer running ', clk, btn('Stop', async () => { const r = await api.call('time.stop', {}); if (r.ok) { toast('Timer stopped.'); state.timer = null; paintTimer(); } else fail(r, 'stop that timer'); }, 'pri'));
+    timerBar.replaceChildren(icon('clock'), 'Timer running ', clk, btn('Stop', async () => { const r = await api.call('time.stop', {}); if (r.ok) { toast('Timer stopped.'); state.timer = null; paintTimer(); } else fail(r, 'stop that timer'); }, 'primary'));
     state.tick = setInterval(() => { if (!live()) return clearInterval(state.tick); clk.textContent = clock(t.started_at, Date.now()); }, 1000);
   };
   const loadTimer = async () => { const r = await api.call('time.running', {}); if (live()) { state.timer = r.ok ? r.data[0] ?? null : null; paintTimer(); } };
@@ -72,7 +72,7 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
     const client = h('select', { id: 'np-client', 'aria-label': 'Client' }, h('option', { value: '' }, 'Internal (no client)'), ...[...(ctx.clients ?? new Map())].filter(([cid]) => ctx.can('projects.project.create', cid)).map(([cid, n]) => h('option', { value: cid }, n)));
     const due = field({ id: 'np-due', label: 'Due date (optional)', type: 'date' });
     dialog({ title: 'New project', body: [name.el, h('div', { class: 'fld' }, h('label', { for: 'np-client' }, 'For'), client), due.el],
-      actions: [{ label: 'Create project', cls: 'pri', on: async () => {
+      actions: [{ label: 'Create project', cls: 'primary', on: async () => {
         const nm = name.input.value.trim(); if (!nm) return name.error('Give the project a name.');
         const r = await api.call('projects.create', { name: nm, ...(client.value ? { client: client.value } : {}), ...(due.input.value ? { due_on: due.input.value } : {}) });
         if (!r.ok) { fail(r, 'create projects'); return false; }
@@ -82,7 +82,7 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
 
   // ---------------------------------------------------------------- home
   async function home() {
-    put(main, h('div', { class: 'pj-head' }, h('div', {}, h('div', { class: 'crumbs fine' }, 'Projects'), h('h1', { 'data-page-title': true }, 'Projects')), ctx.canAnywhere('projects.project.create') ? btn('New project', newProject, 'pri') : null), skeleton(4));
+    put(main, h('div', { class: 'pj-head' }, h('div', {}, h('div', { class: 'crumbs fine' }, 'Projects'), h('h1', { 'data-page-title': true }, 'Projects')), ctx.canAnywhere('projects.project.create') ? btn('New project', newProject, 'primary') : null), skeleton(4));
     const r = await loadProjects(); if (!live()) return;
     if (!r.ok) return put(main, errorState(home));
     const head = main.firstChild; put(main, head);
@@ -91,7 +91,7 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
     const card = (p) => h('a', { class: 'pj-card', href: hrefs.project(p.id) }, h('div', { class: 'pj-card-top' }, h('strong', {}, p.name), statusChip(p.status)), h('div', { class: 'pj-card-sub' }, projectChip(p), p.due_on ? h('span', { class: 'fine muted' }, `Due ${dueLabel(p.due_on, todayIso())}`) : null), bar(p), h('div', { class: 'fine muted' }, `${p.tasks_done} of ${p.tasks_total} tasks done`));
     const draw = () => {
       const shown = state.projects.filter((p) => !p.archived_at && (filter === 'all' || (filter === 'open' ? p.status !== 'done' : p.status === filter)));
-      if (!shown.length) return put(list, state.projects.length ? emptyState({ title: 'No projects match', body: 'Try another filter, or search for archived work with Ctrl K.', ic: 'search' }) : emptyState({ title: 'No projects yet', body: ctx.canAnywhere('projects.project.create') ? 'Create the first project to start planning work.' : 'Nothing has been shared with you yet.', ic: 'prj', first: true, action: ctx.canAnywhere('projects.project.create') ? btn('New project', newProject, 'pri') : null }));
+      if (!shown.length) return put(list, state.projects.length ? emptyState({ title: 'No projects match', body: 'Try another filter, or search for archived work with Ctrl K.', ic: 'search' }) : emptyState({ title: 'No projects yet', body: ctx.canAnywhere('projects.project.create') ? 'Create the first project to start planning work.' : 'Nothing has been shared with you yet.', ic: 'prj', first: true, action: ctx.canAnywhere('projects.project.create') ? btn('New project', newProject, 'primary') : null }));
       const sp = splitProjects(shown, clientName, ctx.orgName);
       put(list,
         h('section', { 'aria-labelledby': 'pj-cp' }, h('h2', { id: 'pj-cp', class: 'pj-gh' }, 'Client projects'),
@@ -190,14 +190,14 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
       const rows = r2.data.filter((f) => (kind === 'board') === (f.mime_type === BOARD_MIME));
       const mk = async () => {
         const nm = field({ id: 'nf-name', label: kind === 'board' ? 'Whiteboard name' : 'Document name', value: kind === 'board' ? 'New whiteboard' : 'Untitled document', maxlength: 200 });
-        dialog({ title: kind === 'board' ? 'New whiteboard' : 'New document', body: nm.el, actions: [{ label: 'Create', cls: 'pri', on: async () => {
+        dialog({ title: kind === 'board' ? 'New whiteboard' : 'New document', body: nm.el, actions: [{ label: 'Create', cls: 'primary', on: async () => {
           const name = nm.input.value.trim(); if (!name || /[\/\\]/.test(name)) return nm.error('Use a name without slashes.');
           const ctxSpace = p.client_id ? { space: 'client', client: p.client_id, project: p.id } : { space: 'shared', project: p.id };
           const x = kind === 'board' ? await createBoard(api, name, ctxSpace) : await api.call('drive.files.create', { app: 'projects', ...ctxSpace, name, kind: 'document', mime_type: DOC_MIME, body: serialize(emptyDoc()) });
           if (!x.ok) { fail(x, 'add files'); return false; } go(kind === 'board' ? `#/board/${x.data[0].id}` : `#/doc/${x.data[0].id}`);
         } }, { label: 'Cancel' }] });
       };
-      put(body, archived ? readOnlyNotice('This project is archived') : null, h('div', { class: 'pj-calbar' }, h('h2', {}, kind === 'board' ? 'Whiteboards' : 'Docs'), tasksOk && ctx.canAnywhere('drive.file.upload') ? btn(kind === 'board' ? 'New whiteboard' : 'New document', mk, 'pri') : null),
+      put(body, archived ? readOnlyNotice('This project is archived') : null, h('div', { class: 'pj-calbar' }, h('h2', {}, kind === 'board' ? 'Whiteboards' : 'Docs'), tasksOk && ctx.canAnywhere('drive.file.upload') ? btn(kind === 'board' ? 'New whiteboard' : 'New document', mk, 'primary') : null),
         rows.length ? h('ul', { class: 'pj-rows' }, ...rows.map((f) => h('li', { class: 'pj-row' }, icon(kind === 'board' ? 'wb' : 'doc'), h('a', { class: 'pj-title', href: kind === 'board' ? `#/board/${f.id}` : `#/doc/${f.id}` }, f.name), h('span', { class: 'fine muted' }, `Version ${f.current_version}`), h('span', { class: 'fine muted' }, new Date(f.updated_at).toLocaleDateString()))))
           : emptyState({ title: kind === 'board' ? 'No whiteboards yet' : 'No documents yet', body: `${kind === 'board' ? 'Boards' : 'Documents'} made here belong to this project and open inside it. They are not listed in Drive unless you add them there.`, ic: kind === 'board' ? 'wb' : 'doc', first: true }));
     }
@@ -208,12 +208,12 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
 
   const projectMenu = (p, archived) => h('div', { class: 'pj-menu' }, archived
     ? btn('Restore project', async () => { const r = await api.call('projects.restore', { id: p.id }); if (r.ok) { toast('Project restored.'); go(hrefs.project(p.id)); } else fail(r, 'restore this project'); })
-    : btn('Archive project', () => dialog({ title: 'Archive this project?', body: h('p', {}, 'It leaves the lists and your dashboards. You can still find it with search (is:archived) and restore it.'), actions: [{ label: 'Archive', cls: 'pri', on: async () => { const r = await api.call('projects.archive', { id: p.id }); if (!r.ok) { fail(r, 'archive this project'); return false; } toast('Project archived.'); go(hrefs.home()); } }, { label: 'Cancel', focus: true }] })));
+    : btn('Archive project', () => dialog({ title: 'Archive this project?', body: h('p', {}, 'It leaves the lists and your dashboards. You can still find it with search (is:archived) and restore it.'), actions: [{ label: 'Archive', cls: 'primary', on: async () => { const r = await api.call('projects.archive', { id: p.id }); if (!r.ok) { fail(r, 'archive this project'); return false; } toast('Project archived.'); go(hrefs.home()); } }, { label: 'Cancel', focus: true }] })));
   const editProject = (p) => {
     const name = field({ id: 'ep-name', label: 'Name', value: p.name, maxlength: 200 }); const desc = field({ id: 'ep-desc', label: 'Description', value: p.description ?? '', rows: 4 });
     const st = h('select', { id: 'ep-status', 'aria-label': 'Status' }, ...opts(PROJECT_STATUS, p.status)); const start = field({ id: 'ep-start', label: 'Start', type: 'date', value: p.start_on ?? '' }); const due = field({ id: 'ep-due', label: 'Due', type: 'date', value: p.due_on ?? '' });
     dialog({ title: 'Edit project', wide: true, body: [name.el, desc.el, h('div', { class: 'fld' }, h('label', { for: 'ep-status' }, 'Status'), st), start.el, due.el],
-      actions: [{ label: 'Save', cls: 'pri', on: async () => { const nm = name.input.value.trim(); if (!nm) return name.error('A project needs a name.');
+      actions: [{ label: 'Save', cls: 'primary', on: async () => { const nm = name.input.value.trim(); if (!nm) return name.error('A project needs a name.');
         const r = await api.call('projects.update', { id: p.id, name: nm, description: desc.input.value, status: st.value, ...(start.input.value ? { start_on: start.input.value } : {}), ...(due.input.value ? { due_on: due.input.value } : {}) });
         if (!r.ok) { fail(r, 'change this project'); return false; } toast('Saved.'); project(); } }, { label: 'Cancel' }] });
   };
@@ -236,19 +236,19 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
     const timeBox = h('div', { class: 'pj-time' });
     const drawTime = async () => { const r = await api.call('time.list', { task: t.id }); const secs = (r.ok ? r.data : []).reduce((a, e) => a + (e.seconds ?? 0), 0); const running = state.timer && state.timer.task_id === t.id;
       put(timeBox, h('div', {}, h('b', {}, duration(secs)), h('span', { class: 'fine muted' }, ' logged on this task')),
-        canTime() ? h('div', { class: 'pj-timeacts' }, running ? btn('Stop timer', async () => { const x = await api.call('time.stop', {}); if (x.ok) { state.timer = null; paintTimer(); drawTime(); } else fail(x, 'stop that timer'); }, 'pri') : btn('Start timer', async () => { const x = await api.call('time.start', { project: p.id, task: t.id }); if (x.ok) { await loadTimer(); drawTime(); } else if (x.status === 409 || x.status === 422) toast('A timer is already running. Stop it first.', false); else fail(x, 'start a timer'); }, ''),
+        canTime() ? h('div', { class: 'pj-timeacts' }, running ? btn('Stop timer', async () => { const x = await api.call('time.stop', {}); if (x.ok) { state.timer = null; paintTimer(); drawTime(); } else fail(x, 'stop that timer'); }, 'primary') : btn('Start timer', async () => { const x = await api.call('time.start', { project: p.id, task: t.id }); if (x.ok) { await loadTimer(); drawTime(); } else if (x.status === 409 || x.status === 422) toast('A timer is already running. Stop it first.', false); else fail(x, 'start a timer'); }, ''),
           btn('Log time by hand', () => logTime(t, p, drawTime), '')) : null); };
     const share = p.client_id && ctx.can('projects.record.share', p.client_id) ? h('label', { class: 'pj-share' }, h('input', { type: 'checkbox', checked: t.client_visible, onchange: async (e) => { const r = await api.call('tasks.share', { id: t.id, visible: e.target.checked }); if (!r.ok) { e.target.checked = !e.target.checked; fail(r, 'share that task'); } else onChange(); } }), ' Show this task to the client') : null;
     const body = [h('div', { class: 'fld' }, h('label', { for: 'td-title' }, 'Task'), title), saved, sel('td-status', 'Status', TASK_STATUS, t.status, 'status'), sel('td-prio', 'Priority', PRIORITY, t.priority, 'priority'), h('div', { class: 'fld' }, h('label', { for: 'td-who' }, 'Assigned to'), who), h('div', { class: 'fld' }, h('label', { for: 'td-due' }, 'Due'), due),
       h('div', { class: 'fld' }, h('label', { for: 'td-notes' }, 'Notes'), notes), h('h3', {}, 'Subtasks'), checklist, h('h3', {}, 'Time'), timeBox, share,
       h('div', { class: 'pj-soon-row' }, btn('Suggest with AI', null, '', { disabled: true, 'aria-disabled': 'true', title: 'Not available: no AI provider is switched on' }), btn('Comments', null, '', { disabled: true, 'aria-disabled': 'true', title: 'Comments arrive with the notification layer' }))];
     title.id = 'td-title';
-    drawer({ title: 'Task', label: `Task: ${t.title}`, body, actions: canEdit ? [{ label: 'Archive task', on: async () => { const r = await api.call('tasks.archive', { id: t.id }); if (!r.ok) { fail(r, 'archive that task'); return; } toast('Task archived.'); onChange(); } }, { label: 'Done', cls: 'pri' }] : [{ label: 'Close', cls: 'pri' }] });
+    drawer({ title: 'Task', label: `Task: ${t.title}`, body, actions: canEdit ? [{ label: 'Archive task', on: async () => { const r = await api.call('tasks.archive', { id: t.id }); if (!r.ok) { fail(r, 'archive that task'); return; } toast('Task archived.'); onChange(); } }, { label: 'Done', cls: 'primary' }] : [{ label: 'Close', cls: 'primary' }] });
     drawChecklist(); drawTime();
   }
   const logTime = (t, p, after) => {
     const mins = field({ id: 'lt-min', label: 'Minutes', type: 'number', value: '30' }); const note = field({ id: 'lt-note', label: 'Note (optional)', maxlength: 500 });
-    dialog({ title: 'Log time', body: [mins.el, note.el], actions: [{ label: 'Log', cls: 'pri', on: async () => { const m = Math.round(Number(mins.input.value)); if (!(m >= 1 && m <= 1440)) return mins.error('Enter minutes between 1 and 1440.');
+    dialog({ title: 'Log time', body: [mins.el, note.el], actions: [{ label: 'Log', cls: 'primary', on: async () => { const m = Math.round(Number(mins.input.value)); if (!(m >= 1 && m <= 1440)) return mins.error('Enter minutes between 1 and 1440.');
       const end = new Date(); const start = new Date(end.getTime() - m * 60000);
       const r = await api.call('time.log', { project: p.id, task: t.id, started_at: start.toISOString(), ended_at: end.toISOString(), ...(note.input.value ? { note: note.input.value } : {}) });
       if (!r.ok) { fail(r, 'log time'); return false; } toast('Time logged.'); after(); } }, { label: 'Cancel' }] });

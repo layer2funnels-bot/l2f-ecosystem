@@ -59,7 +59,9 @@ export const cav = (name, size = 'sm') => h('span', { class: `cav ${size === 'sm
 /** The v4 search field for toolbars: `.inp` with the glass icon. */
 export const inp = (input, grow = true) => h('label', { class: `inp${grow ? ' grow' : ''}` }, icon('search'), input);
 export const pill = (text, kind = '', ic) => h('span', { class: `pill ${kind}`.trim() }, ic ? icon(ic) : null, text);
-export const btn = (label, onClick, cls = '', attrs = {}) => h('button', { type: 'button', class: `btn ${cls}`.trim(), onclick: onClick, ...attrs }, label);
+// V4: a create action carries a leading plus ("+ New client"). Only the main (primary) create buttons get it, decided here once so no page adds its own.
+const isCreate = (label, cls) => /(^|\s)primary(\s|$)/.test(cls) && typeof label === 'string' && /^(New|Add|Create|Invite|Start)\b/.test(label);
+export const btn = (label, onClick, cls = '', attrs = {}) => h('button', { type: 'button', class: `btn ${cls}`.trim(), onclick: onClick, ...attrs }, isCreate(label, cls) ? [icon('plus', 'plus'), label] : label);
 export const link = (label, onClick) => h('button', { type: 'button', class: 'btn link', onclick: onClick }, label);
 export function notice(kind, ic, content, actions = []) {   // kind: info | warn | err
   return h('div', { class: `notice ${kind}`, role: kind === 'err' || kind === 'warn' ? 'alert' : 'status' }, icon(ic), h('p', {}, content), actions.length ? h('div', { class: 'act' }, ...actions) : null);
@@ -128,16 +130,20 @@ export const plate = () => {
   });
   svg.append(g); return svg;
 };
+/** The V4 layered stack with the organization mark: the first-use empty states and the sign-in stage (Design v4 "Expressive at the door"). */
+export const stackArt = (cls = '') => h('div', { class: 'stack-wrap', 'aria-hidden': 'true' }, h('div', { class: `stack ${cls}`.trim() },
+  h('div', { class: 'ly a', style: '--i:0' }), h('div', { class: 'ly b', style: '--i:1' }), h('div', { class: 'ly c', style: '--i:2' }),
+  h('div', { class: 'ly d', style: '--i:3' }, h('span', {}, document.documentElement.dataset.org === 'aurj' ? 'عروج' : 'L2'))));
 export const emptyState = ({ title, body, action, ic, first = false }) => h('div', { class: 'empty', role: 'status' },
-  first ? plate() : h('div', { class: 'big' }, icon(ic ?? 'search')), h('h3', {}, title), body ? h('p', {}, body) : null, action ?? null);
+  first ? stackArt('mini-stack') : h('div', { class: 'big' }, icon(ic ?? 'search')), h('h3', {}, title), body ? h('p', {}, body) : null, action ?? null);
 export function errorState(retry, { title = 'We couldn’t load this', body = 'Your work is safe. Check your connection and try again.' } = {}) {
-  return h('div', { class: 'empty', role: 'alert' }, h('div', { class: 'big', style: 'background:var(--danger-tint);color:var(--danger)' }, icon('cross')), h('h3', {}, title), h('p', {}, body), retry ? btn('Try again', retry, 'pri') : null);
+  return h('div', { class: 'empty', role: 'alert' }, h('div', { class: 'big', style: 'background:var(--danger-tint);color:var(--danger)' }, icon('cross')), h('h3', {}, title), h('p', {}, body), retry ? btn('Try again', retry, 'primary') : null);
 }
 export const offlineNotice = () => notice('warn', 'warn', [h('b', {}, 'You’re offline.'), ' You can keep reading. Changes can’t be saved until you’re back.']);
 // "Not found" and "no access" are the same screen on purpose (design 07).
 export const notFoundState = (homeHref, homeLabel = 'Go to Office Home') => h('div', { class: 'empty', role: 'status' },
   h('div', { class: 'big' }, icon('search')), h('h3', {}, 'We couldn’t find that'), h('p', {}, 'It may have moved, or you may not have access.'),
-  h('a', { class: 'btn pri', href: homeHref }, homeLabel));
+  h('a', { class: 'btn primary', href: homeHref }, homeLabel));
 export const readOnlyNotice = (why, what = 'You can look but not change.') => notice('info', 'eye', [h('b', {}, 'Read only.'), ` ${why}. ${what}`]);
 
 // Development builds only: shows the design status of a screen that has none yet (docs/DESIGN_STATUS.md). Production never renders it.

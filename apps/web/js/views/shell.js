@@ -19,7 +19,7 @@ const trap = (menu, button, onClose) => {                 // arrow keys move, Es
 
 function switcher({ orgs, active, onPick }) {
   const menuId = 'org-menu';
-  const sw = h('button', { type: 'button', class: 'orgbtn sw', id: 'org-switcher', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-controls': menuId, 'data-pending': 'false' },
+  const sw = h('button', { type: 'button', class: 'orgbtn orgsw', id: 'org-switcher', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-controls': menuId, 'data-pending': 'false' },
     orgMarkEl(active, 28),
     h('span', { class: 't' }, h('strong', {}, active.name)), icon('chev', 'chev'), h('span', { class: 'spin', 'aria-hidden': 'true' }));
   const menu = h('div', { class: 'menu', id: menuId, role: 'menu', 'aria-label': 'Switch organization', 'data-open': 'false' });
@@ -121,7 +121,8 @@ export function shellView({ app, orgs, active, email, name, route, content, bann
     h('div', { class: 'side-foot' }, h('span', { class: 'avatar', 'aria-hidden': 'true' }, initials(name || email)), h('div', {}, h('b', {}, name || email || ''), h('small', {}, `${roleLabel(active.role)} · ${active.name}`))));
   const crumb = h('div', { class: 'crumb', 'aria-label': 'You are here' });
   const paintCrumb = () => {
-    const extra = content.__crumbs ?? (here && items.length > 1 ? [[here.label]] : []);
+    // V4: the app's first page shows the app name alone ("Clients"); Office and deeper pages add the page ("Office / Home", "Drive / Trash")
+    const extra = content.__crumbs ?? (here && items.length > 1 && (here !== items[0] || currentApp === 'office') ? [[here.label]] : []);
     crumb.replaceChildren(h('b', { style: 'white-space:nowrap' }, appName), ...extra.map(([label, href]) => h('span', {}, '/ ', href ? h('a', { href }, label) : label)));
   };
   paintCrumb();

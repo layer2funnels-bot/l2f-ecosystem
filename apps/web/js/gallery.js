@@ -32,7 +32,7 @@ put(document.getElementById('gallery'),
   previewRibbon(),
   h('h1', { 'data-page-title': true }, 'Component gallery'),
   h('p', { class: 'muted' }, 'Muted text sits here. ', h('span', { class: 'mono' }, '1,234.50 USD'), ' ', h('span', { lang: 'ur', dir: 'rtl' }, 'اردو متن کی مثال')),
-  sec('Buttons', row(btn('Primary', () => {}, 'pri'), btn('Secondary', () => {}), btn('Danger', () => {}, 'dng'), btn('Link', () => {}, 'link'), btn('Disabled', () => {}, '', { disabled: true }), btn('Disabled with reason', () => {}, '', { 'aria-disabled': 'true', title: 'Needs the backend first' }),
+  sec('Buttons', row(btn('Primary', () => {}, 'primary'), btn('Secondary', () => {}), btn('Danger', () => {}, 'dng'), btn('Link', () => {}, 'link'), btn('Disabled', () => {}, '', { disabled: true }), btn('Disabled with reason', () => {}, '', { 'aria-disabled': 'true', title: 'Needs the backend first' }),
     h('button', { type: 'button', class: 'iconbtn', 'aria-label': 'More' }, icon('more')))),
   sec('Segmented, tabs, chips, pills', row(seg([['a', 'Day'], ['b', 'Week'], ['c', 'Month']], 'b', () => {}, 'Range')), tabs([['o', 'Overview'], ['l', 'List'], ['b', 'Board']], 'o', () => {}, 'Views'),
     row(chip('Neutral'), chip('Done', 'ok', 'check'), chip('Careful', 'warn', 'warn'), chip('Failed', 'bad', 'cross'), chip('Active', 'act'), pill('Locked', 'warn', 'lock'), avatar('Una Owner'))),
@@ -49,5 +49,5 @@ put(document.getElementById('gallery'),
   sec('Table that stacks on phones', h('table', { class: 'tbl stk' }, h('thead', {}, h('tr', {}, ...['Step', 'Visitors', 'Revenue'].map((t) => h('th', {}, t)))),
     h('tbody', {}, ...[['Landing', '2,500', '$0'], ['Checkout', '150', '$4,199']].map((r) => h('tr', {}, ...r.map((c, i) => h('td', { 'data-l': ['Step', 'Visitors', 'Revenue'][i] }, c))))))),
   sec('Overlays', row(btn('Open dialog', () => dialog({ title: 'A dialog', body: h('p', {}, 'Esc closes it and focus returns.'), actions: [{ label: 'Close', focus: true }] })),
-    btn('Open drawer', () => drawer({ title: 'A drawer', body: h('p', {}, 'Side panel content.'), actions: [{ label: 'Done', cls: 'pri' }] })), btn('Show toast', () => toast('Saved', true)))));
+    btn('Open drawer', () => drawer({ title: 'A drawer', body: h('p', {}, 'Side panel content.'), actions: [{ label: 'Done', cls: 'primary' }] })), btn('Show toast', () => toast('Saved', true)))));
 document.title = 'Component gallery';

@@ -72,7 +72,7 @@ export function docView({ api, id, ctx, opts = {} }) {
     if (!f.ok) { root.replaceChildren(f.status === 404 ? noAccessState({ action: h('a', { class: 'btn', href: '#/launcher' }, 'Back to the Launcher') }) : errorState(() => { root.replaceChildren(skeleton(4)); load(); })); return; }
     const file = f.data[0];
     if (file.kind !== 'document') { root.replaceChildren(h('div', { class: 'empty', role: 'status' }, icon('doc'), h('h2', { 'data-page-title': true }, file.name), h('p', { class: 'muted' }, 'This is a stored file, not a document, so it has no editor. Download it from Drive.'))); return; }
-    if (file.mime_type === BOARD_MIME) { root.replaceChildren(h('div', { class: 'empty', role: 'status' }, icon('wb'), h('h2', { 'data-page-title': true }, file.name), h('p', { class: 'muted' }, 'This is a whiteboard. It opens in the Whiteboard editor.'), h('a', { class: 'btn pri', href: `#/board/${file.id}` }, 'Open the whiteboard'))); return; }
+    if (file.mime_type === BOARD_MIME) { root.replaceChildren(h('div', { class: 'empty', role: 'status' }, icon('wb'), h('h2', { 'data-page-title': true }, file.name), h('p', { class: 'muted' }, 'This is a whiteboard. It opens in the Whiteboard editor.'), h('a', { class: 'btn primary', href: `#/board/${file.id}` }, 'Open the whiteboard'))); return; }
     const v = await api.call('drive.files.version', { file: id });
     if (!ctx.live()) return;
     if (!v.ok) { root.replaceChildren(errorState(() => { root.replaceChildren(skeleton(4)); load(); })); return; }
@@ -86,7 +86,7 @@ export function docView({ api, id, ctx, opts = {} }) {
     const statusEl = h('span', { class: 'docstate', role: 'status', 'aria-live': 'polite' });
     const outlineEl = h('nav', { class: 'docoutline', 'aria-label': 'Outline' });
     const counter = h('span', { class: 'docstat muted' });
-    const saveBtn = btn('Save', () => save({ manual: true }), 'pri');
+    const saveBtn = btn('Save', () => save({ manual: true }), 'primary');
     const titleIn = h('input', { class: 'doctitle', value: meta.name, 'aria-label': 'Document name', maxlength: '200', ...(readOnly ? { readonly: true } : {}) });
     const crumb = h('nav', { class: 'fpath fine', 'aria-label': 'Where this document lives' });
     const bar = h('div', { class: 'docbar' });
@@ -141,7 +141,7 @@ export function docView({ api, id, ctx, opts = {} }) {
     function conflict() {
       dialog({ title: 'Someone saved a newer version', body: [h('p', {}, 'While you were writing, another version was saved. Nothing has been overwritten. Choose what happens to your changes.'), h('p', { class: 'fine muted' }, 'Both versions stay in History either way.')],
         actions: [
-          { label: 'Save mine as the newest', cls: 'pri', on: async (close) => { const cur = await api.call('drive.files.get', { id }); if (!cur.ok) { toast('Couldn’t check the latest version. Try again.', false); return false; } version = cur.data[0].current_version; await save({ manual: true }); },  },
+          { label: 'Save mine as the newest', cls: 'primary', on: async (close) => { const cur = await api.call('drive.files.get', { id }); if (!cur.ok) { toast('Couldn’t check the latest version. Try again.', false); return false; } version = cur.data[0].current_version; await save({ manual: true }); },  },
           { label: 'Load theirs, discard mine', on: async () => { const cur = await api.call('drive.files.version', { file: id }); if (!cur.ok) { toast('Couldn’t load it. Try again.', false); return false; } version = cur.data[0].version; savedBody = serialize(parseBody(cur.data[0].body ?? '')); renderDoc(page, parseBody(cur.data[0].body ?? '')); status = 'saved'; savedAt = cur.data[0].created_at; dirty.clear(); paintStatus(); paintOutline(); } },
           { label: 'Keep editing', focus: true },
         ] });
@@ -157,7 +157,7 @@ export function docView({ api, id, ctx, opts = {} }) {
     const linkBtn = h('button', { type: 'button', class: 'tb', 'aria-label': 'Link', title: 'Link', 'data-cmd': 'link', onmousedown: (e) => e.preventDefault(), onclick: () => {
       const sel = getSelection(); const range = sel.rangeCount ? sel.getRangeAt(0).cloneRange() : null;
       const f = field({ id: 'doc-link', label: 'Web address', value: 'https://', hint: 'Only web (https, http) and e-mail (mailto:) links are kept.' });
-      dialog({ title: 'Add a link', body: f.el, actions: [{ label: 'Add link', cls: 'pri', on: () => { const href = safeHref(f.input.value); if (!href) return f.error('Enter a web address that starts with https:// or http://, or a mailto: address.'); if (range) { sel.removeAllRanges(); sel.addRange(range); } exec('createLink', href); }, }, { label: 'Remove link', on: () => { if (range) { sel.removeAllRanges(); sel.addRange(range); } exec('unlink'); } }, { label: 'Cancel' }] });
+      dialog({ title: 'Add a link', body: f.el, actions: [{ label: 'Add link', cls: 'primary', on: () => { const href = safeHref(f.input.value); if (!href) return f.error('Enter a web address that starts with https:// or http://, or a mailto: address.'); if (range) { sel.removeAllRanges(); sel.addRange(range); } exec('createLink', href); }, }, { label: 'Remove link', on: () => { if (range) { sel.removeAllRanges(); sel.addRange(range); } exec('unlink'); } }, { label: 'Cancel' }] });
     } }, icon('ext'));
     tb.append(block, tbtn('Bold', 'B', 'bold', null, 'b'), tbtn('Italic', 'I', 'italic', null, 'i'), tbtn('Underline', 'U', 'underline', null, 'u'), tbtn('Strikethrough', 'S', 'strikeThrough', null, 's'), linkBtn,
       tbtn('Bulleted list', '•', 'insertUnorderedList'), tbtn('Numbered list', '1.', 'insertOrderedList'), tbtn('Divider', '—', 'insertHorizontalRule'), tbtn('Undo', '↶', 'undo'), tbtn('Redo', '↷', 'redo'));

@@ -21,7 +21,7 @@ export function boardsView({ api, ctx, route = {} }) {
     put(body, rows.length ? h('div', { class: 'tblwrap' }, h('table', { class: 'tbl stk' }, h('caption', { class: 'sr' }, 'Whiteboards'),
       h('thead', {}, h('tr', {}, ...['Board', 'Where it lives', 'Updated'].map((x) => h('th', { scope: 'col' }, x)))),
       h('tbody', {}, ...rows.map((f) => { const w = where(f); return h('tr', {}, h('td', {}, icon('wb'), ' ', h('a', { href: `#/board/${f.id}` }, f.name)), h('td', {}, chip(w.kind), ' ', h('a', { href: w.href }, w.label)), h('td', {}, when(f.updated_at))); }))))
-      : emptyState({ title: state.q ? 'No board matches' : state.show === 'archived' ? 'Nothing archived' : 'No whiteboards yet', body: state.q ? 'Try another word.' : 'Boards you can open appear here, wherever they live. Boards that belong to a project or a client are also reachable from there.', ic: 'wb', first: !state.q && state.show === 'active', action: !state.q && state.show === 'active' ? btn('New whiteboard', () => create(), 'pri') : null }));
+      : emptyState({ title: state.q ? 'No board matches' : state.show === 'archived' ? 'Nothing archived' : 'No whiteboards yet', body: state.q ? 'Try another word.' : 'Boards you can open appear here, wherever they live. Boards that belong to a project or a client are also reachable from there.', ic: 'wb', first: !state.q && state.show === 'active', action: !state.q && state.show === 'active' ? btn('New whiteboard', () => create(), 'primary') : null }));
   }
   function create(tpl = BOARD_TEMPLATES[0]) {
     const name = field({ id: 'nb-name', label: 'Whiteboard name', value: tpl.key === 'blank' ? 'New whiteboard' : tpl.name, maxlength: 200 });
@@ -30,7 +30,7 @@ export function boardsView({ api, ctx, route = {} }) {
     const projSel = h('select', { id: 'nb-project', 'aria-label': 'Project' }, ...[...projects].map(([pid, n]) => h('option', { value: pid }, n)));
     const clientBox = h('div', { class: 'fld', hidden: true }, h('label', { for: 'nb-client' }, 'Client'), clientSel); const projBox = h('div', { class: 'fld', hidden: true }, h('label', { for: 'nb-project' }, 'Project'), projSel);
     kind.addEventListener('change', () => { clientBox.hidden = kind.value !== 'client'; projBox.hidden = kind.value !== 'project'; });
-    dialog({ title: 'New whiteboard', body: [name.el, h('div', { class: 'fld' }, h('label', { for: 'nb-kind' }, 'Where does it belong?'), kind, h('p', { class: 'fine muted' }, 'A board always lives somewhere, so the right people can open it and nobody else can.')), clientBox, projBox], actions: [{ label: 'Create', cls: 'pri', on: async () => {
+    dialog({ title: 'New whiteboard', body: [name.el, h('div', { class: 'fld' }, h('label', { for: 'nb-kind' }, 'Where does it belong?'), kind, h('p', { class: 'fine muted' }, 'A board always lives somewhere, so the right people can open it and nobody else can.')), clientBox, projBox], actions: [{ label: 'Create', cls: 'primary', on: async () => {
       const n = name.input.value.trim(); if (!n || /[\/\\]/.test(n)) return name.error('Use a name without slashes.');
       let context = { space: 'shared' };
       if (kind.value === 'client') { if (!clientSel.value) { toast('Choose a client.', false); return false; } context = { space: 'client', client: clientSel.value }; }
@@ -45,6 +45,6 @@ export function boardsView({ api, ctx, route = {} }) {
   const search = h('input', { type: 'search', placeholder: 'Search boards', 'aria-label': 'Search boards', autocomplete: 'off' }); search.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { state.q = search.value.trim(); load(); }, 200); });
   const sc = h('select', { 'aria-label': 'Where it lives' }, ...[['all', 'Everywhere'], ['shared', `${ctx.orgName} Drive`], ['client', 'Clients'], ['project', 'Projects']].map(([k, l]) => h('option', { value: k }, l))); sc.addEventListener('change', () => { state.scope = sc.value; load(); });
   const sh = h('select', { 'aria-label': 'Show' }, h('option', { value: 'active' }, 'Active'), h('option', { value: 'archived' }, 'Archived')); sh.addEventListener('change', () => { state.show = sh.value; load(); });
-  put(root, h('div', { class: 'pj-head' }, h('div', {}, h('div', { class: 'crumbs fine' }, 'Whiteboard'), h('h1', { 'data-page-title': true }, 'All boards'), h('p', { class: 'sub' }, 'Every whiteboard you can open, wherever it lives. Boards inside a project or a client open there too.')), btn('New whiteboard', () => create(), 'pri')), h('div', { class: 'toolbar' }, search, sc, sh), body);
+  put(root, h('div', { class: 'pj-head' }, h('div', {}, h('div', { class: 'crumbs fine' }, 'Whiteboard'), h('h1', { 'data-page-title': true }, 'All boards'), h('p', { class: 'sub' }, 'Every whiteboard you can open, wherever it lives. Boards inside a project or a client open there too.')), btn('New whiteboard', () => create(), 'primary')), h('div', { class: 'toolbar' }, search, sc, sh), body);
   load(); return root;
 }

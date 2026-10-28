@@ -34,10 +34,10 @@ svg.i{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-widt
 .hdr .search:focus-within{outline:3px solid var(--action);outline-offset:2px}
 .hdr .search input:disabled{cursor:not-allowed}
 .hdr .crumb a{color:inherit;text-decoration:none}
-button.who{width:44px;height:44px;border-radius:50%;font:700 13px/1 var(--font);color:var(--brand-ink);background:var(--av,var(--brand));display:grid;place-items:center;box-shadow:inset 0 0 0 2px rgba(255,255,255,.35);cursor:pointer}
+button.who{width:44px;height:44px;border-radius:50%;font:700 13px/1 var(--font);display:grid;place-items:center;cursor:pointer}
 .iconbtn[aria-disabled=true]{opacity:.45;cursor:not-allowed}
 .hdr>.hide-s{display:inline-grid}
-.side-foot .avatar{--av:var(--brand)}
+
 @media (max-width:760px){.hdr .hide-s{display:none!important}.hdr .search{margin-left:auto}.hdr .appsw{display:block}}
 .hdr .only-m{display:none}
 .hdr .crumb{flex:0 1 auto;min-width:0;overflow:hidden;white-space:nowrap}
@@ -62,8 +62,8 @@ button.who{width:44px;height:44px;border-radius:50%;font:700 13px/1 var(--font);
 .profile-menu{width:260px;left:auto;right:0}
 .seg-theme{display:flex;gap:4px;padding:8px 10px}.seg-theme button{flex:1;min-height:44px;border:1px solid var(--line2);border-radius:12px;background:var(--surface);font-weight:600}
 .seg-theme button[aria-checked=true]{background:var(--action);color:var(--action-ink);border-color:var(--action)}
-.sw[data-pending=true] .chev{display:none}.sw .spin{display:none}.sw[data-pending=true] .spin{display:block}
-.sw .chev{width:16px;height:16px}
+.orgsw[data-pending=true] .chev{display:none}.orgsw .spin{display:none}.orgsw[data-pending=true] .spin{display:block}
+.orgsw .chev{width:16px;height:16px}
 @media (max-width:760px){.menu{position:fixed;left:12px;right:12px;top:auto;bottom:calc(12px + env(safe-area-inset-bottom,0px));width:auto;max-width:none;transform:translateY(12px)}.profile-menu{width:auto}}
 /* bottom bar (phones): our items are links */
 .bbar .pillic svg{width:22px;height:22px}
@@ -71,10 +71,8 @@ button.who{width:44px;height:44px;border-radius:50%;font:700 13px/1 var(--font);
 
 /* ---- aliases: the app's older class names get the v4 look */
 .btn{min-width:44px}
-.btn:not(.primary):not(.pri):not(.ink):not(.action):not(.dng):not(.quiet):not(.link):not(.ghost){border:var(--bw) solid var(--line2);background:var(--surface);box-shadow:0 2px 0 var(--line)}
-.btn:not(.primary):not(.pri):not(.ink):not(.action):not(.dng):not(.quiet):not(.link):not(.ghost):hover{background:var(--surface2)}
-.btn.pri{background:var(--brand);color:var(--brand-ink);box-shadow:0 3px 0 var(--brand-deep),inset 0 1px 0 rgba(255,255,255,.45)}
-.btn.pri:active{box-shadow:0 1px 0 var(--brand-deep),inset 0 1px 0 rgba(255,255,255,.45)}
+.btn:not(.primary):not(.ink):not(.action):not(.dng):not(.quiet):not(.link):not(.ghost){border:var(--bw) solid var(--line2);background:var(--surface);box-shadow:0 2px 0 var(--line)}
+.btn:not(.primary):not(.ink):not(.action):not(.dng):not(.quiet):not(.link):not(.ghost):hover{background:var(--surface2)}
 .btn.dng{background:var(--danger);color:var(--surface);box-shadow:0 3px 0 color-mix(in srgb,var(--danger) 55%,var(--text))}
 .btn.dng:active{box-shadow:0 1px 0 color-mix(in srgb,var(--danger) 55%,var(--text))}
 .btn.link{border:0;background:none;box-shadow:none;color:var(--action);text-decoration:underline;padding:0 8px;min-height:44px}
@@ -89,7 +87,7 @@ button.who{width:44px;height:44px;border-radius:50%;font:700 13px/1 var(--font);
 .notice{margin-bottom:16px}
 .banner{display:flex;gap:12px;align-items:flex-start;padding:12px 16px;border-radius:14px;background:var(--action-tint);margin-bottom:16px;font-size:14px}.banner.ro{background:var(--sunk)}
 .field-ro{background:var(--sunk)!important;color:var(--text)}
-.avatar{--av:var(--brand)}
+
 .plate svg{width:calc(var(--s)*.47);height:calc(var(--s)*.47);stroke-width:2}
 .plate.dim{filter:saturate(.25) brightness(1.05);opacity:.75}
 .card{display:block;gap:0;padding:0;box-shadow:var(--sh1);transform:none}.card:hover{transform:none;box-shadow:var(--sh1)}

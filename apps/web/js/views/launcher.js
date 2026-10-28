@@ -65,7 +65,7 @@ export function launcherView({ catalog, error, org, orgs, role, name, registry, 
     const [, desc] = META[a.app_key] ?? ['gen', ''];
     if (a.state === 'locked') {
       return dialog({ title: `${a.name} is locked`, body: [h('p', {}, 'Clients can’t sign in yet. The Portal stays off until the security tests for client access pass. ', role === 'owner' ? 'Then you switch it on here.' : 'An owner switches it on when it’s ready.'),
-        h('div', { class: 'notice warn', style: 'margin-top:var(--space-3)' }, icon('lock'), h('p', {}, 'Security checks: ', h('b', {}, 'not yet passed'), '. Nothing is visible to clients.'))], actions: [{ label: 'Preview what clients will see', cls: 'pri', on: () => { location.hash = '#/portal'; } }, { label: 'Close', focus: true }] });
+        h('div', { class: 'notice warn', style: 'margin-top:var(--space-3)' }, icon('lock'), h('p', {}, 'Security checks: ', h('b', {}, 'not yet passed'), '. Nothing is visible to clients.'))], actions: [{ label: 'Preview what clients will see', cls: 'primary', on: () => { location.hash = '#/portal'; } }, { label: 'Close', focus: true }] });
     }
     if (a.state === 'coming_soon') {
       return dialog({ title: `${a.name}: coming soon`, body: h('p', {}, a.app_key === 'layer2_agents' ? 'AI helpers are planned. Nothing runs yet, and nothing will without your approval of the provider, cost and data rules.' : `${a.name} is planned. ${desc}`), actions: [{ label: 'Got it', focus: true }] });
@@ -73,7 +73,7 @@ export function launcherView({ catalog, error, org, orgs, role, name, registry, 
     if (a.state === 'not_set_up') {
       const other = orgs.find((o) => o.name === a.other_org);
       return dialog({ title: `${a.name} isn’t set up for ${org.name}`, body: h('p', {}, `${a.name} is on in ${a.other_org ?? 'another organization'}. You’re in ${org.name}, so there’s nothing to open here.`),
-        actions: [...(other ? [{ label: `Switch to ${other.name}`, cls: 'pri', on: () => onSwitch(other.org_id) }] : []), { label: 'Ask an admin', on: () => toast('Message only for now. No request was sent.', false) }, { label: 'Close', focus: true }] });
+        actions: [...(other ? [{ label: `Switch to ${other.name}`, cls: 'primary', on: () => onSwitch(other.org_id) }] : []), { label: 'Ask an admin', on: () => toast('Message only for now. No request was sent.', false) }, { label: 'Close', focus: true }] });
     }
     if (a.app_key === 'funnel_mapper_pro') {
       if (a.launch_url) { location.href = a.launch_url; return; }          // same tab, as a regular app
@@ -110,5 +110,5 @@ export function launcherView({ catalog, error, org, orgs, role, name, registry, 
 
 // An app that is on for this person but has no screens in this build yet (shared "not built" state, never a fake page).
 export const appNotBuiltView = (name) => h('section', {}, designBadge(), h('div', { class: 'crumb' }, 'Apps'), h('h1', { 'data-page-title': true }, name),
-  emptyState({ title: `${name} isn’t built yet`, body: 'Its design and screens come later. Nothing has been lost; the data layer is separate.', ic: 'clock', action: h('a', { class: 'btn pri', href: hrefFor.office() }, 'Go to Office Home') }));
+  emptyState({ title: `${name} isn’t built yet`, body: 'Its design and screens come later. Nothing has been lost; the data layer is separate.', ic: 'clock', action: h('a', { class: 'btn primary', href: hrefFor.office() }, 'Go to Office Home') }));
 export { roleLabel };

@@ -52,7 +52,7 @@ export function driveView({ api, ctx, route }) {
     put(list, rows.length ? h('div', { class: 'tblwrap' }, h('table', { class: 'tbl drv-tbl' }, h('caption', { class: 'sr' }, 'Folders and files'),
       h('thead', {}, h('tr', {}, h('th', { scope: 'col' }, h('span', { class: 'sr' }, 'Select')), ...['Name', 'Type', 'Size', 'Updated'].map((x) => h('th', { scope: 'col' }, x)), h('th', { scope: 'col' }, h('span', { class: 'sr' }, 'Actions')))),
       h('tbody', {}, ...rows.map(rowEl))))
-      : emptyState({ title: state.q ? 'No file matches' : folderId ? 'This folder is empty' : space === 'personal' ? 'Your personal space is empty' : `${ctx.orgName} library is empty`, body: state.q ? 'Try another word.' : canWrite ? 'Drop files anywhere on this page, or use New.' : 'Nothing has been added here yet.', ic: 'drv', first: !state.q && !folderId, action: canWrite && !state.q ? btn('New', newMenu, 'pri') : null }));
+      : emptyState({ title: state.q ? 'No file matches' : folderId ? 'This folder is empty' : space === 'personal' ? 'Your personal space is empty' : `${ctx.orgName} library is empty`, body: state.q ? 'Try another word.' : canWrite ? 'Drop files anywhere on this page, or use New.' : 'Nothing has been added here yet.', ic: 'drv', first: !state.q && !folderId, action: canWrite && !state.q ? btn('New', newMenu, 'primary') : null }));
     paintSel();
   }
   function rowEl(r) {
@@ -84,7 +84,7 @@ export function driveView({ api, ctx, route }) {
   }
   function rename(item, isFolder) {
     const f = field({ id: 'dr-name', label: 'Name', value: item.name, maxlength: 200 });
-    dialog({ title: `Rename ${isFolder ? 'folder' : 'file'}`, body: f.el, actions: [{ label: 'Rename', cls: 'pri', on: async () => { const n = f.input.value.trim(); if (!n || /[\/\\]/.test(n)) return f.error('Use a name without slashes.');
+    dialog({ title: `Rename ${isFolder ? 'folder' : 'file'}`, body: f.el, actions: [{ label: 'Rename', cls: 'primary', on: async () => { const n = f.input.value.trim(); if (!n || /[\/\\]/.test(n)) return f.error('Use a name without slashes.');
       const r = await api.call(isFolder ? 'drive.folders.update' : 'drive.files.update', { id: item.id, name: n }); if (!r.ok) { fail(r, 'rename that'); return false; } toast('Renamed.'); load(); } }, { label: 'Cancel' }] });
   }
   async function moveDialog(items) {
@@ -94,7 +94,7 @@ export function driveView({ api, ctx, route }) {
     const ids = new Set(items.filter((x) => x.folder).map((x) => x.folder.id));
     const opts = [{ id: '', name: space === 'personal' ? 'Personal (top level)' : `${ctx.orgName} library (top level)` }, ...(r.ok ? r.data : []), ...(inCurrent.ok ? inCurrent.data : [])].filter((d) => !ids.has(d.id) && d.id !== folderId);
     const sel = h('select', { id: 'mv-to', 'aria-label': 'Move to' }, ...opts.map((d) => h('option', { value: d.id }, d.name)));
-    dialog({ title: `Move ${items.length} item${items.length === 1 ? '' : 's'}`, body: [h('div', { class: 'fld' }, h('label', { for: 'mv-to' }, 'Move to'), sel)], actions: [{ label: 'Move', cls: 'pri', on: async () => {
+    dialog({ title: `Move ${items.length} item${items.length === 1 ? '' : 's'}`, body: [h('div', { class: 'fld' }, h('label', { for: 'mv-to' }, 'Move to'), sel)], actions: [{ label: 'Move', cls: 'primary', on: async () => {
       for (const it of items) { const input = it.folder ? { id: it.folder.id, ...(sel.value ? { parent: sel.value } : { to_root: true }) } : { id: it.file.id, ...(sel.value ? { folder: sel.value } : { to_root: true }) };
         const x = await api.call(it.folder ? 'drive.folders.update' : 'drive.files.update', input); if (!x.ok) { fail(x, 'move that'); return false; } }
       toast('Moved.'); load(); } }, { label: 'Cancel' }] });
@@ -104,7 +104,7 @@ export function driveView({ api, ctx, route }) {
     toast(`${files.length === 1 ? 'Moved' : `${files.length} items moved`} to the Trash.`); load();
   }
   function trashFolder(d) {
-    dialog({ title: `Move “${d.name}” to the Trash?`, body: h('p', {}, 'The folder leaves the list. Files inside it stay where they are and keep their place if you restore the folder.'), actions: [{ label: 'Move to Trash', cls: 'pri', on: async () => { const r = await api.call('drive.folders.archive', { id: d.id }); if (!r.ok) { fail(r, 'move that to the Trash'); return false; } toast('Moved to the Trash.'); load(); } }, { label: 'Cancel', focus: true }] });
+    dialog({ title: `Move “${d.name}” to the Trash?`, body: h('p', {}, 'The folder leaves the list. Files inside it stay where they are and keep their place if you restore the folder.'), actions: [{ label: 'Move to Trash', cls: 'primary', on: async () => { const r = await api.call('drive.folders.archive', { id: d.id }); if (!r.ok) { fail(r, 'move that to the Trash'); return false; } toast('Moved to the Trash.'); load(); } }, { label: 'Cancel', focus: true }] });
   }
 
   // ---------------------------------------------------------------- New, upload
@@ -116,12 +116,12 @@ export function driveView({ api, ctx, route }) {
   }
   function newFolder() {
     const f = field({ id: 'nf-name', label: 'Folder name', value: 'New folder', maxlength: 200 });
-    dialog({ title: 'New folder', body: f.el, actions: [{ label: 'Create', cls: 'pri', on: async () => { const n = f.input.value.trim(); if (!n || /[\/\\]/.test(n)) return f.error('Use a name without slashes.');
+    dialog({ title: 'New folder', body: f.el, actions: [{ label: 'Create', cls: 'primary', on: async () => { const n = f.input.value.trim(); if (!n || /[\/\\]/.test(n)) return f.error('Use a name without slashes.');
       const r = await api.call('drive.folders.create', { space, name: n, ...(folderId ? { parent: folderId } : {}) }); if (!r.ok) { fail(r, 'add folders'); return false; } toast('Folder created.'); load(); } }, { label: 'Cancel' }] });
   }
   function newFile(label, mime, body) {
     const f = field({ id: 'nd-name', label: `${label} name`, value: `Untitled ${label.toLowerCase()}`, maxlength: 200 });
-    dialog({ title: `New ${label.toLowerCase()}`, body: f.el, actions: [{ label: 'Create', cls: 'pri', on: async () => { const n = f.input.value.trim(); if (!n || /[\/\\]/.test(n)) return f.error('Use a name without slashes.');
+    dialog({ title: `New ${label.toLowerCase()}`, body: f.el, actions: [{ label: 'Create', cls: 'primary', on: async () => { const n = f.input.value.trim(); if (!n || /[\/\\]/.test(n)) return f.error('Use a name without slashes.');
       const r = await api.call('drive.files.create', { space, name: n, kind: 'document', mime_type: mime, body, ...(folderId ? { folder: folderId } : {}) }); if (!r.ok) { fail(r, 'add files'); return false; }
       ctx.go(openHref(r.data[0])); } }, { label: 'Cancel' }] });
   }
@@ -175,7 +175,7 @@ export function driveView({ api, ctx, route }) {
       }
     };
     const strip = h('div', { class: 'tabs', role: 'tablist', 'aria-label': 'Details' }, ...[['details', 'Details'], ['sharing', 'Sharing'], ['versions', 'Versions']].map(([k, l]) => h('button', { type: 'button', role: 'tab', 'aria-selected': String(k === tab.cur), 'data-k': k, onclick: (e) => { tab.cur = k; strip.querySelectorAll('[role=tab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.k === k))); draw(); } }, l)));
-    drawer({ title: f.name, label: `Details of ${f.name}`, body: [strip, body], actions: [{ label: 'Close', cls: 'pri' }] }); draw();
+    drawer({ title: f.name, label: `Details of ${f.name}`, body: [strip, body], actions: [{ label: 'Close', cls: 'primary' }] }); draw();
   }
 
   // ---------------------------------------------------------------- recent, trash
@@ -199,7 +199,7 @@ export function driveView({ api, ctx, route }) {
   // ---------------------------------------------------------------- shell
   const search = h('input', { type: 'search', placeholder: 'Search the library', 'aria-label': 'Search files', autocomplete: 'off' }); let t = null;
   search.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { state.q = search.value.trim(); load(); }, 250); });
-  const filesShell = () => { put(main, head(space === 'personal' ? 'Personal' : 'Drive', space === 'personal' ? 'Only you can open these files.' : `The ${ctx.orgName} library: files and documents the whole team can find. Project and client files stay with their own app.`, canWrite ? btn('New', newMenu, 'pri') : null),
+  const filesShell = () => { put(main, head(space === 'personal' ? 'Personal' : 'Drive', space === 'personal' ? 'Only you can open these files.' : `The ${ctx.orgName} library: files and documents the whole team can find. Project and client files stay with their own app.`, canWrite ? btn('New', newMenu, 'primary') : null),
     !canWrite ? readOnlyNotice('You can look at the library but not add to it', '') : null, crumb, h('div', { class: 'toolbar' }, inp(search)), bar, list, progress); };
   put(root, h('div', { class: 'pj-grid' }, main), picker); dropZone();     // the spaces live in the app's side rail (appnav.js)
   if (view === 'files') filesShell();

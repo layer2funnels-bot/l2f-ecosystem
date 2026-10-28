@@ -33,7 +33,7 @@ export function boardView({ api, id, ctx }) {
     if (!ctx.live()) return;
     if (!f.ok) return fail(f.status === 404 ? noAccessState({ action: h('a', { class: 'btn', href: '#/launcher' }, 'Back to the Launcher') }) : errorState(() => { root.replaceChildren(skeleton(4)); load(); }));
     const file = f.data[0];
-    if (file.kind !== 'document' || file.mime_type !== BOARD_MIME) return fail(h('div', { class: 'empty', role: 'status' }, icon('wb'), h('h2', { 'data-page-title': true }, file.name), h('p', { class: 'muted' }, 'This is not a whiteboard.'), file.kind === 'document' ? h('a', { class: 'btn pri', href: `#/doc/${file.id}` }, 'Open it as a document') : null));
+    if (file.kind !== 'document' || file.mime_type !== BOARD_MIME) return fail(h('div', { class: 'empty', role: 'status' }, icon('wb'), h('h2', { 'data-page-title': true }, file.name), h('p', { class: 'muted' }, 'This is not a whiteboard.'), file.kind === 'document' ? h('a', { class: 'btn primary', href: `#/doc/${file.id}` }, 'Open it as a document') : null));
     const v = await api.call('drive.files.version', { file: id });
     if (!ctx.live()) return;
     if (!v.ok) return fail(errorState(() => { root.replaceChildren(skeleton(4)); load(); }));
@@ -51,7 +51,7 @@ export function boardView({ api, id, ctx }) {
     const getBody = () => { if (cache.sig !== sig || cache.body === null) cache = { sig, body: serializeBoard(els, bg) }; return cache.body; };
     const surface = h('div', { class: 'boardsurface', role: 'application', 'aria-label': `Whiteboard ${meta.name}` });
     const statusEl = h('span', { class: 'docstate', role: 'status', 'aria-live': 'polite' }); const counter = h('span', { class: 'docstat muted' });
-    const saveBtn = btn('Save', () => sess.save({ manual: true }), 'pri');
+    const saveBtn = btn('Save', () => sess.save({ manual: true }), 'primary');
     const titleIn = h('input', { class: 'doctitle', value: meta.name, 'aria-label': 'Board name', maxlength: '200', ...(readOnly ? { readonly: true } : {}) });
     const crumb = h('nav', { class: 'fpath fine', 'aria-label': 'Where this board lives' });
     let board = null;

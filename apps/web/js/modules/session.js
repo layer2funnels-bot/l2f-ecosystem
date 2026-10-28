@@ -66,7 +66,7 @@ export function createSession({ api, id, ctx, version, savedBody, savedAt, readO
   function conflict() {
     dialog({ title: 'Someone saved a newer version', body: [h('p', {}, 'While you were working, another version was saved. Nothing has been overwritten. Choose what happens to your changes.'), h('p', { class: 'fine muted' }, 'Both versions stay in History either way.')],
       actions: [
-        { label: 'Save mine as the newest', cls: 'pri', on: async () => { const cur = await api.call('drive.files.get', { id }); if (!cur.ok) { toast('Couldn’t check the latest version. Try again.', false); return false; } ver = cur.data[0].current_version; await self.save({ manual: true }); } },
+        { label: 'Save mine as the newest', cls: 'primary', on: async () => { const cur = await api.call('drive.files.get', { id }); if (!cur.ok) { toast('Couldn’t check the latest version. Try again.', false); return false; } ver = cur.data[0].current_version; await self.save({ manual: true }); } },
         { label: 'Load theirs, discard mine', on: async () => { const cur = await api.call('drive.files.version', { file: id }); if (!cur.ok) { toast('Couldn’t load it. Try again.', false); return false; } setBody(cur.data[0].body ?? ''); self.reset({ version: cur.data[0].version, savedAt: cur.data[0].created_at }); } },
         { label: 'Keep editing', focus: true },
       ] });
