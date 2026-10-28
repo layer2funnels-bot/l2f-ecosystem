@@ -31,7 +31,8 @@ export function appNav(appId, route, { isAdmin = false } = {}) {
     case 'projects':
       return { items: [it('home', '#/projects', 'Home', 'home'), it('mine', '#/projects/mine', 'My Work', 'mywork')], current: route.params?.view === 'mine' ? 'mine' : 'home' };
     case 'clients':
-      return { items: [it('list', '#/clients', 'Clients', 'clients')], current: 'list' };
+      return { items: [it('list', '#/clients', 'Clients', 'clients'), it('requests', '#/clients/requests', 'Requests & Approvals', 'inbox'), it('sops', '#/clients/sops', 'SOPs', 'sop'), it('tools', '#/clients/tools', 'Tools', 'tool'), ...(isAdmin ? [it('settings', '#/clients/settings', 'Settings', 'gear')] : [])],
+        current: ['requests', 'sops', 'tools', 'settings'].includes(route.params?.view) ? route.params.view : 'list' };
     case 'drive': {
       const v = route.params?.view; const space = route.params?.space;
       return { items: [it('files', '#/drive', 'Library', 'folder'), it('personal', '#/drive/personal', 'Personal', 'drive'), it('recent', '#/drive/recent', 'Recent', 'clock'), it('trash', '#/drive/trash', 'Trash', 'trash')],

@@ -6,7 +6,7 @@ import { builderView } from './formbuilder.js';
 import { emptyDoc, serialize } from './docmodel.js';
 
 const DOC_MIME = 'application/vnd.l2f.doc+json';
-export const hrefs = { list: (q = '') => `#/clients${q}`, client: (id, tab) => `#/clients/c/${id}${tab && tab !== 'overview' ? `?tab=${tab}` : ''}` };
+export const hrefs = { page: (k) => `#/clients/${k}`, list: (q = '') => `#/clients${q}`, client: (id, tab) => `#/clients/c/${id}${tab && tab !== 'overview' ? `?tab=${tab}` : ''}` };
 const STATUS = [['lead', 'Lead'], ['proposal', 'Proposal'], ['active', 'Active'], ['paused', 'Paused'], ['past', 'Past']];
 const KINDS = [['avatars', 'Customer avatar', 'name'], ['offers', 'Offer or product', 'name'], ['stories', 'Story', 'title'], ['brand_kits', 'Brand kit', 'name'], ['strategies', 'Funnel Strategy', 'name'], ['ladders', 'Value Ladder', 'name']];
 const statusLabel = (s) => (STATUS.find(([k]) => k === s) ?? [s, s ?? 'No status'])[1];
@@ -195,7 +195,49 @@ export function clientsView({ api, ctx, route }) {
     draw();
   }
 
+  // ---------------------------------------------------------------- the other menu pages: Requests & Approvals (all clients), SOPs, Tools, Settings
+  const plainHead = (title, sub, ...acts) => h('div', { class: 'pj-head' }, h('div', {}, h('h1', { 'data-page-title': true }, title), sub ? h('p', { class: 'sub' }, sub) : null), acts.filter(Boolean).length ? h('div', { class: 'acts' }, ...acts) : null);
+  async function allRequests() {
+    put(main, plainHead('Requests & Approvals', 'Everything asked of clients, across every client you can open.'), skeleton(3));
+    const ids = [...(ctx.clients ?? new Map())];
+    const [ap, ...rq] = await Promise.all([api.call('approvals.list', {}), ...ids.map(([cid]) => api.call('clients.requests.list', { client: cid }))]); if (!live()) return;
+    const nameOf = (cid) => ctx.clients?.get?.(cid) ?? 'A client';
+    const rows = [...rq.flatMap((r, i) => (r.ok ? r.data.map((x) => ({ kind: x.kind === 'approval' ? 'Approval' : 'Information', title: x.title, client: ids[i][0], status: x.status === 'open' ? 'Waiting on client' : x.status === 'answered' ? 'Responded' : 'Closed', at: x.created_at, id: x.id })) : [])),
+      ...(ap.ok ? ap.data.filter((a) => a.client_id).map((a) => ({ kind: 'Approval', title: a.title, client: a.client_id, status: a.status === 'pending' ? 'Waiting on client' : a.status === 'approved' ? 'Approved' : a.status === 'rejected' ? 'Changes requested' : 'Withdrawn', at: a.created_at, id: a.id })) : [])]
+      .sort((a, b) => String(b.at).localeCompare(String(a.at)));
+    let f = 'all'; const body2 = h('div', {});
+    const draw = () => { const shown = rows.filter((x) => f === 'all' || (f === 'wait' && x.status === 'Waiting on client') || (f === 'resp' && x.status === 'Responded') || (f === 'done' && x.status === 'Approved'));
+      put(body2, shown.length ? h('div', { class: 'tblwrap' }, h('table', { class: 'tbl stk' }, h('caption', { class: 'sr' }, 'Requests and approvals'), h('thead', {}, h('tr', {}, ...['Request', 'Client', 'Type', 'Status', 'Sent'].map((x) => h('th', { scope: 'col' }, x)))),
+        h('tbody', {}, ...shown.map((x) => h('tr', {}, h('td', { class: 't1', 'data-l': 'Request' }, h('a', { class: 'fname', href: hrefs.client(x.client, 'requests') }, h('span', {}, x.title))), h('td', { 'data-l': 'Client' }, nameOf(x.client)), h('td', { 'data-l': 'Type' }, x.kind),
+          h('td', { 'data-l': 'Status' }, chip(x.status, x.status === 'Approved' ? 'ok' : x.status === 'Waiting on client' ? 'warn' : '')), h('td', { 'data-l': 'Sent' }, when(x.at)))))))
+        : emptyState({ title: rows.length ? 'Nothing matches' : 'No requests yet', body: rows.length ? 'Try another filter.' : 'Ask a client for information or an approval from their page. Nothing reaches them until the Client Portal is on.', ic: 'inbox', first: !rows.length })); };
+    put(main, plainHead('Requests & Approvals', 'Everything asked of clients, across every client you can open.'),
+      h('div', { class: 'toolbar' }, seg([['all', 'All'], ['wait', 'Waiting on client'], ['resp', 'Responded'], ['done', 'Approved']], f, (k) => { f = k; draw(); }, 'Show')),
+      body2, notice('info', 'lock', 'The Client Portal is locked. Requests are saved as prepared. Nothing is sent or shown to clients yet.')); draw();
+  }
+  async function sopsPage() {
+    put(main, plainHead('SOPs', 'How we run each stage. They live once, protected, in Drive.'), skeleton(2));
+    const r = await api.call('drive.sops.list', {}); if (!live()) return;
+    if (!r.ok) return put(main, plainHead('SOPs', null), errorState(sopsPage));
+    put(main, plainHead('SOPs', 'How we run each stage. They live once, protected, in Drive.'),
+      r.data.length ? h('div', { style: 'display:grid;gap:10px;max-width:760px' }, ...r.data.map((f) => h('a', { class: 'linkrow', href: openHrefOf(f), style: 'text-decoration:none;border:var(--bw) solid var(--line);background:var(--surface);box-shadow:var(--sh1);padding:14px 16px' }, icon('sop'), h('span', { class: 'main' }, h('b', {}, f.name), h('small', {}, `Protected · in Drive${f.sop_key ? ` · ${f.sop_key}` : ''}`)), icon('arrow'))))
+        : emptyState({ title: 'No SOPs yet', body: 'An owner marks a Drive document as a protected SOP. It then appears here for everyone with access.', ic: 'sop', first: true }),
+      h('p', { class: 'hint', style: 'margin-top:12px' }, 'Links only. SOPs are never copied into a client’s Documents.'));
+  }
+  const openHrefOf = (f) => (f.mime_type === 'application/vnd.l2f.sheet+json' ? `#/sheet/${f.id}` : `#/doc/${f.id}`);
+  function toolsPage() {
+    const TOOLS = [['whiteboard', 'Whiteboard', 'Sketch ideas together.', '#/whiteboards', 'wb'], ['forms', 'Form Builder', 'Forms, quizzes and intake.', '#/forms', 'frm'], ['value_ladder', 'Value Ladder', 'Offers from free to premium.', '#/ladder', 'vl'], ['social_planner', 'Social Planner', 'Posts, carousels, schedule.', '#/social', 'soc']];
+    const shown = TOOLS.filter(([k]) => (ctx.catalog ?? []).find((a) => a.app_key === k)?.state === 'available' || !ctx.catalog);
+    put(main, plainHead('Tools', 'Tools you have access to.'), shown.length ? h('div', { class: 'cardgrid' }, ...shown.map(([k, n, d, href, ic]) => h('a', { class: 'card', href, style: 'text-decoration:none;grid-template-columns:auto 1fr;align-items:center;display:grid' }, icon(ic), h('span', {}, h('h3', {}, n), h('p', {}, d)))))
+      : emptyState({ title: 'No tools yet', body: 'Owners and admins switch tools on for an organization. Ask one if you need a tool here.', ic: 'tool' }), h('p', { class: 'hint', style: 'margin-top:12px' }, 'Owners and admins see all four. Others see what they’ve been given.'));
+  }
+  async function settingsPage() {
+    put(main, plainHead('Settings', 'Owner and Admin only. Stage names are fixed until a change is approved.'), skeleton(2)); await loadStages(); if (!live()) return;
+    put(main, plainHead('Settings', 'Owner and Admin only. Stage names are fixed until a change is approved.'), h('div', { class: 'tblwrap' }, h('table', { class: 'tbl stk' }, h('caption', { class: 'sr' }, 'Stages'), h('thead', {}, h('tr', {}, ...['Stage', 'Client sees'].map((x) => h('th', { scope: 'col' }, x)))),
+      h('tbody', {}, ...stages.map((s, i) => h('tr', {}, h('td', { class: 't1', 'data-l': 'Stage' }, `${i + 1}. ${s.label}`), h('td', { 'data-l': 'Client sees' }, s.progress_only ? 'Progress only' : 'Milestone')))))),
+      h('p', { class: 'hint', style: 'margin-top:12px' }, 'Build is progress only on purpose. The build happens in the client’s ClickFunnels or GoHighLevel.'));
+  }
   root.append(main);
-  (route.view === 'client' ? client : list)();
+  ({ client, requests: allRequests, sops: sopsPage, tools: toolsPage, settings: settingsPage }[route.view] ?? list)();
   return root;
 }

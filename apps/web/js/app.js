@@ -279,7 +279,7 @@ async function render(opts = {}) {
   theme.setOrg(org);
   const role = org.role; const isAdmin = role === 'owner' || role === 'admin';
   const c = {
-    api, orgName: org.name, clients: ctx.clients, live, announce, go, guard, rerender: () => render(),
+    api, orgName: org.name, clients: ctx.clients, catalog: ctx.catalog, live, announce, go, guard, rerender: () => render(),
     can: (p, clientId) => canWith(ctx.mine, p, clientId), canAnywhere: (p) => canAnywhereWith(ctx.mine, p),
     clientsWhere: (p) => [...ctx.clients].filter(([cid]) => canWith(ctx.mine, p, cid)),
   };
