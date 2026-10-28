@@ -20,7 +20,7 @@
 .sp-undated ul{list-style:none;margin:0;padding:0;display:grid;gap:var(--space-2)}
 .sp-form{display:grid;gap:var(--space-3)}
 .sp-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-3)}
-.sp-count.over,.over{color:var(--danger)}
+.sp-count.over{color:var(--danger);text-transform:none;letter-spacing:normal;font-size:13px;font-weight:600}   /* v4's .over is an eyebrow style; this is a plain counter */
 .sp-prev{border:1px solid var(--line2);border-radius:var(--radius-md);padding:var(--space-3);background:var(--bg);overflow-wrap:anywhere}
 .sp-prev-cap{white-space:pre-wrap;margin:0}
 .sp-prev mark{background:color-mix(in srgb,var(--danger) 25%,transparent);color:inherit}

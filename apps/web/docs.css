@@ -36,3 +36,5 @@
 .strat-side{display:grid;gap:var(--space-4);align-content:start}
 .strat-side section{border:1px solid var(--line2);border-radius:var(--radius-md);padding:var(--space-4);background:var(--surface)}
 .strat-side h3{font-size:14px;margin:0 0 var(--space-2)}
+/* v4's paper rules size p and li on their own; inside the editor they must inherit, or the browser's editing commands write inline styles (blocked by our policy) to keep the sizes apart */
+.docpage p,.docpage li{font-size:inherit;line-height:inherit;color:inherit}

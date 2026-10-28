@@ -22,7 +22,7 @@ svg.i{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-widt
 
 /* ---- shell glue: the side rail, header and content come from v4.css; these are the app's additions */
 .app{min-height:100vh;display:block;background:var(--bg)}
-.app.in-launcher{background:#0D0E12}
+.app.in-launcher{background:var(--stage)}
 .shell>.main{min-width:0;display:flex;flex-direction:column}
 .shell .content{width:100%;flex:1}
 .side .nav a{display:flex;align-items:center;gap:12px;min-height:44px;padding:0 12px;border-radius:12px;color:var(--text2);font-weight:550;font-size:14.5px;position:relative;text-decoration:none;transition:background 200ms,color 200ms}
@@ -34,7 +34,7 @@ svg.i{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-widt
 .hdr .search:focus-within{outline:3px solid var(--action);outline-offset:2px}
 .hdr .search input:disabled{cursor:not-allowed}
 .hdr .crumb a{color:inherit;text-decoration:none}
-button.who{width:44px;height:44px;border-radius:50%;font:700 13px/1 var(--font);color:#16171B;background:var(--av,var(--brand));display:grid;place-items:center;box-shadow:inset 0 0 0 2px rgba(255,255,255,.35);cursor:pointer}
+button.who{width:44px;height:44px;border-radius:50%;font:700 13px/1 var(--font);color:var(--brand-ink);background:var(--av,var(--brand));display:grid;place-items:center;box-shadow:inset 0 0 0 2px rgba(255,255,255,.35);cursor:pointer}
 .iconbtn[aria-disabled=true]{opacity:.45;cursor:not-allowed}
 .hdr>.hide-s{display:inline-grid}
 .side-foot .avatar{--av:var(--brand)}
@@ -75,8 +75,8 @@ button.who{width:44px;height:44px;border-radius:50%;font:700 13px/1 var(--font);
 .btn:not(.primary):not(.pri):not(.ink):not(.action):not(.dng):not(.quiet):not(.link):not(.ghost):hover{background:var(--surface2)}
 .btn.pri{background:var(--brand);color:var(--brand-ink);box-shadow:0 3px 0 var(--brand-deep),inset 0 1px 0 rgba(255,255,255,.45)}
 .btn.pri:active{box-shadow:0 1px 0 var(--brand-deep),inset 0 1px 0 rgba(255,255,255,.45)}
-.btn.dng{background:var(--danger);color:#fff;box-shadow:0 3px 0 color-mix(in srgb,var(--danger) 55%,#000)}
-.btn.dng:active{box-shadow:0 1px 0 color-mix(in srgb,var(--danger) 55%,#000)}
+.btn.dng{background:var(--danger);color:var(--surface);box-shadow:0 3px 0 color-mix(in srgb,var(--danger) 55%,var(--text))}
+.btn.dng:active{box-shadow:0 1px 0 color-mix(in srgb,var(--danger) 55%,var(--text))}
 .btn.link{border:0;background:none;box-shadow:none;color:var(--action);text-decoration:underline;padding:0 8px;min-height:44px}
 .btn:disabled,.btn[aria-disabled=true]{opacity:.5;cursor:not-allowed;transform:none}
 .btn svg.i{width:18px;height:18px}
@@ -138,7 +138,7 @@ ul.rows{list-style:none;margin:0;padding:0}ul.rows li{display:flex;gap:12px;alig
 .dlg .acts{margin-top:22px;justify-content:flex-end}
 .dlg p+p{margin-top:8px}
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translate(-50%,8px);z-index:calc(var(--z-dialog) + 20);display:flex;gap:10px;align-items:center;padding:14px 16px;border-radius:16px;background:var(--text);color:var(--bg);box-shadow:var(--sh3);font-size:14px;font-weight:600;opacity:0;pointer-events:none;transition:opacity .18s ease-out,transform .18s ease-out;max-width:calc(100% - 32px)}
-.toast svg{color:color-mix(in srgb,var(--action) 70%,#fff)}
+.toast svg{color:color-mix(in srgb,var(--action) 70%,var(--bg))}
 .toast[data-show=true]{opacity:1;transform:translate(-50%,0)}.toast[data-show=false]{visibility:hidden}
 @media (max-width:760px){.toast{bottom:calc(76px + env(safe-area-inset-bottom,0px))}}
 .drawer-back{position:fixed;inset:0;z-index:var(--z-dialog);background:rgba(10,10,14,.45)}

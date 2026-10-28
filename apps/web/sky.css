@@ -3,4 +3,3 @@
 .launcher .attrib{margin-top:12px}.launcher .attrib a{color:inherit;text-decoration:underline}
 .launcher .tile.opening{animation:zoomout var(--motion-base) var(--e-out) forwards}
 @keyframes zoomout{to{transform:scale(1.14);opacity:0}}
-.launcher .l-hero .hi{color:#A7AAB4}

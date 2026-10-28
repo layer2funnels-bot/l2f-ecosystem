@@ -49,7 +49,7 @@
 .pj-board{display:grid;grid-template-columns:repeat(4,minmax(240px,1fr));gap:12px;overflow-x:auto;padding-bottom:12px}
 .pj-col{background:var(--sunk);border-radius:20px;padding:10px;min-height:260px;transition:background 160ms}
 .pj-col h3{font:650 14px var(--font);padding:6px 6px 10px}
-.pj-col.over{background:var(--action-tint);box-shadow:inset 0 0 0 2px var(--action)}
+.pj-col.over{background:var(--action-tint);box-shadow:inset 0 0 0 2px var(--action);text-transform:none;letter-spacing:normal;font:inherit}
 .pj-cardtask{display:flex;flex-direction:column;gap:6px;width:100%;text-align:left;border:var(--bw) solid var(--line);border-radius:14px;background:var(--surface);box-shadow:var(--sh1);color:var(--text);padding:14px;margin-bottom:8px;cursor:grab;transition:transform 200ms var(--e-out),box-shadow 200ms}
 .pj-cardtask:hover{box-shadow:var(--sh2);transform:translateY(-2px)}
 .pj-calbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap}
