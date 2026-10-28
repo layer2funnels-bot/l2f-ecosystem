@@ -875,7 +875,7 @@ for (const [w, label] of [[1280, 'desktop'], [768, 'tablet'], [390, 'phone']]) {
   await admin.query("update social_posts set archived_at = now() where archived_at is null and (title like 'Teaser %' or title like 'Second %')");   // earlier runs leave posts on today's calendar day
   const CN = `Spring push ${Date.now()}`, PN = `Teaser ${Date.now()}`, PN2 = `Second ${Date.now()}`;
   await page.reload(); await page.goto(`${base}/#/social`); await page.waitForSelector('.pj-head h1', { timeout: 9000 });
-  check('SO1', 'Social Planner opens on the calendar with Calendar, Posts, Campaigns and Channels', (await page.locator('.side .nav a').allInnerTexts()).join() === 'Calendar,Posts,Campaigns,Channels' && (await page.locator('.sp-cal').count()) === 1);
+  check('SO1', 'Social Planner opens on the calendar with Calendar, Posts, Queue, Approvals, Campaigns and Channels', (await page.locator('.side .nav a').allInnerTexts()).join() === 'Calendar,Posts,Queue,Approvals,Campaigns,Channels' && (await page.locator('.sp-cal').count()) === 1);
   await page.locator('.side .nav a', { hasText: 'Channels' }).click(); await page.waitForSelector('.tbl', { timeout: 9000 });
   check('SO2', 'Channels lists what each channel takes and every Connect button is switched off with the reason', (await page.locator('.tbl tbody tr').count()) === 9 && (await page.getByRole('button', { name: 'Connect' }).evaluateAll((b) => b.every((x) => x.disabled))) && (await page.locator('main').innerText()).includes('280 characters'));
   await page.locator('.side .nav a', { hasText: 'Campaigns' }).click(); await page.waitForSelector('.empty, .pj-cards', { timeout: 9000 });
