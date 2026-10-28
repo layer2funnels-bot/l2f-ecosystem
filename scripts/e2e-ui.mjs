@@ -53,7 +53,7 @@ const q = async (sql, args = []) => (await admin.query(sql, args)).rows;
 async function layout(p, label) {
   const r = await p.evaluate(() => {
     const out = { over: document.documentElement.scrollWidth - document.documentElement.clientWidth, small: [] };
-    if (out.over > 0) out.who = [...document.querySelectorAll('body *')].filter((e) => e.getBoundingClientRect().right > innerWidth + 1).slice(0, 4).map((e) => `${e.tagName}.${String(e.className).slice(0, 24)}`).join(' ');
+    if (out.over > 0) out.who = [...document.querySelectorAll('body *')].filter((e) => e.getBoundingClientRect().right > innerWidth + 1 && !e.closest('.tblwrap')).slice(0, 4).map((e) => `${e.tagName}.${String(e.className).slice(0, 24)}`).join(' ');
     for (const e of document.querySelectorAll('button, a[href], select, input:not([type=hidden]), textarea, [role=tab]')) {
       if (e.closest('.sr, .skip, .search, .chk, .toast') || e.matches('input[type=checkbox]')) continue;
       const b = e.getBoundingClientRect(); if (!b.width || !b.height) continue;
@@ -353,7 +353,7 @@ check('U16', 'A missing page and a missing record show the same "We couldn’t f
 await visit(page, base + '/#/office/funnels'); await wait('Recently changed');
 check('U17', 'Funnels home: four counts, the section pills, and the "Link design pending" note for funnel maps', (await page.locator('.tile2').count()) === 4 && await page.getByText('Link design pending').isVisible());
 await page.locator('.nav .sub a', { hasText: 'Avatars' }).click(); await wait('No avatars yet');
-check('U18', 'First-use empty list has the plate illustration, a create action for owners', await page.getByRole('link', { name: 'New avatar' }).first().isVisible() && (await page.locator('.empty svg').count()) > 0);
+check('U18', 'First-use empty list has the V4 stack illustration, a create action for owners', await page.getByRole('link', { name: 'New avatar' }).first().isVisible() && (await page.locator('.empty .stack').count()) > 0);
 await page.getByRole('link', { name: 'New avatar' }).first().click(); await wait('New avatar'); await page.waitForSelector('#r-client');
 const scope = await page.locator('#r-client option').allInnerTexts();
 check('U19', '"Belongs to" offers the organization and live clients only (never archived ones)', scope.includes('Organization-wide') && scope.some((o) => o.startsWith('Harry Kaye')) && !scope.some((o) => o.startsWith('Archived')));
