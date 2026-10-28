@@ -38,14 +38,14 @@ export function appNav(appId, route, { isAdmin = false } = {}) {
         current: v === 'recent' ? 'recent' : v === 'trash' ? 'trash' : space === 'personal' ? 'personal' : 'files' };
     }
     case 'forms':
-      return { items: [it('list', '#/forms', 'Forms', 'forms'), it('templates', '#/forms/templates', 'Templates', 'copy')], current: route.params?.view === 'templates' ? 'templates' : 'list' };
+      return { items: [it('list', '#/forms', 'Forms', 'forms'), it('submissions', '#/forms/submissions', 'Submissions', 'inbox'), it('templates', '#/forms/templates', 'Templates', 'copy')], current: route.params?.view === 'templates' ? 'templates' : route.params?.view === 'submissions' ? 'submissions' : 'list' };
     case 'value_ladder':
       return { items: [it('list', '#/ladder', 'Ladders', 'ladder2')], current: 'list' };
     case 'whiteboard':
-      return { items: [it('boards', '#/whiteboards', 'All boards', 'whiteboard')], current: 'boards' };
+      return { items: [it('boards', '#/whiteboards', 'All boards', 'whiteboard'), it('templates', '#/whiteboards?view=templates', 'Templates', 'copy')], current: route.query?.view === 'templates' ? 'templates' : 'boards' };
     case 'social_planner':
-      return { items: [it('calendar', '#/social', 'Calendar', 'cal'), it('posts', '#/social?tab=posts', 'Posts', 'note'), it('campaigns', '#/social?tab=campaigns', 'Campaigns', 'flag'), it('channels', '#/social?tab=channels', 'Channels', 'plug')],
-        current: route.params?.view === 'c' ? 'campaigns' : (['posts', 'campaigns', 'channels'].includes(route.query?.tab) ? route.query.tab : 'calendar') };
+      return { items: [it('calendar', '#/social', 'Calendar', 'cal'), it('posts', '#/social?tab=posts', 'Posts', 'note'), it('queue', '#/social?tab=queue', 'Queue', 'list'), it('approvals', '#/social?tab=approvals', 'Approvals', 'check'), it('campaigns', '#/social?tab=campaigns', 'Campaigns', 'flag'), it('channels', '#/social?tab=channels', 'Channels', 'plug')],
+        current: route.params?.view === 'c' ? 'campaigns' : (['posts', 'queue', 'approvals', 'campaigns', 'channels'].includes(route.query?.tab) ? route.query.tab : 'calendar') };
     case 'portal':
       return { items: [it('home', '#/portal', 'Preview', 'portal')], current: 'home' };
     default:

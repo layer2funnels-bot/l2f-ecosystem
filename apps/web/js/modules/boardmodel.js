@@ -33,3 +33,20 @@ export function serializeBoard(elements, background = '#ffffff') {
 export const signature = (elements) => (Array.isArray(elements) ? elements.map((e) => `${e.id}:${e.version}${e.isDeleted ? 'x' : ''}`).join('|') : '');
 export const countLive = (elements) => (Array.isArray(elements) ? elements.filter((e) => e && !e.isDeleted).length : 0);
 export const emptyBoard = () => serializeBoard([], '#ffffff');
+
+// ---- starter templates (Design v4 Whiteboard > Templates): a few labelled boxes, arrows and notes to start from. Plain drawing elements only, so they pass parseBoard.
+const base = { angle: 0, strokeColor: '#1e1e1e', backgroundColor: 'transparent', fillStyle: 'solid', strokeWidth: 2, strokeStyle: 'solid', roughness: 0, opacity: 100, groupIds: [], frameId: null, roundness: null, seed: 1, version: 1, versionNonce: 1, isDeleted: false, boundElements: null, updated: 1, link: null, locked: false };
+let seq = 0;
+const eid = () => `t${(seq += 1)}`;
+const box = (x, y, w, h, label, fill = '#fff3bf') => [
+  { ...base, id: eid(), type: 'rectangle', x, y, width: w, height: h, backgroundColor: fill, roundness: { type: 3 } },
+  { ...base, id: eid(), type: 'text', x: x + 12, y: y + h / 2 - 12, width: w - 24, height: 24, text: label, originalText: label, fontSize: 18, fontFamily: 2, textAlign: 'center', verticalAlign: 'middle', containerId: null, lineHeight: 1.25, autoResize: true }];
+const arrow = (x, y, dx, dy = 0) => ({ ...base, id: eid(), type: 'arrow', x, y, width: Math.abs(dx), height: Math.abs(dy), points: [[0, 0], [dx, dy]], startBinding: null, endBinding: null, startArrowhead: null, endArrowhead: 'arrow' });
+const heading = (x, y, text) => ({ ...base, id: eid(), type: 'text', x, y, width: 420, height: 32, text, originalText: text, fontSize: 28, fontFamily: 2, textAlign: 'left', verticalAlign: 'top', containerId: null, lineHeight: 1.25, autoResize: true });
+export const BOARD_TEMPLATES = [
+  { key: 'blank', name: 'Blank', desc: 'An empty canvas.', scene: () => emptyBoard() },
+  { key: 'funnel', name: 'Funnel flow', desc: 'Traffic, page, offer, thank you: a left-to-right flow to rearrange.', scene: () => { seq = 0; return serializeBoard([heading(0, -60, 'Funnel flow'), ...box(0, 0, 180, 90, 'Traffic', '#a5d8ff'), arrow(190, 45, 70), ...box(270, 0, 180, 90, 'Landing page', '#d0bfff'), arrow(460, 45, 70), ...box(540, 0, 180, 90, 'Offer', '#ffd8a8'), arrow(730, 45, 70), ...box(810, 0, 180, 90, 'Thank you', '#b2f2bb')]); } },
+  { key: 'brainstorm', name: 'Brainstorm', desc: 'One question in the middle and four areas around it.', scene: () => { seq = 0; return serializeBoard([heading(0, -60, 'Brainstorm'), ...box(260, 120, 220, 100, 'The question', '#ffec99'), ...box(0, 0, 200, 90, 'Idea', '#fff3bf'), ...box(540, 0, 200, 90, 'Idea', '#fff3bf'), ...box(0, 260, 200, 90, 'Idea', '#fff3bf'), ...box(540, 260, 200, 90, 'Idea', '#fff3bf')]); } },
+  { key: 'retro', name: 'Retro', desc: 'Went well, to improve, actions.', scene: () => { seq = 0; return serializeBoard([heading(0, -60, 'Retro'), ...box(0, 0, 260, 320, 'Went well', '#b2f2bb'), ...box(290, 0, 260, 320, 'To improve', '#ffc9c9'), ...box(580, 0, 260, 320, 'Actions', '#a5d8ff')]); } },
+  { key: 'mindmap', name: 'Mind map', desc: 'A centre topic with branches to fill in.', scene: () => { seq = 0; return serializeBoard([...box(280, 160, 200, 90, 'Topic', '#d0bfff'), ...box(0, 0, 180, 70, 'Branch', '#e9ecef'), ...box(580, 0, 180, 70, 'Branch', '#e9ecef'), ...box(0, 340, 180, 70, 'Branch', '#e9ecef'), ...box(580, 340, 180, 70, 'Branch', '#e9ecef')]); } },
+];

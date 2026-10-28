@@ -44,6 +44,7 @@ export function parseRoute(hash) {
   if (a === 'ladder' && b === 'l' && c && seg.length === 3) return r('ladder', { view: 'l', id: c });
   if ((a === 'forms' && !b) || (a === 'app' && b === 'forms' && seg.length === 2)) return r('forms', { view: 'list' });
   if (a === 'forms' && b === 'templates' && seg.length === 2) return r('forms', { view: 'templates' });
+  if (a === 'forms' && b === 'submissions' && seg.length === 2) return r('forms', { view: 'submissions' });
   if (a === 'forms' && b === 'f' && c && seg.length === 3) return r('forms', { view: 'f', id: c });
   if ((a === 'portal' && !b) || (a === 'app' && b === 'portal' && seg.length === 2)) return r('portal', {});
   if (a === 'portal' && b && seg.length <= 3) return r('portal', { client: b, page: c ?? 'home' });

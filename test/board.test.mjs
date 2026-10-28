@@ -1,6 +1,6 @@
 // Whiteboard scene model (boardmodel.js): what a board stores and what may be opened. Plain logic, no browser.
 import { recorder } from './lib.mjs';
-import { parseBoard, serializeBoard, signature, countLive, emptyBoard, MAX_ELEMENTS, MAX_CHARS, BOARD_MIME } from '../apps/web/js/modules/boardmodel.js';
+import { parseBoard, serializeBoard, signature, countLive, emptyBoard, MAX_ELEMENTS, MAX_CHARS, BOARD_MIME, BOARD_TEMPLATES } from '../apps/web/js/modules/boardmodel.js';
 import { parseRoute, hrefFor, pageKeyFor, routeForPage } from '../apps/web/js/routes.js';
 
 const { results, check } = recorder();
@@ -22,6 +22,7 @@ check('BD9', 'An empty board is stored as a valid scene and counts zero', parseB
 check('BD10', 'The change signature moves when an element is edited, added or deleted, and not otherwise', signature([el('a')]) === signature([el('a')]) && signature([el('a')]) !== signature([el('a', 'rectangle', { version: 2 })]) && signature([el('a')]) !== signature([el('a'), el('b')]) && signature([el('a')]) !== signature([el('a', 'rectangle', { isDeleted: true })]));
 check('BD11', 'Serialising is stable: the same scene always gives the same text (no phantom "unsaved changes")', serializeBoard(back.elements, back.background) === serializeBoard(parseBoard(serializeBoard(back.elements, back.background)).elements, back.background));
 check('BD12', 'The board address #/board/<id> is a route; after an organization switch it lands on the Whiteboard app, never on a record of the other organization', parseRoute('#/board/abc').name === 'board' && parseRoute('#/board/abc').params.id === 'abc' && hrefFor.board('abc') === '#/board/abc' && parseRoute('#/board').name === 'not-found' && pageKeyFor(parseRoute('#/board/abc')).app === 'whiteboard' && routeForPage('whiteboard', null) === '#/whiteboards');
+check('BD13', 'Every starter template opens: Blank is empty, the others have drawing elements, all within the document limit, with unique element ids', BOARD_TEMPLATES.length >= 5 && BOARD_TEMPLATES.every((x) => { const s2 = x.scene(); const p2 = parseBoard(s2); return s2.length < MAX_CHARS && (x.key === 'blank' ? p2.elements.length === 0 : p2.elements.length > 3) && new Set(p2.elements.map((e) => e.id)).size === p2.elements.length; }));
 for (const x of results) console.log(`${x.ok ? 'PASS' : 'FAIL'}  ${x.id.padEnd(5)} ${x.name}`);
 const pc = results.filter((x) => x.ok).length; console.log(`\n${pc}/${results.length} checks passed`);
 process.exit(pc === results.length ? 0 : 1);
