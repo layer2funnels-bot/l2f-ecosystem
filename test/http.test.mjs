@@ -2,7 +2,7 @@
 import { randomUUID as id } from 'node:crypto';
 import { recorder } from './lib.mjs';
 import { createJwtVerifier, createJwksProvider } from '../packages/core/jwt.mjs';
-import { createHttpHandler } from '../packages/core/http.mjs';
+import { createHttpHandler, BATCH_MAX } from '../packages/core/http.mjs';
 
 const { results, check } = recorder();
 const enc = new TextEncoder();
@@ -93,6 +93,19 @@ const boom = createHttpHandler({ api: { handle: async () => { throw new Error('s
 res = await boom(new Request('https://app.example.com/api/x', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${good}`, 'x-org-id': ORG }, body: '{}' }));
 const t = await res.text();
 check('H14', 'An unexpected exception becomes a generic 500 with no detail', res.status === 500 && !t.includes('password'));
+
+// ---- batch: several operations in one request (one database connection), each still checked on its own
+let n1 = seen.length;
+res = await call('/api/batch', { body: JSON.stringify({ calls: [{ op: 'launcher.list' }, { op: 'limited', input: { a: 1 } }, { op: 'org.list' }] }) }); b = await res.json();
+check('H15', 'A batch runs each call through the normal API path with the same identity and organization, and answers each in order (one refusal does not fail the others)',
+  res.status === 200 && b.ok && b.results.length === 3 && b.results[0].ok && b.results[1].status === 429 && b.results[1].error.code === 'rate_limited' && b.results[2].ok
+  && seen.slice(n1).map((r) => r.operation).join() === 'launcher.list,limited,org.list' && seen.slice(n1).every((r) => r.auth.userId === U && r.headers['x-org-id'] === ORG) && seen[n1 + 1].input.a === 1);
+n1 = seen.length;
+const bad = [{ calls: [] }, { calls: Array.from({ length: BATCH_MAX + 1 }, () => ({ op: 'launcher.list' })) }, { calls: [{ op: 'batch' }] }, { calls: [{ op: 7 }] }, { calls: 'x' }, {}];
+const answers = []; for (const body of bad) answers.push((await call('/api/batch', { body: JSON.stringify(body) })).status);
+check('H16', `An empty batch, more than ${BATCH_MAX} calls, a batch inside a batch or a malformed call is refused before anything runs`, answers.every((st) => st === 400) && seen.length === n1, answers.join());
+res = await call('/api/batch', { body: JSON.stringify({ calls: [{ op: 'launcher.list' }] }), headers: { authorization: 'Bearer abc.def.ghi' } });
+check('H17', 'A batch with a bad token is one 401 and nothing runs', res.status === 401 && seen.length === n1);
 
 for (const x of results) console.log(`${x.ok ? 'PASS' : 'FAIL'}  ${x.id.padEnd(4)} ${x.name}`);
 const p = results.filter((x) => x.ok).length; console.log(`\n${p}/${results.length} checks passed`); process.exit(p === results.length ? 0 : 1);

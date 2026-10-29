@@ -340,7 +340,7 @@ async function render(opts = {}) {
         const entry = ctx.catalog.find((a) => a.app_key === 'planner');
         if (!ctx.catalogError && entry?.state !== 'available') { unmountPlanner(); content = plannerOffView(org, entry); break; }
         const s = session.get();
-        content = plannerView({ api, org, me: { id: s?.userId, name: s?.name || s?.email || 'You' } });
+        content = plannerView({ api, org, orgs: ctx.orgs, me: { id: s?.userId, name: s?.name || s?.email || 'You' } });
         nav = appNav('Planner', PLANNER_PAGES.filter((p) => !p.manage || c.can('planner.plan.manage')), plannerSection(route.params.page));
         break;
       }
