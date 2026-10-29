@@ -353,4 +353,32 @@ const organizeOps = [
     run: (q, _c, i) => q('delete from task_files where task_id = $1 and file_id = $2 returning file_id', [i.task, i.file]) }),
 ];
 
-export const projectsOperations = [...projectOps, ...searchOps, ...peopleOps, ...taskOps, ...checklistOps, ...timeOps, ...organizeOps];
+// ---- R5 (migration 0038): simple rules per project. The database runs them (triggers), so every way of changing a task follows them.
+const RULE_SELECT = `select r.id, r.project_id, r.trigger as "when", r.trigger_status as status, r.trigger_section as section, sc.name as section_name, r.action,
+    r.assignee_id as assignee, coalesce(nullif(pr.display_name, ''), case when r.assignee_id is null then null else 'Member ' || left(r.assignee_id::text, 4) end) as assignee_name,
+    r.priority, r.due_in_days, r.tag_id, g.name as tag_name, r.enabled, r.created_at
+  from project_rules r left join project_sections sc on sc.workspace_id = r.workspace_id and sc.id = r.trigger_section
+  left join profiles pr on pr.id = r.assignee_id left join project_tags g on g.workspace_id = r.workspace_id and g.id = r.tag_id`;
+const ruleOps = [
+  defineOperation({ name: 'rules.list', class: 'read', input: { project: { type: 'uuid', required: true } },
+    run: (q, _c, i) => q(`${RULE_SELECT} where r.project_id = $1 order by r.created_at, r.id`, [i.project]) }),
+  defineOperation({
+    name: 'rules.add', class: 'write', single: true,
+    input: { project: { type: 'uuid', required: true }, when: { type: 'enum', values: ['created', 'status', 'section'], required: true }, status: { type: 'enum', values: TASK_STATUS }, section: { type: 'uuid' },
+      action: { type: 'enum', values: ['assign', 'priority', 'due_in', 'tag'], required: true }, assignee: { type: 'uuid' }, priority: { type: 'enum', values: ['low', 'normal', 'high', 'urgent'] },
+      due_in_days: { type: 'int', min: 0, max: 365 }, tag: { type: 'text', max: 40 } },
+    run: async (q, ctx, i) => {
+      // incomplete rules are refused by the table's checks (422); the tag is found or created in the same statement, so a refused rule leaves no tag behind
+      const [r] = await q(`insert into project_rules (workspace_id, project_id, trigger, trigger_status, trigger_section, action, assignee_id, priority, due_in_days, tag_id)
+        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, case when $10::text is null or btrim($10) = '' then null else private.project_tag_ensure($1, $10) end) returning id`,
+      [ctx.orgId, i.project, i.when, i.when === 'status' ? i.status ?? null : null, i.when === 'section' ? i.section ?? null : null, i.action,
+        i.action === 'assign' ? i.assignee ?? null : null, i.action === 'priority' ? i.priority ?? null : null, i.action === 'due_in' ? i.due_in_days ?? null : null, i.action === 'tag' ? i.tag ?? null : null]);
+      return q(`${RULE_SELECT} where r.id = $1`, [r.id]);
+    },
+  }),
+  defineOperation({ name: 'rules.update', class: 'write', single: true, input: { ...id, enabled: { type: 'bool', required: true } },
+    run: (q, _c, i) => q('update project_rules set enabled = $2 where id = $1 returning id, enabled', [i.id, i.enabled]) }),
+  defineOperation({ name: 'rules.delete', class: 'write', single: true, input: id, run: (q, _c, i) => q('delete from project_rules where id = $1 returning id', [i.id]) }),
+];
+
+export const projectsOperations = [...projectOps, ...searchOps, ...peopleOps, ...taskOps, ...checklistOps, ...timeOps, ...organizeOps, ...ruleOps];

@@ -1,7 +1,7 @@
 // T16 rate limiting. Fixed window per key, in memory (one free-tier server; swap the store later without changing callers).
 // Classes keep cheap reads from starving sensitive actions, and sensitive actions get a very small budget.
 export const DEFAULT_LIMITS = Object.freeze({
-  read: { max: 120, windowMs: 60_000 },
+  read: { max: 300, windowMs: 60_000 },   // a screen costs 5-12 reads (DECISIONS V4-30); reads are cheap, connections are what cost (batching)
   write: { max: 30, windowMs: 60_000 },
   sensitive: { max: 5, windowMs: 60_000 },   // invitations: creating and accepting
 });

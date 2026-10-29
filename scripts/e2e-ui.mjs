@@ -308,13 +308,13 @@ await page.goBack(); await page.reload(); await wait('Your apps in Layer2Funnels
   await page.fill('input[name=t]', T2); await page.keyboard.press('Enter'); await wait(T2);
   check('P3', 'Tasks are added from the list and stored, and no stray “null” text is drawn on the page', !/\bnull\b/.test(await page.locator('main').innerText()) && (await admin.query("select count(*)::int n from project_tasks where title in ($1,$2)", [T1, T2])).rows[0].n === 2);
   await page.getByRole('tab', { name: 'Board', exact: true }).click(); await wait('Drag a card');
-  const card = page.locator('.pj-cardtask', { hasText: T1 }); const target = page.locator('.pj-col[data-status=doing]');
-  await card.dragTo(target); await page.waitForFunction(() => document.querySelector('.pj-col[data-status=doing] .pj-cardtask'));
+  const card = page.locator('.pj-cardtask', { hasText: T1 }); const target = page.locator('.pj-col[data-key=doing]');
+  await card.dragTo(target); await page.waitForFunction(() => document.querySelector('.pj-col[data-key=doing] .pj-cardtask'));
   check('P4', 'Dragging a card to another column changes its status in the database', (await admin.query("select status from project_tasks where title = $1", [T1])).rows[0].status === 'doing');
   await page.locator('.pj-cardtask', { hasText: T2 }).click(); await wait('Subtasks');
   await page.fill('input[aria-label="Add a subtask"]', 'Check mobile'); await page.keyboard.press('Enter'); await wait('Check mobile');
   await page.selectOption('#td-prio', 'high'); for (let n = 0; n < 30 && (await admin.query('select priority from project_tasks where title = $1', [T2])).rows[0].priority !== 'high'; n++) await page.waitForTimeout(100);
-  const t2 = (await admin.query("select priority, (select count(*)::int from task_checklist_items c where c.task_id = t.id) n from project_tasks t where title = $1", [T2])).rows[0];
+  const t2 = (await admin.query("select priority, (select count(*)::int from project_tasks c where c.parent_task_id = t.id and c.title = 'Check mobile') n from project_tasks t where title = $1", [T2])).rows[0];   // subtasks are real tasks since Projects R1
   check('P5', 'The task drawer saves priority on change and adds a subtask', t2.priority === 'high' && t2.n === 1);
   await page.getByRole('button', { name: 'Start timer' }).click(); await wait('Timer running');
   check('P6', 'Starting a timer shows it on every Projects page and stores a running entry using the database clock', (await admin.query('select count(*)::int n from time_entries where ended_at is null')).rows[0].n === 1);
