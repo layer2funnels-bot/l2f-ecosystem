@@ -6,7 +6,7 @@ const when = (iso) => { const d = new Date(iso); const mins = Math.round((Date.n
   return mins < 1 ? 'just now' : mins < 60 ? `${mins} min ago` : mins < 1440 ? `${Math.round(mins / 60)} h ago` : d.toLocaleDateString(); };
 
 /** Comment thread. people: [{ user_id, display_name, is_you }]; canComment: may this person write here. */
-export function commentsPanel({ api, type, id, people = [], canComment, onChange = () => {} }) {
+export function commentsPanel({ api, type, id, people = [], canComment, onChange = () => {}, initial }) {
   const box = h('div', { class: 'cm' });
   const list = h('ol', { class: 'cm-list', 'aria-label': 'Comments' });
   const mentioned = new Map();              // display name -> user id, for the people picked while writing
@@ -63,15 +63,15 @@ export function commentsPanel({ api, type, id, people = [], canComment, onChange
     const done = h('div', { class: 'cm-acts' }, btn('Save', async () => { const v = ta.value.trim(); if (!v) return; const r = await api.call('comments.edit', { id: c.id, body: v }); if (r.ok) load(); else toast('That change wasn’t saved.', false); }, 'pri'), btn('Cancel', () => load(), ''));
     bodyEl.replaceWith(ta); li.querySelector('.cm-acts')?.replaceWith(done); ta.focus();
   };
-  async function load() {
-    const r = await api.call('comments.list', { type, id });
+  async function load(first) {
+    const r = first ? { ok: true, data: first } : await api.call('comments.list', { type, id });
     if (!r.ok) return put(list, h('li', { class: 'fine muted' }, 'Comments couldn’t be loaded.'));
     put(list, ...(r.data.length ? r.data.map(row) : [h('li', { class: 'fine muted cm-empty' }, 'No comments yet.')]));
   }
   put(box, list, canComment ? h('div', { class: 'cm-new' }, h('label', { class: 'sr', for: `cm-${id}` }, 'New comment'), h('div', { class: 'cm-wrap' }, text, sugg),
     h('div', { class: 'cm-send' }, h('span', { class: 'fine muted', id: `cm-hint-${id}` }, 'Ctrl+Enter to send. Comments are internal: clients never see them.'), post))
     : h('p', { class: 'fine muted' }, 'You can read comments here but not add them.'));
-  load();
+  load(initial);   // a panel that already loaded the comments passes them in (no second request)
   return box;
 }
 
@@ -87,11 +87,11 @@ export function activityPanel({ api, type, id, describe }) {
 }
 
 /** Follow / Following toggle: followers are told about comments and completion. */
-export function followButton({ api, type, id }) {
+export function followButton({ api, type, id, initial }) {
   const b = btn('Follow', null, '', { 'aria-pressed': 'false', disabled: true });
   let on = false;
   const paint = () => { b.replaceChildren(icon(on ? 'check' : 'bell'), on ? 'Following' : 'Follow'); b.setAttribute('aria-pressed', String(on)); b.title = on ? 'You are told about comments and when it is done. Click to stop.' : 'Be told about comments and when it is done.'; };
-  api.call('follow.get', { type, id }).then((r) => { if (r.ok) { on = r.data[0].following; b.disabled = false; paint(); } });
+  if (typeof initial === 'boolean') { on = initial; b.disabled = false; } else api.call('follow.get', { type, id }).then((r) => { if (r.ok) { on = r.data[0].following; b.disabled = false; paint(); } });
   b.addEventListener('click', async () => { b.disabled = true; const r = await api.call('follow.set', { type, id, on: !on }); b.disabled = false; if (r.ok) { on = r.data[0].following; paint(); toast(on ? 'You’ll be told about this task.' : 'You won’t be told about this task any more.'); } else toast('That didn’t work. Try again.', false); });
   paint();
   return b;

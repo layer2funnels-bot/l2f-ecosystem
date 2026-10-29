@@ -2,13 +2,13 @@
 // task drawer with timer, smart search). One module so that the Projects app and, later, Office > Projects (V4-2) mount the very same screens and data.
 // Everything goes through the permission-checked API; buttons follow `ctx.can`, the database decides. Logic lives in projectmodel.js (tested without a browser).
 import { h, put, icon, btn, chip, dialog, drawer, toast, field, notice, skeleton, emptyState, errorState, noAccessState, seg, tabs, readOnlyNotice } from '../ui.js';
-import { splitProjects, PROJECT_STATUS, TASK_STATUS, PRIORITY, label, byStatus, sortTasks, viewTasks, groupTasks, progress, monthGrid, monthTitle, shiftMonth, timeline, dueLabel, myWorkGroups, parseSearch, searchInput, duration, clock } from './projectmodel.js';
+import { workloadGrid, WEEK_CAPACITY_MINUTES, splitProjects, PROJECT_STATUS, TASK_STATUS, PRIORITY, label, byStatus, sortTasks, viewTasks, groupTasks, progress, monthGrid, monthTitle, shiftMonth, timeline, dueLabel, myWorkGroups, parseSearch, searchInput, duration, clock } from './projectmodel.js';
 import { createBoard, BOARD_MIME } from './whiteboard.js';
 import { emptyDoc, serialize } from './docmodel.js';
 import { commentsPanel, activityPanel, followButton } from './collab.js';
 const DOC_MIME = 'application/vnd.l2f.doc+json';
 
-export const makeHrefs = (base = '#/projects') => ({ home: () => base, mine: () => `${base}/mine`, project: (id, tab) => `${base}/p/${id}${tab && tab !== 'overview' ? `?tab=${tab}` : ''}`, task: (id, task, tab) => `${base}/p/${id}?${tab ? `tab=${tab}&` : ''}task=${task}` });
+export const makeHrefs = (base = '#/projects') => ({ home: () => base, mine: () => `${base}/mine`, workload: () => `${base}/workload`, portfolio: () => `${base}/portfolio`, project: (id, tab) => `${base}/p/${id}${tab && tab !== 'overview' ? `?tab=${tab}` : ''}`, task: (id, task, tab) => `${base}/p/${id}?${tab ? `tab=${tab}&` : ''}task=${task}` });
 export const hrefs = makeHrefs();
 const todayIso = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 const reduced = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -60,6 +60,8 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
     side.replaceChildren(
       h('a', { class: 'pj-link', href: hrefs.home(), ...(route.view === 'home' ? { 'aria-current': 'page' } : {}) }, icon('prj'), 'Projects'),
       h('a', { class: 'pj-link', href: hrefs.mine(), ...(route.view === 'mine' ? { 'aria-current': 'page' } : {}) }, icon('check'), 'My Work'),
+      h('a', { class: 'pj-link', href: hrefs.workload(), ...(route.view === 'workload' ? { 'aria-current': 'page' } : {}) }, icon('user'), 'Workload'),
+      h('a', { class: 'pj-link', href: hrefs.portfolio(), ...(route.view === 'portfolio' ? { 'aria-current': 'page' } : {}) }, icon('grid'), 'Portfolio'),
       h('button', { type: 'button', class: 'pj-link', onclick: () => openSearch() }, icon('search'), 'Search', h('kbd', { 'aria-hidden': 'true' }, 'Ctrl K')),
       ...sideGroups(cur));
   };
@@ -124,6 +126,54 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
     main.append(body);
   }
 
+  // ---------------------------------------------------------------- workload: who has how much, week by week (open, assigned work by due week)
+  const hrs = (m) => (m ? `${Math.round((m / 60) * 10) / 10} h` : '–');
+  async function workload() {
+    put(main, h('div', { class: 'pj-head' }, h('div', {}, h('div', { class: 'crumbs fine' }, 'Projects'), h('h1', { 'data-page-title': true }, 'Workload'))), skeleton(4));
+    await loadProjects(); const WEEKS = 6; const from = todayIso();
+    let only = '';
+    const body = h('div');
+    const draw = async () => {
+      const r = await api.call('projects.workload', { from, weeks: WEEKS, ...(only ? { project: only } : {}) }); if (!live()) return;
+      if (!r.ok) return put(body, errorState(draw));
+      const g = workloadGrid(r.data, from, WEEKS);
+      if (!g.people.length) return put(body, emptyState({ title: 'No assigned open work', body: 'Tasks with a person and a due date show here, week by week.', ic: 'user', first: true }));
+      // one hue, light to dark, by estimated hours; the number is always printed, so nothing depends on colour
+      const shade = (m) => (m ? Math.min(4, Math.ceil((4 * m) / Math.max(g.max, WEEK_CAPACITY_MINUTES))) : 0);
+      const wk = (w) => new Date(`${w}T12:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+      put(body, h('div', { class: 'pj-wl-wrap', role: 'region', 'aria-label': 'Workload by person and week', tabindex: '0' }, h('table', { class: 'pj-wl' },
+        h('thead', {}, h('tr', {}, h('th', { scope: 'col' }, 'Person'), ...g.weeks.map((w, n) => h('th', { scope: 'col' }, n === 0 ? `This week (${wk(w)})` : `Week of ${wk(w)}`)), h('th', { scope: 'col' }, 'No date'))),
+        h('tbody', {}, ...g.people.map((p) => h('tr', {}, h('th', { scope: 'row' }, p.name),
+          ...p.cells.map((c) => h('td', { class: `pj-wl-c s${shade(c.minutes)}${c.over ? ' over' : ''}`, title: `${p.name}, week of ${wk(c.week)}: ${c.tasks} task${c.tasks === 1 ? '' : 's'}, ${hrs(c.minutes)} estimated${c.overdue ? `, ${c.overdue} overdue` : ''}` },
+            c.tasks ? [h('b', {}, hrs(c.minutes)), h('span', { class: 'fine' }, ` ${c.tasks} task${c.tasks === 1 ? '' : 's'}`), c.over ? h('span', { class: 'chip warn' }, icon('warn'), 'Over 40 h') : null, c.overdue ? h('span', { class: 'chip bad' }, `${c.overdue} late`) : null] : h('span', { class: 'muted' }, '–'))),
+          h('td', {}, p.undated ? `${p.undated} task${p.undated === 1 ? '' : 's'}` : h('span', { class: 'muted' }, '–'))))))),
+        h('p', { class: 'fine muted' }, 'Hours are the estimates on open tasks, counted in the week each is due. Overdue work counts in this week. Darker means more hours; over 40 hours in a week is flagged.'));
+    };
+    const pick = h('select', { id: 'wl-project', onchange: (e) => { only = e.target.value; draw(); } }, h('option', { value: '' }, 'All projects'), ...state.projects.filter((p) => !p.archived_at).map((p) => h('option', { value: p.id }, p.name)));
+    put(main, main.firstChild, h('div', { class: 'pj-toolbar' }, h('label', { class: 'pj-tool', for: 'wl-project' }, h('span', {}, 'Project'), pick)), body);
+    draw();
+  }
+
+  // ---------------------------------------------------------------- portfolio: every project at a glance
+  async function portfolio() {
+    put(main, h('div', { class: 'pj-head' }, h('div', {}, h('div', { class: 'crumbs fine' }, 'Projects'), h('h1', { 'data-page-title': true }, 'Portfolio'))), skeleton(4));
+    const [r] = await Promise.all([api.call('projects.portfolio', {}), loadProjects()]); if (!live()) return;
+    if (!r.ok) return put(main, main.firstChild, errorState(portfolio));
+    if (!r.data.length) return put(main, main.firstChild, emptyState({ title: 'No projects yet', body: 'Projects you can open show here with their progress.', ic: 'prj', first: true }));
+    let sort = 'overdue';
+    const tbl = h('div');
+    const draw = () => {
+      const rows = [...r.data].sort(sort === 'overdue' ? (a, b) => b.overdue - a.overdue || a.name.localeCompare(b.name) : sort === 'due' ? (a, b) => String(a.next_due ?? '9').localeCompare(String(b.next_due ?? '9')) : (a, b) => a.name.localeCompare(b.name));
+      put(tbl, h('div', { class: 'pj-wl-wrap' }, h('table', { class: 'tbl pj-pf' }, h('thead', {}, h('tr', {}, ...['Project', 'For', 'Status', 'Progress', 'Open', 'Overdue', 'Next due'].map((x) => h('th', { scope: 'col' }, x)))),
+        h('tbody', {}, ...rows.map((p) => h('tr', {}, h('th', { scope: 'row' }, h('a', { href: hrefs.project(p.id) }, p.name)), h('td', {}, p.client_id ? clientName(p.client_id) : 'Internal'), h('td', {}, statusChip(p.status)),
+          h('td', {}, h('div', { class: 'pj-pfbar', role: 'img', 'aria-label': `${p.progress} percent done`, title: `${p.done} done, ${p.open} open` }, h('i', { style: `width:${p.progress}%` })), h('span', { class: 'fine' }, ` ${p.progress}%`)),
+          h('td', {}, String(p.open)), h('td', {}, p.overdue ? h('span', { class: 'chip bad' }, icon('warn'), `${p.overdue} overdue`) : h('span', { class: 'muted' }, '0')),
+          h('td', {}, p.next_due ? dueLabel(p.next_due, todayIso()) : h('span', { class: 'muted' }, '–'))))))));
+    };
+    put(main, main.firstChild, h('div', { class: 'pj-toolbar' }, seg([['overdue', 'Most overdue first'], ['due', 'Next due first'], ['name', 'By name']], sort, (k) => { sort = k; draw(); }, 'Sort projects')), tbl);
+    draw();
+  }
+
   // ---------------------------------------------------------------- project workspace
   async function project() {
     put(main, skeleton(4)); await loadProjects();
@@ -144,12 +194,12 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
     const head = h('div', { class: 'pj-head' }, h('div', {}, h('div', { class: 'crumbs fine' }, h('a', { href: hrefs.home() }, 'Projects'), ' / ', p.client_id ? clientName(p.client_id) : 'Internal'),
       h('h1', { 'data-page-title': true }, p.name), h('div', { class: 'pj-meta' }, statusChip(p.status), p.is_template ? chip('Template', 'act') : null, p.due_on ? h('span', { class: 'fine muted' }, `Due ${dueLabel(p.due_on, todayIso())}`) : null, archived ? chip('Archived', 'warn') : null)),
       h('div', { class: 'pj-actions' }, editable ? btn('Edit details', () => editProject(p), '') : null, editable || archived ? projectMenu(p, archived) : null));
-    const TABS = [['overview', 'Overview'], ['list', 'List'], ['board', 'Board'], ['calendar', 'Calendar'], ['timeline', 'Timeline'], ['docs', 'Docs'], ['whiteboards', 'Whiteboards']];
+    const TABS = [['overview', 'Overview'], ['list', 'List'], ['board', 'Board'], ['calendar', 'Calendar'], ['timeline', 'Timeline'], ['report', 'Report'], ['docs', 'Docs'], ['whiteboards', 'Whiteboards']];
     const tabBar = tabs(TABS, TABS.some(([k]) => k === tab) ? tab : 'overview', (k) => { tab = k; history.replaceState(null, '', hrefs.project(p.id, k)); draw(); }, 'Project views');
 
     function draw() {
       const cur = TABS.some(([k]) => k === tab) ? tab : 'overview'; tabBar.querySelectorAll('[role=tab][data-k]').forEach((b) => { b.setAttribute('aria-selected', String(b.dataset.k === cur)); b.tabIndex = b.dataset.k === cur ? 0 : -1; });
-      ({ overview, list, board, calendar, timelineTab, docs, whiteboards })[cur === 'timeline' ? 'timelineTab' : cur]();
+      ({ overview, list, board, calendar, timelineTab, report, docs, whiteboards })[cur === 'timeline' ? 'timelineTab' : cur]();
     }
     const selected = new Set();           // tasks picked in the List for a change to all of them at once
     const taskRow = (t, { select = false } = {}) => h('li', { class: `pj-row${t.status === 'done' ? ' isdone' : ''}${selected.has(t.id) ? ' picked' : ''}` },
@@ -250,6 +300,26 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
             col.addEventListener('drop', (e) => { e.preventDefault(); col.classList.remove('over'); const t = tasks.find((x) => x.id === (dragId ?? e.dataTransfer.getData('text/plain'))); dragId = null; if (t) moveTo(t, c.key, c.tasks); }); }
           return col; })));
     }
+    // the project report: numbers first, then status and people as tables with a single-colour bar for size
+    async function report() {
+      put(body, skeleton(3));
+      const [rr, pr] = await Promise.all([api.call('projects.report', { project: p.id }), api.call('projects.report.people', { project: p.id })]); if (!live()) return;
+      if (!rr.ok) return put(body, errorState(report));
+      const R = rr.data[0]; const people2 = pr.ok ? pr.data : [];
+      const stat = (n, t, cls = '') => h('div', { class: `pj-stat ${cls}` }, h('b', {}, String(n)), h('span', {}, t));
+      const byS = TASK_STATUS.map(([k, l]) => [l, tasks.filter((t) => t.status === k).length]);   // all tasks, subtasks too: the same count as the numbers above
+      const most = Math.max(1, ...byS.map(([, n]) => n));
+      const maxOpen = Math.max(1, ...people2.map((x) => x.open));
+      const time = (sec) => duration(sec);
+      put(body, h('div', { class: 'pj-stats' }, stat(R.open, 'open tasks'), stat(R.overdue, 'overdue', R.overdue ? 'late' : ''), stat(R.blocked, 'blocked'), stat(R.done_7, 'done in 7 days'), stat(R.done_30, 'done in 30 days'), stat(hrs(R.estimate_open_minutes), 'estimated work left')),
+        h('section', { class: 'pj-sec' }, h('h2', {}, 'Tasks by status'), h('table', { class: 'tbl pj-rep' }, h('tbody', {}, ...byS.map(([l, n]) => h('tr', {}, h('th', { scope: 'row' }, l),
+          h('td', { class: 'pj-repbar' }, h('div', { class: 'pj-pfbar', role: 'img', 'aria-label': `${l}: ${n}`, title: `${l}: ${n} task${n === 1 ? '' : 's'}` }, h('i', { style: `width:${(100 * n) / most}%` }))), h('td', {}, String(n))))))),
+        h('section', { class: 'pj-sec' }, h('h2', {}, 'People'), people2.length ? h('div', { class: 'pj-wl-wrap' }, h('table', { class: 'tbl pj-rep' },
+          h('thead', {}, h('tr', {}, ...['Person', 'Open', '', 'Overdue', 'Done', 'Estimated left', 'Billable time', 'Other time'].map((x) => h('th', { scope: 'col' }, x)))),
+          h('tbody', {}, ...people2.map((x) => h('tr', {}, h('th', { scope: 'row' }, x.name), h('td', {}, String(x.open)),
+            h('td', { class: 'pj-repbar' }, h('div', { class: 'pj-pfbar', role: 'img', 'aria-label': `${x.name}: ${x.open} open`, title: `${x.name}: ${x.open} open` }, h('i', { style: `width:${(100 * x.open) / maxOpen}%` }))),
+            h('td', {}, x.overdue ? h('span', { class: 'chip bad' }, `${x.overdue} late`) : '0'), h('td', {}, String(x.done)), h('td', {}, hrs(x.estimate_open_minutes)), h('td', {}, time(x.billable_seconds)), h('td', {}, time(x.other_seconds))))))) : h('p', { class: 'muted' }, 'No assigned tasks or logged time yet.')));
+    }
     function calendar() {
       const grid = monthGrid(month.year, month.month, tasks, { today: todayIso() });
       put(body, archived ? readOnlyNotice('This project is archived') : null, h('div', { class: 'pj-calbar' }, btn('Previous month', () => { month = shiftMonth(month.year, month.month, -1); calendar(); }), h('h2', { 'aria-live': 'polite' }, monthTitle(month.year, month.month)), btn('Next month', () => { month = shiftMonth(month.year, month.month, 1); calendar(); })),
@@ -333,7 +403,9 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
   };
   // ---------------------------------------------------------------- task drawer
   async function taskDrawer(t0, p, { onChange, canEdit }) {
-    await people(); let t = t0; const saved = h('span', { class: 'fine muted', role: 'status', 'aria-live': 'polite' });
+    // everything the panel shows comes in ONE request (tasks.panel); after an edit only the part that changed is asked for again
+    const [, pr0] = await Promise.all([people(), api.call('tasks.panel', { id: t0.id })]); const pre = pr0.ok ? pr0.data[0] : null;
+    let t = pre?.task ?? t0; const saved = h('span', { class: 'fine muted', role: 'status', 'aria-live': 'polite' });
     const save = async (patch) => { const r = await api.call('tasks.update', { id: t.id, ...patch }); if (r.ok) { t = r.data[0]; saved.textContent = 'Saved.'; onChange(); } else { saved.textContent = ''; fail(r, 'change that task'); } };
     const title = h('input', { class: 'doctitle', value: t.title, maxlength: '300', 'aria-label': 'Task title', ...(canEdit ? {} : { readonly: true }) });
     title.addEventListener('change', () => { const v = title.value.trim(); if (!v) { title.value = t.title; return; } save({ title: v }); });
@@ -341,13 +413,15 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
     const who = h('select', { id: 'td-who', ...(canEdit ? {} : { disabled: true }), onchange: (e) => save(e.target.value ? { assignee: e.target.value } : { clear_assignee: true }) }, h('option', { value: '' }, 'Unassigned'), ...(state.people ?? []).map((x) => h('option', { value: x.user_id, ...(x.user_id === t.assignee_id ? { selected: true } : {}) }, x.is_you ? `${x.display_name} (you)` : x.display_name)));
     const due = h('input', { id: 'td-due', type: 'date', value: t.due_on ?? '', ...(canEdit ? {} : { disabled: true }), onchange: (e) => save(e.target.value ? { due_on: e.target.value } : { clear_due: true }) });
     const start = h('input', { id: 'td-start', type: 'date', value: t.start_on ?? '', ...(canEdit ? {} : { disabled: true }), onchange: (e) => save(e.target.value ? { start_on: e.target.value } : { clear_start: true }) });
+    const estimate = h('input', { id: 'td-est', type: 'number', min: '0', max: '1600', step: '0.25', inputmode: 'decimal', value: t.estimate_minutes != null ? String(Math.round((t.estimate_minutes / 60) * 100) / 100) : '', ...(canEdit ? {} : { disabled: true }),
+      onchange: (e) => { const v = e.target.value.trim(); if (v === '') return save({ estimate_minutes: 0 }); const m = Math.round(Number(v) * 60); if (!(m >= 0 && m <= 100000)) { e.target.value = ''; return toast('Enter hours between 0 and 1600.', false); } save({ estimate_minutes: m }); } });
     const REPEATS = [['', 'Does not repeat'], ['daily', 'Every day'], ['weekdays', 'Every weekday'], ['weekly', 'Every week'], ['biweekly', 'Every 2 weeks'], ['monthly', 'Every month'], ['yearly', 'Every year']];
     const repeat = h('select', { id: 'td-repeat', ...(canEdit ? {} : { disabled: true }), onchange: (e) => { if (e.target.value && !t.due_on) { e.target.value = ''; return toast('Give the task a due date first: the next one is due a step after it.', false); } save(e.target.value ? { repeat: e.target.value } : { clear_repeat: true }); } },
       ...REPEATS.map(([k, l]) => h('option', { value: k, ...((t.repeat ?? '') === k ? { selected: true } : {}) }, l)));
     // what this task waits on (tasks of the same project)
     const depBox = h('div', { class: 'pj-deps' });
-    const drawDeps = async () => {
-      const r = await api.call('tasks.deps.list', { task: t.id }); const deps = r.ok ? r.data : [];
+    const drawDeps = async (first) => {
+      const r = first ? { ok: true, data: first } : await api.call('tasks.deps.list', { task: t.id }); const deps = r.ok ? r.data : [];
       const open = deps.filter((d) => d.status !== 'done').length;
       const pool = (state.projectTasks ?? []).filter((x) => x.id !== t.id && !deps.some((d) => d.id === x.id) && x.status !== 'done');
       put(depBox, open ? notice('warn', 'clock', [h('b', {}, `Waiting on ${open} task${open === 1 ? '' : 's'}.`), ' Its assignee is told when they are done.']) : null,
@@ -361,8 +435,8 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
       h('option', { value: '' }, 'No section'), ...secs.map((x) => h('option', { value: x.id, ...(x.id === t.section_id ? { selected: true } : {}) }, x.name)))) : null;
     // tags: type a name to add (an existing organization tag is reused), × to remove
     const tagBox = h('div', { class: 'pj-tags' });
-    const drawTags = async () => {
-      const all = await api.call('tags.list', {}); const cur = t.tags ?? [];
+    const drawTags = async (first) => {
+      const all = first ? { ok: true, data: first } : await api.call('tags.list', {}); const cur = t.tags ?? [];
       const listId = `tags-${t.id}`;
       put(tagBox, h('div', { class: 'pj-taglist' }, ...cur.map((g) => h('span', { class: `chip tag-${g.color}` }, g.name, canEdit ? h('button', { type: 'button', class: 'chip-x', 'aria-label': `Remove tag ${g.name}`, onclick: async () => { const x = await api.call('tasks.tags.remove', { task: t.id, tag: g.id }); if (x.ok) { t = { ...t, tags: cur.filter((y) => y.id !== g.id) }; drawTags(); onChange(); } else fail(x, 'change tags'); } }, '×') : null)),
         cur.length ? null : h('span', { class: 'fine muted' }, 'No tags.')),
@@ -371,8 +445,8 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
     };
     // files: Drive files of this project (they stay in Drive; the task points at them)
     const fileBox = h('div', { class: 'pj-files' });
-    const drawFiles = async () => {
-      const r = await api.call('tasks.files.list', { task: t.id }); const files = r.ok ? r.data : [];
+    const drawFiles = async (first) => {
+      const r = first ? { ok: true, data: first } : await api.call('tasks.files.list', { task: t.id }); const files = r.ok ? r.data : [];
       const href = (f) => (f.mime_type === BOARD_MIME ? `#/board/${f.id}` : f.kind === 'document' ? `#/doc/${f.id}` : null);
       const download = async (f) => { const x = await api.call('drive.files.download', { id: f.id }); if (x.ok && x.data[0]?.url) location.href = x.data[0].url; else fail(x, 'open that file'); };
       put(fileBox, files.length ? h('ul', { class: 'pj-rows' }, ...files.map((f) => h('li', { class: 'pj-row' }, icon(f.mime_type === BOARD_MIME ? 'wb' : 'doc'),
@@ -382,20 +456,20 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
     };
     const notes = h('textarea', { id: 'td-notes', rows: 5, maxlength: '20000', ...(canEdit ? {} : { readonly: true }) }); notes.value = t.notes ?? ''; notes.addEventListener('change', () => save({ notes: notes.value }));
     const checklist = h('div', { class: 'pj-check-list' });
-    const drawChecklist = async () => { const r = await api.call('checklist.list', { task: t.id }); if (!r.ok) return;
+    const drawChecklist = async (first) => { const r = first ? { ok: true, data: first } : await api.call('checklist.list', { task: t.id }); if (!r.ok) return;
       put(checklist, h('ul', { class: 'pj-rows' }, ...r.data.map((c) => h('li', { class: 'pj-row' }, h('input', { type: 'checkbox', checked: c.done, 'aria-label': c.label, ...(canEdit ? { onchange: async (e) => { await api.call('checklist.update', { id: c.id, done: e.target.checked }); onChange(); } } : { disabled: true }) }), h('span', {}, c.label), canEdit ? btn(['Remove', h('span', { class: 'sr' }, ` ${c.label}`)], async () => { await api.call('checklist.delete', { id: c.id }); drawChecklist(); onChange(); }, 'link') : null))),
         canEdit ? h('form', { class: 'pj-add', onsubmit: async (e) => { e.preventDefault(); const i = e.target.elements.l; const v = i.value.trim(); if (!v) return; i.value = ''; await api.call('checklist.add', { task: t.id, label: v }); drawChecklist(); onChange(); } }, h('input', { name: 'l', placeholder: 'Add a checklist item', 'aria-label': 'Add a checklist item', maxlength: 500 }), btn('Add', null, '', { type: 'submit' })) : null); };
     // timer for this task + logged time
     const timeBox = h('div', { class: 'pj-time' });
-    const drawTime = async () => { const r = await api.call('time.list', { task: t.id }); const secs = (r.ok ? r.data : []).reduce((a, e) => a + (e.seconds ?? 0), 0); const running = state.timer && state.timer.task_id === t.id;
+    const drawTime = async (first) => { const secs = first !== undefined ? first : ((await api.call('time.list', { task: t.id })).data ?? []).reduce((a, e) => a + (e.seconds ?? 0), 0); const running = state.timer && state.timer.task_id === t.id;
       put(timeBox, h('div', {}, h('b', {}, duration(secs)), h('span', { class: 'fine muted' }, ' logged on this task')),
         canTime() ? h('div', { class: 'pj-timeacts' }, running ? btn('Stop timer', async () => { const x = await api.call('time.stop', {}); if (x.ok) { state.timer = null; paintTimer(); drawTime(); } else fail(x, 'stop that timer'); }, 'pri') : btn('Start timer', async () => { const x = await api.call('time.start', { project: p.id, task: t.id }); if (x.ok) { await loadTimer(); drawTime(); } else if (x.status === 409 || x.status === 422) toast('A timer is already running. Stop it first.', false); else fail(x, 'start a timer'); }, ''),
           btn('Log time by hand', () => logTime(t, p, drawTime), '')) : null); };
     // subtasks: real tasks (own assignee, due date, comments); added here, opened like any task
     const archivedProject = Boolean(p.archived_at);
     const subtasks = h('div', { class: 'pj-subtasks' });
-    const drawSubtasks = async () => {
-      const r = await api.call('tasks.list', { project: p.id, parent: t.id, archived: false }); if (!r.ok) return put(subtasks, h('p', { class: 'fine muted' }, 'Subtasks couldn’t be loaded.'));
+    const drawSubtasks = async (first) => {
+      const r = first ? { ok: true, data: first } : await api.call('tasks.list', { project: p.id, parent: t.id, archived: false }); if (!r.ok) return put(subtasks, h('p', { class: 'fine muted' }, 'Subtasks couldn’t be loaded.'));
       put(subtasks, r.data.length ? h('ul', { class: 'pj-rows' }, ...r.data.map((s2) => h('li', { class: `pj-row${s2.status === 'done' ? ' isdone' : ''}` },
         h('button', { type: 'button', class: 'pj-check', 'aria-pressed': String(s2.status === 'done'), 'aria-label': `${s2.status === 'done' ? 'Reopen' : 'Mark done'}: ${s2.title}`, ...(canEdit ? { onclick: async () => { const x = await api.call('tasks.update', { id: s2.id, status: s2.status === 'done' ? 'todo' : 'done' }); if (x.ok) { drawSubtasks(); onChange(); } else fail(x, 'change that subtask'); } } : { disabled: true }) }),
         h('button', { type: 'button', class: 'pj-title', onclick: () => { closeDrawer(); taskDrawer(s2, p, { onChange, canEdit }); } }, s2.title),
@@ -403,15 +477,15 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
         canEdit ? h('form', { class: 'pj-add', onsubmit: async (e) => { e.preventDefault(); const i = e.target.elements.s; const v = i.value.trim(); if (!v) return; i.value = ''; const x = await api.call('tasks.create', { project: p.id, parent: t.id, title: v }); if (x.ok) { drawSubtasks(); onChange(); } else fail(x, 'add subtasks'); } }, h('input', { name: 's', placeholder: 'Add a subtask', 'aria-label': 'Add a subtask', maxlength: 300 }), btn('Add', null, '', { type: 'submit' })) : null);
     };
     const share = p.client_id && ctx.can('projects.record.share', p.client_id) ? h('label', { class: 'pj-share' }, h('input', { type: 'checkbox', checked: t.client_visible, onchange: async (e) => { const r = await api.call('tasks.share', { id: t.id, visible: e.target.checked }); if (!r.ok) { e.target.checked = !e.target.checked; fail(r, 'share that task'); } else onChange(); } }), ' Show this task to the client') : null;
-    const body = [h('div', { class: 'fld' }, h('label', { for: 'td-title' }, 'Task'), title), saved, sel('td-status', 'Status', TASK_STATUS, t.status, 'status'), sel('td-prio', 'Priority', PRIORITY, t.priority, 'priority'), h('div', { class: 'fld' }, h('label', { for: 'td-who' }, 'Assigned to'), who), h('div', { class: 'fld' }, h('label', { for: 'td-start' }, 'Start'), start), h('div', { class: 'fld' }, h('label', { for: 'td-due' }, 'Due'), due), h('div', { class: 'fld' }, h('label', { for: 'td-repeat' }, 'Repeat'), repeat), sectionField,
+    const body = [h('div', { class: 'fld' }, h('label', { for: 'td-title' }, 'Task'), title), saved, sel('td-status', 'Status', TASK_STATUS, t.status, 'status'), sel('td-prio', 'Priority', PRIORITY, t.priority, 'priority'), h('div', { class: 'fld' }, h('label', { for: 'td-who' }, 'Assigned to'), who), h('div', { class: 'fld' }, h('label', { for: 'td-start' }, 'Start'), start), h('div', { class: 'fld' }, h('label', { for: 'td-due' }, 'Due'), due), h('div', { class: 'fld' }, h('label', { for: 'td-repeat' }, 'Repeat'), repeat), h('div', { class: 'fld' }, h('label', { for: 'td-est' }, 'Estimate (hours)'), estimate), sectionField,
       h('div', { class: 'fld' }, h('label', { for: 'td-notes' }, 'Notes'), notes),
       h('h3', {}, 'Waiting on'), depBox, h('h3', {}, 'Tags'), tagBox, ...(t.parent_task_id ? [] : [h('h3', {}, 'Subtasks'), subtasks]), h('h3', {}, 'Files'), fileBox, h('h3', {}, 'Checklist'), checklist, h('h3', {}, 'Time'), timeBox, share,
-      h('h3', {}, 'Comments'), commentsPanel({ api, type: 'project_task', id: t.id, people: state.people ?? [], canComment: !archivedProject && ctx.canAnywhere('projects.task.comment') }),
+      h('h3', {}, 'Comments'), commentsPanel({ api, type: 'project_task', id: t.id, initial: pre?.comments, people: state.people ?? [], canComment: !archivedProject && ctx.canAnywhere('projects.task.comment') }),
       (() => { const hist = activityPanel({ api, type: 'project_task', id: t.id, describe: describeStep }); return h('details', { class: 'pj-history', ontoggle: (e) => { if (e.target.open) hist.load(); } }, h('summary', {}, 'History'), hist); })()];
     title.id = 'td-title';
-    body.unshift(h('div', { class: 'pj-drawer-top' }, t.parent_task_id ? btn('↑ Back to the parent task', async () => { const x = await api.call('tasks.get', { id: t.parent_task_id }); if (x.ok) { closeDrawer(); taskDrawer(x.data[0], p, { onChange, canEdit }); } else fail(x, 'open that task'); }, 'link') : h('span'), followButton({ api, type: 'project_task', id: t.id })));
+    body.unshift(h('div', { class: 'pj-drawer-top' }, t.parent_task_id ? btn('↑ Back to the parent task', async () => { const x = await api.call('tasks.get', { id: t.parent_task_id }); if (x.ok) { closeDrawer(); taskDrawer(x.data[0], p, { onChange, canEdit }); } else fail(x, 'open that task'); }, 'link') : h('span'), followButton({ api, type: 'project_task', id: t.id, initial: pre?.following })));
     const closeDrawer = drawer({ title: t.parent_task_id ? 'Subtask' : 'Task', label: `Task: ${t.title}`, body, actions: canEdit ? [{ label: 'Archive task', on: async () => { const r = await api.call('tasks.archive', { id: t.id }); if (!r.ok) { fail(r, 'archive that task'); return; } toast('Task archived.'); onChange(); } }, { label: 'Done', cls: 'pri' }] : [{ label: 'Close', cls: 'pri' }] });
-    drawChecklist(); drawTime(); drawTags(); drawFiles(); drawDeps(); if (!t.parent_task_id) drawSubtasks();
+    drawChecklist(pre?.checklist); drawTime(pre ? pre.time_seconds : undefined); drawTags(pre?.tags_all); drawFiles(pre?.files); drawDeps(pre?.deps); if (!t.parent_task_id) drawSubtasks(pre?.subtasks);
   }
   // pick one of the project's Drive files to attach to the task
   async function attachFile(t, p, already, after) {
@@ -465,6 +539,6 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
 
   // ---------------------------------------------------------------- mount
   root.append(timerBar, h('div', { class: 'pj-grid' }, side, main)); paintSide(route.id); loadTimer();
-  (route.view === 'mine' ? mine : route.view === 'project' ? project : home)();
+  ({ mine, project, workload, portfolio }[route.view] ?? home)();
   return root;
 }

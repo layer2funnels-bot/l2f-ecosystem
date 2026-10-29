@@ -55,11 +55,13 @@ export function parseRoute(hash) {
   if (a === 'clients' && b === 'c' && c && seg.length === 3) return r('clients', { view: 'client', id: c });
   if ((a === 'projects' && !b) || (a === 'app' && b === 'projects' && seg.length === 2)) return r('projects', { view: 'home' });
   if (a === 'projects' && b === 'mine' && seg.length === 2) return r('projects', { view: 'mine' });
+  if (a === 'projects' && (b === 'workload' || b === 'portfolio') && seg.length === 2) return r('projects', { view: b });
   if (a === 'projects' && b === 'p' && c && seg.length === 3) return r('projects', { view: 'project', id: c });
   if (a === 'doc' && b && seg.length === 2) return r('doc', { id: b });
   if (a === 'board' && b && seg.length === 2) return r('board', { id: b });
   if (a === 'office' && seg.length === 1) return r('office');
   if (a === 'office' && b === 'projects' && c === 'mine' && seg.length === 3) return r('office-page', { page: 'projects', view: 'mine' });
+  if (a === 'office' && b === 'projects' && (c === 'workload' || c === 'portfolio') && seg.length === 3) return r('office-page', { page: 'projects', view: c });
   if (a === 'office' && b === 'projects' && c === 'p' && d && seg.length === 4) return r('office-page', { page: 'projects', view: 'project', id: d });
   if (a === 'office' && b === 'projects' && seg.length === 2) return r('office-page', { page: 'projects', view: 'home' });
   if (a === 'office' && OFFICE_OTHER.has(b) && seg.length === 2) return r('office-page', { page: b });

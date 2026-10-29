@@ -6,7 +6,7 @@ import { createOrgCache, orgHeaders } from '../../../packages/core/org-switch.mj
 export const NO_ORG = '00000000-0000-0000-0000-000000000000';
 export const BATCH_MAX = 4;   // same limit as the server (packages/core/http.mjs)
 
-export function createApiClient({ session, auth, fetchImpl = (...a) => fetch(...a), onExpired, batching = true }) {
+export function createApiClient({ session, auth, fetchImpl = (...a) => fetch(...a), onExpired, onRateLimited, batching = true }) {
   const cache = createOrgCache(null);
   const state = { org: null };
   const post = async (path, body, org) => {
@@ -57,6 +57,7 @@ export function createApiClient({ session, auth, fetchImpl = (...a) => fetch(...
     let res = await send(op, input, org);
     if (res.status === 401 && (await refresh())) res = await send(op, input, org);   // the retries after one shared refresh go out together again
     if (res.status === 401) { onExpired?.(); }
+    if (res.status === 429) onRateLimited?.(res.error?.retryAfterSeconds);   // say so plainly (a screen's own error state would otherwise blame the connection)
     return res;
   }
   return { call, cache, state, setOrg(id) { state.org = id; cache.reset(id); } };

@@ -29,7 +29,7 @@ async function signUp(tag, name) {
 }
 const org = async (slug, name) => (await q('insert into workspaces (slug,name) values ($1,$2) on conflict (slug) do update set name=excluded.name returning id', [slug, name]))[0].id;
 const L = await org('layer2funnels', 'Layer2Funnels'), A = await org('aurj', 'Aurj');
-const lead = await signUp('lead', `Lena Lead ${stamp % 1000}`), dev = await signUp('dev', `Dan Dev ${stamp % 1000}`), aurj = await signUp('aurj', `Aria Aurj ${stamp % 1000}`);
+const lead = await signUp('lead', `Lena Lead ${stamp % 1000000}`), dev = await signUp('dev', `Dan Dev ${stamp % 1000000}`), aurj = await signUp('aurj', `Aria Aurj ${stamp % 1000000}`);
 await q("insert into memberships (workspace_id,user_id,kind,role) values ($1,$2,'staff','owner'),($1,$3,'staff','editor'),($4,$5,'staff','owner') on conflict do nothing", [L, lead.uid, dev.uid, A, aurj.uid]);
 await q("insert into app_grants (workspace_id,user_id,app_key) values ($1,$2,'projects') on conflict do nothing", [L, dev.uid]);
 const lvl = (await q("select id from access_levels where workspace_id=$1 and name='All projects · edit'", [L]))[0].id;
@@ -48,11 +48,11 @@ check('PR1', 'The task panel has a Follow button, Subtasks, a Checklist, Comment
 await page.fill('.pj-subtasks input[name=s]', 'Hero section'); await page.keyboard.press('Enter'); await page.waitForSelector('.pj-subtasks button.pj-title:has-text("Hero section")', { timeout: 9000 });
 check('PR2', 'A subtask is added inside its task, as a real task with its own row', await page.locator('.pj-subtasks button.pj-title:has-text("Hero section")').isVisible());
 // mention Dan with the @ picker
-const box = page.locator('.cm-new textarea'); await box.click(); await box.type(`Please review this @Dan Dev ${stamp % 1000}`);   // keep typing the full name: the organization has several Dans from earlier runs
+const box = page.locator('.cm-new textarea'); await box.click(); await box.type(`Please review this @Dan Dev ${stamp % 1000000}`);   // keep typing the full name: the organization has several Dans from earlier runs
 await page.waitForSelector('.cm-sugg li', { timeout: 5000 }); const offered = await page.locator('.cm-sugg li').count(); await page.keyboard.press('Enter'); await box.type('before Friday');
 await page.click('.cm-send button:has-text("Comment")'); await page.waitForSelector('.cm-item .cm-body', { timeout: 9000 });
 const posted = await page.locator('.cm-item .cm-body').first().innerText();
-check('PR3', 'Typing @ suggests teammates and keeps narrowing as the full name is typed; Enter picks it and the comment is posted', offered === 1 && posted.includes(`@Dan Dev ${stamp % 1000} before Friday`), `${offered} offered; ${posted}`);
+check('PR3', 'Typing @ suggests teammates and keeps narrowing as the full name is typed; Enter picks it and the comment is posted', offered === 1 && posted.includes(`@Dan Dev ${stamp % 1000000} before Friday`), `${offered} offered; ${posted}`);
 await page.click('.drawer summary:has-text("History")'); await page.waitForTimeout(600);
 const hist = await page.locator('.act-list').innerText();
 check('PR4', 'History tells, in words, who created the task, added a subtask and commented', /created this task/.test(hist) && /added a subtask/.test(hist) && /commented/.test(hist), hist.slice(0, 200));
@@ -160,6 +160,25 @@ const copied = await q("select t.title, s.name as section from project_tasks t j
 const openInTemplate = await q("select count(*)::int n from project_tasks t join projects p on p.id=t.project_id where p.name=$1 and t.status <> 'done' and t.archived_at is null", [`Relaunch template ${stamp}`]);
 check('PR24', 'Save as template, then "Use template": the new project starts with the template\'s sections and all its open tasks', copied.some((c) => c.title === 'Moodboard' && c.section === 'Design') && copied.length === openInTemplate[0].n, JSON.stringify(copied));
 await shot(page, 'r3-from-template');
+
+// ---------------------------------------------------------------- R4: oversight
+const soon = new Date(Date.now() + 2 * 864e5).toISOString().slice(0, 10);
+const T9 = (await q("insert into project_tasks (workspace_id,project_id,title,assignee_id,due_on) values ($1,$2,'Write ads',$3,$4) returning id", [L, P, dev.uid, soon]))[0].id;
+await page.goto(`${base}/#/projects/p/${P}?tab=list&task=${T9}`); await page.reload(); await page.waitForSelector('.drawer #td-est', { timeout: 9000 });
+await page.fill('#td-est', '45'); await page.press('#td-est', 'Tab'); await page.waitForTimeout(800);
+check('PR25', 'A task gets an estimate in hours (stored as minutes)', (await q('select estimate_minutes from project_tasks where id=$1', [T9]))[0].estimate_minutes === 2700);
+await page.keyboard.press('Escape');
+await page.click('[role=tab]:has-text("Report")'); await page.waitForSelector('.pj-stats', { timeout: 9000 });
+const repText = await page.locator('.pj-body').innerText();
+check('PR26', 'The project Report shows open, overdue and estimated work left, tasks by status and people with their time', /open tasks/.test(repText) && /45 h/.test(repText) && /Tasks by status/.test(repText) && repText.includes(`Dan Dev ${stamp % 1000000}`), repText.slice(0, 200));
+await shot(page, 'r4-report');
+await page.click('.pj-side a:has-text("Workload")'); await page.waitForSelector('.pj-wl, .empty', { timeout: 9000 });
+const danRow = page.locator(`.pj-wl tr:has(th:has-text("Dan Dev ${stamp % 1000000}"))`);
+check('PR27', 'Workload shows each person by week; a week over 40 hours is flagged', await danRow.isVisible() && /Over 40 h/.test(await danRow.innerText()), await danRow.innerText().catch(() => ''));
+await shot(page, 'r4-workload');
+await page.click('.pj-side a:has-text("Portfolio")'); await page.waitForSelector('.pj-pf', { timeout: 9000 });
+check('PR28', 'Portfolio lists the projects with progress, open and overdue work', (await page.locator(`.pj-pf tr:has-text("Website relaunch ${stamp}")`).count()) === 1);
+await shot(page, 'r4-portfolio');
 
 check('PR99', 'No script errors or page policy violations during the journey', problems.length === 0, problems.slice(0, 3).join(' | '));
 const failed = results.filter((r) => !r.ok); console.log(`\n${results.length - failed.length}/${results.length} checks passed`);

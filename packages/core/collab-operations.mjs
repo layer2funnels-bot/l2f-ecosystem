@@ -4,14 +4,17 @@
 import { defineOperation } from './define.mjs';
 
 const TYPES = ['project_task'];
+// shared with the apps that load a record's whole panel in one request (tasks.panel)
+export const COMMENTS_SQL = `select c.id, c.author_id, coalesce(nullif(pr.display_name, ''), 'Someone') as author_name, c.body, c.edited_at, c.created_at,
+    coalesce((select array_agg(m.user_id) from comment_mentions m where m.comment_id = c.id), '{}') as mentions
+  from comments c left join profiles pr on pr.id = c.author_id where c.entity_type = $1 and c.entity_id = $2 order by c.seq limit 500`;
+export const FOLLOWING_SQL = 'select exists (select 1 from follows where entity_type = $1 and entity_id = $2 and user_id = $3) as following';
 const target = { type: { type: 'enum', values: TYPES, required: true }, id: { type: 'uuid', required: true } };
 
 export const collabOperations = [
   defineOperation({
     name: 'comments.list', class: 'read', input: target,
-    run: (q, _c, i) => q(`select c.id, c.author_id, coalesce(nullif(pr.display_name, ''), 'Someone') as author_name, c.body, c.edited_at, c.created_at,
-        coalesce((select array_agg(m.user_id) from comment_mentions m where m.comment_id = c.id), '{}') as mentions
-      from comments c left join profiles pr on pr.id = c.author_id where c.entity_type = $1 and c.entity_id = $2 order by c.seq limit 500`, [i.type, i.id]),
+    run: (q, _c, i) => q(COMMENTS_SQL, [i.type, i.id]),
   }),
   defineOperation({
     name: 'comments.add', class: 'write', single: true,
@@ -33,14 +36,14 @@ export const collabOperations = [
   }),
   defineOperation({
     name: 'follow.get', class: 'read', single: true, input: target,
-    run: (q, ctx, i) => q('select exists (select 1 from follows where entity_type = $1 and entity_id = $2 and user_id = $3) as following', [i.type, i.id, ctx.userId]),
+    run: (q, ctx, i) => q(FOLLOWING_SQL, [i.type, i.id, ctx.userId]),
   }),
   defineOperation({
     name: 'follow.set', class: 'write', single: true, input: { ...target, on: { type: 'bool', required: true } },
     run: async (q, ctx, i) => {
       if (i.on) await q('insert into follows (workspace_id, entity_type, entity_id, user_id) values ($1, $2, $3, $4) on conflict do nothing', [ctx.orgId, i.type, i.id, ctx.userId]);
       else await q('delete from follows where entity_type = $1 and entity_id = $2 and user_id = $3', [i.type, i.id, ctx.userId]);
-      return q('select exists (select 1 from follows where entity_type = $1 and entity_id = $2 and user_id = $3) as following', [i.type, i.id, ctx.userId]);
+      return q(FOLLOWING_SQL, [i.type, i.id, ctx.userId]);
     },
   }),
   defineOperation({

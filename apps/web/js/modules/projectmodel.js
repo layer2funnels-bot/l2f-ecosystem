@@ -136,3 +136,21 @@ export function groupTasks(tasks, by, { sections = [], name = (id) => id, today 
   }
   return TASK_STATUS.map(([k, title]) => pick(k, title, (t) => t.status === k));
 }
+
+// ---- R4: workload grid. Weeks start on Monday; a week over 40 estimated hours is flagged as more than one person can do.
+export const weekStart = (iso) => { const dow = new Date(`${String(iso).slice(0, 10)}T12:00:00Z`).getUTCDay(); return addDays(iso, -((dow + 6) % 7)); };
+export const WEEK_CAPACITY_MINUTES = 40 * 60;
+export function workloadGrid(rows, from, weeks) {
+  const first = weekStart(from);
+  const ws = Array.from({ length: weeks }, (_, i) => addDays(first, i * 7));
+  const people = new Map();
+  for (const r of rows) {
+    if (!people.has(r.user_id)) people.set(r.user_id, { user_id: r.user_id, name: r.name, cells: ws.map((week) => ({ week, tasks: 0, minutes: 0, overdue: 0, over: false })), undated: 0 });
+    const p = people.get(r.user_id);
+    if (r.week_start == null) { p.undated += r.tasks; continue; }
+    const c = p.cells.find((x) => x.week === String(r.week_start).slice(0, 10)); if (!c) continue;
+    c.tasks += r.tasks; c.minutes += r.minutes; c.overdue += r.overdue; c.over = c.minutes > WEEK_CAPACITY_MINUTES;
+  }
+  const list = [...people.values()].sort((a, b) => String(a.name).localeCompare(String(b.name)));
+  return { weeks: ws, people: list, max: Math.max(0, ...list.flatMap((p) => p.cells.map((c) => c.minutes))) };
+}

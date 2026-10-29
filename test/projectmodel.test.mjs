@@ -1,6 +1,6 @@
 // Projects screen logic (projectmodel.js): grouping, the client/internal split, calendar grid, timeline, due labels, My Work groups, search text, time formatting.
 import { recorder } from './lib.mjs';
-import { viewTasks, groupTasks, byStatus, sortTasks, progress, splitProjects, monthGrid, shiftMonth, timeline, dueLabel, myWorkGroups, parseSearch, searchInput, duration, clock, addDays, diffDays, label, TASK_STATUS } from '../apps/web/js/modules/projectmodel.js';
+import { workloadGrid, weekStart, viewTasks, groupTasks, byStatus, sortTasks, progress, splitProjects, monthGrid, shiftMonth, timeline, dueLabel, myWorkGroups, parseSearch, searchInput, duration, clock, addDays, diffDays, label, TASK_STATUS } from '../apps/web/js/modules/projectmodel.js';
 
 const { results, check } = recorder();
 const t = (id, o = {}) => ({ id, title: id, status: 'todo', position: 0, created_at: `2026-10-0${id.length}`, due_on: null, ...o });
@@ -53,6 +53,15 @@ check('PM18', 'Timeline: a task with start and due dates is a bar with a width, 
 const long = timeline({}, [t('a', { start_on: '2030-06-10', due_on: '2030-06-15' })], '2026-10-29');
 check('PM19', 'A long timeline gets a fixed width per day (so it scrolls instead of squeezing bars to slivers) and a tick every week; a short one fits the screen',
   long.px === long.days * 16 && long.ticks.length > 50 && long.ticks.every((k, n) => n === 0 || k.date > long.ticks[n - 1].date) && tl.px === 640);
+// ---- R4: the workload grid (people × weeks) from the server's rows
+const wg = workloadGrid([
+  { user_id: 'u2', name: 'Ben', week_start: '2026-11-02', tasks: 2, minutes: 600, overdue: 1 },
+  { user_id: 'u1', name: 'Ana', week_start: '2026-11-09', tasks: 1, minutes: 2700, overdue: 0 },
+  { user_id: 'u1', name: 'Ana', week_start: null, tasks: 3, minutes: 0, overdue: 0 },
+], '2026-11-04', 3);
+check('PM20', 'Workload grid: weeks start on Monday from the chosen date, one row per person by name, empty weeks are zero, undated work and over-40-hour weeks are flagged',
+  weekStart('2026-11-04') === '2026-11-02' && weekStart('2026-11-08') === '2026-11-02' && wg.weeks.join() === '2026-11-02,2026-11-09,2026-11-16' && wg.people.map((p) => p.name).join() === 'Ana,Ben'
+  && wg.people[0].cells.map((c) => c.minutes).join() === '0,2700,0' && wg.people[0].cells[1].over && !wg.people[1].cells[0].over && wg.people[1].cells[0].overdue === 1 && wg.people[0].undated === 3 && wg.max === 2700);
 for (const x of results) console.log(`${x.ok ? 'PASS' : 'FAIL'}  ${x.id.padEnd(5)} ${x.name}`);
 const pc = results.filter((x) => x.ok).length; console.log(`\n${pc}/${results.length} checks passed`);
 process.exit(pc === results.length ? 0 : 1);
