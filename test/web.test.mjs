@@ -112,6 +112,16 @@ check('W26', 'Unsaved work is registered with a label and a save action, and cle
   check('W32', 'A call on its own goes to its own address, unchanged', sent.length === 1 && sent[0].url === '/api/y.alone');
 }
 
+check('W33', 'Projects has Workload and Portfolio pages, in the app and inside Office', parseRoute('#/projects/workload').params.view === 'workload' && parseRoute('#/projects/portfolio').params.view === 'portfolio'
+  && parseRoute('#/office/projects/workload').params.view === 'workload' && parseRoute('#/office/projects/portfolio').name === 'office-page');
+
+{
+  let told = null; const session = { get: () => ({ access: 't' }), needsRefresh: () => false, expired: () => false };
+  const api = createApiClient({ session, auth: {}, batching: false, onRateLimited: (secs) => { told = secs; }, fetchImpl: async () => ({ status: 429, json: async () => ({ ok: false, error: { code: 'rate_limited', retryAfterSeconds: 9 } }) }) });
+  const r = await api.call('x.y', {});
+  check('W34', 'When the server says "too many requests", the shell is told (with the wait), so people see that instead of "check your connection"', r.status === 429 && told === 9);
+}
+
 // ---- Planner inside the shell (apps/web/js/modules/planner.js mounts apps/planner/src/embed.tsx)
 check('W27', 'Planner has one address inside the shell: #/planner/<page> keeps its page and query; the old #/app/planner and #/office/planner lead there too',
   parseRoute('#/planner').name === 'planner' && parseRoute('#/planner').params.page === 'overview' && parseRoute('#/planner/map?plan=p1').params.page === 'map' && parseRoute('#/planner/map?plan=p1').query.plan === 'p1'

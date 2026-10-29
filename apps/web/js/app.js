@@ -39,7 +39,9 @@ const store = (() => { try { localStorage.setItem('l2f.t', '1'); localStorage.re
 const tabStore = (() => { try { sessionStorage.setItem('l2f.t', '1'); sessionStorage.removeItem('l2f.t'); return sessionStorage; } catch { return store; } })();
 const session = createSession({ storage: store });
 const auth = createAuthClient({ baseUrl: cfg.supabaseUrl, publishableKey: cfg.publishableKey, redirectTo: `${location.origin}/` });
-const api = createApiClient({ session, auth, onExpired: () => { if (session.get()) goExpired(); } });
+let slowDownShown = 0;
+const api = createApiClient({ session, auth, onExpired: () => { if (session.get()) goExpired(); },
+  onRateLimited: (secs) => { if (Date.now() - slowDownShown > 15000) { slowDownShown = Date.now(); toast(`${messageFor('rate_limited')}${secs ? ` (about ${secs} s)` : ''}`, false); } } });
 
 let ctx = null;           // { orgs, active, mine, clients, catalog }
 let renderId = 0;
