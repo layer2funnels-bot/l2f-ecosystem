@@ -47,6 +47,9 @@ Labels: **verified** = run in this repository; **not run** = needs staging or li
 6. Both `0015_planner.sql` (older backend) and 0033 exist; the older one has no screens. Retire later with a separate migration.
 7. **Planner is not visible to anyone until the `planner` app is switched to `active` in the database** (a data change, not part of any migration) and people hold the grant. That is part of go-live.
 
+## Live finding (29 Oct)
+Migration 0033 is applied on the live database (history row present, 30 tables, 30 org_scope policies, 0 browser grants). `/planner/` still served the shell page because the Cloudflare build runs only `build-web.mjs`, which copied Planner's build only if it already existed. Fixed in `scripts/build-web.mjs`: it installs and builds Planner itself (and stops the build on Cloudflare if that fails). Verified from a clean tree: `dist/web/planner/index.html` is Planner. Live effect only after merge to `main`.
+
 ## Needs the owner
 - Migration 0033 on staging, then on production: **not applied anywhere except the local development stack**.
 - Merge: **not done**.
