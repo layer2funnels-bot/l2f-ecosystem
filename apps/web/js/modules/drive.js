@@ -12,7 +12,7 @@ const size = (n) => (n == null ? '' : n < 1024 ? `${n} B` : n < 1048576 ? `${(n 
 const kindOf = (f) => (f.mime_type === DOC_MIME ? 'Document' : f.mime_type === SHEET_MIME ? 'Spreadsheet' : f.mime_type === BOARD_MIME ? 'Whiteboard' : f.kind === 'document' ? 'Text' : (f.mime_type ?? 'File').split('/').pop());
 const TILE = { Document: ['DOC', '#2B5CF0'], Spreadsheet: ['XLS', '#13A592'], Whiteboard: ['WB', '#1B1D23'], Text: ['TXT', '#6B4FF0'] };
 /** The file-type tile (Design v4): three letters on the type's colour. */
-const ftile = (f) => { const [t, c] = TILE[kindOf(f)] ?? ['FILE', '#7D8190']; return h('span', { class: 'ftile', style: `--c:${c}`, 'aria-hidden': 'true' }, t); };
+const ftile = (f) => { const [t, c] = TILE[kindOf(f)] ?? (/^image\//.test(f.mime_type ?? '') ? ['IMG', '#6B4FF0'] : f.mime_type === 'application/pdf' ? ['PDF', '#E8553D'] : ['FILE', '#7D8190']); return h('span', { class: 'ftile', style: `--c:${c}`, 'aria-hidden': 'true' }, t); };
 const iconOf = (f) => (f.mime_type === BOARD_MIME ? 'wb' : f.kind === 'document' ? 'doc' : 'drv');
 export const openHref = (f) => (f.mime_type === SHEET_MIME ? `#/sheet/${f.id}` : f.mime_type === BOARD_MIME ? `#/board/${f.id}` : f.kind === 'document' ? `#/doc/${f.id}` : null);
 
@@ -22,7 +22,7 @@ export function driveView({ api, ctx, route }) {
   const space = route.space === 'personal' ? 'personal' : 'shared'; const view = route.view ?? 'files'; const folderId = route.folder ?? null;
   const canWrite = ctx.can('drive.file.upload') || ctx.canAnywhere('drive.file.upload');
   const fail = (r, what = 'do that') => toast(r?.status === 404 ? `You can’t ${what} here.` : (r?.message ?? 'Something went wrong. Try again.'), false);
-  const state = { q: '', folders: [], files: [], selected: new Set() };
+  const state = { q: '', type: 'all', folders: [], files: [], selected: new Set() };
 
   // ---------------------------------------------------------------- navigation
   const side = h('nav', { class: 'pj-side', 'aria-label': 'Drive' });
@@ -46,12 +46,25 @@ export function driveView({ api, ctx, route }) {
     paint();
   }
   const bar = h('div', { class: 'drv-sel', hidden: true, role: 'region', 'aria-label': 'Selected items' });
-  const list = h('div', { class: 'tblwrap' });
+  const list = h('div', { class: 'drv-list' });
+  const TYPES = [['all', 'All types'], ['Document', 'Documents'], ['Spreadsheet', 'Spreadsheets'], ['Whiteboard', 'Whiteboards'], ['other', 'Other files']];
+  const typeSel = h('select', { class: 'sel', 'aria-label': 'Type', onchange: (e) => { state.type = e.target.value; paint(); } }, ...TYPES.map(([k, t]) => h('option', { value: k }, t)));
+  /** Home (the top of a space, not searching): files edited lately as cards and the folders as quick links, above the full list. */
+  function homeBlocks(files) {
+    const latest = [...files].sort((a, b) => String(b.updated_at).localeCompare(String(a.updated_at))).slice(0, 4);
+    const card = (f) => { const href = openHref(f); const inner = [h('span', { class: 'dcard-art', 'aria-hidden': 'true' }, ftile(f)), h('span', { class: 'dcard-foot' }, h('b', {}, f.name), h('small', { class: 'muted' }, `Edited ${when(f.updated_at)}`))];
+      return href ? h('a', { class: 'dcard', href }, ...inner) : h('button', { type: 'button', class: 'dcard', onclick: () => download(f) }, ...inner); };
+    return [latest.length ? h('section', { 'aria-labelledby': 'dh-sg' }, h('h2', { id: 'dh-sg', class: 'over' }, 'Recently edited'), h('div', { class: 'dcards' }, ...latest.map(card))) : null,
+      state.folders.length ? h('section', { 'aria-labelledby': 'dh-fo' }, h('h2', { id: 'dh-fo', class: 'over' }, 'Folders'), h('div', { class: 'dfolders' }, ...state.folders.map((d) => h('a', { class: 'dfolder', href: driveHref(space, d.id) }, icon('folder'), d.name)))) : null,
+      latest.length || state.folders.length ? h('h2', { class: 'over' }, 'All files and folders') : null];
+  }
   function paint() {
-    const rows = [...state.folders.map((d) => ({ folder: d })), ...state.files.map((f) => ({ file: f }))];
-    put(list, rows.length ? h('div', { class: 'tblwrap' }, h('table', { class: 'tbl drv-tbl' }, h('caption', { class: 'sr' }, 'Folders and files'),
+    const files = state.type && state.type !== 'all' ? state.files.filter((f) => (state.type === 'other' ? !['Document', 'Spreadsheet', 'Whiteboard'].includes(kindOf(f)) : kindOf(f) === state.type)) : state.files;
+    const rows = [...(state.type && state.type !== 'all' ? [] : state.folders).map((d) => ({ folder: d })), ...files.map((f) => ({ file: f }))];
+    const atHome = !folderId && !state.q && (!state.type || state.type === 'all');
+    put(list, rows.length ? h('div', { class: 'drv-home' }, ...(atHome ? homeBlocks(state.files) : []), h('div', { class: 'tblwrap' }, h('table', { class: 'tbl drv-tbl' }, h('caption', { class: 'sr' }, 'Folders and files'),
       h('thead', {}, h('tr', {}, h('th', { scope: 'col' }, h('span', { class: 'sr' }, 'Select')), ...['Name', 'Type', 'Size', 'Updated'].map((x) => h('th', { scope: 'col' }, x)), h('th', { scope: 'col' }, h('span', { class: 'sr' }, 'Actions')))),
-      h('tbody', {}, ...rows.map(rowEl))))
+      h('tbody', {}, ...rows.map(rowEl)))))
       : emptyState({ title: state.q ? 'No file matches' : folderId ? 'This folder is empty' : space === 'personal' ? 'Your personal space is empty' : `${ctx.orgName} library is empty`, body: state.q ? 'Try another word.' : canWrite ? 'Drop files anywhere on this page, or use New.' : 'Nothing has been added here yet.', ic: 'drv', first: !state.q && !folderId, action: canWrite && !state.q ? btn('New', newMenu, 'primary') : null }));
     paintSel();
   }
@@ -200,7 +213,7 @@ export function driveView({ api, ctx, route }) {
   const search = h('input', { type: 'search', placeholder: 'Search the library', 'aria-label': 'Search files', autocomplete: 'off' }); let t = null;
   search.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { state.q = search.value.trim(); load(); }, 250); });
   const filesShell = () => { put(main, head(space === 'personal' ? 'Personal' : 'Drive', space === 'personal' ? 'Only you can open these files.' : `The ${ctx.orgName} library: files and documents the whole team can find. Project and client files stay with their own app.`, canWrite ? btn('New', newMenu, 'primary') : null),
-    !canWrite ? readOnlyNotice('You can look at the library but not add to it', '') : null, crumb, h('div', { class: 'toolbar' }, inp(search)), bar, list, progress); };
+    !canWrite ? readOnlyNotice('You can look at the library but not add to it', '') : null, crumb, h('div', { class: 'toolbar' }, inp(search), typeSel), bar, list, progress); };
   put(root, h('div', { class: 'pj-grid' }, main), picker); dropZone();     // the spaces live in the app's side rail (appnav.js)
   if (view === 'files') filesShell();
   load();

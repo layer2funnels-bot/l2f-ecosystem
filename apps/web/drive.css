@@ -23,3 +23,12 @@
 .ftile svg{width:18px;height:18px}
 .drv .tbl .fname{gap:12px}.drv .tbl .fname a{color:var(--text);font-weight:600;text-decoration:none}.drv .tbl .fname small{margin-left:4px;color:var(--muted);font-weight:400}
 .drv .tbl .fname .linklike{background:none;border:0;padding:0;font:inherit;font-weight:600;color:var(--text);cursor:pointer;text-align:left}
+/* Drive Home (Design v4): recently edited cards, folder quick links */
+.drv-home{display:grid;gap:var(--space-3)}.drv-home>section{display:grid;gap:10px}.drv-home .over{margin:var(--space-3) 0 0}
+.dcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}
+.dcard{display:flex;flex-direction:column;border:var(--bw) solid var(--line);border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--sh1);overflow:hidden;color:var(--text);text-decoration:none;text-align:left;font:inherit;padding:0;cursor:pointer;transition:box-shadow var(--d-2,200ms) var(--e-out,ease),transform var(--d-2,200ms) var(--e-out,ease)}
+.dcard:hover{box-shadow:var(--sh2);transform:translateY(-2px)}.dcard-art{display:grid;place-items:center;height:110px;background:var(--bg2,var(--bg))}.dcard-art .ftile{transform:scale(1.5)}
+.dcard-foot{display:grid;gap:2px;padding:12px 14px;border-top:var(--bw) solid var(--line);min-width:0}.dcard-foot b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dfolders{display:flex;flex-wrap:wrap;gap:10px}.dfolder{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border:var(--bw) solid var(--line);border-radius:var(--r-md,12px);background:var(--surface);box-shadow:var(--sh1);color:var(--text);font-weight:600;text-decoration:none}
+.dfolder:hover{box-shadow:var(--sh2)}.dfolder svg{color:var(--action)}
+@media (max-width:620px){.dcards{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.dcard-art{height:84px}.dcard-art .ftile{transform:none}}
