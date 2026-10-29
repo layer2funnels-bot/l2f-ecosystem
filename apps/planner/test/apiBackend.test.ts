@@ -27,3 +27,37 @@ test('a refusal or an unreachable server becomes an error, never an endless load
   await assert.rejects(offline.rpc('planner_get_plan', { p_plan: 'x' }), (e: { code: string }) => e.code === 'offline');
   assert.equal(createApiBackend({ storage: store(null) }).me(), null);   // signed out: the host shows "Sign in first"
 });
+// ---- session expiry: the cause of "the page only works after a browser refresh"
+const rw = (session: unknown) => { const m = new Map<string, string>([['l2f.session.v1', JSON.stringify(session)]]); return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => { m.set(k, v); }, removeItem: (k: string) => { m.delete(k); } } as unknown as Storage; };
+const ok = () => new Response(JSON.stringify({ ok: true, data: [{ r: 1 }] }), { status: 200 });
+
+test('an expiring token is refreshed before the call, and the new token is used', async () => {
+  const NOW = 1_000_000_000_000;
+  const storage = rw({ access: 'old', refresh: 'r1', expiresAt: NOW + 10_000, userId: 'u1' });   // 10 s left
+  const seen: string[] = [];
+  const fetchImpl = (async (_u: string, init: RequestInit) => { seen.push((init.headers as Record<string, string>).authorization!); return ok(); }) as unknown as typeof fetch;
+  let refreshCalls = 0;
+  const auth = { refresh: async (t: string) => { refreshCalls++; assert.equal(t, 'r1'); return { ok: true, data: { access_token: 'new', refresh_token: 'r2', expires_in: 3600, user: { id: 'u1' } } }; } };
+  const b = createApiBackend({ fetchImpl, storage, auth, now: () => NOW });
+  await b.rpc('planner_get_plan', { p_plan: 'x' }); await b.rpc('planner_get_plan', { p_plan: 'y' });
+  assert.equal(refreshCalls, 1);                       // once, not per call
+  assert.deepEqual(seen, ['Bearer new', 'Bearer new']);
+});
+
+test('an expired session that cannot be refreshed ends as a clear message and sends nothing', async () => {
+  const NOW = 1_000_000_000_000; let sent = 0;
+  const storage = rw({ access: 'old', refresh: 'r1', expiresAt: NOW - 1000, userId: 'u1' });
+  const b = createApiBackend({ fetchImpl: (async () => { sent++; return ok(); }) as unknown as typeof fetch, storage, auth: { refresh: async () => ({ ok: false }) }, now: () => NOW });
+  await assert.rejects(b.rpc('planner_get_plan', { p_plan: 'x' }), (e: { code: string }) => e.code === 'session_expired');
+  assert.equal(sent, 0);
+});
+
+test('a 401 triggers one refresh and one retry', async () => {
+  const NOW = 1_000_000_000_000; const seen: string[] = [];
+  const storage = rw({ access: 'stale', refresh: 'r1', expiresAt: NOW + 3_600_000, userId: 'u1' });   // looks valid, server disagrees
+  const fetchImpl = (async (_u: string, init: RequestInit) => { const a = (init.headers as Record<string, string>).authorization!; seen.push(a); return a === 'Bearer fresh' ? ok() : new Response('{"ok":false}', { status: 401 }); }) as unknown as typeof fetch;
+  const auth = { refresh: async () => ({ ok: true, data: { access_token: 'fresh', refresh_token: 'r2', expires_in: 3600 } }) };
+  const b = createApiBackend({ fetchImpl, storage, auth, now: () => NOW });
+  assert.equal(await b.rpc('planner_get_plan', { p_plan: 'x' }), 1);
+  assert.deepEqual(seen, ['Bearer stale', 'Bearer fresh']);
+});
