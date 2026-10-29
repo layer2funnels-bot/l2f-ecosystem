@@ -1,7 +1,7 @@
 {
   "id": "planner",
   "name": "Planner",
-  "description": "Your week, in one view",
+  "description": "Strategy, objectives and KPIs",
   "group": "Everyday",
   "plate": {
     "colors": [
@@ -22,7 +22,7 @@
   ],
   "grantRequired": true,
   "status": "soon",
-  "embeds": [],
+  "embeds": ["projects"],
   "reuses": [
     "projects"
   ],
