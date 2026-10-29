@@ -1,6 +1,6 @@
 /* Drive (v4): list, selection bar, upload progress. Shares row/card/side styles with Projects. */
 .drv{min-width:0;position:relative}
-.drv-main{min-width:0}.drv .tblwrap{max-width:100%}
+.drv-main{min-width:0}.drv .tblwrap{max-width:100%}.tblwrap{position:relative}   /* visually hidden labels inside a scrolling table must not widen the page */
 .drv-tbl td,.drv-tbl th{vertical-align:middle}
 .drv-tbl td:first-child{width:44px}
 .drv-tbl input[type=checkbox]{width:24px;height:24px}

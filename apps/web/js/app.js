@@ -277,6 +277,7 @@ async function render(opts = {}) {
 
   // inside the ecosystem
   const org = ctx.active;
+  const registry = await loadRegistry(); if (!live()) return;   // before any view starts: a view that finished loading before it was attached to the page would drop its own result
   theme.setOrg(org);
   const role = org.role; const isAdmin = role === 'owner' || role === 'admin';
   const c = {
@@ -295,13 +296,13 @@ async function render(opts = {}) {
   } else {
     switch (route.name) {
       case 'home': case 'launcher': case 'signin': case 'signup': case 'check-email': case 'forgot': case 'invite':
-        content = launcherView({ catalog: ctx.catalog, error: ctx.catalogError, org, orgs: ctx.orgs, role, name: session.get()?.name, registry: await loadRegistry(), loadWeather: () => loadWeather({ api, store: localStorage }), onSwitch: (i) => switchFlow(i), retry: async () => { await loadOrgContext(org); render(); } }); break;
+        content = launcherView({ catalog: ctx.catalog, error: ctx.catalogError, org, orgs: ctx.orgs, role, name: session.get()?.name, registry, loadWeather: () => loadWeather({ api, store: localStorage }), onSwitch: (i) => switchFlow(i), retry: async () => { await loadOrgContext(org); render(); } }); break;
       case 'office': content = officeHomeView({ org, role, isAdmin, api, live, portalState: ctx.catalog.find((a) => a.app_key === 'portal')?.state }); break;
       case 'office-page': {
         const pg = route.params.page;
         if (pg === 'documents') content = documentsView({ api, ctx: c });
         else if (pg === 'team') content = teamView({ api, ctx: c });
-        else if (pg === 'apps') content = appsView({ catalog: ctx.catalog, registry: await loadRegistry(), org, orgs: ctx.orgs });
+        else if (pg === 'apps') content = appsView({ catalog: ctx.catalog, registry, org, orgs: ctx.orgs });
         else if (pg === 'projects') content = projectsView({ api, ctx: c, base: '#/office/projects', embedded: true, route: { view: route.params.view ?? 'home', id: route.params.id, query: route.query } });
         else content = appNotBuiltView(OFFICE_PAGES.find((p) => p.key === pg)?.label ?? 'This page');
         break;
@@ -328,7 +329,7 @@ async function render(opts = {}) {
     }
   }
   const view = shellView({ app: appApi, orgs: ctx.orgs, active: org, email: session.get()?.email, name: session.get()?.name, route, content, banner: bannerEl(), isAdmin, inOffice, launcherCurrent: route.name === 'launcher' || route.name === 'home',
-    catalog: ctx.catalog, registry: await loadRegistry(), currentApp: inOffice ? 'office' : route.name === 'doc' || route.name === 'sheet' || route.name === 'drive' ? 'drive' : route.name === 'board' ? 'whiteboard' : route.name === 'projects' ? 'projects' : route.name === 'clients' ? 'clients' : route.name === 'portal' ? 'portal' : route.name === 'forms' ? 'forms' : route.name === 'ladder' ? 'value_ladder' : route.name === 'boards' ? 'whiteboard' : route.name === 'social' ? 'social_planner' : route.name === 'app' ? route.params.app : null, theme,
+    catalog: ctx.catalog, registry, currentApp: inOffice ? 'office' : route.name === 'doc' || route.name === 'sheet' || route.name === 'drive' ? 'drive' : route.name === 'board' ? 'whiteboard' : route.name === 'projects' ? 'projects' : route.name === 'clients' ? 'clients' : route.name === 'portal' ? 'portal' : route.name === 'forms' ? 'forms' : route.name === 'ladder' ? 'value_ladder' : route.name === 'boards' ? 'whiteboard' : route.name === 'social' ? 'social_planner' : route.name === 'app' ? route.params.app : null, theme,
     weather: { on: () => !weatherOff(localStorage), set: (on) => { setWeatherOff(localStorage, !on); try { sessionStorage.removeItem('l2f.wx'); } catch { /* none */ } render(); } } });
   put(root, view, designBadge('Built to design'));
   document.title = `${pageLabel(route)} · ${org.name}`;

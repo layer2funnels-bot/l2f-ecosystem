@@ -53,7 +53,7 @@ const q = async (sql, args = []) => (await admin.query(sql, args)).rows;
 async function layout(p, label) {
   const r = await p.evaluate(() => {
     const out = { over: document.documentElement.scrollWidth - document.documentElement.clientWidth, small: [] };
-    if (out.over > 0) out.who = [...document.querySelectorAll('body *')].filter((e) => e.getBoundingClientRect().right > innerWidth + 1 && !e.closest('.tblwrap')).slice(0, 4).map((e) => `${e.tagName}.${String(e.className).slice(0, 24)}`).join(' ');
+    if (out.over > 0) out.who = [...document.querySelectorAll('body *')].filter((e) => e.getBoundingClientRect().right > innerWidth + 1 && !e.closest('.tblwrap')).slice(0, 4).map((e) => `${e.tagName}.${String(e.className).slice(0, 24)}`).join(' ') + ' | scroll: ' + [...document.querySelectorAll('body *')].filter((e) => e.scrollWidth > e.clientWidth + 1 && getComputedStyle(e).overflowX === 'visible' && e.clientWidth > 0).slice(0, 4).map((e) => `${e.tagName}.${String(e.className).slice(0, 24)} ${e.scrollWidth}>${e.clientWidth}`).join(' ');
     for (const e of document.querySelectorAll('button, a[href], select, input:not([type=hidden]), textarea, [role=tab]')) {
       if (e.closest('.sr, .skip, .search, .chk, .toast') || e.matches('input[type=checkbox]')) continue;
       const b = e.getBoundingClientRect(); if (!b.width || !b.height) continue;
@@ -298,6 +298,7 @@ await page.goBack(); await page.reload(); await wait('The sky follows your time 
 {
   const PJ = `Website relaunch ${Date.now()}`, T1 = `Write homepage copy ${Date.now()}`, T2 = `Review design ${Date.now()}`;   // unique per run: a re-run on the same local database never collides
   await admin.query('update time_entries set ended_at = now() where ended_at is null');
+  await admin.query("insert into projects (workspace_id, name) select $1, 'Seed internal project' where not exists (select 1 from projects where workspace_id = $1 and client_id is null and archived_at is null)", [L]);   // a fresh database has no project yet: the home shows its empty state instead of the two sections
   await page.goto(`${base}/#/projects`); await page.waitForSelector('.pj-sections h2', { timeout: 9000 }).catch(async (e) => { await shot(page, 'FAILED-pj'); console.log((await page.locator('body').innerText()).slice(0, 600), problems.slice(0, 3), net.slice(-4)); throw e; });
   check('P1', 'Projects opens as its own app with a sidebar and a New project action', (await page.locator('.pj-side').count()) === 1 && (await page.getByRole('button', { name: 'New project' }).count()) >= 1);
   await page.waitForFunction(() => document.querySelectorAll('.pj-sections h2').length >= 2, null, { timeout: 9000 });
