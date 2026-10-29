@@ -72,10 +72,16 @@ export function createApiBackend(opts: { fetchImpl?: typeof fetch; storage?: Sto
       return rows[0]?.r as T;
     },
     async listWorkspaces(): Promise<Workspace[]> {
-      const rows = await call<{ org_id: string; name: string; slug: string; member_kind: string }[]>('org.list', {}, NO_ORG);
-      return rows.filter((o) => o.member_kind !== 'client').map((o) => ({ id: o.org_id, name: o.name, slug: o.slug }) as Workspace);
+      const rows = await call<{ org_id: string; name: string; slug: string; member_kind: string; role?: string; is_active?: boolean }[]>('org.list', {}, NO_ORG);
+      return rows.filter((o) => o.member_kind !== 'client').map((o) => ({ id: o.org_id, name: o.name, slug: o.slug, isActive: !!o.is_active, role: o.role }) as Workspace);
     },
-    async setActiveWorkspace(workspaceId: string) { org = workspaceId; },
+    // The ecosystem owns "which organization is active" (profiles.active_workspace_id, the shell's switcher): Planner switches through the same operation,
+    // so the shell and Planner always agree and a reload opens the organization the person last chose.
+    async setActiveWorkspace(workspaceId: string) {
+      const rows = await call<{ outcome: string }[]>('org.switch', { org: workspaceId, app: 'planner' }, NO_ORG);
+      if (rows[0]?.outcome === 'not_available') throw { code: 'forbidden', message: 'You can only switch to an organization you belong to.' };
+      org = workspaceId;
+    },
     async listProjects(workspaceId: string): Promise<ProjectRef[]> {
       const rows = await call<{ id: string; name: string }[]>('projects.list', { scope: 'all' }, workspaceId);
       return rows.map((p) => ({ id: p.id, name: p.name }));

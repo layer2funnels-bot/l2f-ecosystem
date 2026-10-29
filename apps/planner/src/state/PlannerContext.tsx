@@ -6,6 +6,7 @@ import { PlannerError } from '../api/types.ts';
 import type { PlannerClient } from '../api/client.ts';
 import { todayIso } from '../lib/schedule.ts';
 import { useRoute, type Page, type Route } from './route.ts';
+import { defaultOrg } from '../../../web/js/routes.js';   // the shell's rule for the organization to open when none is active yet
 
 export type ToastKind = 'success' | 'error' | 'info';
 export interface ToastItem { id: number; kind: ToastKind; text: string }
@@ -93,7 +94,9 @@ export function PlannerProvider({ client, me, children }: { client: PlannerClien
       setWorkspaces(list);
       if (!list.length) { setStatus('no-access'); return; }
       const remembered = safeGet(wsStore(me.id));
-      setWsId(list.find((w) => w.id === remembered)?.id ?? list[0]!.id);
+      // inside the ecosystem the active organization is the one the shell has active; the remembered choice only serves the demo
+      // with no active organization yet, the shell's own rule decides (highest role, then name), so both always open the same one
+      setWsId(list.find((w) => w.isActive)?.id ?? (list[0]!.role ? (defaultOrg(list) as Workspace).id : (list.find((w) => w.id === remembered)?.id ?? list[0]!.id)));
     }).catch(() => { if (live) { setStatus('error'); setErrorText('The organizations could not be loaded.'); } });
     return () => { live = false; };
   }, [client, me.id]);

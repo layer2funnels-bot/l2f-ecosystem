@@ -61,3 +61,16 @@ test('a 401 triggers one refresh and one retry', async () => {
   assert.equal(await b.rpc('planner_get_plan', { p_plan: 'x' }), 1);
   assert.deepEqual(seen, ['Bearer stale', 'Bearer fresh']);
 });
+
+// ---- the organization is the ecosystem's, not Planner's own
+test('the organization list carries the active one, and switching goes through the shared switch operation', async () => {
+  const seen: { url: string; body: unknown }[] = [];
+  const fetchImpl = (async (url: string, init: RequestInit) => { seen.push({ url, body: JSON.parse(String(init.body)) });
+    return new Response(JSON.stringify({ ok: true, data: url.endsWith('org.list') ? [{ org_id: ORG, name: 'Aurj', slug: 'aurj', member_kind: 'staff', is_active: true }, { org_id: 'b', name: 'L', slug: 'layer2funnels', member_kind: 'staff', is_active: false }, { org_id: 'c', name: 'Client', slug: 'x', member_kind: 'client', is_active: false }] : [{ outcome: 'same_page' }] }), { status: 200 }); }) as unknown as typeof fetch;
+  const b = createApiBackend({ fetchImpl, storage: store({ access: 't', userId: 'u1' }) });
+  const list = await b.listWorkspaces();
+  assert.deepEqual(list.map((w) => [w.name, w.isActive]), [['Aurj', true], ['L', false]]);   // client contacts never see Planner
+  await b.setActiveWorkspace('b');
+  assert.equal(seen[1]!.url, '/api/org.switch');
+  assert.deepEqual(seen[1]!.body, { org: 'b', app: 'planner' });
+});
