@@ -26,7 +26,8 @@
     "check:fmp-copy": "node scripts/fmp-copy.mjs verify",
     "dryrun:fmp": "node scripts/fmp-dryrun/run.mjs",
     "rehearsal:local": "node scripts/rehearsal.mjs",
-    "check:pg17": "node scripts/check-pg17.mjs"
+    "check:pg17": "node scripts/check-pg17.mjs",
+    "test:e2e:planner": "node scripts/e2e-planner.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "0.3.10",

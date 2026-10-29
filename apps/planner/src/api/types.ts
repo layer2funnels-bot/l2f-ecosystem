@@ -9,7 +9,7 @@ export type UpdateCadence = 'none' | 'weekly' | 'fortnightly' | 'monthly' | 'qua
 export type Cadence = 'none' | 'weekly' | 'fortnightly' | 'monthly' | 'quarterly';
 
 export interface Member { user_id: string; name: string; role: 'owner' | 'admin' | 'editor' | 'viewer' }
-export interface Workspace { id: string; slug: 'layer2funnels' | 'aurj'; name: string }
+export interface Workspace { id: string; slug: 'layer2funnels' | 'aurj'; name: string; /** the organization the ecosystem has active for this person (the shell's switcher); set by the API backend only */ isActive?: boolean; role?: string }
 export interface Identity { id: string; name: string }
 
 /** Which Planner actions the signed-in person may take (the database still enforces every one). */
