@@ -115,3 +115,10 @@
 .chip.tag-red{background:var(--danger-tint);color:var(--danger)}.chip.tag-violet,.chip.tag-teal,.chip.tag-pink,.chip.tag-slate{background:var(--sunk);color:var(--text2)}
 @media (max-width:600px){.pj-tool{flex:1 1 45%}.pj-bulk{position:static}}
 .drawer-bd > h3{margin:var(--space-5) 0 var(--space-2)}
+/* R3: timeline bars (start to due), templates, waiting on */
+.pj-mark.span{transform:none;border-radius:var(--radius-sm);text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:24px}
+.pj-tpls{margin-top:var(--space-6)}
+.pj-tpl{display:grid;gap:var(--space-2)}
+.pj-deps .notice{margin-bottom:var(--space-2)}
+.pj-mark.span{max-width:none;background:var(--action-tint)}
+.pj-tl-in{position:relative;min-width:100%}.pj-tl-in .pj-ticks,.pj-tl-in .pj-track{min-width:0}

@@ -37,14 +37,19 @@ export const shiftMonth = (year, month, by) => { const m = month - 1 + by; retur
 
 /** Timeline: the date range to draw and each bar as percentages. Tasks with only a due date draw as a marker on that day. */
 export function timeline(project, tasks, today) {
-  const dates = [project.start_on, project.due_on, today, ...tasks.map((t) => t.due_on)].filter(Boolean).map((d) => String(d).slice(0, 10)).sort();
+  const dates = [project.start_on, project.due_on, today, ...tasks.flatMap((t) => [t.start_on, t.due_on])].filter(Boolean).map((d) => String(d).slice(0, 10)).sort();
   if (!dates.length) return null;
   const from = addDays(dates[0], -2), to = addDays(dates.at(-1), 2); const span = Math.max(1, diffDays(to, from));
   const pct = (d) => Math.max(0, Math.min(100, (100 * diffDays(d, from)) / span));
   const projectBar = project.start_on || project.due_on ? { left: pct(project.start_on ?? project.due_on), width: Math.max(1.5, pct(project.due_on ?? project.start_on) - pct(project.start_on ?? project.due_on)) } : null;
   return { from, to, days: span, today: today ? pct(today) : null, project: projectBar,
-    marks: sortTasks(tasks.filter((t) => t.due_on)).map((t) => ({ id: t.id, title: t.title, status: t.status, left: pct(String(t.due_on).slice(0, 10)), overdue: t.status !== 'done' && today && String(t.due_on).slice(0, 10) < today })),
-    ticks: Array.from({ length: Math.min(8, span + 1) }, (_, i) => { const d = addDays(from, Math.round((i * span) / Math.min(7, span))); return { date: d, left: pct(d) }; }) };
+    // a task with a start and a due date is a bar; one with a single date is a point at that date
+    marks: sortTasks(tasks.filter((t) => t.due_on || t.start_on)).map((t) => { const s = t.start_on ? String(t.start_on).slice(0, 10) : null, d = t.due_on ? String(t.due_on).slice(0, 10) : null;
+      return { id: t.id, title: t.title, status: t.status, left: pct(s ?? d), ...(s && d && d > s ? { width: pct(d) - pct(s) } : {}), overdue: t.status !== 'done' && today && d && d < today }; }),
+    // px: the drawing width. 16 px a day, at least a screen (640 px): a long plan scrolls sideways instead of squeezing its bars to slivers
+    px: Math.max(640, span * 16),
+    ticks: span > 40 ? Array.from({ length: Math.floor(span / 7) + 1 }, (_, i) => { const d = addDays(from, i * 7); return { date: d, left: pct(d) }; })
+      : Array.from({ length: Math.min(8, span + 1) }, (_, i) => { const d = addDays(from, Math.round((i * span) / Math.min(7, span))); return { date: d, left: pct(d) }; }) };
 }
 
 /** "Overdue 3 days", "Today", "Tomorrow", "In 5 days", then the date. */
