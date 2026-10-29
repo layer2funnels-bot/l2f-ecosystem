@@ -29,7 +29,7 @@ Labels: **verified** = run in this repository; **not run** = needs staging or li
 | `DRIVERS=pglite npm test` (all repository suites with 0033) | verified: 50 suites pass, `planner-strategy` 18/18, `direct-access` 19/19, `isolation` 47/47, `audit` 63/63 |
 | `node scripts/build-web.mjs`, `check:tokens`, `check:secrets` | verified: pass |
 | Browser journey `scripts/e2e-planner.mjs` (local stack, real sign-ups, two organizations) | verified: 16/16 |
-| Whole browser suite `scripts/e2e-ui.mjs` | see the pull request description |
+| Whole browser suite `scripts/e2e-ui.mjs` (local stack, includes the Whiteboard editor) | verified: 241/241 |
 | GitHub Actions (test, e2e, fmp-copy) | **not run**: the jobs end in 2 s with no runner (account usage restriction), so no CI result exists |
 | Staging, live | **not run** |
 
