@@ -1,0 +1,3 @@
+/* Every Planner style in one file: the shell loads it into Planner's shadow root (src/embed.tsx); the standalone demo imports it (src/main.tsx). */
+@import './base.css';
+@import './pages.css';

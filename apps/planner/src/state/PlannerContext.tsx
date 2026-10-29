@@ -5,7 +5,7 @@ import type { Can, Identity, Member, NamedHorizon, PlanDetail, PlanSummary, Work
 import { PlannerError } from '../api/types.ts';
 import type { PlannerClient } from '../api/client.ts';
 import { todayIso } from '../lib/schedule.ts';
-import { useRoute, type Page, type Route } from './route.ts';
+import { PLAN_PAGES, useRoute, type Page, type Route } from './route.ts';
 import { defaultOrg } from '../../../web/js/routes.js';   // the shell's rule for the organization to open when none is active yet
 
 export type ToastKind = 'success' | 'error' | 'info';
@@ -56,7 +56,8 @@ const wsStore = (userId: string) => `planner.workspace.${userId}`;
 const safeGet = (k: string) => { try { return window.localStorage.getItem(k); } catch { return null; } };
 const safeSet = (k: string, v: string) => { try { window.localStorage.setItem(k, v); } catch { /* storage unavailable: the choice just is not remembered */ } };
 
-export function PlannerProvider({ client, me, children }: { client: PlannerClient; me: Identity; children: ReactNode }) {
+/** `embedded`: the ecosystem shell hosts Planner and owns the theme, the organization palette and organization switching. */
+export function PlannerProvider({ client, me, embedded = false, children }: { client: PlannerClient; me: Identity; embedded?: boolean; children: ReactNode }) {
   const { route, navigate, patch } = useRoute();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [wsId, setWsId] = useState<string | null>(null);
@@ -105,12 +106,13 @@ export function PlannerProvider({ client, me, children }: { client: PlannerClien
   // Design v4: data-org picks the organization palette, data-theme the light or dark scheme (system by default, overridable).
   const [themePref, setThemePrefState] = useState<'auto' | 'light' | 'dark'>(() => { const v = safeGet('planner.theme'); return v === 'light' || v === 'dark' ? v : 'auto'; });
   const setThemePref = useCallback((v: 'auto' | 'light' | 'dark') => { setThemePrefState(v); safeSet('planner.theme', v); }, []);
-  useEffect(() => { document.documentElement.dataset.org = workspace?.slug === 'aurj' ? 'aurj' : 'l2f'; }, [workspace?.slug]);
+  useEffect(() => { if (!embedded) document.documentElement.dataset.org = workspace?.slug === 'aurj' ? 'aurj' : 'l2f'; }, [workspace?.slug, embedded]);
   useEffect(() => {
+    if (embedded) return;   // the shell's profile menu sets light, dark or system for every app
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
     const apply = () => { document.documentElement.dataset.theme = themePref === 'auto' ? (mq.matches ? 'dark' : 'light') : themePref; };
     apply(); mq.addEventListener('change', apply); return () => mq.removeEventListener('change', apply);
-  }, [themePref]);
+  }, [themePref, embedded]);
 
   const loadWorkspace = useCallback(async (ws: string, keepPlan: string | null, archived: boolean, urlPlan: string | null = null) => {
     const gen = ++generation.current;
@@ -162,6 +164,11 @@ export function PlannerProvider({ client, me, children }: { client: PlannerClien
     if (planId && wsId && route.params.plan !== planId) { safeSet(planStore(me.id, wsId), planId); patch({ plan: planId }, { replace: true }); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [planId, wsId]);
+  // a menu link carries no plan (the shell's section bar): put the selected one back in the address, never replacing one a link named
+  useEffect(() => {
+    if (planId && !route.params.plan && PLAN_PAGES.includes(route.page)) patch({ plan: planId }, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [route.page, route.params.plan]);
 
   // the address is the source of truth for the selected plan: following a link while the app is open switches plan (or says it is missing)
   useEffect(() => {

@@ -29,19 +29,22 @@ The demo runs PostgreSQL 17 (PGlite) **inside the browser** with the repository'
 
 `?db=<name>` in the address opens a separate demo database (handy for parallel testing tabs).
 
-## Using it for real
-`PlannerApp` needs two things: a `PlannerBackend` and the signed-in person.
-```tsx
-import { PlannerApp, createSupabaseBackend } from '@l2f/planner';
-<PlannerApp backend={createSupabaseBackend(signedInSupabaseClient)} me={{ id: user.id, name: profile.display_name }} embedded />
+## Using it for real (inside the ecosystem)
+The shell mounts Planner at **`/#/planner/<page>`**: `apps/web/js/modules/planner.js` imports `/planner/embed.js` (built from `src/embed.tsx`, fixed file name) and calls
+```js
+const unmount = await mount(element, { org: activeOrgId, me: { id, name }, call: (op, input, org) => api.call(op, input, { org }) });
 ```
-Sign-in, the Launcher and the organization switcher belong to Office (Phase 5 slice 0, not built yet); `embedded` hides Planner's own brand and organization switcher so Office's header is used. The Supabase adapter calls the same `planner_*` functions; **it has not been run against a live Supabase project** (none exists yet): apply migrations 0001-0006 to a staging project and run the database suites against it first (`docs/DEVELOPER_HANDOVER.md` §6).
+Planner renders `embedded` in a shadow root under the shell's header: no brand, organization picker, theme button or skip link of its own; the shell's
+API client carries the session; the shell's organization is the only one (an organization switch unmounts and mounts again). Its styles
+(`src/styles/planner.css`) use the shared tokens from `packages/ui/tokens.css`, which reach the shadow root from `<html>`.
+`/planner/` itself redirects into the shell, except `/planner/?demo` (the local demo above). Status and checks: `docs/PLANNER_INTEGRATION_STATUS.md`.
 
 ## Structure
 ```
 src/api        typed client (one method per SQL function), local engine + demo seed, Supabase adapter
 src/state      provider (organization, plan, permissions, mutation helper) and hash routing
-src/shell      frame: organization switcher, plan selector, navigation, search
+src/shell      frame: plan selector, tabs, search, Create (standalone demo: also the left menu and organization switcher)
+src/embed.tsx  mount() for the ecosystem shell; src/main.tsx: the /planner/ page (demo, otherwise a redirect)
 src/pages      one file per screen
 src/components goal drawer, goal form, filter bar, dialogs
 src/ui         accessible primitives, overlays, tiny SVG charts

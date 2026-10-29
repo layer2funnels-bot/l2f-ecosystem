@@ -1,13 +1,16 @@
 import { StrictMode, Suspense, lazy } from 'react';
 import { createRoot } from 'react-dom/client';
 
-// Signed in to the ecosystem (the shell stored a session) -> the real Planner through the shared API.
-// Otherwise, or with ?demo, the local demo with synthetic data in the browser.
-// Both are loaded on demand: a signed-in person never downloads the demo database engine and its migrations (about 1 MB of code
-// plus 13 MB of WebAssembly), which was the main cause of the slow first load.
-const DemoHost = lazy(() => import('./host/DemoHost.tsx'));
-const EcosystemHost = lazy(() => import('./host/EcosystemHost.tsx'));
+// The real Planner lives inside the ecosystem shell at /#/planner/... (src/embed.tsx), with the shell's header, organization switcher,
+// sign-in and theme. This page only keeps the local demo (?demo: synthetic data in the browser); any other visit, including an old
+// /planner/#/planner/map?plan=... link, is sent to the same address inside the shell, which asks for sign-in when needed.
 const demo = new URLSearchParams(window.location.search).has('demo');
-let signedIn = false; try { signedIn = !!JSON.parse(window.localStorage.getItem('l2f.session.v1') || 'null')?.access; } catch { /* no storage */ }
-createRoot(document.getElementById('root')!).render(
-  <StrictMode><Suspense fallback={<p style={{ padding: 24, fontFamily: 'system-ui' }}>Loading Planner…</p>}>{signedIn && !demo ? <EcosystemHost /> : <DemoHost />}</Suspense></StrictMode>);
+if (!demo) {
+  const hash = /^#\/planner(\/|$|\?)/.test(window.location.hash) ? window.location.hash : '#/planner';
+  window.location.replace(`/${hash}`);
+} else {
+  // the demo database engine (about 1 MB of code plus 13 MB of WebAssembly) is only ever downloaded here
+  const DemoHost = lazy(() => import('./host/DemoHost.tsx'));
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode><Suspense fallback={<p style={{ padding: 24, fontFamily: 'system-ui' }}>Loading the Planner demo…</p>}><DemoHost /></Suspense></StrictMode>);
+}

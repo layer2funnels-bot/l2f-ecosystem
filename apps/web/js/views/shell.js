@@ -79,25 +79,35 @@ function profile({ email, name, onSignOut, theme, weather }) {
   return h('div', { class: 'swwrap profile-wrap' }, btn, menu);
 }
 
-export function officeNav(route, isAdmin) {
-  const pages = OFFICE_PAGES.filter((p) => !p.adminOnly || isAdmin);
-  const cur = officeSection(route);
-  const top = h('nav', { class: 'nav has-b', 'aria-label': 'Office sections' }, h('span', { class: 'appname' }, 'Office'),
-    ...pages.map((p) => h('a', { href: p.href, ...(p.key === cur ? { 'aria-current': 'page' } : {}) }, p.label)));
+/** An app's own menu in the shell: a bar under the header (tablet/desktop) and a bottom bar (phone), the same for every app.
+ *  `pages`: [{ key, label, icon, href }]; `cur`: the current key. The links carry data-key so the mark can move without a re-render. */
+export function appNav(name, pages, cur) {
+  const mark = (p) => ({ 'data-key': p.key, ...(p.key === cur ? { 'aria-current': 'page' } : {}) });
+  const top = h('nav', { class: 'nav has-b', 'aria-label': `${name} sections` }, h('span', { class: 'appname' }, name),
+    ...pages.map((p) => h('a', { href: p.href, ...mark(p) }, p.label)));
   const main = pages.length > 5 ? pages.slice(0, 4) : pages; const more = pages.length > 5 ? pages.slice(4) : [];
-  const bottom = h('nav', { class: 'bnav', 'aria-label': 'Office sections' },
-    ...main.map((p) => h('a', { href: p.href, ...(p.key === cur ? { 'aria-current': 'page' } : {}) }, icon(p.icon), h('span', {}, SHORT[p.label] ?? p.label))),
-    more.length ? h('button', { type: 'button', 'aria-haspopup': 'dialog', ...(more.some((p) => p.key === cur) ? { 'aria-current': 'page' } : {}),
+  const bottom = h('nav', { class: 'bnav', 'aria-label': `${name} sections` },
+    ...main.map((p) => h('a', { href: p.href, ...mark(p) }, icon(p.icon), h('span', {}, SHORT[p.label] ?? p.label))),
+    more.length ? h('button', { type: 'button', 'aria-haspopup': 'dialog', 'data-more': more.map((p) => p.key).join(' '), ...(more.some((p) => p.key === cur) ? { 'aria-current': 'page' } : {}),
       onclick: () => {
-        const close = dialog({ title: 'More in Office', body: h('div', { class: 'sheet' }, ...more.map((p) => h('a', { class: 'btn', href: p.href, onclick: () => close(), ...(p.key === cur ? { 'aria-current': 'page' } : {}) }, icon(p.icon), p.label))), actions: [{ label: 'Close', focus: true }] });
+        const close = dialog({ title: `More in ${name}`, body: h('div', { class: 'sheet' }, ...more.map((p) => h('a', { class: 'btn', href: p.href, onclick: () => close(), ...(p.key === cur ? { 'aria-current': 'page' } : {}) }, icon(p.icon), p.label))), actions: [{ label: 'Close', focus: true }] });
       } }, icon('more'), h('span', {}, 'More')) : null);
   return { top, bottom };
 }
+/** Moves the current-page mark of the app menu on screen (an app that routes its own pages, like Planner, needs no shell re-render). */
+export function markAppNav(cur) {
+  for (const a of document.querySelectorAll('.nav a[data-key], .bnav a[data-key]')) { if (a.dataset.key === cur) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); }
+  for (const b of document.querySelectorAll('.bnav button[data-more]')) { if (b.dataset.more.split(' ').includes(cur)) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); }
+}
 
-export function shellView({ app, orgs, active, email, name, route, content, banner, isAdmin, inOffice, launcherCurrent, catalog, registry, currentApp, theme, weather }) {
+export function officeNav(route, isAdmin) {
+  return appNav('Office', OFFICE_PAGES.filter((p) => !p.adminOnly || isAdmin), officeSection(route));
+}
+
+export function shellView({ app, orgs, active, email, name, route, content, banner, isAdmin, inOffice, launcherCurrent, catalog, registry, currentApp, theme, weather, nav: appBar = null }) {
   offs.forEach((f) => f()); offs = [];
-  document.body.classList.toggle('hasb', Boolean(inOffice));
-  const nav = inOffice ? officeNav(route, isAdmin) : null;
+  const nav = appBar ?? (inOffice ? officeNav(route, isAdmin) : null);
+  document.body.classList.toggle('hasb', Boolean(nav));
   return h('div', { class: 'app', 'data-org': active.slug ?? '' },
     h('a', { class: 'skip', href: '#main', onclick: (e) => { e.preventDefault(); const m = document.getElementById('main'); m.setAttribute('tabindex', '-1'); m.focus(); } }, 'Skip to content'),      // not a hash link: the address is the route
     h('div', { class: 'bar4' }),

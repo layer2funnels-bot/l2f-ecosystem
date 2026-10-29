@@ -8,7 +8,8 @@ import { plural } from '../lib/format.ts';
 interface Note { key: string; text: string; goalId?: string; href?: string }
 
 /** What needs you right now, worked out from the open plan: late updates, overdue objectives and overdue reviews. Nothing is stored or sent. */
-export function Notifications() {
+/** `embedded`: the shell's header already has a bell (for ecosystem notifications), so Planner's reminders are labelled in words. */
+export function Notifications({ embedded = false }: { embedded?: boolean }) {
   const { plan, me, today, openGoal, navigate, planId } = usePlanner();
   const notes = useMemo<Note[]>(() => {
     if (!plan) return [];
@@ -25,7 +26,7 @@ export function Notifications() {
   }, [plan, me.id, today]);
   if (!plan) return null;
   return (
-    <Popover align="end" count={notes.length} label={<><Icon name="bell" /><span className="sr-only">Notifications</span></>}>
+    <Popover align="end" count={notes.length} label={embedded ? 'Needs you' : <><Icon name="bell" /><span className="sr-only">Notifications</span></>}>
       <div className="notes">
         <h3 className="ps-sub">Needs you</h3>
         {notes.length === 0 ? <p className="muted">You’re all caught up.</p> : (

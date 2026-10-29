@@ -1,6 +1,10 @@
 /* Shell: left menu + stage (Design v4 shell: 256px side rail on surface2, 44px nav items, 12px radius). */
 .app { display: grid; grid-template-columns: 252px minmax(0, 1fr); min-block-size: 100dvh; }
 .app--embedded { grid-template-columns: minmax(0, 1fr); }
+/* inside the shell: its content area already sets the page width and side padding, and the page (not Planner) is the full height */
+.app--embedded { min-block-size: 0; }
+.app--embedded .topbar, .app--embedded .planbar, .app--embedded .subnav { padding-inline: 0; }
+.app--embedded .main { padding-inline: 0; padding-block-end: 0; }
 .stage { min-inline-size: 0; display: flex; flex-direction: column; }
 .stage > .main { flex: 1 1 auto; }
 .rail { position: sticky; inset-block-start: 0; block-size: 100dvh; display: flex; flex-direction: column; gap: 4px; padding: 14px 12px; background: var(--surface2); border-inline-end: var(--bw) solid var(--line); overflow-y: auto; z-index: var(--z-menu); }

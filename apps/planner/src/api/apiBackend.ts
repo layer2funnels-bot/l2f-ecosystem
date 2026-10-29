@@ -13,10 +13,19 @@ const NO_ORG = '00000000-0000-0000-0000-000000000000';
 interface Envelope<T> { ok: boolean; data?: T; error?: { code?: string; message?: string } }
 
 type Auth = { refresh(token: string): Promise<{ ok: boolean; data?: Record<string, unknown> | null }> };
-export function createApiBackend(opts: { fetchImpl?: typeof fetch; storage?: Storage; auth?: Auth; now?: () => number } = {}): PlannerBackend & { me(): { id: string; name: string } | null } {
+/** The ecosystem shell hosting Planner (src/embed.tsx): its API client, its active organization and the signed-in person.
+ *  The shell's client already carries the token, refreshes it and shows "session expired", so Planner keeps no session logic of its own. */
+export interface Host {
+  org: string;
+  me: { id: string; name: string };
+  call(op: string, input: unknown, org: string): Promise<Envelope<unknown> & { status?: number; offline?: boolean }>;
+}
+export function createApiBackend(opts: { fetchImpl?: typeof fetch; storage?: Storage; auth?: Auth; now?: () => number; host?: Host; timeoutMs?: number } = {}): PlannerBackend & { me(): { id: string; name: string } | null } {
+  const host = opts.host ?? null;
+  const timeoutMs = opts.timeoutMs ?? 20_000;
   const fetchImpl = opts.fetchImpl ?? ((...a: Parameters<typeof fetch>) => fetch(...a));
-  const storage = opts.storage ?? window.localStorage;
-  let org: string | null = null;
+  const storage = (opts.storage ?? (host ? null : window.localStorage)) as Storage;   // hosted: never read, the shell owns the session
+  let org: string | null = host?.org ?? null;   // hosted: the shell decides the organization; it never changes inside one mount
   const session = () => { try { return JSON.parse(storage.getItem(SESSION_KEY) || 'null') as { access?: string; userId?: string; name?: string; email?: string } | null; } catch { return null; } };
   // Always read the latest stored session: the shell (another tab) may have refreshed it since this page opened.
   const shell = () => createSession({ storage, ...(opts.now ? { now: opts.now } : {}) });
@@ -40,6 +49,7 @@ export function createApiBackend(opts: { fetchImpl?: typeof fetch; storage?: Sto
   }
 
   async function call<T>(op: string, input: unknown, orgId = org ?? NO_ORG): Promise<T> {
+    if (host) return hostCall<T>(host, op, input, orgId);
     // a request that never answers must end as a clear error, not an endless spinner that only a refresh clears
     const ctl = new AbortController(); const timer = setTimeout(() => ctl.abort(), 20_000);
     const send = async () => fetchImpl(`/api/${op}`, {
@@ -61,23 +71,36 @@ export function createApiBackend(opts: { fetchImpl?: typeof fetch; storage?: Sto
     return body.data as T;
   }
 
+  async function hostCall<T>(h: Host, op: string, input: unknown, orgId: string): Promise<T> {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const late = new Promise<null>((resolve) => { timer = setTimeout(() => resolve(null), timeoutMs); });
+    const r = await Promise.race([h.call(op, input ?? {}, orgId), late]).finally(() => clearTimeout(timer));
+    if (!r) throw { code: 'offline', message: 'Planner could not reach the server. Check your connection and try again.' };
+    if (r.ok) return r.data as T;
+    const code = r.error?.code ?? 'failed';
+    if (code === 'session_expired' || r.status === 401) throw ended();          // the shell is already showing its "session expired" screen
+    if (code === 'offline' || r.offline) throw { code: 'offline', message: 'Planner could not reach the server. Check your connection and try again.' };
+    throw { code, message: r.error?.message };
+  }
+
   return {
     kind: 'supabase',
-    me() { const s = session(); return s?.userId ? { id: s.userId, name: s.name ?? s.email ?? 'You' } : null; },
+    me() { if (host) return host.me; const s = session(); return s?.userId ? { id: s.userId, name: s.name ?? s.email ?? 'You' } : null; },
     async rpc<T>(fn: string, args: Record<string, unknown> = {}): Promise<T> {
       if (!/^planner_[a-z_]+$/.test(fn)) throw new Error('unknown operation');
       // the organization a call names becomes the active one; calls about one plan or objective use the active organization
-      if (typeof args.p_workspace === 'string') org = args.p_workspace;
+      if (!host && typeof args.p_workspace === 'string') org = args.p_workspace;
       const rows = await call<{ r: T }[]>(`planner.strategy.${fn.replace(/^planner_/, '')}`, { args });
       return rows[0]?.r as T;
     },
     async listWorkspaces(): Promise<Workspace[]> {
       const rows = await call<{ org_id: string; name: string; slug: string; member_kind: string; role?: string; is_active?: boolean }[]>('org.list', {}, NO_ORG);
-      return rows.filter((o) => o.member_kind !== 'client').map((o) => ({ id: o.org_id, name: o.name, slug: o.slug, isActive: !!o.is_active, role: o.role }) as Workspace);
+      return rows.filter((o) => o.member_kind !== 'client').map((o) => ({ id: o.org_id, name: o.name, slug: o.slug, isActive: host ? o.org_id === host.org : !!o.is_active, role: o.role }) as Workspace);
     },
     // The ecosystem owns "which organization is active" (profiles.active_workspace_id, the shell's switcher): Planner switches through the same operation,
     // so the shell and Planner always agree and a reload opens the organization the person last chose.
     async setActiveWorkspace(workspaceId: string) {
+      if (host) throw { code: 'forbidden', message: 'Switch organization with the switcher at the top of the page.' };   // hosted: only the shell switches
       const rows = await call<{ outcome: string }[]>('org.switch', { org: workspaceId, app: 'planner' }, NO_ORG);
       if (rows[0]?.outcome === 'not_available') throw { code: 'forbidden', message: 'You can only switch to an organization you belong to.' };
       org = workspaceId;
