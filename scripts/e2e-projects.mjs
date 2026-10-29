@@ -94,7 +94,7 @@ await page.click('.pj-title:has-text("Moodboard")'); await page.waitForSelector(
 await page.fill('.drawer .pj-tags input', 'Brand'); await page.press('.drawer .pj-tags input', 'Enter'); await page.waitForSelector('.drawer .pj-taglist .chip:has-text("Brand")', { timeout: 9000 });
 await page.fill('#td-due', '2030-06-15'); await page.press('#td-due', 'Tab'); await page.waitForTimeout(600);
 await page.keyboard.press('Escape'); await page.waitForTimeout(500);
-await page.click('.pj-title:has-text("Moodboard")'); await page.waitForSelector('.drawer #td-due', { timeout: 9000 });
+await page.click('.pj-title:has-text("Moodboard")'); await page.waitForSelector('.drawer .pj-taglist .chip:has-text("Brand")', { timeout: 9000 }).catch(() => {});
 const dueShown = await page.inputValue('#td-due');
 check('PR13', 'A tag added in the task panel shows on the task, and a saved due date shows again in the date field when reopened', dueShown === '2030-06-15' && await page.locator('.drawer .pj-taglist .chip:has-text("Brand")').isVisible(), dueShown);
 // files: one of the project's Drive documents
@@ -124,6 +124,42 @@ const over = await page.evaluate(() => document.documentElement.scrollWidth - in
 check('PR18', 'On a phone the List with its toolbar does not scroll sideways', over <= 1, String(over));
 await shot(page, 'r2-phone');
 await page.setViewportSize({ width: 1366, height: 860 });
+
+// ---------------------------------------------------------------- R3: repeatable work
+await page.goto(`${base}/#/projects/p/${P}?tab=list`); await page.reload(); await page.waitForSelector('.pj-toolbar', { timeout: 9000 });
+await page.click('.pj-title:has-text("Moodboard")'); await page.waitForSelector('.drawer #td-start', { timeout: 9000 });
+await page.fill('#td-start', '2030-06-10'); await page.press('#td-start', 'Tab'); await page.waitForTimeout(500);
+await page.selectOption('#td-repeat', 'weekly'); await page.waitForTimeout(500);
+await page.waitForSelector('.drawer .pj-deps select', { timeout: 9000 });
+await page.selectOption('.drawer .pj-deps select', { label: 'Write homepage copy' }); await page.waitForSelector('.drawer .pj-deps .notice', { timeout: 9000 });
+check('PR19', 'In the task panel: a start date, "every week", and a task it waits on (shown as "Waiting on 1 task")', (await page.locator('.drawer .pj-deps .notice').innerText()).includes('Waiting on 1 task'));
+await page.keyboard.press('Escape'); await page.waitForTimeout(500);
+check('PR20', 'The List marks the task as waiting and repeating', /Waiting on 1/.test(await page.locator('.pj-row:has-text("Moodboard")').innerText()) && (await page.locator('.pj-row:has-text("Moodboard")').innerText()).includes('↻'));
+// Dan finishes what Moodboard waits on: Moodboard's assignee (Lena) is told
+await q("update project_tasks set assignee_id=$1 where project_id=$2 and title='Moodboard'", [lead.uid, P]);
+await dev.page.goto(`${base}/#/projects/p/${P}?tab=list`); await dev.page.reload(); await dev.page.waitForSelector('.pj-toolbar', { timeout: 9000 });
+await dev.page.click('.pj-row:has-text("Write homepage copy") .pj-check'); await dev.page.waitForTimeout(1200);
+await page.reload(); await page.waitForSelector('#bell .badge:not([hidden])', { timeout: 9000 }).catch(() => {}); await page.click('#bell'); await page.waitForSelector('.bell-item', { timeout: 9000 });
+check('PR21', 'When the task it waited on is done, its assignee is told it can start', /“Moodboard” can start/.test(await page.locator('.bell-menu').innerText()));
+await page.keyboard.press('Escape');
+await page.click('[role=tab]:has-text("Timeline")'); await page.waitForSelector('.pj-tl', { timeout: 9000 });
+check('PR22', 'On the Timeline a task with a start and a due date is a bar', await page.locator('.pj-mark.span:has-text("Moodboard")').isVisible());
+await shot(page, 'r3-timeline');
+// finishing a repeating task makes the next one
+await page.click('[role=tab]:has-text("List")'); await page.click('.pj-row:has-text("Moodboard") .pj-check'); await page.waitForTimeout(1500);
+const reps = await q("select due_on::text, status from project_tasks where project_id=$1 and title='Moodboard' order by due_on", [P]);
+check('PR23', 'Finishing the weekly task creates next week\'s, due 7 days later', reps.length === 2 && reps[0].status === 'done' && reps[1].due_on === '2030-06-22' && reps[1].status === 'todo', JSON.stringify(reps));
+// save as template, then a new project from it
+await page.click('.pj-actions button:has-text("Save as template")'); await page.waitForSelector('#cp-name'); await page.fill('#cp-name', `Relaunch template ${stamp}`);
+await page.click('[role=dialog] button:has-text("Save template")'); await page.waitForSelector('.pj-meta .chip:has-text("Template")', { timeout: 9000 });
+await page.goto(`${base}/#/projects`); await page.waitForSelector(`.pj-tpl:has-text("Relaunch template ${stamp}")`, { timeout: 9000 });
+await page.click(`.pj-tpl:has-text("Relaunch template ${stamp}") button:has-text("Use template")`); await page.waitForSelector('#np-name');
+await page.fill('#np-name', `From template ${stamp}`); await page.fill('#np-start', '2031-01-05'); await page.click('[role=dialog] button:has-text("Create project")');
+await page.waitForSelector(`h1:has-text("From template ${stamp}")`, { timeout: 9000 });
+const copied = await q("select t.title, s.name as section from project_tasks t join projects p on p.id=t.project_id left join project_sections s on s.id=t.section_id where p.name=$1 order by t.title", [`From template ${stamp}`]);
+const openInTemplate = await q("select count(*)::int n from project_tasks t join projects p on p.id=t.project_id where p.name=$1 and t.status <> 'done' and t.archived_at is null", [`Relaunch template ${stamp}`]);
+check('PR24', 'Save as template, then "Use template": the new project starts with the template\'s sections and all its open tasks', copied.some((c) => c.title === 'Moodboard' && c.section === 'Design') && copied.length === openInTemplate[0].n, JSON.stringify(copied));
+await shot(page, 'r3-from-template');
 
 check('PR99', 'No script errors or page policy violations during the journey', problems.length === 0, problems.slice(0, 3).join(' | '));
 const failed = results.filter((r) => !r.ok); console.log(`\n${results.length - failed.length}/${results.length} checks passed`);

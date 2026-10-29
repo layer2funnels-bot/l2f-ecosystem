@@ -45,6 +45,14 @@ check('PM17', 'Grouping: by section in the project\'s order with "No section" la
   bySec.map((g) => `${g.title}:${ids(g.tasks)}`).join('|') === 'Design:b|Build:ddd,a|No section:cc' && bySec[0].key === 's1' && bySec.at(-1).key === null
   && byWho.map((g) => g.title).join() === 'Ana,Ben,Unassigned' && groupTasks(V, 'priority').map((g) => g.title).join() === 'Urgent,High,Normal,Low'
   && byDue.map((g) => `${g.title}:${ids(g.tasks)}`).join('|') === 'Overdue:ddd|Today:b|Next 7 days:a|No date:cc' && groupTasks(V, 'status').map((g) => g.key).join() === 'todo,doing,blocked,done');
+// ---- R3: a task with a start date is a bar from start to due on the timeline; one with only a due date stays a mark
+const tl3 = timeline({ start_on: '2026-10-01', due_on: '2026-10-31' }, [t('a', { start_on: '2026-10-05', due_on: '2026-10-15' }), t('b', { due_on: '2026-10-20' }), t('c', { start_on: '2026-10-25' })], '2026-10-10');
+const ma = tl3.marks.find((m) => m.id === 'a'), mb = tl3.marks.find((m) => m.id === 'b'), mc = tl3.marks.find((m) => m.id === 'c');
+check('PM18', 'Timeline: a task with start and due dates is a bar with a width, a due-only task a point, a start-only task a point at its start',
+  ma && ma.width > 0 && Math.abs(ma.left + ma.width - (100 * (14 + 2 - 0)) / 34) < 0.01 && mb && !mb.width && mc && !mc.width && Math.abs(mc.left - (100 * 26) / 34) < 0.01);
+const long = timeline({}, [t('a', { start_on: '2030-06-10', due_on: '2030-06-15' })], '2026-10-29');
+check('PM19', 'A long timeline gets a fixed width per day (so it scrolls instead of squeezing bars to slivers) and a tick every week; a short one fits the screen',
+  long.px === long.days * 16 && long.ticks.length > 50 && long.ticks.every((k, n) => n === 0 || k.date > long.ticks[n - 1].date) && tl.px === 640);
 for (const x of results) console.log(`${x.ok ? 'PASS' : 'FAIL'}  ${x.id.padEnd(5)} ${x.name}`);
 const pc = results.filter((x) => x.ok).length; console.log(`\n${pc}/${results.length} checks passed`);
 process.exit(pc === results.length ? 0 : 1);

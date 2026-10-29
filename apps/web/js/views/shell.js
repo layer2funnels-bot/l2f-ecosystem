@@ -62,6 +62,7 @@ function appSwitcher({ catalog = [], registry, current, launcherCurrent }) {
 
 /** The header bell (migration 0034): what needs you in this organization. notifications: { count() -> n|null, list() -> rows|null, read(ids|'all'), href(row) }. */
 const KIND = { assigned: 'assigned you', mentioned: 'mentioned you on', commented: 'commented on', completed: 'completed' };
+const noteText = (r) => (r.kind === 'unblocked' ? `“${r.title}” can start: ${r.actor_name} finished what it was waiting on` : `${r.actor_name} ${KIND[r.kind] ?? 'updated'} “${r.title}”`);
 function bell(notifications) {
   const badge = h('span', { class: 'badge', hidden: true, 'aria-hidden': 'true' });
   const b = h('button', { type: 'button', class: 'iconbtn', id: 'bell', 'aria-haspopup': 'true', 'aria-expanded': 'false', 'aria-controls': 'bell-menu', 'aria-label': 'Notifications' }, icon('bell'), badge);
@@ -76,7 +77,7 @@ function bell(notifications) {
     const rows = await notifications.list();
     const unread = (rows ?? []).filter((r) => !r.read_at).map((r) => r.id);
     const item = (r) => h('a', { class: `opt bell-item${r.read_at ? '' : ' unread'}`, href: notifications.href(r), tabindex: '0', onclick: () => { close(false); if (!r.read_at) notifications.read([r.id]).then(() => notifications.count(true).then(paintCount)); } },
-      h('span', { class: 'tx' }, h('strong', {}, `${r.actor_name} ${KIND[r.kind] ?? 'updated'} “${r.title}”`), h('small', {}, `${r.project_name} · ${new Date(r.created_at).toLocaleString()}`)));
+      h('span', { class: 'tx' }, h('strong', {}, noteText(r)), h('small', {}, `${r.project_name} · ${new Date(r.created_at).toLocaleString()}`)));
     menu.replaceChildren(h('div', { class: 'mh bell-head' }, 'Notifications', unread.length ? h('button', { type: 'button', class: 'btn link', onclick: async () => { await notifications.read('all'); paintCount(0); menu.querySelectorAll('.unread').forEach((x) => x.classList.remove('unread')); } }, 'Mark all read') : null),
       ...(rows == null ? [h('p', { class: 'mfoot' }, 'Notifications couldn’t be loaded.')] : rows.length ? rows.map(item) : [h('p', { class: 'mfoot' }, 'You’re all caught up.')]));
     (menu.querySelector('a.opt') ?? menu).focus?.();
