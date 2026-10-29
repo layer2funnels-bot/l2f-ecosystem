@@ -14,10 +14,10 @@ import { buildWhiteboard } from './build-whiteboard.mjs';
 const out = at('dist/web'); rmSync(out, { recursive: true, force: true }); mkdirSync(out + '/packages/core', { recursive: true });
 await buildWhiteboard({ quiet: true });          // the editor bundle (skipped when its build-time dependencies are not installed: the board page then says so)
 cpSync(at('apps/web'), out, { recursive: true });
-// Planner (React, migration 0033): built by its own Vite config into apps/planner/dist, served at /planner/.
+// Planner (React, migration 0033): built by its own Vite config into apps/planner/dist, served at /planner/; the shell mounts /planner/embed.js at #/planner.
 // Cloudflare runs only this script, so it installs and builds Planner itself when the bundle is missing; on Cloudflare a failure stops the build
 // (the previous deployment stays live) instead of shipping a site where /planner/ silently falls back to the shell page.
-if (!existsSync(at('apps/planner/dist/index.html'))) {
+if (!existsSync(at('apps/planner/dist/index.html')) || !existsSync(at('apps/planner/dist/embed.js'))) {   // an older bundle without embed.js counts as missing
   const run = (args) => spawnSync('npm', ['--prefix', at('apps/planner'), ...args], { stdio: 'inherit' }).status === 0;
   if (!(run(['ci']) && run(['run', 'build']))) {
     if (process.env.CF_PAGES) { console.error('Planner build failed: stopping so /planner/ is never served as the shell page.'); process.exit(1); }

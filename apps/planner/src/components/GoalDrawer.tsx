@@ -13,6 +13,7 @@ import { ActionsTab } from './drawer/ActionsTab.tsx';
 import { RisksTab } from './drawer/RisksTab.tsx';
 import { CommentsTab } from './drawer/CommentsTab.tsx';
 import { HistoryTab } from './drawer/HistoryTab.tsx';
+import { byId } from '../ui/dom.ts';
 
 type TabId = 'overview' | 'updates' | 'measures' | 'actions' | 'risks' | 'comments' | 'history';
 type Load = { id: string; state: 'loading' | 'error' | 'missing' | 'ready'; data?: GoalDetail };
@@ -93,7 +94,7 @@ export default function GoalDrawer() {
     else return;
     e.preventDefault();
     setTab(tabs[n]!.id);
-    document.getElementById(`gd-tab-${tabs[n]!.id}`)?.focus();
+    byId(e.currentTarget, `gd-tab-${tabs[n]!.id}`)?.focus();
   };
 
   const toggleArchive = async () => {

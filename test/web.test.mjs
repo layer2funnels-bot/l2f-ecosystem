@@ -1,7 +1,8 @@
 // Browser-side logic that must not depend on a browser: input validation rules shared with the server. UI state tests are added below.
 import { recorder } from './lib.mjs';
 import { validate } from '../packages/core/validate.mjs';
-import { parseRoute, routeForPage, pageKeyFor, defaultOrg, hrefFor, FUNNEL_TYPES } from '../apps/web/js/routes.js';
+import { parseRoute, routeForPage, pageKeyFor, defaultOrg, hrefFor, FUNNEL_TYPES, OFFICE_PAGES } from '../apps/web/js/routes.js';
+import { PLANNER_PAGES, plannerSection } from '../apps/web/js/modules/planner.js';
 import { createSession, parseAuthHash } from '../apps/web/js/session.js';
 import { createAuthClient, isEmail } from '../apps/web/js/gotrue.js';
 import { MESSAGES, messageFor, fieldLabel } from '../apps/web/js/messages.js';
@@ -66,7 +67,7 @@ check('W19', 'No innerHTML, insertAdjacentHTML, document.write or eval anywhere 
 check('W20', 'Admin routes parse (members, access with its three views) and map to the registry pages used by the switcher',
   parseRoute('#/office/admin').params.tab === 'members' && parseRoute('#/office/admin/access/effective').params.sub === 'effective' && parseRoute('#/office/admin/access').params.sub === 'levels' && parseRoute('#/office/admin/nope').name === 'not-found'
   && pageKeyFor(parseRoute('#/office/admin/members')).page === 'admin.members' && pageKeyFor(parseRoute('#/office/admin/access/levels')).page === 'admin.access' && routeForPage('office', 'admin.access') === '#/office/admin/access/levels'
-  && parseRoute('#/office/planner').name === 'office-page' && parseRoute('#/office/team').params.page === 'team');
+  && parseRoute('#/office/team').params.page === 'team');
 const mine = permissionSet([{ permission_key: 'funnels.avatar.view', scope: 'workspace' }, { permission_key: 'funnels.avatar.edit', scope: 'client', client_id: 'c1' }]);
 check('W21', 'A person who holds a permission on one client only sees the buttons for that client, and no others', canWith(mine, 'funnels.avatar.edit', 'c1') && !canWith(mine, 'funnels.avatar.edit', 'c2') && !canWith(mine, 'funnels.avatar.edit', null)
   && canWith(mine, 'funnels.avatar.view', 'c2') && canAnywhereWith(mine, 'funnels.avatar.edit') && !canAnywhereWith(mine, 'funnels.avatar.create'));
@@ -83,5 +84,16 @@ check('W24', 'The Levels table is read from the permission catalog: defaults and
 check('W25', 'Passwords need at least 10 characters (design 02)', MIN_PASSWORD === 10);
 let saved = 0; dirty.set('Avatars', async () => { saved++; return true; });
 check('W26', 'Unsaved work is registered with a label and a save action, and clearing it forgets it', dirty.isDirty() && dirty.get().label === 'Avatars' && (await dirty.get().save()) === true && saved === 1 && (dirty.clear(), !dirty.isDirty()));
+
+// ---- Planner inside the shell (apps/web/js/modules/planner.js mounts apps/planner/src/embed.tsx)
+check('W27', 'Planner has one address inside the shell: #/planner/<page> keeps its page and query; the old #/app/planner and #/office/planner lead there too',
+  parseRoute('#/planner').name === 'planner' && parseRoute('#/planner').params.page === 'overview' && parseRoute('#/planner/map?plan=p1').params.page === 'map' && parseRoute('#/planner/map?plan=p1').query.plan === 'p1'
+  && parseRoute('#/app/planner').name === 'planner' && parseRoute('#/office/planner').name === 'planner' && parseRoute('#/planner/a/b').name === 'not-found');
+check('W28', 'The Launcher, the app switcher and the Office menu open Planner in the shell, and an organization switch lands on Planner (never on another organization\'s plan)',
+  hrefFor.app('planner') === '#/planner' && OFFICE_PAGES.find((p) => p.key === 'planner').href === '#/planner'
+  && JSON.stringify(pageKeyFor(parseRoute('#/planner/map?plan=p1'))) === '{"app":"planner","page":null}' && routeForPage('planner', null) === '#/planner');
+check('W29', 'Planner\'s menu in the shell covers every Planner page once, and only Strategy model needs plan management',
+  ['overview', 'mine', 'plans', 'map', 'reviews', 'settings', 'alignment', 'reports', 'goals', 'metrics', 'model', 'templates'].every((pg) => PLANNER_PAGES.filter((x) => x.pages.includes(pg)).length === 1)
+  && PLANNER_PAGES.filter((x) => x.manage).map((x) => x.key).join() === 'model' && plannerSection('metrics') === 'reports' && plannerSection(undefined) === 'overview');
 for (const x of results) console.log(`${x.ok ? 'PASS' : 'FAIL'}  ${x.id.padEnd(4)} ${x.name}`);
 const p = results.filter((x) => x.ok).length; console.log(`\n${p}/${results.length} checks passed`); process.exit(p === results.length ? 0 : 1);

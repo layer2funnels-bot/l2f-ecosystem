@@ -13,6 +13,7 @@ import { formatDate, percent, plural, relativeTime } from '../lib/format.ts';
 import { expectedProgress, scheduleState, SCHEDULE_LABEL } from '../lib/schedule.ts';
 import { PRIORITY_META, PRIORITY_ORDER, STATUS_META, STATUS_ORDER } from '../lib/status.ts';
 import { ancestors, filterGoals, groupGoals, MAX_DEPTH, sortGoals, type SortKey } from '../lib/tree.ts';
+import { eventInside } from '../ui/dom.ts';
 
 interface Row { goal: Goal; depth: number; childCount: number }
 interface BulkReport { verb: string; ok: number; total: number; failed: { id: string; title: string; reason: string }[] }
@@ -274,7 +275,7 @@ function RowMenu({ label, children }: { label: string; children: (close: () => v
   const close = useCallback(() => setPos(null), []);
   useEffect(() => {
     if (!pos) return;
-    const onDoc = (e: MouseEvent) => { const t = e.target as Node; if (!panel.current?.contains(t) && !btn.current?.contains(t)) close(); };
+    const onDoc = (e: MouseEvent) => { if (!eventInside(panel.current, e) && !eventInside(btn.current, e)) close(); };
     const onKey = (e: globalThis.KeyboardEvent) => { if (e.key === 'Escape') { close(); btn.current?.focus(); } };
     document.addEventListener('mousedown', onDoc); document.addEventListener('keydown', onKey);
     window.addEventListener('resize', close); document.addEventListener('scroll', close, true);

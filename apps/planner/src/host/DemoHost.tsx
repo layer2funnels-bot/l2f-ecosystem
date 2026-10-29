@@ -5,6 +5,8 @@ import { openLocalEngine, type LocalEngine } from '../api/localEngine.ts';
 import { DEMO_IDS, DEMO_USERS } from '../api/demoSeed.ts';
 import { PlannerApp } from '../PlannerApp.tsx';
 import { ErrorState, PageLoading } from '../ui/primitives.tsx';
+import '../../../../packages/ui/tokens.css';   // the ecosystem's shared tokens (inside the shell they are already on the page)
+import '../styles/planner.css';
 
 const KEY = 'planner.demo.user';
 const readUser = () => { try { const v = window.localStorage.getItem(KEY); return DEMO_USERS.find((u) => u.id === v)?.id ?? DEMO_IDS.OLIVE; } catch { return DEMO_IDS.OLIVE; } };

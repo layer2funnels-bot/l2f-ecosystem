@@ -6,6 +6,7 @@ import { Button, Chip, EmptyState, ErrorState, PageLoading, PriorityBadge, Progr
 import { formatDate, percent, plural } from '../lib/format.ts';
 import { daysUntil, scheduleState, SCHEDULE_LABEL } from '../lib/schedule.ts';
 import { STATUS_ORDER } from '../lib/status.ts';
+import { byId } from '../ui/dom.ts';
 
 type ActionStatus = Action['status'];
 const ACTION_COLUMNS: { status: ActionStatus; label: string }[] = [{ status: 'todo', label: 'To do' }, { status: 'doing', label: 'In progress' }, { status: 'on_hold', label: 'On hold' }, { status: 'done', label: 'Done' }, { status: 'wont_do', label: 'Won’t do' }];
@@ -50,7 +51,7 @@ export default function MyGoalsPage() {
   const tabKey = (e: KeyboardEvent<HTMLButtonElement>) => {
     if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
     const next = tab === 'goals' ? 'actions' : 'goals'; setTab(next);
-    document.getElementById(`mine-tab-${next}`)?.focus();
+    byId(e.currentTarget, `mine-tab-${next}`)?.focus();
   };
 
   if (!workspace) return null;

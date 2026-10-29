@@ -2,6 +2,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode, type KeyboardEvent as ReactKeyEvent } from 'react';
 import { Button, cx } from './primitives.tsx';
 import type { ToastItem } from '../state/PlannerContext.tsx';
+import { activeIn, eventInside } from './dom.ts';
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
@@ -10,7 +11,7 @@ function useOverlay(open: boolean, onClose: () => void) {
   const restore = useRef<HTMLElement | null>(null);
   useEffect(() => {
     if (!open) return;
-    restore.current = document.activeElement as HTMLElement | null;
+    restore.current = activeIn(ref.current) as HTMLElement | null;
     const el = ref.current;
     const first = el?.querySelector<HTMLElement>('[data-autofocus], input:not([type=hidden]), textarea, select') ?? el?.querySelector<HTMLElement>(FOCUSABLE) ?? el;
     first?.focus();
@@ -22,8 +23,8 @@ function useOverlay(open: boolean, onClose: () => void) {
     const nodes = Array.from(ref.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? []).filter((n) => n.offsetParent !== null);
     if (!nodes.length) return;
     const first = nodes[0]!, last = nodes[nodes.length - 1]!;
-    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    if (e.shiftKey && activeIn(first) === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && activeIn(last) === last) { e.preventDefault(); first.focus(); }
   };
   return { ref, onKeyDown };
 }
@@ -91,7 +92,7 @@ export function MenuButton({ label, children, align = 'end', variant = 'secondar
   const [open, setOpen] = useState(false);
   useEffect(() => {
     if (!open) return;
-    const onDoc = (e: MouseEvent) => { if (!wrap.current?.contains(e.target as Node)) setOpen(false); };
+    const onDoc = (e: MouseEvent) => { if (!eventInside(wrap.current, e)) setOpen(false); };
     const onKey = (e: globalThis.KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
     document.addEventListener('mousedown', onDoc); document.addEventListener('keydown', onKey);
     return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onKey); };
@@ -109,7 +110,7 @@ export function Popover({ label, count, children, align = 'start' }: { label: Re
   const [open, setOpen] = useState(false);
   useEffect(() => {
     if (!open) return;
-    const onDoc = (e: MouseEvent) => { if (!wrap.current?.contains(e.target as Node)) setOpen(false); };
+    const onDoc = (e: MouseEvent) => { if (!eventInside(wrap.current, e)) setOpen(false); };
     const onKey = (e: globalThis.KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
     document.addEventListener('mousedown', onDoc); document.addEventListener('keydown', onKey);
     return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onKey); };

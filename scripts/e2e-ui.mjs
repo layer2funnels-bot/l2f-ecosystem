@@ -341,8 +341,15 @@ await q("insert into planner_reviews (workspace_id,title,due_on) values ($1,'Q4 
 await visit(page, base + '/#/office'); await wait('Edit quiz emails');
 check('U14b', 'Office Home fills "My work", "Deadlines" and the review notice from Projects and Planner (overdue task flagged, project name shown, review coming up)', (await page.locator('main').innerText()).includes('Quiz funnel rebuild') && (await page.locator('main').innerText()).includes('Overdue') && await page.getByText('Coming up:').isVisible() && !(await page.locator('main').innerText()).includes('Nothing assigned to you.'));
 
-await page.locator('nav.nav a', { hasText: 'Planner' }).click(); await page.waitForURL(/\/planner\//, { timeout: 9000 }); await wait('My work'); const onPlanner = page.url().includes('/planner/'); await page.goBack(); await page.waitForSelector('nav.nav', { timeout: 9000 });
-check('U15', 'The Office Planner item opens the real Planner (its own menu), no longer a placeholder', onPlanner);
+// Planner switched on here (on the live site that is a separate go-live step), so this check does not depend on what ran before
+await q("update public.apps set lifecycle = 'active' where key = 'planner'"); await q("insert into workspace_apps (workspace_id, app_key, enabled) values ($1, 'planner', true) on conflict (workspace_id, app_key) do update set enabled = true", [L]);
+await page.reload(); await page.waitForSelector('nav.nav', { timeout: 9000 });
+await page.locator('nav.nav a', { hasText: 'Planner' }).click(); await page.waitForURL(/#\/planner/, { timeout: 9000 });
+await page.waitForFunction(() => !!document.querySelector('.planner-mount')?.shadowRoot?.querySelector('.stage'), null, { timeout: 9000 }).catch(() => {});
+const onPlanner = new URL(page.url()).pathname === '/' && (await page.locator('nav.nav .appname').innerText()) === 'Planner' && (await page.locator('header.hdr').count()) === 1
+  && await page.evaluate(() => !!document.querySelector('.planner-mount')?.shadowRoot?.querySelector('.stage') && !document.querySelector('.planner-mount').shadowRoot.querySelector('.rail'));
+await page.goBack(); await page.waitForSelector('nav.nav', { timeout: 9000 });
+check('U15', 'The Office Planner item opens the real Planner inside the shell (same header and organization switcher, Planner\'s menu in the shell\'s bar), no longer a placeholder', onPlanner);
 await visit(page, base + '/#/app/layer2_agents'); await wait('isn’t built yet');
 check('U15b', 'An app whose screens are not built yet says so honestly instead of showing a fake page', (await page.locator('main').innerText()).includes('Go to Office Home'));
 await visit(page, base + '/#/office/nope'); await wait('We couldn’t find that');
@@ -808,7 +815,7 @@ await rm.close();
 }
 
 const routes = [['/#/launcher', 'Your apps in'], ['/#/office', 'Needs your attention'], ['/#/office/funnels', 'Recently changed'], ['/#/office/funnels/avatars', 'Avatar for C1'], ['/#/office/funnels/avatars/new', 'Belongs to'],
-  ['/#/office/admin/members', 'Joining is by invitation only.'], ['/#/office/admin/access/levels', 'Deny always wins.'], ['/#/office/admin/access/assignments', 'Add assignment'], ['/#/office/admin/access/effective', 'Show access for'], ['/#/portal', 'The Portal is locked'], ['/#/drive', 'stay with their own app'], ['/#/clients', 'Everyone you work for'], ['/#/office/funnels/strategies', 'One written strategy per funnel'], ['/#/office/documents', 'stay with their own app'], ['/#/office/team', 'only where your own access allows'], ['/#/office/apps', 'Locked and coming-soon apps'], ['/#/office/admin/access/history', 'The last 100 changes'], ['/#/office/planner', 'isn’t built yet']];
+  ['/#/office/admin/members', 'Joining is by invitation only.'], ['/#/office/admin/access/levels', 'Deny always wins.'], ['/#/office/admin/access/assignments', 'Add assignment'], ['/#/office/admin/access/effective', 'Show access for'], ['/#/portal', 'The Portal is locked'], ['/#/drive', 'stay with their own app'], ['/#/clients', 'Everyone you work for'], ['/#/office/funnels/strategies', 'One written strategy per funnel'], ['/#/office/documents', 'stay with their own app'], ['/#/office/team', 'only where your own access allows'], ['/#/office/apps', 'Locked and coming-soon apps'], ['/#/office/admin/access/history', 'The last 100 changes'], ['/#/planner/plans', 'New plan']];
 for (const [w, label] of [[1280, 'desktop'], [768, 'tablet'], [390, 'phone']]) {
   const p = await newPage(w, 900);
   await p.goto(base + '/'); await wait('Sign in', p);
