@@ -148,6 +148,13 @@ const taskOps = [
         select 'project', p.id, p.name, p.due_on, p.id from projects p where p.archived_at is null and p.status <> 'done' and p.due_on between current_date and current_date + $1::int
       ) d order by due_on, label limit 100`, [i.days ?? 14]),
   }),
+  // The latest task changes across the projects the caller may see (Projects Home, "Recent updates"). Names only, no task content beyond the title.
+  defineOperation({
+    name: 'projects.recent', class: 'read', input: { limit: { type: 'int', min: 1, max: 20 } },
+    run: (q, _c, i) => q(`select t.id, t.project_id, p.name as project_name, t.title, t.status, t.assignee_id, t.updated_at
+      from project_tasks t join projects p on p.workspace_id = t.workspace_id and p.id = t.project_id
+      where t.archived_at is null and p.archived_at is null order by t.updated_at desc limit $1`, [i.limit ?? 6]),
+  }),
 ];
 
 // ------------------------------------------------------------------ checklist items (part of the task: same permissions, removed directly)

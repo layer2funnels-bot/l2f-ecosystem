@@ -54,6 +54,7 @@ export function parseRoute(hash) {
   if (a === 'clients' && b === 'c' && c && seg.length === 3) return r('clients', { view: 'client', id: c });
   if ((a === 'projects' && !b) || (a === 'app' && b === 'projects' && seg.length === 2)) return r('projects', { view: 'home' });
   if (a === 'projects' && b === 'mine' && seg.length === 2) return r('projects', { view: 'mine' });
+  if (a === 'projects' && ['all', 'docs', 'dashboards', 'ai'].includes(b) && seg.length === 2) return r('projects', { view: b });
   if (a === 'projects' && b === 'p' && c && seg.length === 3) return r('projects', { view: 'project', id: c });
   if (a === 'doc' && b && seg.length === 2) return r('doc', { id: b });
   if (a === 'board' && b && seg.length === 2) return r('board', { id: b });

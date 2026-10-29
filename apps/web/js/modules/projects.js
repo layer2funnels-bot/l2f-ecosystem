@@ -80,11 +80,62 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
       } }, { label: 'Cancel' }] });
   };
 
-  // ---------------------------------------------------------------- home
+  // ---------------------------------------------------------------- home (Design v4): greeting, priorities, projects, recent updates
+  const greeting = () => { const hr = new Date().getHours(); return `Good ${hr < 12 ? 'morning' : hr < 18 ? 'afternoon' : 'evening'}${ctx.userName ? `, ${String(ctx.userName).trim().split(/\s+/)[0]}` : ''}`; };
+  const ago = (iso) => { const m = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000)); return m < 1 ? 'just now' : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : m < 2880 ? 'Yesterday' : `${Math.round(m / 1440)} days ago`; };
   async function home() {
+    put(main, h('div', { class: 'pj-head' }, h('div', {}, h('div', { class: 'crumbs fine' }, 'Projects'), h('h1', { 'data-page-title': true }, greeting()))), skeleton(4));
+    const [r, w, rec] = await Promise.all([loadProjects(), api.call('my.work', { limit: 50 }), api.call('projects.recent', { limit: 5 })]); await people(); if (!live()) return;
+    if (!r.ok) return put(main, errorState(home));
+    const active = state.projects.filter((p) => !p.archived_at && p.status !== 'done');
+    const work = w.ok ? w.data : []; const soon = new Date(); soon.setDate(soon.getDate() + 1); const limit = `${soon.getFullYear()}-${String(soon.getMonth() + 1).padStart(2, '0')}-${String(soon.getDate()).padStart(2, '0')}`;
+    const dueSoon = work.filter((t) => t.due_on && String(t.due_on).slice(0, 10) <= limit).length;
+    const prio = (pr) => (pr === 'urgent' || pr === 'high' ? 'High' : pr === 'low' ? 'Low' : 'Normal');
+    const row = (t) => h('li', { class: 'pj-prow' }, h('span', { class: 'pj-ring', 'aria-hidden': 'true' }), h('a', { class: 'pj-title', href: hrefs.task(t.project_id, t.id) }, t.title), h('span', { class: `fine ${t.overdue ? 'danger' : 'muted'}` }, t.due_on ? dueLabel(String(t.due_on).slice(0, 10), todayIso()) : 'No date'), h('span', { class: 'fine muted' }, prio(t.priority)), icon('right'));
+    const chipOf = (p) => statusChip(p.status);
+    const prow = (p) => h('li', {}, h('a', { class: 'pj-prj', href: hrefs.project(p.id) }, h('span', { class: 'pdot', style: `--c:${dotOf(p.id)}` }), h('span', { class: 'nm' }, p.name), chipOf(p)));
+    const split = splitProjects(active.slice(0, 40), clientName, ctx.orgName);
+    const upd = (rec.ok ? rec.data : []).map((t) => h('li', { class: 'pj-upd' }, h('span', { class: 'avatar', 'aria-hidden': 'true' }, personName(t.assignee_id).split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase()),
+      h('div', {}, h('p', {}, h('b', {}, t.assignee_id ? personName(t.assignee_id) : 'Someone'), ' moved ', h('a', { href: hrefs.task(t.project_id, t.id) }, h('b', {}, t.title)), ` to ${label(TASK_STATUS, t.status)}`), h('span', { class: 'fine muted' }, `${t.project_name} · ${ago(t.updated_at)}`))));
+    const head = h('div', { class: 'pj-head' }, h('div', {}, h('div', { class: 'crumbs fine' }, 'Projects'), h('h1', { 'data-page-title': true }, greeting()),
+      h('p', { class: 'sub' }, `${dueSoon} ${dueSoon === 1 ? 'task' : 'tasks'} due by tomorrow across ${active.length} ${active.length === 1 ? 'project' : 'projects'}.`)),
+      h('div', { class: 'acts' }, h('button', { type: 'button', class: 'btn', onclick: () => openSearch() }, icon('search'), 'Search'), ctx.canAnywhere('projects.project.create') ? btn('New project', newProject, 'primary') : null));
+    const left = h('section', { class: 'panel', 'aria-labelledby': 'pj-pr' }, h('div', { class: 'sec-h' }, h('h2', { id: 'pj-pr' }, 'Your priorities'), h('span', { class: 'n' }, String(Math.min(work.length, 5))), h('a', { class: 'linkbtn', href: hrefs.mine() }, 'My Work')),
+      work.length ? h('ul', { class: 'pj-prows' }, ...work.slice(0, 5).map(row)) : emptyState({ title: 'Nothing assigned to you', body: 'Tasks assigned to you across all projects appear here.', ic: 'check' }));
+    const prj = h('section', { class: 'panel pj-sections', 'aria-labelledby': 'pj-pj' }, h('div', { class: 'sec-h' }, h('h2', { id: 'pj-pj' }, 'Projects'), h('a', { class: 'linkbtn', href: `${base}/all` }, 'All projects')),
+      active.length ? h('div', {}, split.clients.length ? h('div', {}, h('h3', { class: 'pj-sub' }, 'Client projects'), ...split.clients.map((g) => h('div', { class: 'pj-group' }, h('h4', { class: 'pj-gname' }, g.name), h('ul', {}, ...g.projects.slice(0, 5).map(prow))))) : null,
+        h('h3', { class: 'pj-sub' }, split.internalTitle), split.internal.length ? h('ul', {}, ...split.internal.slice(0, 6).map(prow)) : h('p', { class: 'fine muted pj-none' }, 'None yet'))
+        : emptyState({ title: 'No projects yet', body: ctx.canAnywhere('projects.project.create') ? 'Create the first project to start planning work.' : 'Projects you can open appear here.', ic: 'projects', first: true, ...(ctx.canAnywhere('projects.project.create') ? { action: btn('New project', newProject, 'primary') } : {}) }));
+    const recent = h('section', { class: 'panel', 'aria-labelledby': 'pj-up' }, h('div', { class: 'sec-h' }, h('h2', { id: 'pj-up' }, 'Recent updates')), upd.length ? h('ul', { class: 'pj-upds' }, ...upd) : h('p', { class: 'fine muted' }, 'Task changes in your projects appear here.'));
+    put(main, head, h('div', { class: 'pj-home' }, left, h('div', { class: 'pj-homeside' }, prj, recent)));
+  }
+
+  // ---------------------------------------------------------------- Docs: every document that lives in a project
+  async function docs() {
+    put(main, h('div', { class: 'pj-head' }, h('div', {}, h('div', { class: 'crumbs fine' }, 'Projects'), h('h1', { 'data-page-title': true }, 'Docs'), h('p', { class: 'sub' }, 'Documents kept inside projects. Each opens in its project context.'))), skeleton(4));
+    await loadProjects(); const r = await api.call('drive.project.files', { kind: 'document' }); if (!live()) return;
+    if (!r.ok) return put(main, errorState(docs));
+    const rows = r.data.filter((f) => f.mime_type !== BOARD_MIME); const nm = (id) => state.projects.find((p) => p.id === id)?.name ?? 'Project';
+    put(main, h('div', { class: 'pj-head' }, h('div', {}, h('div', { class: 'crumbs fine' }, 'Projects'), h('h1', { 'data-page-title': true }, 'Docs'), h('p', { class: 'sub' }, 'Documents kept inside projects. Each opens in its project context.'))),
+      rows.length ? h('div', { class: 'tblwrap' }, h('table', { class: 'tbl stk' }, h('caption', { class: 'sr' }, 'Project documents'), h('thead', {}, h('tr', {}, ...['Document', 'Project', 'Updated'].map((x) => h('th', { scope: 'col' }, x)))),
+        h('tbody', {}, ...rows.map((f) => h('tr', {}, h('td', { class: 't1', 'data-l': 'Document' }, h('a', { class: 'fname', href: `#/doc/${f.id}` }, h('span', {}, f.name))), h('td', { 'data-l': 'Project' }, h('a', { href: hrefs.project(f.project_id, 'docs') }, nm(f.project_id))), h('td', { 'data-l': 'Updated' }, ago(f.updated_at)))))))
+        : emptyState({ title: 'No project documents yet', body: 'Create a document from a project’s Docs tab. It stays with that project and does not appear in Drive.', ic: 'doc', first: true }));
+  }
+
+  // ---------------------------------------------------------------- pages that are designed but switched off
+  const offPage = (title, sub, why, ic) => async () => {
+    put(main, h('div', { class: 'pj-head' }, h('div', {}, h('div', { class: 'crumbs fine' }, 'Projects'), h('h1', { 'data-page-title': true }, title), h('p', { class: 'sub' }, sub))),
+      emptyState({ title: `${title} is not available yet`, body: why, ic, first: true }));
+    await loadProjects();
+  };
+  const dashboards = offPage('Dashboards', 'Charts across your projects.', 'Dashboards arrive after the reporting design is approved. Nothing here is hidden from you in the meantime.', 'chart');
+  const ai = offPage('AI Assist', 'Help with planning and summaries.', 'AI is switched off for this organization. No AI provider is connected, and no project data is sent anywhere.', 'star2');
+
+  // ---------------------------------------------------------------- all projects (the two labelled sections)
+  async function list() {
     put(main, h('div', { class: 'pj-head' }, h('div', {}, h('div', { class: 'crumbs fine' }, 'Projects'), h('h1', { 'data-page-title': true }, 'Projects')), ctx.canAnywhere('projects.project.create') ? btn('New project', newProject, 'primary') : null), skeleton(4));
     const r = await loadProjects(); if (!live()) return;
-    if (!r.ok) return put(main, errorState(home));
+    if (!r.ok) return put(main, errorState(list));
     const head = main.firstChild; put(main, head);
     let filter = 'open';
     const list = h('div', { class: 'pj-sections' });
@@ -273,6 +324,6 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
   // standalone: the project list lives in the app's side rail (the shell lifts it); inside Office it stays beside the page
   if (embedded) root.append(timerBar, h('div', { class: 'pj-grid embedded' }, side, main)); else { root.append(timerBar, h('div', { class: 'pj-grid' }, main)); root.__side = side; }
   paintSide(route.id); loadTimer();
-  (route.view === 'mine' ? mine : route.view === 'project' ? project : home)();
+  ({ mine, project, all: list, docs, dashboards, ai }[route.view] ?? home)();
   return root;
 }

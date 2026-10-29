@@ -29,7 +29,9 @@ export function appNav(appId, route, { isAdmin = false } = {}) {
       return { items: OFFICE_PAGES.filter((p) => !p.adminOnly || isAdmin).map((p) => ({ ...it(p.key, p.href, p.label, ICON[p.key] ?? p.icon), ...(p.key === 'funnels' ? { kids: FK.map(([k, href, label, ic]) => ({ key: k, href, label, icon: ic })), kid } : {}) })), current: officeSection(route) };
     }
     case 'projects':
-      return { items: [it('home', '#/projects', 'Home', 'home'), it('mine', '#/projects/mine', 'My Work', 'mywork')], current: route.params?.view === 'mine' ? 'mine' : 'home' };
+      return { items: [it('home', '#/projects', 'Home', 'home'), it('mine', '#/projects/mine', 'My Work', 'mywork'), it('all', '#/projects/all', 'Projects', 'projects'), it('docs', '#/projects/docs', 'Docs', 'doc'),
+        it('whiteboards', '#/whiteboards', 'Whiteboards', 'whiteboard'), it('dashboards', '#/projects/dashboards', 'Dashboards', 'chart'), it('ai', '#/projects/ai', 'AI Assist', 'star2'), it('apps', '#/office/apps', 'App Center', 'plug')],
+        current: ['mine', 'all', 'docs', 'dashboards', 'ai'].includes(route.params?.view) ? route.params.view : 'home' };
     case 'clients':
       return { items: [it('list', '#/clients', 'Clients', 'clients'), it('requests', '#/clients/requests', 'Requests & Approvals', 'inbox'), it('sops', '#/clients/sops', 'SOPs', 'sop'), it('tools', '#/clients/tools', 'Tools', 'tool'), ...(isAdmin ? [it('settings', '#/clients/settings', 'Settings', 'gear')] : [])],
         current: ['requests', 'sops', 'tools', 'settings'].includes(route.params?.view) ? route.params.view : 'list' };
