@@ -194,12 +194,12 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
     const head = h('div', { class: 'pj-head' }, h('div', {}, h('div', { class: 'crumbs fine' }, h('a', { href: hrefs.home() }, 'Projects'), ' / ', p.client_id ? clientName(p.client_id) : 'Internal'),
       h('h1', { 'data-page-title': true }, p.name), h('div', { class: 'pj-meta' }, statusChip(p.status), p.is_template ? chip('Template', 'act') : null, p.due_on ? h('span', { class: 'fine muted' }, `Due ${dueLabel(p.due_on, todayIso())}`) : null, archived ? chip('Archived', 'warn') : null)),
       h('div', { class: 'pj-actions' }, editable ? btn('Edit details', () => editProject(p), '') : null, editable || archived ? projectMenu(p, archived) : null));
-    const TABS = [['overview', 'Overview'], ['list', 'List'], ['board', 'Board'], ['calendar', 'Calendar'], ['timeline', 'Timeline'], ['report', 'Report'], ['docs', 'Docs'], ['whiteboards', 'Whiteboards']];
+    const TABS = [['overview', 'Overview'], ['list', 'List'], ['board', 'Board'], ['calendar', 'Calendar'], ['timeline', 'Timeline'], ['report', 'Report'], ['rules', 'Rules'], ['docs', 'Docs'], ['whiteboards', 'Whiteboards']];
     const tabBar = tabs(TABS, TABS.some(([k]) => k === tab) ? tab : 'overview', (k) => { tab = k; history.replaceState(null, '', hrefs.project(p.id, k)); draw(); }, 'Project views');
 
     function draw() {
       const cur = TABS.some(([k]) => k === tab) ? tab : 'overview'; tabBar.querySelectorAll('[role=tab][data-k]').forEach((b) => { b.setAttribute('aria-selected', String(b.dataset.k === cur)); b.tabIndex = b.dataset.k === cur ? 0 : -1; });
-      ({ overview, list, board, calendar, timelineTab, report, docs, whiteboards })[cur === 'timeline' ? 'timelineTab' : cur]();
+      ({ overview, list, board, calendar, timelineTab, report, rules, docs, whiteboards })[cur === 'timeline' ? 'timelineTab' : cur]();
     }
     const selected = new Set();           // tasks picked in the List for a change to all of them at once
     const taskRow = (t, { select = false } = {}) => h('li', { class: `pj-row${t.status === 'done' ? ' isdone' : ''}${selected.has(t.id) ? ' picked' : ''}` },
@@ -299,6 +299,54 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
           if (tasksOk) { col.addEventListener('dragover', (e) => { e.preventDefault(); col.classList.add('over'); }); col.addEventListener('dragleave', () => col.classList.remove('over'));
             col.addEventListener('drop', (e) => { e.preventDefault(); col.classList.remove('over'); const t = tasks.find((x) => x.id === (dragId ?? e.dataTransfer.getData('text/plain'))); dragId = null; if (t) moveTo(t, c.key, c.tasks); }); }
           return col; })));
+    }
+    // simple rules: one "when" and one "then" each, written out as a sentence; the database applies them to every change
+    async function rules() {
+      put(body, skeleton(2));
+      const [rr] = await Promise.all([api.call('rules.list', { project: p.id }), editable ? people() : null]); if (!live()) return;
+      if (!rr.ok) return put(body, errorState(rules));
+      const secName = (id) => sections.find((x) => x.id === id)?.name ?? 'a section';
+      const whenText = (r) => (r.when === 'created' ? 'When a task is added' : r.when === 'status' ? `When a task moves to ${label(TASK_STATUS, r.status)}` : `When a task moves into “${r.section_name ?? secName(r.section)}”`);
+      const thenText = (r) => (r.action === 'assign' ? `assign it to ${r.assignee_name ?? personName(r.assignee)}` : r.action === 'priority' ? `set priority to ${label(PRIORITY, r.priority)}`
+        : r.action === 'due_in' ? (r.due_in_days === 0 ? 'make it due today' : `make it due in ${r.due_in_days} day${r.due_in_days === 1 ? '' : 's'}`) : `tag it “${r.tag_name}”`);
+      const row = (r) => h('li', { class: `pj-rule${r.enabled ? '' : ' off'}` }, h('p', {}, h('b', {}, whenText(r)), `, ${thenText(r)}.`, r.enabled ? null : h('span', { class: 'fine muted' }, ' (paused)')),
+        editable ? h('div', { class: 'pj-rule-acts' },
+          btn(r.enabled ? 'Pause' : 'Turn on', async () => { const x = await api.call('rules.update', { id: r.id, enabled: !r.enabled }); if (x.ok) rules(); else fail(x, 'change rules'); }, 'link'),
+          btn('Remove', async () => { const x = await api.call('rules.delete', { id: r.id }); if (x.ok) { toast('Rule removed.'); rules(); } else fail(x, 'change rules'); }, 'link')) : null);
+      const sel = (id, lbl, list, on) => { const el = h('select', { id, onchange: (e) => on?.(e.target.value) }, ...list.map(([k, t]) => h('option', { value: k }, t))); return { el: h('label', { class: 'pj-tool', for: id }, h('span', {}, lbl), el), input: el }; };
+      const form = () => {
+        const when = sel('ru-when', 'When', [['created', 'a task is added'], ['status', 'a task moves to a status'], ...(sections.length ? [['section', 'a task moves into a section']] : [])], () => paint());
+        const st = sel('ru-status', 'Status', TASK_STATUS.map(([k, l]) => [k, l]));
+        const sc = sel('ru-section', 'Section', sections.map((x) => [x.id, x.name]));
+        const act = sel('ru-action', 'Then', [['assign', 'assign it to'], ['priority', 'set priority to'], ['due_in', 'make it due in'], ['tag', 'add the tag']], () => paint());
+        const who = sel('ru-who', 'Person', (state.people ?? []).map((x) => [x.user_id, x.is_you ? `${x.display_name} (you)` : x.display_name]));
+        const pri = sel('ru-pri', 'Priority', PRIORITY.map(([k, l]) => [k, l]));
+        const days = h('input', { id: 'ru-days', type: 'number', min: '0', max: '365', value: '3', inputmode: 'numeric' });
+        const tag = h('input', { id: 'ru-tag', maxlength: '40', placeholder: 'e.g. Needs review' });
+        const daysF = h('label', { class: 'pj-tool', for: 'ru-days' }, h('span', {}, 'Days from then'), days);
+        const tagF = h('label', { class: 'pj-tool', for: 'ru-tag' }, h('span', {}, 'Tag'), tag);
+        const slot1 = h('span', {}), slot2 = h('span', {});
+        const paint = () => {
+          put(slot1, when.input.value === 'status' ? st.el : when.input.value === 'section' ? sc.el : null);
+          put(slot2, { assign: who.el, priority: pri.el, due_in: daysF, tag: tagF }[act.input.value]);
+        };
+        paint();
+        const add = btn('Add rule', async () => {
+          const w = when.input.value, a = act.input.value;
+          const input = { project: p.id, when: w, action: a, ...(w === 'status' ? { status: st.input.value } : w === 'section' ? { section: sc.input.value } : {}),
+            ...(a === 'assign' ? { assignee: who.input.value } : a === 'priority' ? { priority: pri.input.value } : a === 'due_in' ? { due_in_days: Number(days.value) } : { tag: tag.value.trim() }) };
+          if (a === 'tag' && !input.tag) return toast('Give the tag a name.', false);
+          if (a === 'due_in' && !(Number.isInteger(input.due_in_days) && input.due_in_days >= 0 && input.due_in_days <= 365)) return toast('Use a number of days from 0 to 365.', false);
+          if (a === 'assign' && !input.assignee) return toast('Pick a person.', false);
+          add.disabled = true; const x = await api.call('rules.add', input); add.disabled = false;
+          if (x.ok) { toast('Rule added. It applies from now on.'); rules(); } else fail(x, 'change rules');
+        }, 'pri');
+        return h('section', { class: 'pj-sec' }, h('h2', {}, 'Add a rule'), h('div', { class: 'pj-rule-form' }, when.el, slot1, act.el, slot2, add));
+      };
+      put(body, archived ? readOnlyNotice('This project is archived') : null,
+        h('section', { class: 'pj-sec' }, h('h2', {}, 'Rules'), h('p', { class: 'fine muted' }, 'Rules do routine changes for you. They run for every change, including bulk changes and repeating tasks. When a task is added, a rule only fills what was left empty.'),
+          rr.data.length ? h('ul', { class: 'pj-rules' }, ...rr.data.map(row)) : h('p', { class: 'muted' }, 'No rules yet.')),
+        editable ? form() : h('p', { class: 'fine muted' }, 'Only people who can edit this project can change its rules.'));
     }
     // the project report: numbers first, then status and people as tables with a single-colour bar for size
     async function report() {

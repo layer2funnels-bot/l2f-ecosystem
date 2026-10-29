@@ -1,43 +1,54 @@
-# Projects: audit and plan (29 Oct 2026)
+# Projects: audit, plan and what was built (29 Oct 2026)
 
 ## In one paragraph
-Projects has a sound base: projects tied to clients, tasks with status, priority, one assignee and a due date, checklists, timers and logged
-time, "My work", deadlines, search, client sharing, and five views (List, Board, Calendar, Timeline, Overview) plus Docs and Whiteboards tabs.
-What it lacks is everything a team needs to *work together* on that base: nobody can comment on a task, mention a colleague, see what changed,
-or be told that something needs them. Work cannot be broken down below a checklist, repeated from a template, or organized beyond four fixed
-statuses. Asana and ClickUp have all of that; that gap, not the views, is why it feels basic.
+At the audit, Projects had a sound base (projects tied to clients, tasks with status, priority, one assignee and a due date, checklists, timers,
+"My work", search, client sharing, List/Board/Calendar/Timeline/Overview views) but nothing a team needs to *work together*: no comments,
+mentions, history, notifications, subtasks, sections, tags, templates, recurring work, workload or rules. Those gaps against Asana and ClickUp
+were closed in five releases (R1–R5, migrations 0034–0038), each built test-first and checked in a real browser.
 
-## Compared with Asana / ClickUp (what an agency needs to finish work)
-| Capability | Asana / ClickUp | Ours | Plan |
+## Compared with Asana / ClickUp, now
+| Capability | Asana / ClickUp | Before | Now |
 |---|---|---|---|
-| List, Board, Calendar, Timeline views | yes | **yes** | polish in R2 |
-| Comments on tasks, @mentions | yes | **no** | **R1** |
-| Activity history per task ("who changed what") | yes | no (audit log only, admins) | **R1** |
-| Notifications / inbox (assigned, mentioned, due) | yes | **no** (the header bell is a placeholder in every app) | **R1** (shared service) |
-| Subtasks (real tasks under a task) | yes | checklist only | **R1** |
-| Several assignees / followers | yes | one assignee | **R1** (followers) |
-| Attach files from Drive to a task | yes | Docs/Whiteboards tabs per project only | R2 |
-| Sections / custom statuses per project | yes | 4 fixed statuses | R2 |
-| Tags, custom fields | yes | no | R2 |
-| Filter, sort, group, saved views, bulk edit | yes | filter by status only | R2 |
-| Start dates, dependencies (blocked by) | yes | due date only | R3 |
-| Project and task templates | yes | no | R3 |
-| Recurring tasks | yes | no | R3 |
-| Workload per person, reports, dashboards | yes | overview + time summary | R4 |
-| Automations ("when done, move to…") | yes | no | R5 |
-| Time tracking, billable time | ClickUp yes | **yes** | — |
-| Tied to the client record, client portal, Planner objectives | no | **yes** — our edge | keep and deepen |
+| List, Board, Calendar, Timeline views | yes | yes | yes; Board can group by section; Timeline has a fixed day width, weekly ticks and a Today button |
+| Comments with @mentions | yes | no | **yes** (R1): mention picker, edit/delete own comments, internal only |
+| Activity history per task | yes | admins' audit log only | **yes** (R1) |
+| Notifications (assigned, mentioned, followed task changed, unblocked) | yes | placeholder bell | **yes** (R1): header bell in every app, unread count |
+| Subtasks | yes | checklist only | **yes** (R1), plus checklists |
+| Followers | yes | no | **yes** (R1) |
+| Sections per project | yes | no | **yes** (R2) |
+| Tags | yes | no | **yes** (R2), one list per organization |
+| Filter, sort, group, search in a project | yes | status filter only | **yes** (R2), remembered per project on the device |
+| Bulk edit | yes | no | **yes** (R2): status, priority, person, due, section, archive |
+| Drive files on a task | yes | per project only | **yes** (R2): attach or upload |
+| Start dates, dependencies ("waiting on") | yes | due date only | **yes** (R3), with loop protection and an "unblocked" notification |
+| Project templates, duplicate a project | yes | no | **yes** (R3) |
+| Recurring tasks | yes | no | **yes** (R3): daily, weekdays, weekly, every 2 weeks, monthly, yearly |
+| Time estimates | yes | no | **yes** (R4) |
+| Workload per person per week | yes | no | **yes** (R4), against a 40 h week |
+| Project report, portfolio across projects | yes | overview only | **yes** (R4) |
+| Automations | yes | no | **yes** (R5): when added / moved to a status / moved into a section → assign, set priority, set due in N days, add a tag |
+| Time tracking, billable time | ClickUp | yes | yes |
+| Tied to client record, portal, Planner | no | yes (our edge) | yes |
 
-Skipped on purpose: goals/OKRs (Planner does it), chat (not now), whiteboards and docs inside tasks (Whiteboard and Drive do it), AI features (need an approved provider).
+## Speed and reliability (found while testing)
+- The task panel used to make 8 requests; it now makes 1 (`tasks.panel`). Opening a few tasks no longer hits the 120-reads-a-minute limit.
+- When the limit is hit, the screen now says so ("too many requests, wait a moment") instead of "couldn't load".
+- Calls a screen makes at the same moment travel as one batched request (one database connection).
+- Real dates no longer come back as midnight timestamps (date fields showed empty).
 
-## Releases
-- **R1 — Work together** (in progress). The shared services the architecture already calls for (ER1: "comments/activity, notifications … exist once and are reused"; status "Missing"), used by Projects first: comments with @mentions on tasks, an activity history, notifications in the header bell (assigned to you, mentioned, a task you follow changed), followers, subtasks.
-- **R2 — Organize**: sections/custom statuses per project, tags, filters/sort/group and saved views, bulk edit, Drive attachments on tasks.
-- **R3 — Repeatable work**: start dates and dependencies, project and task templates, recurring tasks.
-- **R4 — Oversight**: workload per person, project and time reports.
-- **R5 — Automations**: simple rules.
+## Still missing (ranked; none blocks daily use)
+1. **Custom fields** (number, dropdown, text per project). Biggest remaining gap with ClickUp.
+2. **Forms → tasks** (a Form Builder submission creates a task). Needs a decision on which forms may do it.
+3. **Duplicate a single task** (projects can be duplicated; tasks cannot yet).
+4. **Several assignees on one task** (followers cover "keep me informed"; one person stays responsible).
+5. **Saved views shared with the team** (today the view is remembered per person per device).
+6. **Custom statuses per project** (four fixed statuses + sections cover most agency boards).
+7. **Email notifications** (today: in-app bell only; needs an approved email provider).
+8. **Rules with conditions** ("only if priority is high") and more actions (move to section, notify someone).
 
-Every later app (Clients, Drive, Planner, Social Planner…) plugs into the R1 services instead of building its own.
+## Skipped on purpose
+Goals/OKRs (Planner does it), chat (not now), AI features (need an approved provider).
 
 ## Needs your decision
-Nothing yet. Later: whether clients may see comments marked "shared with client" in the Portal (R1 keeps every comment internal).
+- Whether clients may see comments marked "shared with client" in the Portal (today every comment is internal).
+- Whether a Form Builder form may create tasks, and who may set that up.

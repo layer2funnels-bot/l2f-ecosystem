@@ -180,6 +180,18 @@ await page.click('.pj-side a:has-text("Portfolio")'); await page.waitForSelector
 check('PR28', 'Portfolio lists the projects with progress, open and overdue work', (await page.locator(`.pj-pf tr:has-text("Website relaunch ${stamp}")`).count()) === 1);
 await shot(page, 'r4-portfolio');
 
+// R5: a rule set on screen applies to the next change
+await page.goto(`${base}/#/projects/p/${P}?tab=rules`); await page.reload(); await page.waitForSelector('#ru-when', { timeout: 9000 });
+await page.selectOption('#ru-when', 'status'); await page.selectOption('#ru-status', 'blocked'); await page.selectOption('#ru-action', 'priority'); await page.selectOption('#ru-pri', 'urgent');
+await page.click('button:has-text("Add rule")'); await page.waitForSelector('.pj-rule', { timeout: 9000 });
+const ruleText = await page.locator('.pj-rules').innerText();
+check('PR29', 'A rule is added on the Rules tab and shown as a sentence', /When a task moves to Blocked, set priority to Urgent\./.test(ruleText), ruleText);
+await q("update project_tasks set status='blocked' where id=$1", [T9]);
+check('PR30', 'The rule applies to the next change (moved to Blocked, so priority became Urgent)', (await q('select priority from project_tasks where id=$1', [T9]))[0].priority === 'urgent');
+await page.click('.pj-rule button:has-text("Pause")'); await page.waitForSelector('.pj-rule.off', { timeout: 9000 });
+check('PR31', 'A rule can be paused from the same tab', /\(paused\)/.test(await page.locator('.pj-rules').innerText()));
+await shot(page, 'r5-rules');
+
 check('PR99', 'No script errors or page policy violations during the journey', problems.length === 0, problems.slice(0, 3).join(' | '));
 const failed = results.filter((r) => !r.ok); console.log(`\n${results.length - failed.length}/${results.length} checks passed`);
 await b.close(); await s.close?.(); await admin.end(); await fake.close?.(); process.exit(failed.length ? 1 : 0);

@@ -116,8 +116,8 @@ clock += 61_000;
 r = await call('invitation.accept', { token: 'later' }, U.VIEWER_L, NO_ORG);
 check('D5', 'The window resets after a minute', r.status === 404);
 api = mk(); let ok = 0, lim = 0;
-for (let i = 0; i < 130; i++) { const x = await call('clients.list', {}, U.ADMIN_BOTH, L); x.status === 200 ? ok++ : x.status === 429 && lim++; }
-check('D6', 'Reads: 120 per minute, then limited', ok === 120 && lim === 10);
+for (let i = 0; i < 310; i++) { const x = await call('clients.list', {}, U.ADMIN_BOTH, L); x.status === 200 ? ok++ : x.status === 429 && lim++; }
+check('D6', 'Reads: 300 per minute, then limited', ok === 300 && lim === 10);
 
 // ---- E. safe logging (T15)
 const text = JSON.stringify(logs);
