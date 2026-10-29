@@ -82,6 +82,49 @@ await aurj.page.keyboard.press('Escape'); await aurj.page.goto(`${base}/#/projec
 const aurjMain = await aurj.page.locator('#main').innerText();
 check('PR10', 'Someone in another organization gets no notification and cannot open the project', /all caught up/.test(aurjBell) && /Not here/.test(aurjMain), `${aurjBell.slice(0, 80)} | ${aurjMain.slice(0, 120)}`);
 
+// ---------------------------------------------------------------- R2: organizing work
+await page.goto(`${base}/#/projects/p/${P}?tab=list`); await page.reload(); await page.waitForSelector('.pj-toolbar', { timeout: 9000 });
+await page.click('.pj-toolbar button:has-text("Section")'); await page.fill('#ns-name', 'Design'); await page.click('.dialog button:has-text("Add section"), [role=dialog] button:has-text("Add section")');
+await page.waitForSelector('.pj-gh:has-text("Design")', { timeout: 9000 });
+check('PR11', 'Adding a section switches the List to sections, with the new section and "No section"', (await page.locator('#pj-group').inputValue()) === 'section' && await page.locator('.pj-gh:has-text("No section")').isVisible());
+const designAdd = page.locator('.pj-sec:has(.pj-gh:has-text("Design")) .pj-add input');
+await designAdd.fill('Moodboard'); await designAdd.press('Enter'); await page.waitForSelector('.pj-sec:has(.pj-gh:has-text("Design")) .pj-title:has-text("Moodboard")', { timeout: 9000 });
+check('PR12', 'A task added inside a section lands in that section', true);
+await page.click('.pj-title:has-text("Moodboard")'); await page.waitForSelector('.drawer .pj-tags input', { timeout: 9000 });
+await page.fill('.drawer .pj-tags input', 'Brand'); await page.press('.drawer .pj-tags input', 'Enter'); await page.waitForSelector('.drawer .pj-taglist .chip:has-text("Brand")', { timeout: 9000 });
+await page.fill('#td-due', '2030-06-15'); await page.press('#td-due', 'Tab'); await page.waitForTimeout(600);
+await page.keyboard.press('Escape'); await page.waitForTimeout(500);
+await page.click('.pj-title:has-text("Moodboard")'); await page.waitForSelector('.drawer #td-due', { timeout: 9000 });
+const dueShown = await page.inputValue('#td-due');
+check('PR13', 'A tag added in the task panel shows on the task, and a saved due date shows again in the date field when reopened', dueShown === '2030-06-15' && await page.locator('.drawer .pj-taglist .chip:has-text("Brand")').isVisible(), dueShown);
+// files: one of the project's Drive documents
+await q("insert into files (workspace_id,space,name,kind,project_id,managed_by,uploaded_by,size_bytes) values ($1,'shared','Brand guide','document',$2,'projects',$3,0)", [L, P, lead.uid]);
+await page.click('.drawer button:has-text("Attach a project file")'); await page.waitForSelector('[role=dialog] button:has-text("Attach")', { timeout: 9000 });
+await page.click('[role=dialog] .pj-row:has-text("Brand guide") button:has-text("Attach")'); await page.waitForSelector('.drawer .pj-files .pj-title:has-text("Brand guide")', { timeout: 9000 });
+check('PR14', 'A project file is attached to the task and opens from it', (await page.getAttribute('.drawer .pj-files a.pj-title', 'href'))?.startsWith('#/doc/'));
+await shot(page, 'r2-task-panel');
+await page.keyboard.press('Escape'); await page.waitForTimeout(500);
+await page.selectOption('#pj-tag', { label: 'Brand' }); await page.waitForTimeout(300);
+const tagged = await page.locator('.pj-sec .pj-title').allInnerTexts();
+await page.selectOption('#pj-tag', ''); await page.fill('#pj-q', 'homepage'); await page.waitForTimeout(300);
+const found = await page.locator('.pj-sec .pj-title').allInnerTexts();
+await page.fill('#pj-q', ''); await page.waitForTimeout(200);
+check('PR15', 'Filtering by tag and finding by words show only the matching tasks', tagged.join() === 'Moodboard' && found.join() === 'Write homepage copy', `${tagged} | ${found}`);
+await page.check('.pj-row:has-text("Moodboard") .pj-pick'); await page.check('.pj-row:has-text("Write homepage copy") .pj-pick');
+await page.waitForSelector('.pj-bulk', { timeout: 5000 });
+await page.selectOption('.pj-bulk select[aria-label="Priority…"]', 'urgent'); await page.waitForTimeout(1200);
+const urgent = await q("select count(*)::int n from project_tasks where project_id=$1 and priority='urgent' and title in ('Moodboard','Write homepage copy')", [P]);
+check('PR16', 'Selecting two tasks shows the bulk bar, and one choice changes both', urgent[0].n === 2 && !(await page.locator('.pj-bulk').count()));
+await shot(page, 'r2-list');
+await page.click('[role=tab]:has-text("Board")'); await page.waitForSelector('.pj-board'); await page.click('.seg button:has-text("Columns by section")'); await page.waitForTimeout(400);
+check('PR17', 'The Board can show columns by section', await page.locator('.pj-col[aria-label="Design"]').isVisible() && await page.locator('.pj-col[aria-label="No section"]').isVisible());
+await shot(page, 'r2-board');
+await page.setViewportSize({ width: 390, height: 844 }); await page.click('[role=tab]:has-text("List")'); await page.waitForTimeout(500);
+const over = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
+check('PR18', 'On a phone the List with its toolbar does not scroll sideways', over <= 1, String(over));
+await shot(page, 'r2-phone');
+await page.setViewportSize({ width: 1366, height: 860 });
+
 check('PR99', 'No script errors or page policy violations during the journey', problems.length === 0, problems.slice(0, 3).join(' | '));
 const failed = results.filter((r) => !r.ok); console.log(`\n${results.length - failed.length}/${results.length} checks passed`);
 await b.close(); await s.close?.(); await admin.end(); await fake.close?.(); process.exit(failed.length ? 1 : 0);

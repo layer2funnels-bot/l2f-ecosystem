@@ -90,3 +90,44 @@ export const searchInput = (parsed) => ({ ...(parsed.q ? { q: parsed.q } : {}), 
 export function duration(seconds) { const s = Math.max(0, Math.floor(Number(seconds) || 0)); const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60); return h ? `${h}h ${String(m).padStart(2, '0')}m` : `${m}m`; }
 /** Running timer clock "01:02:05" from the server's start time and the moment to show. */
 export function clock(startedAt, nowMs) { const s = Math.max(0, Math.floor((nowMs - new Date(startedAt).getTime()) / 1000)); return [Math.floor(s / 3600), Math.floor((s % 3600) / 60), s % 60].map((n) => String(n).padStart(2, '0')).join(':'); }
+
+// ---- R2: what the List shows. Computed in the browser from the tasks already loaded, so filtering, sorting and grouping cost no requests.
+const PRIO_RANK = { urgent: 0, high: 1, normal: 2, low: 3 };
+const SORTS = {
+  manual: () => 0,
+  due: (a, b) => (a.due_on ? 0 : 1) - (b.due_on ? 0 : 1) || String(a.due_on ?? '').localeCompare(String(b.due_on ?? '')),
+  priority: (a, b) => (PRIO_RANK[a.priority] ?? 9) - (PRIO_RANK[b.priority] ?? 9),
+  title: (a, b) => String(a.title).localeCompare(String(b.title), undefined, { sensitivity: 'base' }),
+  newest: (a, b) => String(b.created_at).localeCompare(String(a.created_at)),
+};
+/** filter: { q, assignee ('none' = nobody), tag, hideDone }, sort: manual | due | priority | title | newest (ties keep the manual order) */
+export function viewTasks(tasks, { q = '', assignee = '', tag = '', hideDone = false, sort = 'manual' } = {}) {
+  const words = String(q).toLowerCase().split(/\s+/).filter(Boolean);
+  const kept = tasks.filter((t) => (!words.length || words.every((w) => String(t.title).toLowerCase().includes(w)))
+    && (!assignee || (assignee === 'none' ? !t.assignee_id : t.assignee_id === assignee))
+    && (!tag || (t.tags ?? []).some((g) => g.id === tag))
+    && (!hideDone || t.status !== 'done'));
+  const cmp = SORTS[sort] ?? SORTS.manual;
+  return sortTasks(kept).sort(cmp);      // sort is stable: equal keys keep the manual order
+}
+/** by: status | section | assignee | priority | due. Returns [{ key, title, tasks }] in a fixed, meaningful order. */
+export function groupTasks(tasks, by, { sections = [], name = (id) => id, today = null } = {}) {
+  const pick = (key, title, test) => ({ key, title, tasks: tasks.filter(test) });   // the caller passes tasks already in the order it wants (viewTasks)
+  if (by === 'section') {
+    const known = new Set(sections.map((s) => s.id));
+    return [...sections.map((s) => pick(s.id, s.name, (t) => t.section_id === s.id)), pick(null, 'No section', (t) => !t.section_id || !known.has(t.section_id))];
+  }
+  if (by === 'assignee') {
+    const who = [...new Set(tasks.map((t) => t.assignee_id).filter(Boolean))].sort((a, b) => String(name(a)).localeCompare(String(name(b))));
+    const groups = who.map((u) => pick(u, name(u), (t) => t.assignee_id === u));
+    return tasks.some((t) => !t.assignee_id) ? [...groups, pick(null, 'Unassigned', (t) => !t.assignee_id)] : groups;
+  }
+  if (by === 'priority') return PRIORITY.map(([k, title]) => pick(k, title, (t) => t.priority === k));
+  if (by === 'due') {
+    const soon = today ? addDays(today, 7) : null;
+    const when = (t) => (!t.due_on ? 'none' : t.due_on.slice(0, 10) < today ? (t.status === 'done' ? 'earlier' : 'overdue') : t.due_on.slice(0, 10) === today ? 'today' : t.due_on.slice(0, 10) <= soon ? 'week' : 'later');
+    return [['overdue', 'Overdue'], ['today', 'Today'], ['week', 'Next 7 days'], ['later', 'Later'], ['earlier', 'Earlier'], ['none', 'No date']]
+      .map(([k, title]) => pick(k, title, (t) => when(t) === k)).filter((g) => g.tasks.length);
+  }
+  return TASK_STATUS.map(([k, title]) => pick(k, title, (t) => t.status === k));
+}

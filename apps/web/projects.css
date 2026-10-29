@@ -96,3 +96,22 @@
 .cm-sugg li.sel,.cm-sugg li:hover{background:var(--tint)}
 .act-list{gap:var(--space-2);font-size:14px}
 .pj-history summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:600}
+/* R2: list toolbar, sections, selection and bulk bar, tags, files */
+.pj-toolbar{display:flex;flex-wrap:wrap;align-items:flex-end;gap:var(--space-2) var(--space-3);margin-bottom:var(--space-4)}
+.pj-toolbar input[type=search]{flex:1 1 200px;min-width:160px;min-height:44px}
+.pj-tool{display:grid;gap:2px;font-size:12px;font-weight:600;color:var(--muted)}.pj-tool select{min-height:44px}
+.pj-toggle{display:flex;align-items:center;gap:var(--space-2);min-height:44px;font-size:14px;color:var(--text)}
+.pj-ghrow{display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);flex-wrap:wrap}
+.pj-secacts{display:flex;gap:var(--space-1)}
+.pj-pick{width:20px;height:20px;flex:none;accent-color:var(--action)}
+.pj-row.picked{background:var(--action-tint);border-radius:var(--radius-md)}
+.pj-bulk{position:sticky;top:var(--space-2);z-index:var(--z-sticky);display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-3);margin-bottom:var(--space-3);background:var(--surface);border:1px solid var(--line2);border-radius:var(--radius-lg);box-shadow:var(--shadow-2)}
+.pj-bulk select,.pj-bulk input{min-height:44px}
+.pj-taglist{display:flex;flex-wrap:wrap;gap:var(--space-1);margin-bottom:var(--space-2)}
+.pj-cardtags{display:flex;flex-wrap:wrap;gap:4px}
+.chip-x{border:0;background:transparent;color:inherit;font-size:16px;line-height:1;min-width:28px;min-height:28px;cursor:pointer;border-radius:50%}
+.chip-x:hover{background:var(--tint)}
+.chip.tag-blue{background:var(--action-tint);color:var(--action)}.chip.tag-green{background:var(--ok-tint);color:var(--ok)}.chip.tag-amber{background:var(--warn-tint);color:var(--warn)}
+.chip.tag-red{background:var(--danger-tint);color:var(--danger)}.chip.tag-violet,.chip.tag-teal,.chip.tag-pink,.chip.tag-slate{background:var(--sunk);color:var(--text2)}
+@media (max-width:600px){.pj-tool{flex:1 1 45%}.pj-bulk{position:static}}
+.drawer-bd > h3{margin:var(--space-5) 0 var(--space-2)}
