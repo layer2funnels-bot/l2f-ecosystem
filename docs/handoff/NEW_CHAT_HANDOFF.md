@@ -87,5 +87,5 @@ Playwright and Chromium are pre-installed (`require('playwright')` works). Don't
 
 ## State at handoff
 - Projects R1–R5 are done (migrations 0034–0038); see `docs/apps/PROJECTS_AUDIT.md` for what is left (custom fields first).
-- Tests on 29 Oct: `npm test` 55/55 suites; `e2e-projects` 32/32; `e2e-ui` and `e2e-planner`: see the final report in the chat.
+- Tests on 29 Oct: `npm test` 55/55 suites; `e2e-projects` 32/32; `e2e-ui` 241/241; `e2e-planner` 32/32; API journey 71/71.
 - Owner decisions pending: merging PR #34 once CI can run; applying 0034–0038 beyond local; "shared with client" comments in the Portal; Forms → tasks.

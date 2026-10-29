@@ -16,7 +16,7 @@ Paste this whole file into the main chat so it knows the code moved on.
 | `c2df43c` Projects R2, organizing | Migration **0035**: sections per project, organization tags, Drive files attached to tasks. Filter, sort, group and search in a project; bulk changes. Fix: plain dates no longer come back as midnight timestamps (server and tests). |
 | `b2e9aba` Projects R3, repeatable work | Migration **0036**: start dates, recurring tasks (finishing one creates the next), "waiting on" dependencies with a loop guard and an "unblocked" notification, project templates, duplicating a project. The timeline got a fixed day width, weekly ticks and a Today button. |
 | `d890fb9` Projects R4, oversight | Migration **0037**: time estimates. Workload (person × week against 40 h), project Report tab, Portfolio across projects. The task panel loads in **1 request instead of 8** (`tasks.panel`). A rate-limited request now shows a toast saying so. |
-| (next commit) Projects R5, rules | Migration **0038**: per-project rules. When a task is added, moves to a status or moves into a section: assign it, set its priority, set it due in N days, or add a tag. They run inside the database, so bulk changes and recurring copies follow them too. Rules tab on the project. Reads are raised to **300 a minute** (was 120): see DECISIONS V4-30. |
+| `864e292` Projects R5, rules | Migration **0038**: per-project rules. When a task is added, moves to a status or moves into a section: assign it, set its priority, set it due in N days, or add a tag. They run inside the database, so bulk changes and recurring copies follow them too. Rules tab on the project. Reads are raised to **300 a minute** (was 120): see DECISIONS V4-30. |
 
 ## New database objects (migrations 0034–0038)
 Tables: `comments`, `comment_mentions`, `activity_events`, `follows`, `notifications`, `project_sections`, `project_tags`, `task_tags`,
@@ -38,7 +38,7 @@ subtasks, comments, history, follow. Projects home: templates. Header: notificat
 
 ## Tests (all passing locally on 29 Oct)
 - `npm test`: 55 suites, including the new `collab` (24), `projects-organize` (19), `projects-repeatable` (15), `projects-oversight` (13) and `projects-automations` (15).
-- Browser journeys on the local stack: `scripts/e2e-projects.mjs` 32/32 (new). `scripts/e2e-ui.mjs` and `scripts/e2e-planner.mjs`: results are in `NEW_CHAT_HANDOFF.md` §State.
+- Browser journeys on the local stack: `scripts/e2e-projects.mjs` 32/32 (new). `scripts/e2e-ui.mjs` 241/241, `scripts/e2e-planner.mjs` 32/32, API journey `npm run test:e2e` 71/71.
 - Mutation checks: removing the organization fence on comments, the dependency loop rule, the project filter on rules, or the edit permission on rules each makes a test fail.
 
 ## Decisions taken (technical, recorded in `docs/DECISIONS.md`)
