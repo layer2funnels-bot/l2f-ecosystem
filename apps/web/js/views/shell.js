@@ -60,6 +60,32 @@ function appSwitcher({ catalog = [], registry, current, launcherCurrent }) {
   return h('div', { class: 'swwrap apps-wrap' }, btn, menu);
 }
 
+/** The header bell (migration 0034): what needs you in this organization. notifications: { count() -> n|null, list() -> rows|null, read(ids|'all'), href(row) }. */
+const KIND = { assigned: 'assigned you', mentioned: 'mentioned you on', commented: 'commented on', completed: 'completed' };
+function bell(notifications) {
+  const badge = h('span', { class: 'badge', hidden: true, 'aria-hidden': 'true' });
+  const b = h('button', { type: 'button', class: 'iconbtn', id: 'bell', 'aria-haspopup': 'true', 'aria-expanded': 'false', 'aria-controls': 'bell-menu', 'aria-label': 'Notifications' }, icon('bell'), badge);
+  const menu = h('div', { class: 'menu bell-menu', id: 'bell-menu', role: 'region', 'aria-label': 'Notifications', 'data-open': 'false' });
+  const paintCount = (n) => { badge.hidden = !n; badge.textContent = n > 99 ? '99+' : String(n ?? ''); b.setAttribute('aria-label', n ? `Notifications, ${n} unread` : 'Notifications'); };
+  const close = (refocus) => { menu.dataset.open = 'false'; b.setAttribute('aria-expanded', 'false'); if (refocus) b.focus(); };
+  notifications.count().then(paintCount);
+  b.addEventListener('click', async () => {
+    if (menu.dataset.open === 'true') return close(true);
+    menu.replaceChildren(h('div', { class: 'mh' }, 'Notifications'), h('p', { class: 'mfoot' }, 'Loading…'));
+    menu.dataset.open = 'true'; b.setAttribute('aria-expanded', 'true');
+    const rows = await notifications.list();
+    const unread = (rows ?? []).filter((r) => !r.read_at).map((r) => r.id);
+    const item = (r) => h('a', { class: `opt bell-item${r.read_at ? '' : ' unread'}`, href: notifications.href(r), tabindex: '0', onclick: () => { close(false); if (!r.read_at) notifications.read([r.id]).then(() => notifications.count(true).then(paintCount)); } },
+      h('span', { class: 'tx' }, h('strong', {}, `${r.actor_name} ${KIND[r.kind] ?? 'updated'} “${r.title}”`), h('small', {}, `${r.project_name} · ${new Date(r.created_at).toLocaleString()}`)));
+    menu.replaceChildren(h('div', { class: 'mh bell-head' }, 'Notifications', unread.length ? h('button', { type: 'button', class: 'btn link', onclick: async () => { await notifications.read('all'); paintCount(0); menu.querySelectorAll('.unread').forEach((x) => x.classList.remove('unread')); } }, 'Mark all read') : null),
+      ...(rows == null ? [h('p', { class: 'mfoot' }, 'Notifications couldn’t be loaded.')] : rows.length ? rows.map(item) : [h('p', { class: 'mfoot' }, 'You’re all caught up.')]));
+    (menu.querySelector('a.opt') ?? menu).focus?.();
+  });
+  menu.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); close(true); } });
+  onDocClick((e) => { if (menu.dataset.open === 'true' && !e.target.closest('.bell-wrap')) close(false); });
+  return h('div', { class: 'swwrap bell-wrap' }, b, menu);
+}
+
 function profile({ email, name, onSignOut, theme, weather }) {
   const btn = h('button', { type: 'button', class: 'who', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-controls': 'profile-menu', 'aria-label': `Your profile: ${name || email}` }, initials(name || email));
   const menu = h('div', { class: 'menu profile-menu', id: 'profile-menu', role: 'menu', 'aria-label': 'Your profile', 'data-open': 'false' });
@@ -104,7 +130,7 @@ export function officeNav(route, isAdmin) {
   return appNav('Office', OFFICE_PAGES.filter((p) => !p.adminOnly || isAdmin), officeSection(route));
 }
 
-export function shellView({ app, orgs, active, email, name, route, content, banner, isAdmin, inOffice, launcherCurrent, catalog, registry, currentApp, theme, weather, nav: appBar = null }) {
+export function shellView({ app, orgs, active, email, name, route, content, banner, isAdmin, inOffice, launcherCurrent, catalog, registry, currentApp, theme, weather, nav: appBar = null, notifications = null }) {
   offs.forEach((f) => f()); offs = [];
   const nav = appBar ?? (inOffice ? officeNav(route, isAdmin) : null);
   document.body.classList.toggle('hasb', Boolean(nav));
@@ -117,7 +143,7 @@ export function shellView({ app, orgs, active, email, name, route, content, bann
       h('label', { class: 'search' }, icon('search'), h('span', { class: 'sr' }, 'Search this organization'),
         h('input', { type: 'search', placeholder: `Search ${active.name}`, disabled: true, 'aria-describedby': 'search-why', autocomplete: 'off' })),
       h('span', { class: 'sr', id: 'search-why' }, 'Search is not available yet. It arrives with the apps it searches.'),
-      h('span', { class: 'iconbtn hide-s', role: 'img', 'aria-label': 'Notifications are not available yet', 'aria-disabled': 'true', title: 'Notifications are not available yet' }, icon('bell')),
+      notifications ? bell(notifications) : h('span', { class: 'iconbtn hide-s', role: 'img', 'aria-label': 'Notifications are not available yet', 'aria-disabled': 'true', title: 'Notifications are not available yet' }, icon('bell')),
       profile({ email, name, onSignOut: () => app.signOut(), theme, weather })),
     nav?.top ?? null,
     h('main', { class: 'content', id: 'main', 'aria-busy': 'false' }, banner ?? null, content),
