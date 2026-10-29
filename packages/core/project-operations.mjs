@@ -91,11 +91,14 @@ const TASK = {
   title: { type: 'text', required: true, max: 300 }, notes: T(20000), status: { type: 'enum', values: TASK_STATUS }, priority: { type: 'enum', values: ['low', 'normal', 'high', 'urgent'] },
   assignee: { type: 'uuid' }, due_on: { type: 'date' }, position: { type: 'int', min: 0, max: 100000 },
   parent: { type: 'uuid' },                          // a subtask: the task it belongs to (same project, one level; the database checks)
+  section: { type: 'uuid' },                         // a section of the same project (the foreign key includes the project)
 };
-const TCOL = { title: 'title', notes: 'notes', status: 'status', priority: 'priority', assignee: 'assignee_id', due_on: 'due_on', position: 'position', parent: 'parent_task_id' };
-const TSELECT = `select t.id, t.project_id, t.client_id, t.parent_task_id, t.title, t.notes, t.status, t.priority, t.assignee_id, t.due_on, t.position, t.completed_at, t.client_visible, t.archived_at, t.created_at, t.updated_at,
+const TCOL = { title: 'title', notes: 'notes', status: 'status', priority: 'priority', assignee: 'assignee_id', due_on: 'due_on', position: 'position', parent: 'parent_task_id', section: 'section_id' };
+const TSELECT = `select t.id, t.project_id, t.client_id, t.parent_task_id, t.section_id, t.title, t.notes, t.status, t.priority, t.assignee_id, t.due_on, t.position, t.completed_at, t.client_visible, t.archived_at, t.created_at, t.updated_at,
     (select count(*)::int from project_tasks s where s.parent_task_id = t.id and s.archived_at is null) as subtasks_total,
     (select count(*)::int from project_tasks s where s.parent_task_id = t.id and s.archived_at is null and s.status = 'done') as subtasks_done,
+    coalesce((select json_agg(json_build_object('id', g.id, 'name', g.name, 'color', g.color) order by lower(g.name)) from task_tags tt join project_tags g on g.workspace_id = tt.workspace_id and g.id = tt.tag_id where tt.task_id = t.id), '[]') as tags,
+    (select count(*)::int from task_files tf where tf.task_id = t.id) as files_total,
     (select count(*)::int from task_checklist_items c where c.task_id = t.id) as checklist_total,
     (select count(*)::int from task_checklist_items c where c.task_id = t.id and c.done) as checklist_done
   from project_tasks t`;
@@ -119,12 +122,13 @@ const taskOps = [
     },
   }),
   defineOperation({
-    name: 'tasks.update', class: 'write', single: true, input: { ...id, ...Object.fromEntries(Object.entries(TASK).map(([k, f]) => [k, { ...f, required: false }])), clear_assignee: { type: 'bool' }, clear_due: { type: 'bool' } },
+    name: 'tasks.update', class: 'write', single: true, input: { ...id, ...Object.fromEntries(Object.entries(TASK).map(([k, f]) => [k, { ...f, required: false }])), clear_assignee: { type: 'bool' }, clear_due: { type: 'bool' }, clear_section: { type: 'bool' } },
     run: async (q, _c, i) => {
       const used = Object.keys(TCOL).filter((k) => i[k] !== undefined);
       const sets = used.map((k, n) => `${TCOL[k]} = $${n + 2}`);
       if (i.clear_assignee) sets.push('assignee_id = null');
       if (i.clear_due) sets.push('due_on = null');
+      if (i.clear_section) sets.push('section_id = null');
       if (sets.length && !(await q(`update project_tasks set ${sets.join(', ')} where id = $1 returning id`, [i.id, ...used.map((k) => i[k])])).length) return [];
       return q(`${TSELECT} where t.id = $1`, [i.id]);
     },
@@ -216,4 +220,47 @@ const timeOps = [
   }),
 ];
 
-export const projectsOperations = [...projectOps, ...searchOps, ...peopleOps, ...taskOps, ...checklistOps, ...timeOps];
+
+// ------------------------------------------------------------------ R2: sections, tags, bulk changes, files on a task (migration 0035)
+const organizeOps = [
+  defineOperation({ name: 'sections.list', class: 'read', input: { project: { type: 'uuid', required: true } },
+    run: (q, _c, i) => q('select id, project_id, name, position from project_sections where project_id = $1 order by position, created_at', [i.project]) }),
+  defineOperation({ name: 'sections.create', class: 'write', single: true, input: { project: { type: 'uuid', required: true }, name: { type: 'text', required: true, max: 100 } },
+    run: (q, ctx, i) => q(`insert into project_sections (workspace_id, project_id, name, position)
+      values ($1, $2, $3, (select coalesce(max(position) + 1, 0) from project_sections where project_id = $2)) returning id, project_id, name, position`, [ctx.orgId, i.project, i.name]) }),
+  defineOperation({ name: 'sections.update', class: 'write', single: true, input: { ...id, name: { type: 'text', max: 100 }, position: { type: 'int', min: 0, max: 100000 } },
+    run: (q, _c, i) => q('update project_sections set name = coalesce($2, name), position = coalesce($3, position) where id = $1 returning id, project_id, name, position', [i.id, i.name ?? null, i.position ?? null]) }),
+  defineOperation({ name: 'sections.delete', class: 'write', single: true, input: id, run: (q, _c, i) => q('delete from project_sections where id = $1 returning id', [i.id]) }),
+  defineOperation({ name: 'tags.list', class: 'read', run: (q) => q('select id, name, color from project_tags order by lower(name) limit 500') }),
+  defineOperation({ name: 'tasks.tags.add', class: 'write', single: true, input: { task: { type: 'uuid', required: true }, name: { type: 'text', required: true, max: 40 } },
+    run: (q, _c, i) => q('select id, name, color from task_tag_add($1, $2)', [i.task, i.name]) }),
+  defineOperation({ name: 'tasks.tags.remove', class: 'write', single: true, input: { task: { type: 'uuid', required: true }, tag: { type: 'uuid', required: true } },
+    run: (q, _c, i) => q('delete from task_tags where task_id = $1 and tag_id = $2 returning tag_id', [i.task, i.tag]) }),
+  defineOperation({
+    // many tasks at once: row policies skip the ones the person may not edit; the answer is how many changed
+    name: 'tasks.bulk', class: 'write', single: true,
+    input: { ids: { type: 'list', items: 'uuid', max: 200, required: true }, status: { type: 'enum', values: TASK_STATUS }, priority: { type: 'enum', values: ['low', 'normal', 'high', 'urgent'] },
+      assignee: { type: 'uuid' }, clear_assignee: { type: 'bool' }, due_on: { type: 'date' }, clear_due: { type: 'bool' }, section: { type: 'uuid' }, clear_section: { type: 'bool' }, archive: { type: 'bool' } },
+    run: (q, _c, i) => {
+      const sets = []; const args = [i.ids];
+      const put = (col, v) => { args.push(v); sets.push(`${col} = $${args.length}`); };
+      if (i.status) put('status', i.status);
+      if (i.priority) put('priority', i.priority);
+      if (i.assignee) put('assignee_id', i.assignee); else if (i.clear_assignee) sets.push('assignee_id = null');
+      if (i.due_on) put('due_on', i.due_on); else if (i.clear_due) sets.push('due_on = null');
+      if (i.section) put('section_id', i.section); else if (i.clear_section) sets.push('section_id = null');
+      if (i.archive) sets.push('archived_at = now()');
+      if (!sets.length) return [{ n: 0 }];
+      return q(`with done as (update project_tasks set ${sets.join(', ')} where id = any ($1::uuid[])${i.archive ? ' and archived_at is null' : ''} returning 1) select count(*)::int as n from done`, args);
+    },
+  }),
+  defineOperation({ name: 'tasks.files.list', class: 'read', input: { task: { type: 'uuid', required: true } },
+    run: (q, _c, i) => q(`select f.id, f.name, f.kind, f.mime_type, f.size_bytes, f.updated_at, tf.created_at as attached_at
+      from task_files tf join files f on f.workspace_id = tf.workspace_id and f.id = tf.file_id where tf.task_id = $1 and f.archived_at is null order by tf.created_at`, [i.task]) }),
+  defineOperation({ name: 'tasks.files.attach', class: 'write', single: true, input: { task: { type: 'uuid', required: true }, file: { type: 'uuid', required: true } },
+    run: (q, ctx, i) => q('insert into task_files (workspace_id, task_id, file_id) values ($1, $2, $3) on conflict do nothing returning file_id', [ctx.orgId, i.task, i.file]) }),
+  defineOperation({ name: 'tasks.files.detach', class: 'write', single: true, input: { task: { type: 'uuid', required: true }, file: { type: 'uuid', required: true } },
+    run: (q, _c, i) => q('delete from task_files where task_id = $1 and file_id = $2 returning file_id', [i.task, i.file]) }),
+];
+
+export const projectsOperations = [...projectOps, ...searchOps, ...peopleOps, ...taskOps, ...checklistOps, ...timeOps, ...organizeOps];

@@ -2,7 +2,7 @@
 // task drawer with timer, smart search). One module so that the Projects app and, later, Office > Projects (V4-2) mount the very same screens and data.
 // Everything goes through the permission-checked API; buttons follow `ctx.can`, the database decides. Logic lives in projectmodel.js (tested without a browser).
 import { h, put, icon, btn, chip, dialog, drawer, toast, field, notice, skeleton, emptyState, errorState, noAccessState, seg, tabs, readOnlyNotice } from '../ui.js';
-import { splitProjects, PROJECT_STATUS, TASK_STATUS, PRIORITY, label, byStatus, progress, monthGrid, monthTitle, shiftMonth, timeline, dueLabel, myWorkGroups, parseSearch, searchInput, duration, clock } from './projectmodel.js';
+import { splitProjects, PROJECT_STATUS, TASK_STATUS, PRIORITY, label, byStatus, sortTasks, viewTasks, groupTasks, progress, monthGrid, monthTitle, shiftMonth, timeline, dueLabel, myWorkGroups, parseSearch, searchInput, duration, clock } from './projectmodel.js';
 import { createBoard, BOARD_MIME } from './whiteboard.js';
 import { emptyDoc, serialize } from './docmodel.js';
 import { commentsPanel, activityPanel, followButton } from './collab.js';
@@ -120,7 +120,8 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
     const r = await api.call('projects.get', { id: route.id }); if (!live()) return;
     if (!r.ok) return put(main, r.status === 404 ? noAccessState({ action: h('a', { class: 'btn', href: hrefs.home() }, 'Back to Projects') }) : errorState(project));
     const p = r.data[0]; paintSide(p.id);
-    const tr = await api.call('tasks.list', { project: p.id, archived: false }); if (!live()) return;
+    const [tr, sr] = await Promise.all([api.call('tasks.list', { project: p.id, archived: false }), api.call('sections.list', { project: p.id }), people()]); if (!live()) return;
+    let sections = sr.ok ? sr.data : []; state.sections = sections;
     let tasks = tr.ok ? tr.data : []; const archived = Boolean(p.archived_at); const editable = canProject(p) && !archived; const tasksOk = canTask() && !archived;
     let tab = route.query.tab ?? 'overview'; let month = (() => { const d = new Date(); return { year: d.getFullYear(), month: d.getMonth() + 1 }; })();
     const body = h('div', { class: 'pj-body' });
@@ -140,11 +141,57 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
       const cur = TABS.some(([k]) => k === tab) ? tab : 'overview'; tabBar.querySelectorAll('[role=tab][data-k]').forEach((b) => { b.setAttribute('aria-selected', String(b.dataset.k === cur)); b.tabIndex = b.dataset.k === cur ? 0 : -1; });
       ({ overview, list, board, calendar, timelineTab, docs, whiteboards })[cur === 'timeline' ? 'timelineTab' : cur]();
     }
-    const taskRow = (t) => h('li', { class: `pj-row${t.status === 'done' ? ' isdone' : ''}` },
+    const selected = new Set();           // tasks picked in the List for a change to all of them at once
+    const taskRow = (t, { select = false } = {}) => h('li', { class: `pj-row${t.status === 'done' ? ' isdone' : ''}${selected.has(t.id) ? ' picked' : ''}` },
+      select && tasksOk ? h('input', { type: 'checkbox', class: 'pj-pick', 'aria-label': `Select “${t.title}”`, ...(selected.has(t.id) ? { checked: true } : {}), onchange: (e) => { if (e.target.checked) selected.add(t.id); else selected.delete(t.id); draw(); } }) : null,
       h('button', { type: 'button', class: 'pj-check', 'aria-pressed': String(t.status === 'done'), 'aria-label': `${t.status === 'done' ? 'Reopen' : 'Mark done'}: ${t.title}`, ...(tasksOk ? { onclick: () => setStatus(t, t.status === 'done' ? 'todo' : 'done') } : { disabled: true }) }),
-      h('button', { type: 'button', class: 'pj-title', onclick: () => openTask(t) }, t.title), t.assignee_id ? h('span', { class: 'fine muted' }, personName(t.assignee_id)) : null,
-      t.subtasks_total ? h('span', { class: 'fine muted', title: 'Subtasks done' }, icon('check'), ` ${t.subtasks_done}/${t.subtasks_total}`) : null, t.checklist_total ? h('span', { class: 'fine muted', title: 'Checklist' }, `${t.checklist_done}/${t.checklist_total}`) : null, chip(label(PRIORITY, t.priority), t.priority === 'urgent' ? 'bad' : t.priority === 'high' ? 'warn' : ''), h('span', { class: `pj-due${t.status !== 'done' && t.due_on && t.due_on < todayIso() ? ' late' : ''}` }, t.due_on ? dueLabel(t.due_on, todayIso()) : ''));
-    const addBox = (status) => tasksOk ? h('form', { class: 'pj-add', onsubmit: (e) => { e.preventDefault(); const i = e.target.elements.t; const v = i.value; i.value = ''; addTask(v, { status }); } }, h('input', { name: 't', placeholder: 'Add a task', 'aria-label': `Add a task (${label(TASK_STATUS, status)})`, maxlength: 300 }), btn('Add', null, '', { type: 'submit' })) : null;
+      h('button', { type: 'button', class: 'pj-title', onclick: () => openTask(t) }, t.title),
+      ...(t.tags ?? []).slice(0, 3).map((g) => chip(g.name, `tag-${g.color}`)), t.assignee_id ? h('span', { class: 'fine muted' }, personName(t.assignee_id)) : null,
+      t.subtasks_total ? h('span', { class: 'fine muted', title: 'Subtasks done' }, icon('check'), ` ${t.subtasks_done}/${t.subtasks_total}`) : null, t.checklist_total ? h('span', { class: 'fine muted', title: 'Checklist' }, `${t.checklist_done}/${t.checklist_total}`) : null,
+      t.files_total ? h('span', { class: 'fine muted', title: 'Files' }, icon('doc'), ` ${t.files_total}`) : null,
+      chip(label(PRIORITY, t.priority), t.priority === 'urgent' ? 'bad' : t.priority === 'high' ? 'warn' : ''), h('span', { class: `pj-due${t.status !== 'done' && t.due_on && t.due_on < todayIso() ? ' late' : ''}` }, t.due_on ? dueLabel(t.due_on, todayIso()) : ''));
+    // a new task takes the group it is added in: its status, section, person or priority
+    const addBox = (extra = {}, where = '') => tasksOk ? h('form', { class: 'pj-add', onsubmit: (e) => { e.preventDefault(); const i = e.target.elements.t; const v = i.value; i.value = ''; addTask(v, extra); } }, h('input', { name: 't', placeholder: 'Add a task', 'aria-label': `Add a task${where ? ` (${where})` : ''}`, maxlength: 300 }), btn('Add', null, '', { type: 'submit' })) : null;
+    const extraFor = (by, key) => (by === 'status' ? { status: key } : by === 'section' && key ? { section: key } : by === 'assignee' && key ? { assignee: key } : by === 'priority' ? { priority: key } : {});
+
+    // the List's choices are remembered per project on this device
+    const VIEW_KEY = `pj.view.${p.id}`;
+    const view = (() => { try { return { group: 'status', sort: 'manual', q: '', assignee: '', tag: '', hideDone: false, ...JSON.parse(localStorage.getItem(VIEW_KEY) || '{}'), q: '' }; } catch { return { group: 'status', sort: 'manual', q: '', assignee: '', tag: '', hideDone: false }; } })();
+    const setView = (patch) => { Object.assign(view, patch); try { const { q: _q, ...keep } = view; localStorage.setItem(VIEW_KEY, JSON.stringify(keep)); } catch { /* not remembered */ } draw(); };
+    const sectionOps = {
+      add: () => { const nm = field({ id: 'ns-name', label: 'Section name', maxlength: 100 }); dialog({ title: 'New section', body: nm.el, actions: [{ label: 'Add section', cls: 'pri', on: async () => { const v = nm.input.value.trim(); if (!v) return nm.error('Give the section a name.'); const x = await api.call('sections.create', { project: p.id, name: v }); if (!x.ok) { fail(x, 'add sections'); return false; } sections.push(x.data[0]); state.sections = sections; if (view.group !== 'section') setView({ group: 'section' }); else draw(); } }, { label: 'Cancel' }] }); },
+      rename: (sec) => { const nm = field({ id: 'rs-name', label: 'Section name', value: sec.name, maxlength: 100 }); dialog({ title: 'Rename section', body: nm.el, actions: [{ label: 'Save', cls: 'pri', on: async () => { const v = nm.input.value.trim(); if (!v) return nm.error('A section needs a name.'); const x = await api.call('sections.update', { id: sec.id, name: v }); if (!x.ok) { fail(x, 'rename sections'); return false; } sec.name = v; draw(); } }, { label: 'Cancel' }] }); },
+      move: async (sec, by) => { const i = sections.indexOf(sec), j = i + by; if (j < 0 || j >= sections.length) return; [sections[i], sections[j]] = [sections[j], sections[i]]; draw(); await Promise.all(sections.map((x, n) => api.call('sections.update', { id: x.id, position: n }))); },
+      remove: (sec) => dialog({ title: `Remove “${sec.name}”?`, body: h('p', {}, 'Its tasks stay in the project, under “No section”.'), actions: [{ label: 'Remove section', cls: 'pri', on: async () => { const x = await api.call('sections.delete', { id: sec.id }); if (!x.ok) { fail(x, 'remove sections'); return false; } sections = sections.filter((y) => y.id !== sec.id); state.sections = sections; await reload(); } }, { label: 'Cancel', focus: true }] }),
+    };
+    const toolbar = () => {
+      const tagsSeen = [...new Map(tops().flatMap((t) => t.tags ?? []).map((g) => [g.id, g])).values()].sort((a, b) => a.name.localeCompare(b.name));
+      const sel = (id, lbl, list, cur, on) => h('label', { class: 'pj-tool', for: id }, h('span', {}, lbl), h('select', { id, onchange: (e) => on(e.target.value) }, ...list.map(([k, t]) => h('option', { value: k, ...(k === cur ? { selected: true } : {}) }, t))));
+      const search = h('input', { type: 'search', id: 'pj-q', placeholder: 'Find a task', value: view.q, 'aria-label': 'Find a task in this project', autocomplete: 'off' });
+      search.addEventListener('input', () => { view.q = search.value; const pos = search.selectionStart; draw(); const again = body.querySelector('#pj-q'); again?.focus(); again?.setSelectionRange(pos, pos); });
+      return h('div', { class: 'pj-toolbar', role: 'search' }, search,
+        sel('pj-who', 'Person', [['', 'Anyone'], ...(state.people ?? []).map((x) => [x.user_id, x.is_you ? `${x.display_name} (you)` : x.display_name]), ['none', 'Unassigned']], view.assignee, (v) => setView({ assignee: v })),
+        tagsSeen.length ? sel('pj-tag', 'Tag', [['', 'Any tag'], ...tagsSeen.map((g) => [g.id, g.name])], view.tag, (v) => setView({ tag: v })) : null,
+        sel('pj-group', 'Group by', [['status', 'Status'], ['section', 'Section'], ['assignee', 'Person'], ['priority', 'Priority'], ['due', 'Due date']], view.group, (v) => setView({ group: v })),
+        sel('pj-sort', 'Sort', [['manual', 'Manual order'], ['due', 'Due date'], ['priority', 'Priority'], ['title', 'Name'], ['newest', 'Newest']], view.sort, (v) => setView({ sort: v })),
+        h('label', { class: 'pj-tool pj-toggle' }, h('input', { type: 'checkbox', ...(view.hideDone ? { checked: true } : {}), onchange: (e) => setView({ hideDone: e.target.checked }) }), h('span', {}, 'Hide done')),
+        tasksOk ? btn([icon('plus'), 'Section'], sectionOps.add, '') : null);
+    };
+    // change every selected task at once (the database skips any the person may not edit)
+    const bulkBar = () => {
+      if (!selected.size || !tasksOk) return null;
+      const run = async (patch, done) => { const x = await api.call('tasks.bulk', { ids: [...selected], ...patch }); if (!x.ok) return fail(x, 'change those tasks'); const n = x.data[0].n; toast(`${done} ${n} task${n === 1 ? '' : 's'}.`); if (n < selected.size) toast(`${selected.size - n} could not be changed by you.`, false); selected.clear(); await reload(); };
+      const pick = (lbl, list, on) => h('select', { 'aria-label': lbl, onchange: (e) => { const v = e.target.value; e.target.value = ''; if (v) on(v); } }, h('option', { value: '' }, lbl), ...list.map(([k, t]) => h('option', { value: k }, t)));
+      const due = h('input', { type: 'date', 'aria-label': 'Set due date', onchange: (e) => { if (e.target.value) run({ due_on: e.target.value }, 'New due date on'); } });
+      return h('div', { class: 'pj-bulk', role: 'region', 'aria-label': 'Change selected tasks' }, h('b', {}, `${selected.size} selected`),
+        btn('Mark done', () => run({ status: 'done' }, 'Marked done:'), 'pri'),
+        pick('Status…', TASK_STATUS, (v) => run({ status: v }, 'Status changed on')),
+        pick('Assign to…', [...(state.people ?? []).map((x) => [x.user_id, x.display_name]), ['none', 'Nobody']], (v) => run(v === 'none' ? { clear_assignee: true } : { assignee: v }, 'Reassigned')),
+        pick('Priority…', PRIORITY, (v) => run({ priority: v }, 'Priority changed on')),
+        sections.length ? pick('Section…', [...sections.map((x) => [x.id, x.name]), ['none', 'No section']], (v) => run(v === 'none' ? { clear_section: true } : { section: v }, 'Moved')) : null,
+        due, btn('Archive', () => dialog({ title: `Archive ${selected.size} task${selected.size === 1 ? '' : 's'}?`, body: h('p', {}, 'They leave the lists. You can find and restore them with search (is:archived).'), actions: [{ label: 'Archive', cls: 'pri', on: () => run({ archive: true }, 'Archived') }, { label: 'Cancel', focus: true }] }), ''),
+        btn('Clear', () => { selected.clear(); draw(); }, 'link'));
+    };
 
     function overview() {
       const open = tasks.filter((t) => t.status !== 'done'); const late = open.filter((t) => t.due_on && t.due_on < todayIso()); const next = open.filter((t) => t.due_on).sort((a, b) => a.due_on.localeCompare(b.due_on)).slice(0, 5);
@@ -155,18 +202,42 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
         h('section', { class: 'pj-sec' }, h('h2', {}, 'Coming up'), next.length ? h('ul', { class: 'pj-rows' }, ...next.map(taskRow)) : h('p', { class: 'muted' }, 'No dated tasks.')));
     }
     function list() {
-      put(body, archived ? readOnlyNotice('This project is archived') : null, ...TASK_STATUS.map(([k, title]) => { const rows = byStatus(tops())[k];
-        return h('section', { class: 'pj-sec' }, h('h2', { class: 'pj-gh' }, title, h('span', { class: 'fine muted' }, ` ${rows.length}`)), rows.length ? h('ul', { class: 'pj-rows' }, ...rows.map(taskRow)) : h('p', { class: 'fine muted' }, 'Nothing here.'), addBox(k)); }));
+      const shown = viewTasks(tops(), view);
+      for (const id2 of [...selected]) if (!shown.some((t) => t.id === id2)) selected.delete(id2);   // only what is on screen stays selected
+      const groups = groupTasks(shown, view.group, { sections, name: personName, today: todayIso() });
+      const filtered = view.q || view.assignee || view.tag || view.hideDone;
+      const head2 = (g) => {
+        const sec = view.group === 'section' && g.key ? sections.find((x) => x.id === g.key) : null;
+        return h('div', { class: 'pj-ghrow' }, h('h2', { class: 'pj-gh' }, g.title, h('span', { class: 'fine muted' }, ` ${g.tasks.length}`)),
+          sec && tasksOk ? h('div', { class: 'pj-secacts' }, btn(['↑', h('span', { class: 'sr' }, ` Move ${sec.name} up`)], () => sectionOps.move(sec, -1), 'link'), btn(['↓', h('span', { class: 'sr' }, ` Move ${sec.name} down`)], () => sectionOps.move(sec, 1), 'link'),
+            btn(['Rename', h('span', { class: 'sr' }, ` ${sec.name}`)], () => sectionOps.rename(sec), 'link'), btn(['Remove', h('span', { class: 'sr' }, ` ${sec.name}`)], () => sectionOps.remove(sec), 'link')) : null);
+      };
+      put(body, archived ? readOnlyNotice('This project is archived') : null, toolbar(), bulkBar(),
+        filtered && !shown.length ? emptyState({ title: 'No tasks match', body: 'Change the filters above to see more.', ic: 'search' }) : null,
+        ...groups.filter((g) => !filtered || g.tasks.length).map((g) => h('section', { class: 'pj-sec' }, head2(g),
+          g.tasks.length ? h('ul', { class: 'pj-rows' }, ...g.tasks.map((t) => taskRow(t, { select: true }))) : h('p', { class: 'fine muted' }, 'Nothing here.'),
+          view.group === 'due' ? null : addBox(extraFor(view.group, g.key), g.title))));
     }
     function board() {
-      const cols = byStatus(tops()); let dragId = null;
-      put(body, archived ? readOnlyNotice('This project is archived') : null, h('p', { class: 'fine muted pj-hint' }, tasksOk ? 'Drag a card to another column, or open it to change its status.' : 'You can look at the board but not change it.'),
-        h('div', { class: 'pj-board' }, ...TASK_STATUS.map(([k, title]) => { const col = h('div', { class: 'pj-col', 'data-status': k, role: 'group', 'aria-label': title },
-          h('h2', { class: 'pj-gh' }, title, h('span', { class: 'fine muted' }, ` ${cols[k].length}`)),
-          ...cols[k].map((t) => h('button', { type: 'button', class: 'pj-cardtask', draggable: tasksOk ? 'true' : 'false', 'data-id': t.id, onclick: () => openTask(t), ondragstart: (e) => { dragId = t.id; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', t.id); } },
-            h('strong', {}, t.title), h('span', { class: 'fine muted' }, [t.assignee_id ? personName(t.assignee_id) : '', t.due_on ? dueLabel(t.due_on, todayIso()) : ''].filter(Boolean).join(' · ')))), addBox(k));
+      const bySection = view.board === 'section'; let dragId = null;
+      const cols = bySection ? groupTasks(sortTasks(tops()), 'section', { sections }) : groupTasks(sortTasks(tops()), 'status');
+      const moveTo = (t, key, list) => {
+        const position = Math.min(100000, list.length ? Math.max(...list.map((x) => x.position)) + 1 : 0);
+        if (!bySection) return t.status !== key && setStatus(t, key, position);
+        if ((t.section_id ?? null) === key) return;
+        api.call('tasks.update', key ? { id: t.id, section: key, position } : { id: t.id, clear_section: true, position }).then((x) => (x.ok ? reload() : fail(x, 'move that task')));
+      };
+      put(body, archived ? readOnlyNotice('This project is archived') : null,
+        h('div', { class: 'pj-toolbar' }, seg([['status', 'Columns by status'], ['section', 'Columns by section']], bySection ? 'section' : 'status', (k) => setView({ board: k }), 'Board columns'), tasksOk && bySection ? btn([icon('plus'), 'Section'], sectionOps.add, '') : null),
+        h('p', { class: 'fine muted pj-hint' }, tasksOk ? 'Drag a card to another column, or open it to change it.' : 'You can look at the board but not change it.'),
+        h('div', { class: 'pj-board' }, ...cols.map((c) => { const col = h('div', { class: 'pj-col', 'data-key': c.key ?? '', role: 'group', 'aria-label': c.title },
+          h('h2', { class: 'pj-gh' }, c.title, h('span', { class: 'fine muted' }, ` ${c.tasks.length}`)),
+          ...c.tasks.map((t) => h('button', { type: 'button', class: 'pj-cardtask', draggable: tasksOk ? 'true' : 'false', 'data-id': t.id, onclick: () => openTask(t), ondragstart: (e) => { dragId = t.id; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', t.id); } },
+            h('strong', {}, t.title), (t.tags ?? []).length ? h('span', { class: 'pj-cardtags' }, ...(t.tags ?? []).slice(0, 3).map((g) => chip(g.name, `tag-${g.color}`))) : null,
+            h('span', { class: 'fine muted' }, [t.assignee_id ? personName(t.assignee_id) : '', t.due_on ? dueLabel(t.due_on, todayIso()) : '', t.subtasks_total ? `${t.subtasks_done}/${t.subtasks_total} subtasks` : ''].filter(Boolean).join(' · ')))),
+          addBox(bySection ? (c.key ? { section: c.key } : {}) : { status: c.key }, c.title));
           if (tasksOk) { col.addEventListener('dragover', (e) => { e.preventDefault(); col.classList.add('over'); }); col.addEventListener('dragleave', () => col.classList.remove('over'));
-            col.addEventListener('drop', (e) => { e.preventDefault(); col.classList.remove('over'); const t = tasks.find((x) => x.id === (dragId ?? e.dataTransfer.getData('text/plain'))); dragId = null; if (t && t.status !== k) setStatus(t, k, Math.min(100000, cols[k].length ? Math.max(...cols[k].map((x) => x.position)) + 1 : 0)); }); }
+            col.addEventListener('drop', (e) => { e.preventDefault(); col.classList.remove('over'); const t = tasks.find((x) => x.id === (dragId ?? e.dataTransfer.getData('text/plain'))); dragId = null; if (t) moveTo(t, c.key, c.tasks); }); }
           return col; })));
     }
     function calendar() {
@@ -243,6 +314,30 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
     const sel = (id, lbl, list, cur, key) => h('div', { class: 'fld' }, h('label', { for: id }, lbl), h('select', { id, ...(canEdit ? {} : { disabled: true }), onchange: (e) => save({ [key]: e.target.value }) }, ...opts(list, cur)));
     const who = h('select', { id: 'td-who', ...(canEdit ? {} : { disabled: true }), onchange: (e) => save(e.target.value ? { assignee: e.target.value } : { clear_assignee: true }) }, h('option', { value: '' }, 'Unassigned'), ...(state.people ?? []).map((x) => h('option', { value: x.user_id, ...(x.user_id === t.assignee_id ? { selected: true } : {}) }, x.is_you ? `${x.display_name} (you)` : x.display_name)));
     const due = h('input', { id: 'td-due', type: 'date', value: t.due_on ?? '', ...(canEdit ? {} : { disabled: true }), onchange: (e) => save(e.target.value ? { due_on: e.target.value } : { clear_due: true }) });
+    const secs = state.sections ?? [];
+    const sectionField = secs.length && !t.parent_task_id ? h('div', { class: 'fld' }, h('label', { for: 'td-sec' }, 'Section'), h('select', { id: 'td-sec', ...(canEdit ? {} : { disabled: true }), onchange: (e) => save(e.target.value ? { section: e.target.value } : { clear_section: true }) },
+      h('option', { value: '' }, 'No section'), ...secs.map((x) => h('option', { value: x.id, ...(x.id === t.section_id ? { selected: true } : {}) }, x.name)))) : null;
+    // tags: type a name to add (an existing organization tag is reused), × to remove
+    const tagBox = h('div', { class: 'pj-tags' });
+    const drawTags = async () => {
+      const all = await api.call('tags.list', {}); const cur = t.tags ?? [];
+      const listId = `tags-${t.id}`;
+      put(tagBox, h('div', { class: 'pj-taglist' }, ...cur.map((g) => h('span', { class: `chip tag-${g.color}` }, g.name, canEdit ? h('button', { type: 'button', class: 'chip-x', 'aria-label': `Remove tag ${g.name}`, onclick: async () => { const x = await api.call('tasks.tags.remove', { task: t.id, tag: g.id }); if (x.ok) { t = { ...t, tags: cur.filter((y) => y.id !== g.id) }; drawTags(); onChange(); } else fail(x, 'change tags'); } }, '×') : null)),
+        cur.length ? null : h('span', { class: 'fine muted' }, 'No tags.')),
+        canEdit ? h('form', { class: 'pj-add', onsubmit: async (e) => { e.preventDefault(); const i = e.target.elements.g; const v = i.value.trim(); if (!v) return; i.value = ''; const x = await api.call('tasks.tags.add', { task: t.id, name: v }); if (x.ok) { if (!cur.some((y) => y.id === x.data[0].id)) t = { ...t, tags: [...cur, x.data[0]] }; drawTags(); onChange(); } else fail(x, 'add tags'); } },
+          h('input', { name: 'g', list: listId, placeholder: 'Add a tag', 'aria-label': 'Add a tag', maxlength: 40, autocomplete: 'off' }), h('datalist', { id: listId }, ...(all.ok ? all.data : []).map((g) => h('option', { value: g.name }))), btn('Add', null, '', { type: 'submit' })) : null);
+    };
+    // files: Drive files of this project (they stay in Drive; the task points at them)
+    const fileBox = h('div', { class: 'pj-files' });
+    const drawFiles = async () => {
+      const r = await api.call('tasks.files.list', { task: t.id }); const files = r.ok ? r.data : [];
+      const href = (f) => (f.mime_type === BOARD_MIME ? `#/board/${f.id}` : f.kind === 'document' ? `#/doc/${f.id}` : null);
+      const download = async (f) => { const x = await api.call('drive.files.download', { id: f.id }); if (x.ok && x.data[0]?.url) location.href = x.data[0].url; else fail(x, 'open that file'); };
+      put(fileBox, files.length ? h('ul', { class: 'pj-rows' }, ...files.map((f) => h('li', { class: 'pj-row' }, icon(f.mime_type === BOARD_MIME ? 'wb' : 'doc'),
+        href(f) ? h('a', { class: 'pj-title', href: href(f) }, f.name) : h('button', { type: 'button', class: 'pj-title', onclick: () => download(f) }, f.name),
+        canEdit ? btn(['Detach', h('span', { class: 'sr' }, ` ${f.name}`)], async () => { const x = await api.call('tasks.files.detach', { task: t.id, file: f.id }); if (x.ok) { drawFiles(); onChange(); } else fail(x, 'detach that file'); }, 'link') : null))) : h('p', { class: 'fine muted' }, 'No files. Files you attach stay in Drive, in this project.'),
+        canEdit ? h('div', { class: 'pj-timeacts' }, btn('Attach a project file', () => attachFile(t, p, files, () => { drawFiles(); onChange(); }), ''), ctx.canAnywhere('drive.file.upload') ? btn('Upload a file', () => uploadToTask(t, p, () => { drawFiles(); onChange(); }), '') : null) : null);
+    };
     const notes = h('textarea', { id: 'td-notes', rows: 5, maxlength: '20000', ...(canEdit ? {} : { readonly: true }) }); notes.value = t.notes ?? ''; notes.addEventListener('change', () => save({ notes: notes.value }));
     const checklist = h('div', { class: 'pj-check-list' });
     const drawChecklist = async () => { const r = await api.call('checklist.list', { task: t.id }); if (!r.ok) return;
@@ -266,15 +361,42 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
         canEdit ? h('form', { class: 'pj-add', onsubmit: async (e) => { e.preventDefault(); const i = e.target.elements.s; const v = i.value.trim(); if (!v) return; i.value = ''; const x = await api.call('tasks.create', { project: p.id, parent: t.id, title: v }); if (x.ok) { drawSubtasks(); onChange(); } else fail(x, 'add subtasks'); } }, h('input', { name: 's', placeholder: 'Add a subtask', 'aria-label': 'Add a subtask', maxlength: 300 }), btn('Add', null, '', { type: 'submit' })) : null);
     };
     const share = p.client_id && ctx.can('projects.record.share', p.client_id) ? h('label', { class: 'pj-share' }, h('input', { type: 'checkbox', checked: t.client_visible, onchange: async (e) => { const r = await api.call('tasks.share', { id: t.id, visible: e.target.checked }); if (!r.ok) { e.target.checked = !e.target.checked; fail(r, 'share that task'); } else onChange(); } }), ' Show this task to the client') : null;
-    const body = [h('div', { class: 'fld' }, h('label', { for: 'td-title' }, 'Task'), title), saved, sel('td-status', 'Status', TASK_STATUS, t.status, 'status'), sel('td-prio', 'Priority', PRIORITY, t.priority, 'priority'), h('div', { class: 'fld' }, h('label', { for: 'td-who' }, 'Assigned to'), who), h('div', { class: 'fld' }, h('label', { for: 'td-due' }, 'Due'), due),
+    const body = [h('div', { class: 'fld' }, h('label', { for: 'td-title' }, 'Task'), title), saved, sel('td-status', 'Status', TASK_STATUS, t.status, 'status'), sel('td-prio', 'Priority', PRIORITY, t.priority, 'priority'), h('div', { class: 'fld' }, h('label', { for: 'td-who' }, 'Assigned to'), who), h('div', { class: 'fld' }, h('label', { for: 'td-due' }, 'Due'), due), sectionField,
       h('div', { class: 'fld' }, h('label', { for: 'td-notes' }, 'Notes'), notes),
-      ...(t.parent_task_id ? [] : [h('h3', {}, 'Subtasks'), subtasks]), h('h3', {}, 'Checklist'), checklist, h('h3', {}, 'Time'), timeBox, share,
+      h('h3', {}, 'Tags'), tagBox, ...(t.parent_task_id ? [] : [h('h3', {}, 'Subtasks'), subtasks]), h('h3', {}, 'Files'), fileBox, h('h3', {}, 'Checklist'), checklist, h('h3', {}, 'Time'), timeBox, share,
       h('h3', {}, 'Comments'), commentsPanel({ api, type: 'project_task', id: t.id, people: state.people ?? [], canComment: !archivedProject && ctx.canAnywhere('projects.task.comment') }),
       (() => { const hist = activityPanel({ api, type: 'project_task', id: t.id, describe: describeStep }); return h('details', { class: 'pj-history', ontoggle: (e) => { if (e.target.open) hist.load(); } }, h('summary', {}, 'History'), hist); })()];
     title.id = 'td-title';
     body.unshift(h('div', { class: 'pj-drawer-top' }, t.parent_task_id ? btn('↑ Back to the parent task', async () => { const x = await api.call('tasks.get', { id: t.parent_task_id }); if (x.ok) { closeDrawer(); taskDrawer(x.data[0], p, { onChange, canEdit }); } else fail(x, 'open that task'); }, 'link') : h('span'), followButton({ api, type: 'project_task', id: t.id })));
     const closeDrawer = drawer({ title: t.parent_task_id ? 'Subtask' : 'Task', label: `Task: ${t.title}`, body, actions: canEdit ? [{ label: 'Archive task', on: async () => { const r = await api.call('tasks.archive', { id: t.id }); if (!r.ok) { fail(r, 'archive that task'); return; } toast('Task archived.'); onChange(); } }, { label: 'Done', cls: 'pri' }] : [{ label: 'Close', cls: 'pri' }] });
-    drawChecklist(); drawTime(); if (!t.parent_task_id) drawSubtasks();
+    drawChecklist(); drawTime(); drawTags(); drawFiles(); if (!t.parent_task_id) drawSubtasks();
+  }
+  // pick one of the project's Drive files to attach to the task
+  async function attachFile(t, p, already, after) {
+    const r = await api.call('drive.project.files', { project: p.id }); if (!r.ok) return fail(r, 'list this project\'s files');
+    const have = new Set(already.map((f) => f.id)); const files = r.data.filter((f) => !have.has(f.id));
+    const close = dialog({ title: 'Attach a project file', wide: true, body: files.length ? h('ul', { class: 'pj-rows' }, ...files.map((f) => h('li', { class: 'pj-row' }, icon(f.mime_type === BOARD_MIME ? 'wb' : 'doc'), h('span', { class: 'pj-title' }, f.name),
+      btn(['Attach', h('span', { class: 'sr' }, ` ${f.name}`)], async () => { const x = await api.call('tasks.files.attach', { task: t.id, file: f.id }); if (x.ok) { toast('File attached.'); close(); after(); } else fail(x, 'attach that file'); }, 'pri')))) : h('p', { class: 'muted' }, 'This project has no other files yet. Upload one, or make a document in the Docs tab.'), actions: [{ label: 'Close' }] });
+  }
+  // upload into the project's own place in Drive (the client's space for a client project, the shared Drive otherwise), then attach it
+  function uploadToTask(t, p, after) {
+    const picker = h('input', { type: 'file', class: 'sr', tabindex: '-1', 'aria-hidden': 'true' });
+    picker.addEventListener('change', async () => {
+      const file = picker.files[0]; picker.remove(); if (!file) return;
+      const where = p.client_id ? { space: 'client', client: p.client_id } : { space: 'shared' };
+      toast(`Uploading ${file.name}…`);
+      const sig = await api.call('drive.uploads.sign', { ...where, name: file.name, size_bytes: Math.max(1, file.size), mime_type: file.type || 'application/octet-stream' });
+      if (!sig.ok || !sig.data[0]) return toast(sig.status === 422 ? 'The storage limit is reached.' : 'You can’t upload files here.', false);
+      const target = sig.data[0];
+      const sent = await fetch(target.url, { method: target.method || 'PUT', headers: target.headers ?? {}, body: file }).then((x) => x.ok, () => false);
+      if (!sent) return toast('The upload failed. Try again.', false);
+      const c = await api.call('drive.files.create', { ...where, project: p.id, app: 'projects', name: file.name, kind: 'file', mime_type: file.type || 'application/octet-stream', size_bytes: Math.max(1, file.size), storage_path: target.path });
+      if (!c.ok) return toast('The file was uploaded but could not be added.', false);
+      const a = await api.call('tasks.files.attach', { task: t.id, file: c.data[0].id });
+      if (!a.ok) return fail(a, 'attach that file');
+      toast(`${file.name} attached.`); after();
+    });
+    document.body.append(picker); picker.click();
   }
   const logTime = (t, p, after) => {
     const mins = field({ id: 'lt-min', label: 'Minutes', type: 'number', value: '30' }); const note = field({ id: 'lt-note', label: 'Note (optional)', maxlength: 500 });

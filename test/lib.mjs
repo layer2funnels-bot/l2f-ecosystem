@@ -10,7 +10,8 @@ export const migrationFiles = () => {
 export async function openDb(driver = process.env.DB_DRIVER || 'pglite') {
   if (driver === 'pglite') {
     const { PGlite } = await import('@electric-sql/pglite');
-    const db = await PGlite.create();
+    const { types } = await import('@electric-sql/pglite');
+    const db = await PGlite.create({ parsers: { [types.DATE]: (v) => v } });   // plain dates stay 'YYYY-MM-DD', as the real server sends them (packages/core/server.mjs)
     return {
       driver,
       exec: (sql) => db.exec(sql),
@@ -19,6 +20,7 @@ export async function openDb(driver = process.env.DB_DRIVER || 'pglite') {
     };
   }
   const pg = (await import('pg')).default;
+  pg.types.setTypeParser(pg.types.builtins.DATE, (v) => v);   // as the real server (packages/core/server.mjs)
   const base = process.env.PG_URL || 'postgres://tester:tester@localhost:5432/postgres';
   const admin = new pg.Client({ connectionString: base });
   await admin.connect();

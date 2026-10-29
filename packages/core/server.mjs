@@ -4,6 +4,9 @@
 //   SUPABASE_JWKS_URL       https://<project>.supabase.co/auth/v1/.well-known/jwks.json
 //   SUPABASE_JWT_ISSUER     optional, e.g. https://<project>.supabase.co/auth/v1
 import pg from 'pg';
+// A plain date (due dates, start dates) stays a plain 'YYYY-MM-DD' string. Left to the driver it becomes a midnight timestamp
+// ('2030-05-01T00:00:00.000Z'), which date fields in forms cannot show, and which can move a day in another time zone.
+pg.types.setTypeParser(pg.types.builtins.DATE, (v) => v);
 import { createApi } from './api.mjs';
 import { createHttpHandler } from './http.mjs';
 import { createJwtVerifier, createJwksProvider } from './jwt.mjs';
