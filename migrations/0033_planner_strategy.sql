@@ -345,6 +345,7 @@ create table public.planner_strategy_focus (
   template_id uuid not null,
   position int not null default 0,
   primary key (strategy_id, template_id),
+  unique (workspace_id, strategy_id, template_id),
   foreign key (workspace_id, strategy_id) references public.planner_strategies (workspace_id, id) on delete cascade,
   foreign key (workspace_id, template_id) references public.planner_focus_templates (workspace_id, id) on delete cascade
 );
@@ -380,7 +381,7 @@ create table public.planner_strategy_focus_kinds (
   template_id uuid not null,
   goal_type_id uuid not null,
   primary key (strategy_id, template_id, goal_type_id),
-  foreign key (strategy_id, template_id) references public.planner_strategy_focus (strategy_id, template_id) on delete cascade,
+  foreign key (workspace_id, strategy_id, template_id) references public.planner_strategy_focus (workspace_id, strategy_id, template_id) on delete cascade,
   foreign key (workspace_id, goal_type_id) references public.planner_goal_types (workspace_id, id) on delete cascade
 );
 -- A plan's focus area remembers which reusable focus area it came from, so the strategy's per-focus rules can apply.
@@ -404,8 +405,8 @@ create table public.planner_strategy_items (
   created_at timestamptz not null default now(),
   unique (workspace_id, id),
   foreign key (workspace_id, strategy_id) references public.planner_strategies (workspace_id, id) on delete cascade,
-  foreign key (strategy_id, template_id) references public.planner_strategy_focus (strategy_id, template_id) on delete cascade,
-  foreign key (parent_id) references public.planner_strategy_items (id) on delete cascade,
+  foreign key (workspace_id, strategy_id, template_id) references public.planner_strategy_focus (workspace_id, strategy_id, template_id) on delete cascade,
+  foreign key (workspace_id, parent_id) references public.planner_strategy_items (workspace_id, id) on delete cascade,
   foreign key (workspace_id, goal_type_id) references public.planner_goal_types (workspace_id, id) on delete set null (goal_type_id),
   check (item_kind = 'objective' or parent_id is not null)   -- KPIs and tasks always belong to an objective
 );
@@ -785,6 +786,8 @@ begin
     'planner_favorites', 'planner_saved_views', 'planner_history', 'planner_type_rules', 'planner_horizons', 'planner_focus_templates', 'planner_strategies', 'planner_strategy_kinds', 'planner_strategy_focus', 'planner_measure_types', 'planner_measure_type_kinds', 'planner_strategy_focus_kinds', 'planner_strategy_items'] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('alter table public.%I force row level security', t);
+    -- the active organization of the request (x-org-id) bounds every row, as on every other tenant table (0005 org_in_scope)
+    execute format($f$create policy org_scope on public.%I as restrictive for all using (private.org_in_scope(workspace_id)) with check (private.org_in_scope(workspace_id))$f$, t);
   end loop;
   -- everything readable needs planner.plan.view
   foreach t in array array['planner_plans', 'planner_values', 'planner_focus_areas', 'planner_goal_types', 'planner_goals', 'planner_kpis',
@@ -1773,6 +1776,7 @@ begin
     select * from tree order by depth, position, created_at
   loop
     if it.item_kind = 'objective' then
+      if it.parent_id is not null and not (ids ? it.parent_id::text) then continue; end if;   -- its parent was skipped: so is it
       select f.id into fa from public.planner_focus_areas f where f.plan_id = p_plan and f.template_id = it.template_id limit 1;
       -- a kind left empty is "Objective" (or the organization's first kind)
       select coalesce((select gt.id from public.planner_goal_types gt where gt.workspace_id = ws and gt.name = 'Objective' limit 1),
@@ -1820,6 +1824,7 @@ begin
       execute format('revoke all on all functions in schema public from %I', r);
       execute format('revoke all on all tables in schema private from %I', r);
       execute format('revoke all on all functions in schema private from %I', r);
+      execute format('revoke all on all sequences in schema public from %I', r);
     end if;
   end loop;
 end $$;

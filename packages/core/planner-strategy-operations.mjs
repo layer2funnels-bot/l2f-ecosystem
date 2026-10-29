@@ -55,6 +55,7 @@ const FUNCTIONS = [
 ];
 
 const ORG_ARGS = new Set(['p_workspace']);
+const ARRAY_ARGS = new Set(['p_ids', 'p_siblings']);   // uuid[] parameters: sent as a real array; the other objects (p_data, p_rules ...) are jsonb text
 export const plannerStrategyOperations = FUNCTIONS.map(([fn, cls, params]) => defineOperation({
   name: `planner.strategy.${fn.replace(/^planner_/, '')}`,
   class: cls,
@@ -62,11 +63,11 @@ export const plannerStrategyOperations = FUNCTIONS.map(([fn, cls, params]) => de
   run: async (q, ctx, i) => {
     const args = i.args ?? {};
     const unknown = Object.keys(args).filter((k) => !params.includes(k));
-    if (unknown.length) throw { code: '22023', message: 'unknown argument' };
+    if (unknown.length) throw { code: 'P0001', message: 'unknown argument' };   // a bad request (422), not a server error
     for (const k of Object.keys(args)) if (ORG_ARGS.has(k) && args[k] !== ctx.orgId) throw { code: '42501' };
     const names = params.filter((k) => Object.hasOwn(args, k));
     const sql = `select public.${fn}(${names.map((k, n) => `"${k}" => $${n + 1}`).join(', ')}) as r`;
-    const rows = await q(sql, names.map((k) => (args[k] !== null && typeof args[k] === 'object' ? JSON.stringify(args[k]) : args[k])));
+    const rows = await q(sql, names.map((k) => (args[k] !== null && typeof args[k] === 'object' && !(ARRAY_ARGS.has(k) && Array.isArray(args[k])) ? JSON.stringify(args[k]) : args[k])));
     return [{ r: rows[0]?.r ?? null }];
   },
 }));

@@ -22,10 +22,10 @@ const call = async (fn, args, user, org = L) => {
 };
 
 await asSuper();
-const U = { OWN: id(), ADM: id(), ED: id(), VW: id(), NOAPP: id(), AOWN: id() };
+const U = { OWN: id(), ADM: id(), ED: id(), VW: id(), NOAPP: id(), AOWN: id(), BOTH: id() };
 await db.query("insert into workspaces (id,slug,name) values ($1,'layer2funnels','L'),($2,'aurj','A')", [L, A]);
 const staff = (u, ws, r) => db.query("insert into memberships (workspace_id,user_id,kind,role) values ($1,$2,'staff',$3)", [ws, u, r]);
-await staff(U.OWN, L, 'owner'); await staff(U.ADM, L, 'admin'); await staff(U.ED, L, 'editor'); await staff(U.VW, L, 'viewer'); await staff(U.NOAPP, L, 'editor'); await staff(U.AOWN, A, 'owner');
+await staff(U.OWN, L, 'owner'); await staff(U.ADM, L, 'admin'); await staff(U.ED, L, 'editor'); await staff(U.VW, L, 'viewer'); await staff(U.NOAPP, L, 'editor'); await staff(U.AOWN, A, 'owner'); await staff(U.BOTH, L, 'owner'); await staff(U.BOTH, A, 'owner');
 for (const u of [U.ED, U.VW]) await db.query("insert into app_grants (workspace_id,user_id,app_key) values ($1,$2,'planner')", [L, u]);
 
 // strategy drawn by an admin, then a plan from it
@@ -57,6 +57,30 @@ x = await call('save_plan', { p_workspace: L, p_id: null, p_data: { name: 'Intru
 check('PS8', 'A non-member cannot act in the organization even with its id in x-org-id', !x.ok);
 x = await api.handle({ operation: 'planner.strategy.get_plan', input: { args: { p_plan: plan, p_extra: 1 } }, auth: { userId: U.ED, email: 'x@example.com' }, headers: { 'x-org-id': L } });
 check('PS9', 'Unknown arguments are refused', x.body?.ok === false);
+
+// a person who belongs to BOTH organizations sees only the organization named by x-org-id (the restrictive org_scope policy; WCIGA)
+x = await call('get_plan', { p_plan: plan }, U.BOTH, L);
+check('PS11', 'A member of both organizations reads the plan when the request names its organization', x.ok && x.r?.plan?.name === 'Q4 social' || x.ok && !!x.r);
+x = await call('get_plan', { p_plan: plan }, U.BOTH, A);
+check('PS12', 'The same person, with the other organization named, gets nothing of it (id-only operations included)', x.ok && x.r === null);
+x = await call('list_plans', { p_workspace: A }, U.BOTH, A);
+check('PS13', 'And the other organization’s plan list is empty', x.ok && Array.isArray(x.r) && x.r.length === 0);
+const orgScoped = await rows("select count(*)::int n from pg_policies where schemaname = 'public' and tablename like 'planner\\_%' and policyname = 'org_scope' and tablename not in ('planner_objectives', 'planner_measures', 'planner_measure_values', 'planner_objective_tasks', 'planner_reviews')");
+const planTables = await rows("select count(*)::int n from pg_class c join pg_namespace s on s.oid = c.relnamespace where s.nspname = 'public' and c.relkind = 'r' and c.relname like 'planner\\_%' and c.relname not in ('planner_objectives', 'planner_measures', 'planner_measure_values', 'planner_objective_tasks', 'planner_reviews')");
+check('PS14', 'Every Planner strategy table carries the org_scope policy', orgScoped[0].n === planTables[0].n && planTables[0].n >= 25);
+
+// array arguments reach the database as arrays, and a bad request is a 422, not a server error
+x = await call('get_plan', { p_plan: plan }, U.ADM);
+const faIds = (x.r?.focus_areas ?? []).map((f) => f.id);
+x = await call('reorder', { p_entity: 'focus_areas', p_ids: faIds }, U.ADM);
+check('PS15', 'Reordering with a list of ids works (uuid[] parameter)', x.status === 200 && x.ok);
+x = await call('move_goal', { p_goal: g.id, p_focus: faIds[0], p_parent: null, p_siblings: [] }, U.ADM);
+check('PS16', 'Moving an objective with an empty sibling list works', x.status === 200 && x.ok);
+x = await api.handle({ operation: 'planner.strategy.get_plan', input: { args: { p_plan: plan, p_extra: 1 } }, auth: { userId: U.ED, email: 'x@example.com' }, headers: { 'x-org-id': L } });
+check('PS17', 'An unknown argument is a 422 (invalid), not a 500', x.status === 422);
+const fkParent = await rows("select count(*)::int n from pg_constraint where conrelid = 'public.planner_strategy_items'::regclass and contype = 'f' and pg_get_constraintdef(oid) like 'FOREIGN KEY (workspace_id, parent_id)%'");
+const fkFocus = await rows("select count(*)::int n from pg_constraint where conrelid in ('public.planner_strategy_items'::regclass, 'public.planner_strategy_focus_kinds'::regclass) and contype = 'f' and pg_get_constraintdef(oid) like 'FOREIGN KEY (workspace_id, strategy_id, template_id)%'");
+check('PS18', 'Strategy items and focus kinds are tied to their workspace by composite keys', fkParent[0].n === 1 && fkFocus[0].n === 2);
 
 // the API is the only door
 const grants = await rows("select count(*)::int n from information_schema.role_table_grants where grantee in ('anon','authenticated') and table_name like 'planner_%'");
