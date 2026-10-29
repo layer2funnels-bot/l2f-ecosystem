@@ -342,8 +342,10 @@ await q("insert into planner_reviews (workspace_id,title,due_on) values ($1,'Q4 
 await visit(page, base + '/#/office'); await wait('Edit quiz emails');
 check('U14b', 'Office Home fills "My work", "Deadlines" and the review notice from Projects and Planner (overdue task flagged, project name shown, review coming up)', (await page.locator('main').innerText()).includes('Quiz funnel rebuild') && (await page.locator('main').innerText()).includes('Overdue') && await page.getByText('Coming up.').isVisible() && !(await page.locator('main').innerText()).includes('Nothing assigned to you.'));
 
-await page.locator('nav.nav a', { hasText: 'Planner' }).click(); await wait('Planner isn’t built yet');
-check('U15', 'A section whose screens are not built yet says so honestly instead of showing a fake page', (await page.locator('main').innerText()).includes('Go to Office Home'));
+await page.locator('nav.nav a', { hasText: 'Planner' }).click(); await page.waitForURL(/\/planner\//, { timeout: 9000 }); await wait('My work'); const onPlanner = page.url().includes('/planner/'); await page.goBack(); await page.waitForSelector('nav.nav', { timeout: 9000 });
+check('U15', 'The Office Planner item opens the real Planner (its own menu), no longer a placeholder', onPlanner);
+await visit(page, base + '/#/app/layer2_agents'); await wait('isn’t built yet');
+check('U15b', 'An app whose screens are not built yet says so honestly instead of showing a fake page', (await page.locator('main').innerText()).includes('Go to Office Home'));
 await visit(page, base + '/#/office/nope'); await wait('We couldn’t find that');
 const lost = await page.locator('main').innerText();
 await visit(page, base + `/#/office/funnels/avatars/00000000-0000-4000-8000-000000000000`); await wait('We couldn’t find that');

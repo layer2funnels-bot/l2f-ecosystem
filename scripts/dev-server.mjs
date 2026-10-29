@@ -34,6 +34,14 @@ export async function startDevServer({ port = 8788, env = { ...LOCAL_ENV, ...pro
       }
       if (url.pathname === '/app-manifests.json') { res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' }); res.end(JSON.stringify(loadManifests().map(({ dir, ...m }) => m))); return; }
       // /packages/* is shared browser code (tokens, core modules); everything else comes from apps/web, SPA fallback to index.html
+      // Planner is its own Vite app (apps/planner, base /planner/): serve its production build the way scripts/build-web.mjs places it in dist/web/planner
+      if (url.pathname === '/planner' || url.pathname.startsWith('/planner/')) {
+        const pdist = fileURLToPath(new URL('../apps/planner/dist/', import.meta.url));
+        let pf = normalize(join(pdist, url.pathname.replace(/^\/planner\/?/, ''))); if (!pf.startsWith(pdist)) { res.writeHead(404).end(); return; }
+        if (!extname(pf)) pf = join(pdist, 'index.html');
+        const pbody = await readFile(pf);
+        res.writeHead(200, { ...headersFor, 'content-type': TYPES[extname(pf)] ?? 'application/octet-stream', 'cache-control': 'no-store' }); res.end(pbody); return;
+      }
       const [base, rel] = url.pathname.startsWith('/packages/ui/') ? [ui, url.pathname.slice(13)] : url.pathname.startsWith('/packages/core/') ? [core, url.pathname.slice(15)] : [root, url.pathname];
       let file = normalize(join(base, rel)); if (!file.startsWith(base)) { res.writeHead(404).end(); return; }
       if (url.pathname === '/' || !extname(file)) file = join(root, 'index.html');

@@ -12,6 +12,7 @@ import { clientsOperations } from './client-operations.mjs';
 import { projectsOperations } from './project-operations.mjs';
 import { driveOperations } from './drive-operations.mjs';
 import { plannerOperations } from './planner-operations.mjs';
+import { plannerStrategyOperations } from './planner-strategy-operations.mjs';
 import { shellOperations } from './shell-operations.mjs';
 import { approvalsOperations } from './approvals-operations.mjs';
 import { portalOperations } from './portal-operations.mjs';
@@ -24,6 +25,7 @@ export const operations = Object.freeze(Object.fromEntries([
   ...projectsOperations,
   ...driveOperations,
   ...plannerOperations,
+  ...plannerStrategyOperations,
   ...shellOperations,
   ...approvalsOperations,
   ...portalOperations,

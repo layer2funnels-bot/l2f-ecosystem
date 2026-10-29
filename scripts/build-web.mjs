@@ -1,7 +1,8 @@
 // Produces dist/web: the static site Cloudflare Pages would serve (build only; this repository never deploys).
 //   SUPABASE_URL=https://<ref>.supabase.co SUPABASE_PUBLISHABLE_KEY=sb_publishable_... GOOGLE_ENABLED=true node scripts/build-web.mjs
 // Only browser-safe values are accepted: a privileged key stops the build.
-import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { loadManifests } from '../packages/core/manifests.mjs';
 
@@ -16,6 +17,17 @@ import { buildWhiteboard } from './build-whiteboard.mjs';
 const out = at('dist/web'); rmSync(out, { recursive: true, force: true }); mkdirSync(out + '/packages/core', { recursive: true });
 await buildWhiteboard({ quiet: true });          // the editor bundle (skipped when its build-time dependencies are not installed: the board page then says so)
 cpSync(at('apps/web'), out, { recursive: true });
+// Planner (React, migration 0033): built by its own Vite config into apps/planner/dist, served at /planner/.
+// Cloudflare runs only this script, so it installs and builds Planner itself when the bundle is missing; on Cloudflare a failure stops the build
+// (the previous deployment stays live) instead of shipping a site where /planner/ silently falls back to the shell page.
+if (!existsSync(at('apps/planner/dist/index.html'))) {
+  const run = (args) => spawnSync('npm', ['--prefix', at('apps/planner'), ...args], { stdio: 'inherit' }).status === 0;
+  if (!(run(['ci']) && run(['run', 'build']))) {
+    if (process.env.CF_PAGES) { console.error('Planner build failed: stopping so /planner/ is never served as the shell page.'); process.exit(1); }
+    console.warn('Planner bundle missing: run npm --prefix apps/planner ci && npm --prefix apps/planner run build first.');
+  }
+}
+if (existsSync(at('apps/planner/dist/index.html'))) cpSync(at('apps/planner/dist'), out + '/planner', { recursive: true });
 cpSync(at('packages/ui'), out + '/packages/ui', { recursive: true });
 rmSync(out + '/gallery.html', { force: true }); rmSync(out + '/js/gallery.js', { force: true });         // the component gallery is for development and tests only
 writeFileSync(out + '/app-manifests.json', JSON.stringify(loadManifests().map(({ dir, ...m }) => m)));

@@ -1,0 +1,54 @@
+/* Design v4 alignment layer. Loaded last. Each rule traces to a measured difference against the v4 prototype
+   (see Downloads/l2f-research/cascade-planner/design_v4_vs_planner.md). */
+
+/* ---- page header, lede, org switcher, search ---- */
+.page-lede { color: var(--text2); font-size: 16px; }
+.org-switch select { min-inline-size: 150px; border: var(--bw) solid var(--line); border-radius: var(--radius-md); box-shadow: var(--sh1); background-color: var(--surface); font: 600 14px/1 var(--font); }
+.search__input { background-color: var(--sunk); border-color: transparent; }
+.search__input:focus { background-color: var(--surface); border-color: var(--action); box-shadow: 0 0 0 4px var(--action-tint); }
+.ov-hero .page-title { font-size: clamp(34px, 5vw, 52px); line-height: 1.02; }
+
+/* ---- controls: 44px targets, v4 chip and badge metrics ---- */
+.icon-btn { min-inline-size: 44px; min-block-size: 44px; border-radius: var(--radius-md); }
+.seg__btn { min-block-size: 44px; }
+.seg { border-radius: var(--radius-md); background: var(--sunk); border-color: transparent; padding: 3px; }
+.seg__btn { border: 0; border-radius: 9px; background: transparent; }
+.seg__btn.is-on { background: var(--surface); color: var(--text); box-shadow: var(--sh1); }
+.btn--sm { min-block-size: 40px; }
+.badge { min-block-size: 24px; padding: 0 10px; font-size: 12px; }
+.chip { min-block-size: 24px; font: 600 12px/1 var(--font); border-radius: 7px; background: var(--sunk); color: var(--text2); }
+.chip--accent { background: var(--action-tint); color: var(--action); }
+.chip--warn { background: var(--warn-tint); color: var(--warn); }
+.chip--bad, .chip--prio-critical { background: var(--danger-tint); color: var(--danger); }
+.chip--prio-high { background: var(--warn-tint); color: var(--warn); }
+.avatar { box-shadow: inset 0 0 0 2px rgba(255,255,255,.35); background: var(--brand); color: var(--brand-ink); border: 0; }
+
+/* ---- strategy map: tinted columns, 14px cards ---- */
+.map__col { background: var(--sunk); border: 0; border-block-start: 4px solid var(--col-color, var(--line2)); border-radius: 20px; padding: 10px; gap: 14px; }
+.map__cards { gap: 14px; }
+.gcard { border-radius: var(--r); padding: 14px; box-shadow: var(--sh1); }
+.gcard:hover { box-shadow: var(--sh2); }
+.gcard__title { font: 600 14.5px/1.35 var(--font); }
+.gcard__open { font-weight: 600; min-block-size: 32px; }
+
+/* ---- goal drawer: v4 width, title scale, ink tab underline ---- */
+.drawer { inline-size: min(560px, 100%); }
+.drawer__title { font-size: 24px; line-height: 1.2; }
+.gd-tab.is-on { color: var(--text); border-block-end-color: var(--text); }
+.gd-tab:hover { color: var(--text); }
+.gd-h { font: 600 12px/1 var(--font); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+
+/* ---- timeline: 48px rows, solid bars ---- */
+.tl { border: var(--bw) solid var(--line); }
+
+/* ---- phones ---- */
+@media (max-width: 600px) {
+  .dev-banner { display: none; }
+  .topbar { padding: 8px 12px; gap: 8px; }
+  .search__input { min-inline-size: 0; inline-size: 100%; }
+  .page-title { font-size: 32px; }
+  .subnav, .gd-tabs { -webkit-mask-image: linear-gradient(to right, #000 88%, transparent); mask-image: linear-gradient(to right, #000 88%, transparent); }
+  .drawer-scrim { align-items: end; }
+  .drawer { block-size: 88dvh; inline-size: 100%; border-radius: 22px 22px 0 0; align-self: end; animation: sheet-up var(--motion-base) var(--e-out); }
+  @keyframes sheet-up { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+}
