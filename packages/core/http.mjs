@@ -1,11 +1,16 @@
 // HTTP edge for the API layer, on standard Request/Response (Cloudflare Pages Functions, Node 20+, tests).
 //   POST /api/<operation>   body = JSON input   headers: Authorization: Bearer <access token>, x-org-id: <uuid>
+//   POST /api/batch         body = { calls: [{ op, input }, …] } (at most BATCH_MAX): the operations run one after another on ONE database connection,
+//                           each with its own checks, rate limit and transaction; answers { ok: true, results: [{ status, ok, data | error }, …] } in order.
+//                           Opening a connection is the expensive part of a request (time to the database, and CPU on Cloudflare Free), so the
+//                           browser sends the calls a screen makes together in one batch (apps/web/js/api.js).
 //   GET  /api/health        no database, no auth (deploy smoke test)
 // Same-origin only: no CORS headers are ever sent. A bearer header (not cookies) carries identity, so there is no CSRF
 // surface, and a mismatching Origin is refused anyway.
 import { NOT_FOUND, SESSION_EXPIRED, BAD_REQUEST, FAILED } from './errors.mjs';
 
 const MAX_BODY_BYTES = 16 * 1024;
+export const BATCH_MAX = 4;   // about one connection plus four short transactions: stays near Cloudflare Free's 10 ms CPU (DECISIONS V4-28)
 const BASE_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
   'cache-control': 'no-store',
@@ -41,10 +46,21 @@ export function createHttpHandler({ api, verifyToken, extraOrigins = [] }) {
       if (text) { try { input = JSON.parse(text); } catch { return reply(BAD_REQUEST.status, errorBody(BAD_REQUEST)); } }
 
       const operation = decodeURIComponent(url.pathname.slice('/api/'.length));
+      const headers = { 'x-org-id': request.headers.get('x-org-id') ?? undefined };
+      if (operation === 'batch') {
+        const calls = input?.calls;
+        if (!Array.isArray(calls) || calls.length < 1 || calls.length > BATCH_MAX || !calls.every((c) => c && typeof c.op === 'string' && c.op !== 'batch')) return reply(BAD_REQUEST.status, errorBody(BAD_REQUEST));
+        const results = [];
+        for (const c of calls) {     // one after another: the connection is reused, and a later call never sees an earlier one's half-done work
+          const out = await api.handle({ operation: c.op, input: c.input ?? {}, auth: { userId: who.userId, email: who.email }, headers });
+          results.push({ status: out.status, ...out.body });
+        }
+        return reply(200, { ok: true, results });
+      }
       const out = await api.handle({
         operation, input,
         auth: { userId: who.userId, email: who.email },
-        headers: { 'x-org-id': request.headers.get('x-org-id') ?? undefined },
+        headers,
       });
       const e = out.body.error;
       return reply(out.status, out.body, { 'x-request-id': out.body.requestId, ...(e?.retryAfterSeconds ? { 'retry-after': String(e.retryAfterSeconds) } : {}) });

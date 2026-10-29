@@ -69,6 +69,9 @@ check('PB1b', 'One header for the whole ecosystem: the shell\'s header, organiza
 check('PB2', 'Loading Planner downloads no database engine or WebAssembly (the old cause of slow loads)', !reqs.some((r) => /pglite|\.wasm|\.data$/.test(r.path)), reqs.map((r) => r.path).filter((p) => /pglite|wasm/.test(p)).join(','));
 const apiCalls = reqs.filter((r) => /\/api\//.test(r.path));
 check('PB3', 'Every API call on first load succeeds', apiCalls.length > 0 && apiCalls.every((r) => r.status === 200), JSON.stringify(apiCalls.filter((r) => r.status !== 200)));
+const apiRequests = reqs.filter((r) => /^\/api\//.test(r.path));
+console.log(`      first load: ${apiRequests.length} API requests (${apiRequests.filter((r) => r.path === '/api/batch').length} batched), ${loadMs} ms`);
+check('PB3b', 'Opening Planner sends the calls it makes together as batches: at most 8 API requests in all (each request is one database connection)', apiRequests.length <= 8 && apiRequests.some((r) => r.path === '/api/batch'), apiRequests.map((r) => r.path).join(' '));
 check('PB4', 'First load is fast on the local stack (under 4 s to a usable screen)', loadMs < 4000, `${loadMs} ms`);
 check('PB5', 'No script errors, warnings or Content-Security-Policy violations while loading (Planner\'s stylesheet in its shadow root included)', problems.length === 0, problems.slice(0, 3).join(' | '));
 const fontCss = reqs.some((r) => r.path === '/fonts.css') && !reqs.some((r) => /googleapis|gstatic/.test(r.path));

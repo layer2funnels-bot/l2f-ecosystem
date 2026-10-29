@@ -28,7 +28,7 @@ export function unmountPlanner() {
 }
 
 /** The element to put in the content area. The same element comes back while Planner stays mounted for this organization. */
-export function plannerView({ api, org, me, loader = () => import('/planner/embed.js') }) {
+export function plannerView({ api, org, orgs, me, loader = () => import('/planner/embed.js') }) {
   if (current?.orgId === org.org_id) return current.el;
   unmountPlanner();
   const el = h('div', { class: 'planner-mount', 'aria-busy': 'true' });
@@ -36,7 +36,7 @@ export function plannerView({ api, org, me, loader = () => import('/planner/embe
   const wrap = h('section', { class: 'planner-wrap' }, slot, el);
   const entry = { orgId: org.org_id, el: wrap, unmount: null };
   current = entry;
-  const host = { org: org.org_id, me, call: (op, input, orgId) => api.call(op, input, { org: orgId }) };
+  const host = { org: org.org_id, me, orgs, call: (op, input, orgId) => api.call(op, input, { org: orgId }) };
   entry.unmount = loader().then(async (m) => {
     if (current !== entry) return null;                         // switched away while loading
     const off = await m.mount(el, host);

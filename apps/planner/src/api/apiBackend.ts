@@ -18,6 +18,8 @@ type Auth = { refresh(token: string): Promise<{ ok: boolean; data?: Record<strin
 export interface Host {
   org: string;
   me: { id: string; name: string };
+  /** the shell's own organization list (already loaded): saves Planner asking again */
+  orgs?: { org_id: string; name: string; slug: string; member_kind: string; role?: string; is_active?: boolean }[];
   call(op: string, input: unknown, org: string): Promise<Envelope<unknown> & { status?: number; offline?: boolean }>;
 }
 export function createApiBackend(opts: { fetchImpl?: typeof fetch; storage?: Storage; auth?: Auth; now?: () => number; host?: Host; timeoutMs?: number } = {}): PlannerBackend & { me(): { id: string; name: string } | null } {
@@ -94,7 +96,7 @@ export function createApiBackend(opts: { fetchImpl?: typeof fetch; storage?: Sto
       return rows[0]?.r as T;
     },
     async listWorkspaces(): Promise<Workspace[]> {
-      const rows = await call<{ org_id: string; name: string; slug: string; member_kind: string; role?: string; is_active?: boolean }[]>('org.list', {}, NO_ORG);
+      const rows = host?.orgs ?? await call<{ org_id: string; name: string; slug: string; member_kind: string; role?: string; is_active?: boolean }[]>('org.list', {}, NO_ORG);
       return rows.filter((o) => o.member_kind !== 'client').map((o) => ({ id: o.org_id, name: o.name, slug: o.slug, isActive: host ? o.org_id === host.org : !!o.is_active, role: o.role }) as Workspace);
     },
     // The ecosystem owns "which organization is active" (profiles.active_workspace_id, the shell's switcher): Planner switches through the same operation,

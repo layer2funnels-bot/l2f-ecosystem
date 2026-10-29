@@ -97,6 +97,12 @@ test('hosted: the organization list marks the shell\'s organization active, and 
   const list = await b.listWorkspaces();
   assert.deepEqual(list.map((w) => [w.id, w.isActive]), [[ORG, true], [OTHER, false]]);
 });
+test('hosted: the shell\'s organization list is used as it is, without asking the server again', async () => {
+  const seen: { op: string; input: unknown; org: string }[] = [];
+  const b = createApiBackend({ host: { org: ORG, me: { id: 'u1', name: 'O' }, orgs: [{ org_id: ORG, name: 'L', slug: 'layer2funnels', member_kind: 'staff' }], call: async (op, input, org) => { seen.push({ op, input, org }); return { ok: true, data: [] }; } } });
+  assert.deepEqual((await b.listWorkspaces()).map((w) => w.id), [ORG]);
+  assert.equal(seen.length, 0);
+});
 
 test('hosted: an expired session, a refusal, no connection and no answer each end as a clear error', async () => {
   await assert.rejects(hosted(() => ({ ok: false, status: 401, error: { code: 'session_expired' } })).rpc('planner_get_plan', { p_plan: 'x' }), (e: { code: string }) => e.code === 'session_expired');

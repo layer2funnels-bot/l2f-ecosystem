@@ -1,6 +1,8 @@
 // Browser-side logic that must not depend on a browser: input validation rules shared with the server. UI state tests are added below.
 import { recorder } from './lib.mjs';
 import { validate } from '../packages/core/validate.mjs';
+import { createApiClient } from '../apps/web/js/api.js';
+const ORG_A = '11111111-1111-4111-8111-111111111111', ORG_B = '22222222-2222-4222-8222-222222222222';
 import { parseRoute, routeForPage, pageKeyFor, defaultOrg, hrefFor, FUNNEL_TYPES, OFFICE_PAGES } from '../apps/web/js/routes.js';
 import { PLANNER_PAGES, plannerSection } from '../apps/web/js/modules/planner.js';
 import { createSession, parseAuthHash } from '../apps/web/js/session.js';
@@ -84,6 +86,31 @@ check('W24', 'The Levels table is read from the permission catalog: defaults and
 check('W25', 'Passwords need at least 10 characters (design 02)', MIN_PASSWORD === 10);
 let saved = 0; dirty.set('Avatars', async () => { saved++; return true; });
 check('W26', 'Unsaved work is registered with a label and a save action, and clearing it forgets it', dirty.isDirty() && dirty.get().label === 'Avatars' && (await dirty.get().save()) === true && saved === 1 && (dirty.clear(), !dirty.isDirty()));
+
+// ---- the shell's API client sends calls made together as one batch (one database connection on the server)
+{
+  const sent = []; let refreshes = 0; let token = 'old';
+  const reply = (body, status = 200) => ({ status, json: async () => body });
+  const fetchImpl = async (url, init) => {
+    const body = JSON.parse(init.body); sent.push({ url, org: init.headers['x-org-id'], body, auth: init.headers.authorization });
+    if (init.headers.authorization === 'Bearer old') return reply({ ok: false, error: { code: 'session_expired' } }, 401);
+    if (url === '/api/batch') return reply({ ok: true, results: body.calls.map((c) => ({ status: 200, ok: true, data: [c.op] })) });
+    return reply({ ok: true, data: [url.slice(5)] });
+  };
+  const session = { get: () => ({ access: token, refresh: 'r1' }), set: (d) => { token = d.access_token; }, needsRefresh: () => false, expired: () => false };
+  const auth = { refresh: async () => { refreshes++; await new Promise((r) => setTimeout(r, 5)); return { ok: true, data: { access_token: 'new' } }; } };
+  const api = createApiClient({ session, auth, fetchImpl, onExpired: () => {} });
+  api.setOrg(ORG_A);
+  const five = await Promise.all(['a.one', 'a.two', 'a.three', 'a.four', 'a.five'].map((op) => api.call(op, {})));
+  check('W30', 'Five calls made together for one organization go out as two requests (4 + 1), every caller gets its own answer, and an expired token is refreshed once for all of them',
+    refreshes === 1 && five.map((r) => r.data[0]).join() === 'a.one,a.two,a.three,a.four,a.five' && sent.filter((x) => x.auth === 'Bearer new').length === 2 && sent.filter((x) => x.auth === 'Bearer new' && x.url === '/api/batch').length === 1);
+  sent.length = 0;
+  const mixed = await Promise.all([api.call('x.one', {}), api.call('x.two', {}, { org: ORG_B }), api.call('x.three', {})]);
+  check('W31', 'Calls for different organizations are never put in one request (each request carries one organization)',
+    sent.length === 2 && sent.every((x) => (x.url === '/api/batch' ? x.org === ORG_A && x.body.calls.length === 2 : x.org === ORG_B)) && mixed.every((r) => r.ok));
+  sent.length = 0; await api.call('y.alone', {});
+  check('W32', 'A call on its own goes to its own address, unchanged', sent.length === 1 && sent[0].url === '/api/y.alone');
+}
 
 // ---- Planner inside the shell (apps/web/js/modules/planner.js mounts apps/planner/src/embed.tsx)
 check('W27', 'Planner has one address inside the shell: #/planner/<page> keeps its page and query; the old #/app/planner and #/office/planner lead there too',
