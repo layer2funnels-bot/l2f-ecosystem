@@ -5,6 +5,7 @@ import { h, put, icon, btn, chip, dialog, drawer, toast, field, notice, skeleton
 import { splitProjects, PROJECT_STATUS, TASK_STATUS, PRIORITY, label, byStatus, progress, monthGrid, monthTitle, shiftMonth, timeline, dueLabel, myWorkGroups, parseSearch, searchInput, duration, clock } from './projectmodel.js';
 import { createBoard, BOARD_MIME } from './whiteboard.js';
 import { emptyDoc, serialize } from './docmodel.js';
+import { commentsPanel, activityPanel, followButton } from './collab.js';
 const DOC_MIME = 'application/vnd.l2f.doc+json';
 
 export const makeHrefs = (base = '#/projects') => ({ home: () => base, mine: () => `${base}/mine`, project: (id, tab) => `${base}/p/${id}${tab && tab !== 'overview' ? `?tab=${tab}` : ''}`, task: (id, task, tab) => `${base}/p/${id}?${tab ? `tab=${tab}&` : ''}task=${task}` });
@@ -127,13 +128,13 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
     const addTask = async (title, extra = {}) => { const t = title.trim(); if (!t) return; const x = await api.call('tasks.create', { project: p.id, title: t, ...extra }); if (x.ok) { toast('Task added.'); await reload(); } else fail(x, 'add tasks'); };
     const setStatus = async (t, status, position) => { const x = await api.call('tasks.update', { id: t.id, status, ...(position != null ? { position } : {}) }); if (x.ok) await reload(); else fail(x, 'change that task'); };
     const openTask = (t) => taskDrawer(t, p, { onChange: reload, canEdit: tasksOk });
+    const tops = () => tasks.filter((t) => !t.parent_task_id);     // List and Board show tasks; subtasks live inside their task (Calendar and Timeline show both)
 
     const head = h('div', { class: 'pj-head' }, h('div', {}, h('div', { class: 'crumbs fine' }, h('a', { href: hrefs.home() }, 'Projects'), ' / ', p.client_id ? clientName(p.client_id) : 'Internal'),
       h('h1', { 'data-page-title': true }, p.name), h('div', { class: 'pj-meta' }, statusChip(p.status), p.due_on ? h('span', { class: 'fine muted' }, `Due ${dueLabel(p.due_on, todayIso())}`) : null, archived ? chip('Archived', 'warn') : null)),
       h('div', { class: 'pj-actions' }, editable ? btn('Edit details', () => editProject(p), '') : null, editable || archived ? projectMenu(p, archived) : null));
     const TABS = [['overview', 'Overview'], ['list', 'List'], ['board', 'Board'], ['calendar', 'Calendar'], ['timeline', 'Timeline'], ['docs', 'Docs'], ['whiteboards', 'Whiteboards']];
     const tabBar = tabs(TABS, TABS.some(([k]) => k === tab) ? tab : 'overview', (k) => { tab = k; history.replaceState(null, '', hrefs.project(p.id, k)); draw(); }, 'Project views');
-    tabBar.append(h('button', { type: 'button', role: 'tab', class: 'pj-soon', 'aria-disabled': 'true', tabindex: '-1', title: 'Comments and activity arrive with the notification layer', onclick: (e) => e.preventDefault() }, 'Activity ', h('small', {}, 'Soon')));
 
     function draw() {
       const cur = TABS.some(([k]) => k === tab) ? tab : 'overview'; tabBar.querySelectorAll('[role=tab][data-k]').forEach((b) => { b.setAttribute('aria-selected', String(b.dataset.k === cur)); b.tabIndex = b.dataset.k === cur ? 0 : -1; });
@@ -142,7 +143,7 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
     const taskRow = (t) => h('li', { class: `pj-row${t.status === 'done' ? ' isdone' : ''}` },
       h('button', { type: 'button', class: 'pj-check', 'aria-pressed': String(t.status === 'done'), 'aria-label': `${t.status === 'done' ? 'Reopen' : 'Mark done'}: ${t.title}`, ...(tasksOk ? { onclick: () => setStatus(t, t.status === 'done' ? 'todo' : 'done') } : { disabled: true }) }),
       h('button', { type: 'button', class: 'pj-title', onclick: () => openTask(t) }, t.title), t.assignee_id ? h('span', { class: 'fine muted' }, personName(t.assignee_id)) : null,
-      t.checklist_total ? h('span', { class: 'fine muted' }, `${t.checklist_done}/${t.checklist_total}`) : null, chip(label(PRIORITY, t.priority), t.priority === 'urgent' ? 'bad' : t.priority === 'high' ? 'warn' : ''), h('span', { class: `pj-due${t.status !== 'done' && t.due_on && t.due_on < todayIso() ? ' late' : ''}` }, t.due_on ? dueLabel(t.due_on, todayIso()) : ''));
+      t.subtasks_total ? h('span', { class: 'fine muted', title: 'Subtasks done' }, icon('check'), ` ${t.subtasks_done}/${t.subtasks_total}`) : null, t.checklist_total ? h('span', { class: 'fine muted', title: 'Checklist' }, `${t.checklist_done}/${t.checklist_total}`) : null, chip(label(PRIORITY, t.priority), t.priority === 'urgent' ? 'bad' : t.priority === 'high' ? 'warn' : ''), h('span', { class: `pj-due${t.status !== 'done' && t.due_on && t.due_on < todayIso() ? ' late' : ''}` }, t.due_on ? dueLabel(t.due_on, todayIso()) : ''));
     const addBox = (status) => tasksOk ? h('form', { class: 'pj-add', onsubmit: (e) => { e.preventDefault(); const i = e.target.elements.t; const v = i.value; i.value = ''; addTask(v, { status }); } }, h('input', { name: 't', placeholder: 'Add a task', 'aria-label': `Add a task (${label(TASK_STATUS, status)})`, maxlength: 300 }), btn('Add', null, '', { type: 'submit' })) : null;
 
     function overview() {
@@ -154,11 +155,11 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
         h('section', { class: 'pj-sec' }, h('h2', {}, 'Coming up'), next.length ? h('ul', { class: 'pj-rows' }, ...next.map(taskRow)) : h('p', { class: 'muted' }, 'No dated tasks.')));
     }
     function list() {
-      put(body, archived ? readOnlyNotice('This project is archived') : null, ...TASK_STATUS.map(([k, title]) => { const rows = byStatus(tasks)[k];
+      put(body, archived ? readOnlyNotice('This project is archived') : null, ...TASK_STATUS.map(([k, title]) => { const rows = byStatus(tops())[k];
         return h('section', { class: 'pj-sec' }, h('h2', { class: 'pj-gh' }, title, h('span', { class: 'fine muted' }, ` ${rows.length}`)), rows.length ? h('ul', { class: 'pj-rows' }, ...rows.map(taskRow)) : h('p', { class: 'fine muted' }, 'Nothing here.'), addBox(k)); }));
     }
     function board() {
-      const cols = byStatus(tasks); let dragId = null;
+      const cols = byStatus(tops()); let dragId = null;
       put(body, archived ? readOnlyNotice('This project is archived') : null, h('p', { class: 'fine muted pj-hint' }, tasksOk ? 'Drag a card to another column, or open it to change its status.' : 'You can look at the board but not change it.'),
         h('div', { class: 'pj-board' }, ...TASK_STATUS.map(([k, title]) => { const col = h('div', { class: 'pj-col', 'data-status': k, role: 'group', 'aria-label': title },
           h('h2', { class: 'pj-gh' }, title, h('span', { class: 'fine muted' }, ` ${cols[k].length}`)),
@@ -215,6 +216,24 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
         if (!r.ok) { fail(r, 'change this project'); return false; } toast('Saved.'); project(); } }, { label: 'Cancel' }] });
   };
 
+  // one step of a task's history in words (activity_events: codes, dates and ids only)
+  const describeStep = (a) => {
+    const d = a.detail ?? {};
+    switch (a.action) {
+      case 'created': return 'created this task';
+      case 'status': return `moved it from ${label(TASK_STATUS, d.from)} to ${label(TASK_STATUS, d.to)}`;
+      case 'assigned': return `assigned it to ${personName(d.to)}`;
+      case 'unassigned': return 'removed the assignee';
+      case 'due': return d.to ? `set the due date to ${dueLabel(d.to, todayIso())}` : 'removed the due date';
+      case 'renamed': return 'renamed it';
+      case 'priority': return `set the priority to ${label(PRIORITY, d.to)}`;
+      case 'archived': return 'archived it';
+      case 'restored': return 'restored it';
+      case 'commented': return 'commented';
+      case 'subtask_added': return 'added a subtask';
+      default: return 'changed it';
+    }
+  };
   // ---------------------------------------------------------------- task drawer
   async function taskDrawer(t0, p, { onChange, canEdit }) {
     await people(); let t = t0; const saved = h('span', { class: 'fine muted', role: 'status', 'aria-live': 'polite' });
@@ -228,20 +247,34 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
     const checklist = h('div', { class: 'pj-check-list' });
     const drawChecklist = async () => { const r = await api.call('checklist.list', { task: t.id }); if (!r.ok) return;
       put(checklist, h('ul', { class: 'pj-rows' }, ...r.data.map((c) => h('li', { class: 'pj-row' }, h('input', { type: 'checkbox', checked: c.done, 'aria-label': c.label, ...(canEdit ? { onchange: async (e) => { await api.call('checklist.update', { id: c.id, done: e.target.checked }); onChange(); } } : { disabled: true }) }), h('span', {}, c.label), canEdit ? btn(['Remove', h('span', { class: 'sr' }, ` ${c.label}`)], async () => { await api.call('checklist.delete', { id: c.id }); drawChecklist(); onChange(); }, 'link') : null))),
-        canEdit ? h('form', { class: 'pj-add', onsubmit: async (e) => { e.preventDefault(); const i = e.target.elements.l; const v = i.value.trim(); if (!v) return; i.value = ''; await api.call('checklist.add', { task: t.id, label: v }); drawChecklist(); onChange(); } }, h('input', { name: 'l', placeholder: 'Add a subtask', 'aria-label': 'Add a subtask', maxlength: 500 }), btn('Add', null, '', { type: 'submit' })) : null); };
+        canEdit ? h('form', { class: 'pj-add', onsubmit: async (e) => { e.preventDefault(); const i = e.target.elements.l; const v = i.value.trim(); if (!v) return; i.value = ''; await api.call('checklist.add', { task: t.id, label: v }); drawChecklist(); onChange(); } }, h('input', { name: 'l', placeholder: 'Add a checklist item', 'aria-label': 'Add a checklist item', maxlength: 500 }), btn('Add', null, '', { type: 'submit' })) : null); };
     // timer for this task + logged time
     const timeBox = h('div', { class: 'pj-time' });
     const drawTime = async () => { const r = await api.call('time.list', { task: t.id }); const secs = (r.ok ? r.data : []).reduce((a, e) => a + (e.seconds ?? 0), 0); const running = state.timer && state.timer.task_id === t.id;
       put(timeBox, h('div', {}, h('b', {}, duration(secs)), h('span', { class: 'fine muted' }, ' logged on this task')),
         canTime() ? h('div', { class: 'pj-timeacts' }, running ? btn('Stop timer', async () => { const x = await api.call('time.stop', {}); if (x.ok) { state.timer = null; paintTimer(); drawTime(); } else fail(x, 'stop that timer'); }, 'pri') : btn('Start timer', async () => { const x = await api.call('time.start', { project: p.id, task: t.id }); if (x.ok) { await loadTimer(); drawTime(); } else if (x.status === 409 || x.status === 422) toast('A timer is already running. Stop it first.', false); else fail(x, 'start a timer'); }, ''),
           btn('Log time by hand', () => logTime(t, p, drawTime), '')) : null); };
+    // subtasks: real tasks (own assignee, due date, comments); added here, opened like any task
+    const archivedProject = Boolean(p.archived_at);
+    const subtasks = h('div', { class: 'pj-subtasks' });
+    const drawSubtasks = async () => {
+      const r = await api.call('tasks.list', { project: p.id, parent: t.id, archived: false }); if (!r.ok) return put(subtasks, h('p', { class: 'fine muted' }, 'Subtasks couldn’t be loaded.'));
+      put(subtasks, r.data.length ? h('ul', { class: 'pj-rows' }, ...r.data.map((s2) => h('li', { class: `pj-row${s2.status === 'done' ? ' isdone' : ''}` },
+        h('button', { type: 'button', class: 'pj-check', 'aria-pressed': String(s2.status === 'done'), 'aria-label': `${s2.status === 'done' ? 'Reopen' : 'Mark done'}: ${s2.title}`, ...(canEdit ? { onclick: async () => { const x = await api.call('tasks.update', { id: s2.id, status: s2.status === 'done' ? 'todo' : 'done' }); if (x.ok) { drawSubtasks(); onChange(); } else fail(x, 'change that subtask'); } } : { disabled: true }) }),
+        h('button', { type: 'button', class: 'pj-title', onclick: () => { closeDrawer(); taskDrawer(s2, p, { onChange, canEdit }); } }, s2.title),
+        s2.assignee_id ? h('span', { class: 'fine muted' }, personName(s2.assignee_id)) : null, h('span', { class: `pj-due${s2.status !== 'done' && s2.due_on && s2.due_on < todayIso() ? ' late' : ''}` }, s2.due_on ? dueLabel(s2.due_on, todayIso()) : '')))) : h('p', { class: 'fine muted' }, 'No subtasks. Break this task into steps that each have their own owner and date.'),
+        canEdit ? h('form', { class: 'pj-add', onsubmit: async (e) => { e.preventDefault(); const i = e.target.elements.s; const v = i.value.trim(); if (!v) return; i.value = ''; const x = await api.call('tasks.create', { project: p.id, parent: t.id, title: v }); if (x.ok) { drawSubtasks(); onChange(); } else fail(x, 'add subtasks'); } }, h('input', { name: 's', placeholder: 'Add a subtask', 'aria-label': 'Add a subtask', maxlength: 300 }), btn('Add', null, '', { type: 'submit' })) : null);
+    };
     const share = p.client_id && ctx.can('projects.record.share', p.client_id) ? h('label', { class: 'pj-share' }, h('input', { type: 'checkbox', checked: t.client_visible, onchange: async (e) => { const r = await api.call('tasks.share', { id: t.id, visible: e.target.checked }); if (!r.ok) { e.target.checked = !e.target.checked; fail(r, 'share that task'); } else onChange(); } }), ' Show this task to the client') : null;
     const body = [h('div', { class: 'fld' }, h('label', { for: 'td-title' }, 'Task'), title), saved, sel('td-status', 'Status', TASK_STATUS, t.status, 'status'), sel('td-prio', 'Priority', PRIORITY, t.priority, 'priority'), h('div', { class: 'fld' }, h('label', { for: 'td-who' }, 'Assigned to'), who), h('div', { class: 'fld' }, h('label', { for: 'td-due' }, 'Due'), due),
-      h('div', { class: 'fld' }, h('label', { for: 'td-notes' }, 'Notes'), notes), h('h3', {}, 'Subtasks'), checklist, h('h3', {}, 'Time'), timeBox, share,
-      h('div', { class: 'pj-soon-row' }, btn('Suggest with AI', null, '', { disabled: true, 'aria-disabled': 'true', title: 'Not available: no AI provider is switched on' }), btn('Comments', null, '', { disabled: true, 'aria-disabled': 'true', title: 'Comments arrive with the notification layer' }))];
+      h('div', { class: 'fld' }, h('label', { for: 'td-notes' }, 'Notes'), notes),
+      ...(t.parent_task_id ? [] : [h('h3', {}, 'Subtasks'), subtasks]), h('h3', {}, 'Checklist'), checklist, h('h3', {}, 'Time'), timeBox, share,
+      h('h3', {}, 'Comments'), commentsPanel({ api, type: 'project_task', id: t.id, people: state.people ?? [], canComment: !archivedProject && ctx.canAnywhere('projects.task.comment') }),
+      (() => { const hist = activityPanel({ api, type: 'project_task', id: t.id, describe: describeStep }); return h('details', { class: 'pj-history', ontoggle: (e) => { if (e.target.open) hist.load(); } }, h('summary', {}, 'History'), hist); })()];
     title.id = 'td-title';
-    drawer({ title: 'Task', label: `Task: ${t.title}`, body, actions: canEdit ? [{ label: 'Archive task', on: async () => { const r = await api.call('tasks.archive', { id: t.id }); if (!r.ok) { fail(r, 'archive that task'); return; } toast('Task archived.'); onChange(); } }, { label: 'Done', cls: 'pri' }] : [{ label: 'Close', cls: 'pri' }] });
-    drawChecklist(); drawTime();
+    body.unshift(h('div', { class: 'pj-drawer-top' }, t.parent_task_id ? btn('↑ Back to the parent task', async () => { const x = await api.call('tasks.get', { id: t.parent_task_id }); if (x.ok) { closeDrawer(); taskDrawer(x.data[0], p, { onChange, canEdit }); } else fail(x, 'open that task'); }, 'link') : h('span'), followButton({ api, type: 'project_task', id: t.id })));
+    const closeDrawer = drawer({ title: t.parent_task_id ? 'Subtask' : 'Task', label: `Task: ${t.title}`, body, actions: canEdit ? [{ label: 'Archive task', on: async () => { const r = await api.call('tasks.archive', { id: t.id }); if (!r.ok) { fail(r, 'archive that task'); return; } toast('Task archived.'); onChange(); } }, { label: 'Done', cls: 'pri' }] : [{ label: 'Close', cls: 'pri' }] });
+    drawChecklist(); drawTime(); if (!t.parent_task_id) drawSubtasks();
   }
   const logTime = (t, p, after) => {
     const mins = field({ id: 'lt-min', label: 'Minutes', type: 'number', value: '30' }); const note = field({ id: 'lt-note', label: 'Note (optional)', maxlength: 500 });

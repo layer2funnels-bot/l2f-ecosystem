@@ -254,6 +254,19 @@ function plannerOffView(org, entry) {
       ic: 'lock', action: h('a', { class: 'btn pri', href: hrefFor.office() }, 'Go to Office Home') }));
 }
 
+// The header bell: the unread count is kept for a minute (it is shown on every page; one request per page change would slow every app down)
+const bell = { n: null, at: 0, org: null };
+const notifications = {
+  async count(fresh = false) {
+    const org = ctx?.active?.org_id;
+    if (!fresh && bell.org === org && Date.now() - bell.at < 60000) return bell.n;
+    const r = await api.call('notifications.unread', {}); bell.org = org; bell.at = Date.now(); bell.n = r.ok ? r.data[0].n : null; return bell.n;
+  },
+  async list() { const r = await api.call('notifications.list', { limit: 30 }); return r.ok ? r.data : null; },
+  async read(ids) { await api.call('notifications.read', ids === 'all' ? { all: true } : { ids }); bell.at = 0; },
+  href: (r) => `#/projects/p/${r.project_id}?task=${r.entity_id}`,
+};
+
 const theme = createTheme(); theme.apply();
 async function render(opts = {}) {
   const id = ++renderId; const live = () => id === renderId;
@@ -350,6 +363,7 @@ async function render(opts = {}) {
     }
   }
   const view = shellView({ app: appApi, orgs: ctx.orgs, active: org, email: session.get()?.email, name: session.get()?.name, route, content, banner: bannerEl(), isAdmin, inOffice, nav, launcherCurrent: route.name === 'launcher' || route.name === 'home',
+    notifications: org.member_kind === 'client' ? null : notifications,
     catalog: ctx.catalog, registry: await loadRegistry(), currentApp: inOffice ? 'office' : route.name === 'doc' || route.name === 'sheet' || route.name === 'drive' ? 'drive' : route.name === 'board' ? 'whiteboard' : route.name === 'projects' ? 'projects' : route.name === 'clients' ? 'clients' : route.name === 'portal' ? 'portal' : route.name === 'forms' ? 'forms' : route.name === 'ladder' ? 'value_ladder' : route.name === 'boards' ? 'whiteboard' : route.name === 'social' ? 'social_planner' : route.name === 'planner' ? 'planner' : route.name === 'app' ? route.params.app : null, theme,
     weather: { on: () => !weatherOff(localStorage), set: (on) => { setWeatherOff(localStorage, !on); try { sessionStorage.removeItem('l2f.wx'); } catch { /* none */ } render(); } } });
   put(root, view, designBadge('Built to design'));

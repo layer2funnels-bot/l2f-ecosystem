@@ -83,3 +83,16 @@
 .pj-gname{font-size:14px;margin:var(--space-3) 0 var(--space-1);color:var(--text2)}
 .pj-side h3.pj-gname{padding:0 var(--space-3);font-size:12px;margin:var(--space-2) 0 2px}
 .pj-none{padding:0 var(--space-3)}
+/* task drawer: subtasks, comments, history (migration 0034) */
+.pj-drawer-top{display:flex;justify-content:space-between;align-items:center;gap:var(--space-2);margin-bottom:var(--space-3)}
+.cm-list,.act-list{list-style:none;margin:0 0 var(--space-3);padding:0;display:grid;gap:var(--space-3)}
+.cm-item{display:grid;grid-template-columns:32px minmax(0,1fr);gap:var(--space-2)}
+.cm-meta{font-size:14px}.cm-body{margin:2px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.cm-acts{display:flex;gap:var(--space-2);margin-top:2px}
+.cm-new{display:grid;gap:var(--space-2)}.cm-wrap{position:relative}.cm-wrap textarea{width:100%}
+.cm-send{display:flex;justify-content:space-between;align-items:center;gap:var(--space-2);flex-wrap:wrap}
+.cm-sugg{position:absolute;left:0;right:0;top:100%;z-index:var(--z-menu);list-style:none;margin:4px 0 0;padding:var(--space-1);background:var(--surface);border:1px solid var(--line2);border-radius:var(--radius-md);box-shadow:var(--shadow-2)}
+.cm-sugg li{display:flex;align-items:center;gap:var(--space-2);min-height:44px;padding:0 var(--space-2);border-radius:var(--radius-sm);cursor:pointer}
+.cm-sugg li.sel,.cm-sugg li:hover{background:var(--tint)}
+.act-list{gap:var(--space-2);font-size:14px}
+.pj-history summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:600}

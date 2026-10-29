@@ -90,9 +90,12 @@ const peopleOps = [
 const TASK = {
   title: { type: 'text', required: true, max: 300 }, notes: T(20000), status: { type: 'enum', values: TASK_STATUS }, priority: { type: 'enum', values: ['low', 'normal', 'high', 'urgent'] },
   assignee: { type: 'uuid' }, due_on: { type: 'date' }, position: { type: 'int', min: 0, max: 100000 },
+  parent: { type: 'uuid' },                          // a subtask: the task it belongs to (same project, one level; the database checks)
 };
-const TCOL = { title: 'title', notes: 'notes', status: 'status', priority: 'priority', assignee: 'assignee_id', due_on: 'due_on', position: 'position' };
-const TSELECT = `select t.id, t.project_id, t.client_id, t.title, t.notes, t.status, t.priority, t.assignee_id, t.due_on, t.position, t.completed_at, t.client_visible, t.archived_at, t.created_at, t.updated_at,
+const TCOL = { title: 'title', notes: 'notes', status: 'status', priority: 'priority', assignee: 'assignee_id', due_on: 'due_on', position: 'position', parent: 'parent_task_id' };
+const TSELECT = `select t.id, t.project_id, t.client_id, t.parent_task_id, t.title, t.notes, t.status, t.priority, t.assignee_id, t.due_on, t.position, t.completed_at, t.client_visible, t.archived_at, t.created_at, t.updated_at,
+    (select count(*)::int from project_tasks s where s.parent_task_id = t.id and s.archived_at is null) as subtasks_total,
+    (select count(*)::int from project_tasks s where s.parent_task_id = t.id and s.archived_at is null and s.status = 'done') as subtasks_done,
     (select count(*)::int from task_checklist_items c where c.task_id = t.id) as checklist_total,
     (select count(*)::int from task_checklist_items c where c.task_id = t.id and c.done) as checklist_done
   from project_tasks t`;
@@ -100,10 +103,11 @@ const TSELECT = `select t.id, t.project_id, t.client_id, t.title, t.notes, t.sta
 const taskOps = [
   defineOperation({
     name: 'tasks.list', class: 'read',
-    input: { project: { type: 'uuid' }, assignee: { type: 'uuid' }, status: { type: 'enum', values: TASK_STATUS }, archived: { type: 'bool' }, open_only: { type: 'bool' } },
+    input: { project: { type: 'uuid' }, assignee: { type: 'uuid' }, status: { type: 'enum', values: TASK_STATUS }, archived: { type: 'bool' }, open_only: { type: 'bool' }, parent: { type: 'uuid' }, top_only: { type: 'bool' } },
     run: (q, _c, i) => q(`${TSELECT} where ($1::uuid is null or t.project_id = $1) and ($2::uuid is null or t.assignee_id = $2) and ($3::text is null or t.status = $3)
-      and ((t.archived_at is not null) = $4) and (not $5 or t.status <> 'done') order by t.position, t.due_on nulls last, t.created_at limit 500`,
-    [i.project ?? null, i.assignee ?? null, i.status ?? null, i.archived ?? false, i.open_only ?? false]),
+      and ((t.archived_at is not null) = $4) and (not $5 or t.status <> 'done') and ($6::uuid is null or t.parent_task_id = $6) and (not $7 or t.parent_task_id is null)
+      order by t.position, t.due_on nulls last, t.created_at limit 500`,
+    [i.project ?? null, i.assignee ?? null, i.status ?? null, i.archived ?? false, i.open_only ?? false, i.parent ?? null, i.top_only ?? false]),
   }),
   defineOperation({ name: 'tasks.get', class: 'read', single: true, input: id, run: (q, _c, i) => q(`${TSELECT} where t.id = $1`, [i.id]) }),
   defineOperation({
