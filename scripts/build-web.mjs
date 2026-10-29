@@ -13,6 +13,8 @@ import { buildWhiteboard } from './build-whiteboard.mjs';
 const out = at('dist/web'); rmSync(out, { recursive: true, force: true }); mkdirSync(out + '/packages/core', { recursive: true });
 await buildWhiteboard({ quiet: true });          // the editor bundle (skipped when its build-time dependencies are not installed: the board page then says so)
 cpSync(at('apps/web'), out, { recursive: true });
+// Planner (React, migration 0033): built by its own Vite config into apps/planner/dist, served at /planner/ (skipped with a note if not built)
+try { cpSync(at('apps/planner/dist'), out + '/planner', { recursive: true }); } catch { console.warn('Planner bundle missing: run npm --prefix apps/planner ci && npm --prefix apps/planner run build first.'); }
 cpSync(at('packages/ui'), out + '/packages/ui', { recursive: true });
 rmSync(out + '/gallery.html', { force: true }); rmSync(out + '/js/gallery.js', { force: true });         // the component gallery is for development and tests only
 writeFileSync(out + '/app-manifests.json', JSON.stringify(loadManifests().map(({ dir, ...m }) => m)));

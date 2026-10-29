@@ -1,0 +1,16 @@
+/* Design v4 "Signal" tokens. Source: docs/design/v4 prototype (prototype-source/base.css), verified with computed styles.
+   Set data-theme="light|dark" and data-org="l2f|aurj" on <html>. Hand-maintained until the shared token build adopts v4. */
+:root {
+  --font-d: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+  --font: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "Geist Mono", ui-monospace, Menlo, Consolas, monospace;
+  --r-sm: 10px; --r: 14px; --r-lg: 22px; --bw: 1px;
+  --e-out: cubic-bezier(.22, 1, .36, 1); --e-spring: cubic-bezier(.34, 1.56, .64, 1);
+}
+:root, [data-theme="light"] { color-scheme: light; --bg: #F3F1EB; --surface: #FFFEFA; --surface2: #F8F6F1; --sunk: #ECE9E1; --line: rgba(28,24,14,.09); --line2: rgba(28,24,14,.18); --text: #16171B; --text2: #4A4E59; --muted: #6F7380; --warn: #8A5200; --warn-tint: #FFF0D2; --danger: #BA3126; --danger-tint: #FCE8E4; --sh1: 0 1px 2px rgba(28,24,14,.06); --sh2: 0 1px 0 rgba(255,255,255,.8) inset, 0 2px 4px rgba(28,24,14,.04), 0 14px 30px -14px rgba(28,24,14,.24); --sh3: 0 40px 80px -30px rgba(14,15,19,.45), 0 12px 24px -12px rgba(14,15,19,.25); }
+[data-theme="dark"] { color-scheme: dark; --bg: #0C0D10; --surface: #15171C; --surface2: #111317; --sunk: #1D2026; --line: rgba(255,255,255,.075); --line2: rgba(255,255,255,.15); --text: #EEEEEA; --text2: #ABAFB9; --muted: #8A8F9B; --warn: #FFC266; --warn-tint: rgba(255,184,77,.12); --danger: #FF8577; --danger-tint: rgba(255,106,90,.13); --sh1: 0 1px 2px rgba(0,0,0,.4); --sh2: 0 1px 0 rgba(255,255,255,.05) inset, 0 16px 32px -16px rgba(0,0,0,.75); --sh3: 0 40px 80px -30px rgba(0,0,0,.85); }
+:root, [data-org="l2f"] { --brand: #FFC633; --brand-ink: #1C1504; --brand-deep: #C98F00; --brand-soft: rgba(255,198,51,.2); --action: #2B63F6; --action-ink: #F7F9FF; --action-tint: rgba(43,99,246,.1); --glow: 255,198,51; }
+[data-org="l2f"][data-theme="dark"] { --action: #7398FF; --action-ink: #06132F; --action-tint: rgba(115,152,255,.15); }
+[data-org="aurj"] { --brand: #B0305A; --brand-ink: #FFF6F2; --brand-deep: #7E1C3D; --brand-soft: rgba(176,48,90,.13); --action: #0C7F95; --action-ink: #F2FCFE; --action-tint: rgba(12,127,149,.11); --glow: 224,99,138; }
+[data-org="aurj"][data-theme="light"] { --bg: #F6F0EB; --surface: #FFFCF9; --surface2: #FAF5F0; --sunk: #EFE6DF; }
+[data-org="aurj"][data-theme="dark"] { --bg: #110C0F; --surface: #1A1317; --surface2: #140F12; --sunk: #251C21; --brand: #E0638A; --brand-ink: #1A0A10; --brand-deep: #A83A60; --action: #4CC6DC; --action-ink: #04262D; --action-tint: rgba(76,198,220,.14); }
