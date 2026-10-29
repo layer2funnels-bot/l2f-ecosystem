@@ -13,6 +13,7 @@ export function socialView({ api, ctx, route }) {
   const root = h('section', { class: 'soc' }); const live = () => ctx.live() && root.isConnected;
   const canCreate = ctx.canAnywhere('social.post.create'); const canEdit = ctx.canAnywhere('social.post.edit'); const canSched = ctx.canAnywhere('social.post.schedule');
   let channels = []; let campaigns = [];
+  const CHC = { instagram: '#E9488F', linkedin: '#2B5CF0', youtube: '#E8553D', facebook: '#4A6CF0', x: '#1B1D23', tiktok: '#13A592', pinterest: '#D93A4A', email: '#F07C1A' };
   const chan = (k) => channels.find((c) => c.key === k); const chLabel = (k) => chan(k)?.label ?? k;
   const clientName = (c) => (c ? (ctx.clients?.get(c) ?? 'A client') : ctx.orgName);
   const fail = (r, what = 'do that') => toast(r?.status === 404 ? `You can’t ${what} here.` : (r?.message ?? 'Something went wrong. Try again.'), false);
@@ -122,16 +123,16 @@ export function socialView({ api, ctx, route }) {
     let tab = TABS.some(([k]) => k === route?.query?.tab) ? route.query.tab : 'calendar';
     const body = h('div', {});     // the four views are the app's side-rail pages (appnav.js)
     const newPost = canCreate ? btn('New post', () => openPost(null), 'primary') : null;
-    put(root, h('div', { class: 'pj-head' }, h('div', {}, h('div', { class: 'crumbs fine' }, 'Social Planner'), h('h1', { 'data-page-title': true }, 'Social Planner'), h('p', { class: 'sub' }, 'Plan posts and campaigns. A person posts them; Planner keeps the record.')), newPost), !canCreate ? readOnlyNotice('Your access level can’t add posts') : null, body);
+    put(root, h('div', { class: 'pj-head' }, h('div', {}, h('div', { class: 'crumbs fine' }, 'Social Planner'), h('h1', { 'data-page-title': true }, TABS.find(([k]) => k === tab)?.[1] ?? 'Calendar'), h('p', { class: 'sub' }, tab === 'calendar' ? `Planned and scheduled posts for ${ctx.orgName}.` : 'Plan posts and campaigns. A person posts them; Planner keeps the record.')), newPost), !canCreate ? readOnlyNotice('Your access level can’t add posts') : null, body);
     ({ calendar, posts, queue: (b) => posts(b, { only: ['approved', 'scheduled'], title: 'Queue', blurb: 'Approved and scheduled posts, in the order they are planned. Nothing is published by us: a person posts, then marks it posted.' }),
       approvals: (b) => posts(b, { only: ['in_review'], title: 'Approvals', blurb: 'Posts waiting for a decision. Open one to approve it or ask for changes.' }), campaigns: campaignsTab, channels: channelsTab })[tab](body);
   }
 
   async function calendar(body) {
     const now = new Date(); let y = now.getFullYear(); let m = now.getMonth(); let ch = ''; const grid = h('div', {}); const head = h('h2', { class: 'sp-month', 'aria-live': 'polite' });
-    const chSel = h('select', { 'aria-label': 'Channel' }, h('option', { value: '' }, 'All channels'), ...channels.map((c) => h('option', { value: c.key }, c.label))); chSel.addEventListener('change', () => { ch = chSel.value; load(); });
-    const nav = h('div', { class: 'sp-nav' }, btn('Previous month', () => { m -= 1; if (m < 0) { m = 11; y -= 1; } load(); }, '', { 'aria-label': 'Previous month' }), btn('Today', () => { y = now.getFullYear(); m = now.getMonth(); load(); }), btn('Next month', () => { m += 1; if (m > 11) { m = 0; y += 1; } load(); }, '', { 'aria-label': 'Next month' }), chSel);
-    put(body, notice('info', 'info', 'No channels are connected yet. Posts can be planned and approved here; publishing turns on after channels are connected and approved. Until then a person posts and marks it posted.'), h('div', { class: 'toolbar' }, head, nav), grid);
+    const chSel = h('select', { class: 'sel', 'aria-label': 'Channel' }, h('option', { value: '' }, 'All channels'), ...channels.map((c) => h('option', { value: c.key }, c.label))); chSel.addEventListener('change', () => { ch = chSel.value; load(); });
+    const nav = h('div', { class: 'sp-nav' }, h('button', { type: 'button', class: 'btn sp-step', 'aria-label': 'Previous month', onclick: () => { m -= 1; if (m < 0) { m = 11; y -= 1; } load(); } }, icon('chev', 'sp-arrl')), btn('Today', () => { y = now.getFullYear(); m = now.getMonth(); load(); }), h('button', { type: 'button', class: 'btn sp-step', 'aria-label': 'Next month', onclick: () => { m += 1; if (m > 11) { m = 0; y += 1; } load(); } }, icon('chev', 'sp-arrr')), chSel);
+    put(body, notice('plain', 'plug', 'No channels are connected yet. Posts can be planned and approved here; publishing turns on after channels are connected and approved. Until then a person posts and marks it posted.'), h('div', { class: 'sp-head' }, head, h('div', { class: 'sp-legend', 'aria-hidden': 'true' }, ...['instagram', 'linkedin', 'youtube', 'facebook'].filter((k) => chan(k)).map((k) => h('span', { class: 'sp-lg', style: `--chc:${CHC[k]}` }, chLabel(k)))), nav), grid);
     async function load() {
       const weeks = monthGrid(y, m); const from = ymd(weeks[0][0]); const to = ymd(weeks.at(-1)[6]);
       put(head, new Date(y, m, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }));
@@ -143,7 +144,7 @@ export function socialView({ api, ctx, route }) {
         ...weeks.flat().map((d) => { const k = ymd(d); const list = days.get(k) ?? [];
           return h('div', { class: `sp-day${d.getMonth() !== m ? ' out' : ''}${k === today ? ' today' : ''}`, role: 'gridcell', 'aria-label': `${d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}, ${list.length} post${list.length === 1 ? '' : 's'}` },
             h('span', { class: 'sp-dn' }, d.getDate()),
-            ...list.slice(0, 3).map((p) => h('button', { type: 'button', class: `sp-chip s-${p.status}`, onclick: () => openPost(p.id) }, h('span', { class: 'sp-ch' }, chLabel(p.channel)), ' ', p.title)),
+            ...list.slice(0, 3).map((p) => h('button', { type: 'button', class: `sp-chip s-${p.status}`, style: `--chc:${CHC[p.channel] ?? 'var(--action)'}`, onclick: () => openPost(p.id) }, h('span', { class: 'sp-ch' }, chLabel(p.channel)), ' ', p.title)),
             list.length > 3 ? h('span', { class: 'fine muted' }, `+${list.length - 3} more`) : null,
             canCreate ? h('button', { type: 'button', class: 'sp-add', 'aria-label': `New post on ${d.toLocaleDateString(undefined, { day: 'numeric', month: 'long' })}`, onclick: () => openPost(null, { scheduled_for: new Date(d.getFullYear(), d.getMonth(), d.getDate(), 9).toISOString() }) }, icon('plus')) : null); })),
         undated.length ? h('div', { class: 'card sp-undated' }, h('h3', {}, 'Not dated yet'), h('ul', {}, ...undated.slice(0, 12).map((p) => h('li', {}, h('button', { type: 'button', class: 'btn link', onclick: () => openPost(p.id) }, p.title), ' ', statePill(p.status), ' ', chip(chLabel(p.channel)))))) : null);

@@ -927,7 +927,7 @@ for (const [w, label] of [[1280, 'desktop'], [768, 'tablet'], [390, 'phone']]) {
   await page.goto(`${base}/#/social`); await page.waitForSelector('.sp-cal', { timeout: 9000 }); await page.waitForSelector('.sp-chip', { timeout: 9000 });
   check('SO16', 'The calendar shows the post that was scheduled for today', (await page.locator('.sp-chip', { hasText: PN }).count()) >= 1 && (await page.locator('.sp-undated').innerText()).includes(PN2));
   await page.goto(`${base}/#/app/social_planner`); await page.waitForSelector('.pj-head h1', { timeout: 9000 });
-  check('SO17', 'The Social Planner tile address opens the planner', (await page.locator('.pj-head h1').innerText()) === 'Social Planner');
+  check('SO17', 'The Social Planner tile address opens the planner', (await page.locator('.pj-head h1').innerText()) === 'Calendar' && (await page.locator('.pj-head .crumbs').innerText()) === 'Social Planner');
   await admin.query("update apps set lifecycle = 'coming_soon' where key = 'social_planner'"); await admin.query("delete from workspace_apps where workspace_id = $1 and app_key = 'social_planner'", [wsS]);
   await page.goto(`${base}/#/launcher`); await page.reload(); await wait('The sky follows your time of day');
 }

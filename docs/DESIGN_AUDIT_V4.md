@@ -36,22 +36,29 @@ Compared: PR #29 build, Aurj organization, light theme, 1366 px (phone 390 px: p
 | Client Portal | Locked | Not compared (preview only). |
 
 ## Correction checklist (priority order). Status changes only after verification.
+Verification used: the repeatable comparison (`scripts/_audit.mjs` computed styles, side-by-side screenshots of the prototype and the build at 1366 and 390 px) plus the browser suite (`scripts/e2e-ui.mjs`, 242 checks on a fresh database).
+
 | ID | Pri | Where | Observed | Expected (V4) | Fix | Status |
 |---|---|---|---|---|---|---|
-| A1 | P0 | All screens | Primary buttons 13px/550 | 14.5px/600 | Use V4 `.btn.primary`; drop the `pri` alias (RC1) | verify |
-| A2 | P0 | Header | Org label monospace, logo tile wrong | Geist 600, rose gradient tile | Rename switcher class (RC1) | verify |
-| A3 | P1 | Header, side rail | Avatar uses brand rose, white text | V4 avatar (yellow, dark text) via `--av` | Use V4 avatar token | open |
-| A4 | P1 | Clients, Drive, Forms, Social | Duplicate crumb ("Clients / Clients") | Single app crumb | `setCrumbs` per page | open |
-| A5 | P1 | Empty states (all lists) | Flat 3-layer icon | 3D V4 stack with organization mark | Use V4 `.stack` illustration in `emptyState` | open |
-| A6 | P1 | Primary buttons | No leading plus icon | Plus icon on create actions | Add icon to create buttons | open |
-| A7 | P1 | List toolbars | Bordered search + native select | V4 `.sel` and search styling | Use `.sel` / V4 search | open |
-| A8 | P1 | Launcher header | No theme toggle; avatar colour | Moon/sun toggle, V4 avatar | Add toggle | open |
-| A9 | P1 | Launcher hero | Heading larger than V4; generic sub-line | V4 size; personalised line | Match size; data-driven line | open |
-| B1 | P0 | Projects | Older card grid | V4 Home + pages | Rebuild Projects Home and menu pages | open |
-| B2 | P0 | Drive | Older library list | V4 Home (suggested, folders, recent, storage) | Rebuild Drive Home | open |
-| B3 | P1 | Social | Title "Social Planner", pill buttons | "Calendar", legend chips, compact nav | Rework page head and toolbar | open |
+| A1 | P0 | All screens | Primary buttons 13px/550 | 14.5px/600 | `.btn.primary`; `pri` alias dropped (RC1) | **done** (audit diff gone) |
+| A2 | P0 | Header | Org label monospace, wrong logo tile | Geist 600, org tile | Switcher class renamed (RC1) | **done** |
+| A3 | P1 | Header, side rail | Avatar in brand rose | V4 avatar (yellow, dark text) | V4 avatar token | **done** |
+| A4 | P1 | Clients, Drive, Forms, Social | Duplicate crumb | Single app crumb | `setCrumbs` per page | **done** |
+| A5 | P1 | Empty states | Flat 3-layer icon | 3D V4 stack with organization mark | V4 stack illustration in `emptyState` | **done** |
+| A6 | P1 | Primary buttons | No plus icon | Plus on create actions | Icon added by the `btn` helper | **done** |
+| A7 | P1 | List toolbars | Native select | V4 `.sel` | `.sel` on Drive type filter and Social channel filter; other lists unchanged | partial |
+| A8 | P1 | Launcher header | No theme switch | Moon/sun toggle | Quick light/dark switch beside the profile | **done** (needs your eye) |
+| A9 | P1 | Launcher hero | Heading slightly larger, no weather chip offline | V4 size, weather chip | Weather chip needs live weather (not available offline) | partial |
+| B1 | P0 | Projects | Older card grid | V4 Home + menu pages | Home rebuilt (greeting, priorities, projects, recent updates); rail: Home, My Work, Projects, Docs, Whiteboards, Dashboards, AI Assist, App Center; Docs lists project documents; Dashboards and AI Assist are honest "not available yet" pages (no AI provider is connected) | **done** |
+| B2 | P0 | Drive | Older library list | V4 Home | Recently edited cards, folder quick links, type filter, PDF/IMG tiles. Not built, on purpose: Shared with me, Shared drives, Starred, storage meter, People filter (no data behind them yet) | partial |
+| B3 | P1 | Social | Title "Social Planner", pill buttons | "Calendar", legend, compact nav | Page title per tab, month row with channel legend, icon steppers, neutral notice with plug icon, channel-coloured posts, dark today marker | **done** |
 | B4 | P2 | Value Ladder | Toolbar differs | Cards with mini bars | Card redesign | open |
 | B5 | P2 | Pills | 12px | 11.5px | Token match | open |
-| C1 | P1 | Interactions | Hover/press on rebuilt buttons unverified | V4 hover, press, transition timings | Verify after A1 | open |
-| C2 | P1 | All | Phone 390 px not yet compared | V4 mobile layouts | Run pair comparison | open |
+| C1 | P1 | Interactions | Hover/press unverified | V4 timings | Needs a hover/press recording pass | open |
+| C2 | P1 | Phone 390 px | Header search squeezed the page name | Search is an icon on phones | Header search collapses to an icon at 620 px and below. Calendar keeps a day list on phones (the prototype's 8 px colour bars cannot meet the 44 px touch target) | **done** for Projects, Drive, Social; other apps open |
 | C3 | P2 | Office Funnels/Team/Apps/Admin, Whiteboard | Not yet compared | | Compare | open |
+
+### Bugs found by the verification itself (not design items)
+- A view that finished loading before the page was attached dropped its result and stayed on its loading skeleton (the manifest registry loaded after the view started). Fixed by loading the registry first. Seen as an intermittent failure in the browser suite on a fresh database.
+- Hidden labels inside a scrolling table escaped its scroll box and widened the page at 768 px (Drive). Fixed.
+- A new class `sp-bar` collided with an existing progress-bar class and `sp-prev` with the post preview: the same class-collision pattern as RC1. Renamed.

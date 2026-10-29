@@ -189,3 +189,5 @@ details.support{margin-top:12px;font-size:13px;color:var(--muted)}
 .toolbar>select,.toolbar select{min-height:44px;padding:0 12px;border-radius:12px;border:var(--bw) solid var(--control);background:var(--surface)}
 .toolbar>input:focus,.toolbar>select:focus{outline:none;border-color:var(--action);box-shadow:0 0 0 4px var(--action-tint)}
 .authwrap{min-height:100vh;display:grid;place-items:center;padding:24px 16px;background:var(--bg)}.authnarrow{width:100%;max-width:440px}
+/* Phone header (Design v4): the search is an icon, so the page name keeps its room */
+@media (max-width:620px){.hdr .search{flex:0 0 44px;width:44px;max-width:44px;padding:0;justify-content:center;background:none}.hdr .search input{display:none}}

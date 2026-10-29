@@ -3,3 +3,5 @@
 .launcher .attrib{margin-top:12px}.launcher .attrib a{color:inherit;text-decoration:underline}
 .launcher .tile.opening{animation:zoomout var(--motion-base) var(--e-out) forwards}
 @keyframes zoomout{to{transform:scale(1.14);opacity:0}}
+.l-right{display:inline-flex;align-items:center;gap:14px}.themebtn{width:44px;height:44px;display:grid;place-items:center;border:0;border-radius:50%;background:transparent;color:#fff;cursor:pointer}
+.themebtn:hover{background:rgba(255,255,255,.14)}.themebtn svg{width:20px;height:20px}

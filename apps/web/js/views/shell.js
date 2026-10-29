@@ -105,7 +105,13 @@ export function shellView({ app, orgs, active, email, name, route, content, bann
   const skip = h('a', { class: 'skip', href: '#main', onclick: (e) => { e.preventDefault(); const m = document.getElementById('main'); m.setAttribute('tabindex', '-1'); m.focus(); } }, 'Skip to content');      // not a hash link: the address is the route
   if (launcherCurrent) {
     // Design v4 section 8: the Launcher is the sky itself. Its top row carries the organization switcher and the profile; there is no header bar.
-    content.querySelector('[data-slot=org]')?.replaceWith(sw); content.querySelector('[data-slot=who]')?.replaceWith(who);
+    content.querySelector('[data-slot=org]')?.replaceWith(sw); const whoSlot = content.querySelector('[data-slot=who]');
+    if (whoSlot && theme) {   // the Launcher header has a quick light/dark switch (Design v4); everywhere else it lives in the profile menu
+      const dark = () => document.documentElement.dataset.theme === 'dark';
+      const tb = h('button', { type: 'button', class: 'themebtn', 'aria-label': dark() ? 'Switch to light theme' : 'Switch to dark theme', onclick: () => { theme.set(dark() ? 'light' : 'dark'); paint(); } });
+      const paint = () => { tb.replaceChildren(icon(dark() ? 'sun' : 'moon')); tb.setAttribute('aria-label', dark() ? 'Switch to light theme' : 'Switch to dark theme'); }; paint();
+      whoSlot.replaceWith(h('span', { class: 'l-right' }, tb, who));
+    } else whoSlot?.replaceWith(who);
     return h('div', { class: 'app in-launcher', 'data-org': active.slug ?? '' }, skip, content, banner ?? null);
   }
   const manifest = registry?.get(currentApp);

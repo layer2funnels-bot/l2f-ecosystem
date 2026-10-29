@@ -38,3 +38,12 @@
   .sp-add{opacity:1}
   .sp-row{grid-template-columns:minmax(0,1fr)}
 }
+/* Calendar head (Design v4): month, channel legend, steppers; channel-coloured posts; dark today marker */
+.sp-head{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:var(--space-4) 0 var(--space-3)}.sp-head .sp-month{margin:0}
+.sp-legend{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}.sp-lg{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:var(--sunk);font:600 12.5px var(--font-b);color:var(--text2)}
+.sp-lg::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--chc)}
+.sp-head .sp-nav{margin-left:0}.sp-step{min-width:44px;padding:0}.sp-arrl{transform:rotate(90deg)}.sp-arrr{transform:rotate(-90deg)}
+.sp-chip{border-left-color:var(--chc,var(--action));background:color-mix(in srgb,var(--chc,var(--action)) 14%,var(--surface));border-color:transparent;border-left-width:3px;font-weight:600}
+.sp-chip.s-idea,.sp-chip.s-draft{border-left-color:var(--chc,var(--muted));opacity:.85}
+.sp-dow{font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:11.5px}.sp-dn{font-weight:700}
+.sp-day.today .sp-dn{background:var(--text);color:var(--bg);border-radius:999px;padding:1px 7px}
