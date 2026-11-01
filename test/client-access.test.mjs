@@ -100,6 +100,11 @@ check('CA25b', 'The list says the Portal is not open again once it is locked (th
 const hist = (await J('clients.access.events', { access: a1.access_id }, U.LAD, ORG.L)).rows.map((x) => x.event);
 check('CA26', 'The history lists each step in order (created, invited, reinvited, accepted, suspended, restored, revoked) without any e-mail or name', ['created_client', 'invited', 'reinvited', 'accepted', 'suspended', 'restored', 'revoked'].every((e, n) => hist[n] === e) && (await rows("select detail from client_access_events")).every((x) => !x.detail || !/@/.test(x.detail)));
 
+await asSuper();   // two steps in the same microsecond: the id (random) sorts them backwards, the history must still keep the order they happened in
+await db.query("insert into client_access_events (id, workspace_id, access_id, event, created_at) values ('ffffffff-ffff-4fff-bfff-ffffffffffff', $1, $2, 'suspended', '2999-01-01'), ('00000000-0000-4000-8000-000000000000', $1, $2, 'restored', '2999-01-01')", [ORG.L, a1.access_id]);
+const tie = (await J('clients.access.events', { access: a1.access_id }, U.LAD, ORG.L)).rows.map((x) => x.event).slice(-2);
+check('CA26b', 'Two steps recorded in the same instant stay in the order they happened', tie.join() === 'suspended,restored', tie.join());
+
 // ---- failure is recorded and recoverable
 await db.query("create function public.t_boom() returns trigger language plpgsql as $$ begin if new.email = 'boom@x.test' then raise exception 'boom'; end if; return new; end $$");
 await db.query("create trigger t_boom before update on public.client_profiles for each row execute function public.t_boom()");
