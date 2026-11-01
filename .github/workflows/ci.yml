@@ -54,6 +54,10 @@ jobs:
         run: |
           npm ci --prefix apps/whiteboard
           node scripts/build-whiteboard.mjs
+      - name: 'Planner bundle (apps/planner; the shell mounts /planner/embed.js at #/planner)'
+        run: |
+          npm ci --prefix apps/planner
+          npm --prefix apps/planner run build
       - name: Playwright (not a project dependency; installed for this job only)
         run: |
           npm install --no-save --no-package-lock playwright@1.56.1
