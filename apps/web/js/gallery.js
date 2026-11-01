@@ -32,7 +32,7 @@ put(document.getElementById('gallery'),
   previewRibbon(),
   h('h1', { 'data-page-title': true }, 'Component gallery'),
   h('p', { class: 'muted' }, 'Muted text sits here. ', h('span', { class: 'mono' }, '1,234.50 USD'), ' ', h('span', { lang: 'ur', dir: 'rtl' }, 'اردو متن کی مثال')),
-  sec('Buttons', row(btn('Primary', () => {}, 'pri'), btn('Secondary', () => {}), btn('Danger', () => {}, 'dng'), btn('Link', () => {}, 'link'), btn('Disabled', () => {}, '', { disabled: true }), btn('Disabled with reason', () => {}, '', { 'aria-disabled': 'true', title: 'Needs the backend first' }),
+  sec('Buttons', row(btn('Primary', () => {}, 'primary'), btn('Secondary', () => {}), btn('Danger', () => {}, 'dng'), btn('Link', () => {}, 'link'), btn('Disabled', () => {}, '', { disabled: true }), btn('Disabled with reason', () => {}, '', { 'aria-disabled': 'true', title: 'Needs the backend first' }),
     h('button', { type: 'button', class: 'iconbtn', 'aria-label': 'More' }, icon('more')))),
   sec('Segmented, tabs, chips, pills', row(seg([['a', 'Day'], ['b', 'Week'], ['c', 'Month']], 'b', () => {}, 'Range')), tabs([['o', 'Overview'], ['l', 'List'], ['b', 'Board']], 'o', () => {}, 'Views'),
     row(chip('Neutral'), chip('Done', 'ok', 'check'), chip('Careful', 'warn', 'warn'), chip('Failed', 'bad', 'cross'), chip('Active', 'act'), pill('Locked', 'warn', 'lock'), avatar('Una Owner'))),
@@ -41,13 +41,13 @@ put(document.getElementById('gallery'),
   sec('Shared states', skeleton(3), emptyState({ title: 'Nothing here yet', body: 'Create the first one.', ic: 'plus', first: true }), errorState(() => {}), noAccessState()),
   sec('App plates', row(...[...reg.values()].map((m, i) => plateOf(m, 56, i % 4 === 3 ? 'locked' : 'available')))),
   sec('Launcher sky: time of day and weather', ...[['morning', 'clear', 'Clear', 21], ['afternoon', 'cloudy', 'Cloudy', 24], ['evening', 'rain', 'Light rain', 16], ['night', 'cold', 'Snow', -2], ['afternoon', 'hot', 'Clear', 38], ['night', 'clear', 'Clear', 14]].map(([part, wx, label, tempC]) => {
-    const box = h('div', { class: 'launcher', 'data-part': part, 'data-wx': wx, style: 'min-height:0;padding:var(--space-3)' }, skyScene(),
-      h('div', { class: 'skyhead' }, h('div', {}, h('p', { class: 'hi' }, greeting(part, 'Una Owner')), h('strong', {}, `${part} · ${wx}`)), weatherChip({ condition: wx, label, tempC })));
+    const box = h('div', { class: `launcher lx t-${part} w-${wx === 'cloudy' ? 'cloud' : wx}`, 'data-part': part, 'data-wx': wx, style: 'min-height:0;padding:16px;border-radius:22px' }, skyScene(),
+      h('div', { class: 'l-hero', style: 'padding:24px 0' }, h('p', { class: 'hi' }, greeting(part, 'Una Owner')), h('strong', {}, `${part} · ${wx}`), weatherChip({ condition: wx, label, tempC })));
     return box;
   })),
   h('section', { class: 'card', style: 'padding:var(--space-5);margin-bottom:var(--space-4)', 'data-gallery': 'docs' }, h('h2', {}, 'Docs editor (shared module)'), docView({ api: fakeApi, id: 'demo', ctx: docCtx })),
-  sec('Table that stacks on phones', h('table', { class: 'tbl stack' }, h('thead', {}, h('tr', {}, ...['Step', 'Visitors', 'Revenue'].map((t) => h('th', {}, t)))),
+  sec('Table that stacks on phones', h('table', { class: 'tbl stk' }, h('thead', {}, h('tr', {}, ...['Step', 'Visitors', 'Revenue'].map((t) => h('th', {}, t)))),
     h('tbody', {}, ...[['Landing', '2,500', '$0'], ['Checkout', '150', '$4,199']].map((r) => h('tr', {}, ...r.map((c, i) => h('td', { 'data-l': ['Step', 'Visitors', 'Revenue'][i] }, c))))))),
   sec('Overlays', row(btn('Open dialog', () => dialog({ title: 'A dialog', body: h('p', {}, 'Esc closes it and focus returns.'), actions: [{ label: 'Close', focus: true }] })),
-    btn('Open drawer', () => drawer({ title: 'A drawer', body: h('p', {}, 'Side panel content.'), actions: [{ label: 'Done', cls: 'pri' }] })), btn('Show toast', () => toast('Saved', true)))));
+    btn('Open drawer', () => drawer({ title: 'A drawer', body: h('p', {}, 'Side panel content.'), actions: [{ label: 'Done', cls: 'primary' }] })), btn('Show toast', () => toast('Saved', true)))));
 document.title = 'Component gallery';

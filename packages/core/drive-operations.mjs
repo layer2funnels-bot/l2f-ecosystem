@@ -80,8 +80,8 @@ const fileOps = [
   }),
   // Everything that belongs to one project (documents and whiteboards opened inside the project). Only what the person may read comes back.
   defineOperation({
-    name: 'drive.project.files', class: 'read', input: { project: { type: 'uuid', required: true }, kind: { type: 'enum', values: ['file', 'document'] }, mime: T(120), archived: { type: 'bool' }, q: { type: 'text', max: 100 } },
-    run: (q, _c, i) => q(`${FSELECT} where f.project_id = $1 and ((f.archived_at is not null) = $2) and ($3::text is null or f.kind = $3) and ($4::text is null or f.mime_type = $4) and ($5::text is null or f.name ilike $5)
+    name: 'drive.project.files', class: 'read', input: { project: { type: 'uuid' }, kind: { type: 'enum', values: ['file', 'document'] }, mime: T(120), archived: { type: 'bool' }, q: { type: 'text', max: 100 } },
+    run: (q, _c, i) => q(`${FSELECT} where f.project_id is not null and ($1::uuid is null or f.project_id = $1) and ((f.archived_at is not null) = $2) and ($3::text is null or f.kind = $3) and ($4::text is null or f.mime_type = $4) and ($5::text is null or f.name ilike $5)
       order by f.updated_at desc limit 500`, [i.project, i.archived ?? false, i.kind ?? null, i.mime ?? null, i.q ? like(i.q) : null]),
   }),
   // The "All boards" lens: every whiteboard the person may open, optionally by context (shared Drive, one client, one project). Only readable records come back.

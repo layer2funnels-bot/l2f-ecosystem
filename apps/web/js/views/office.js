@@ -24,18 +24,18 @@ export function documentsView({ api, ctx }) {
     const docs = d.data.filter((f) => !f.protected_sop);
     put(sops, ...(s?.ok && s.data.length ? [h('h2', { class: 'pj-gh' }, 'Approved SOPs'), h('p', { class: 'fine muted' }, 'Owner-protected procedures. Everyone on the team can read them; changing one needs the right access.'), h('ul', { class: 'rows card' }, ...s.data.map(row))] : []));
     put(list, docs.length ? h('ul', { class: 'rows' }, ...docs.map(row))
-      : emptyState({ title: q.value.trim() ? 'No document matches' : 'No documents yet', body: q.value.trim() ? 'Try another word.' : canCreate ? `Write the first document for ${ctx.orgName}. It goes in the organization library, which Drive also shows.` : `Documents your team adds to ${ctx.orgName} appear here.`, ic: 'doc', first: !q.value.trim(), action: canCreate && !q.value.trim() ? btn('New document', create, 'pri') : null }));
+      : emptyState({ title: q.value.trim() ? 'No document matches' : 'No documents yet', body: q.value.trim() ? 'Try another word.' : canCreate ? `Write the first document for ${ctx.orgName}. It goes in the organization library, which Drive also shows.` : `Documents your team adds to ${ctx.orgName} appear here.`, ic: 'doc', first: !q.value.trim(), action: canCreate && !q.value.trim() ? btn('New document', create, 'primary') : null }));
   }
   function create() {
     const name = field({ id: 'nd-name', label: 'Document name', value: 'Untitled document', maxlength: 200 });
-    dialog({ title: 'New document', body: name.el, actions: [{ label: 'Create', cls: 'pri', on: async () => {
+    dialog({ title: 'New document', body: name.el, actions: [{ label: 'Create', cls: 'primary', on: async () => {
       const nm = name.input.value.trim(); if (!nm || /[\/\\]/.test(nm)) return name.error('Use a name without slashes.');
       const r = await api.call('drive.files.create', { space: 'shared', name: nm, kind: 'document', mime_type: DOC_MIME, body: serialize(emptyDoc()) });
       if (!r.ok) { toast('Couldn’t create it here.', false); return false; } ctx.go(`#/doc/${r.data[0].id}`);
     } }, { label: 'Cancel' }] });
   }
   let t = null; q.addEventListener('input', () => { clearTimeout(t); t = setTimeout(load, 200); });
-  put(root, head(ctx.orgName, 'Documents', `The ${ctx.orgName} library: procedures, plans and notes the whole team can find. Project and client files stay with their own app.`, canCreate ? btn('New document', create, 'pri') : null),
+  put(root, head(ctx.orgName, 'Documents', `The ${ctx.orgName} library: procedures, plans and notes the whole team can find. Project and client files stay with their own app.`, canCreate ? btn('New document', create, 'primary') : null),
     !canCreate ? readOnlyNotice('You can read the library but not add to it', '') : null, h('div', { class: 'findwrap' }, h('label', {}, icon('search'), h('span', { class: 'sr' }, 'Search documents'), q)), sops, list);
   load(); return root;
 }
@@ -50,7 +50,7 @@ export function teamView({ api, ctx }) {
       h('button', { type: 'button', class: 'pj-title', onclick: () => profile(m) }, m.display_name, m.is_you ? h('span', { class: 'fine muted' }, ' (you)') : null), chip(roleLabel(m.role))))) : emptyState({ title: 'No one here yet', body: 'Active team members appear here.', ic: 'user' }));
   }
   async function profile(m) {
-    const body = h('div', {}, skeleton(2)); drawer({ title: m.display_name, label: `Profile of ${m.display_name}`, body: [h('div', { class: 'team-id' }, avatar(m.display_name, 56), h('div', {}, h('b', {}, m.display_name), h('br'), chip(roleLabel(m.role)), m.email ? h('div', { class: 'fine muted' }, m.email) : null)), h('h3', {}, 'Open work you can see'), body], actions: [{ label: 'Close', cls: 'pri' }] });
+    const body = h('div', {}, skeleton(2)); drawer({ title: m.display_name, label: `Profile of ${m.display_name}`, body: [h('div', { class: 'team-id' }, avatar(m.display_name, 56), h('div', {}, h('b', {}, m.display_name), h('br'), chip(roleLabel(m.role)), m.email ? h('div', { class: 'fine muted' }, m.email) : null)), h('h3', {}, 'Open work you can see'), body], actions: [{ label: 'Close', cls: 'primary' }] });
     const [t, p] = await Promise.all([api.call('tasks.list', { assignee: m.user_id, open_only: true }), api.call('projects.list', { scope: 'all' })]);
     const names = new Map((p.ok ? p.data : []).map((x) => [x.id, x.name]));
     const rows = t.ok ? t.data.filter((x) => names.has(x.project_id)) : [];

@@ -22,11 +22,11 @@ export function strategiesListView(ctx) {
     put(body, r.data.length ? h('div', { class: 'card tbl-wrap' }, h('table', { class: 'tbl' }, h('caption', { class: 'sr' }, 'Funnel strategies'),
       h('thead', {}, h('tr', {}, ...['Strategy', 'Status', 'Map', 'Updated'].map((x) => h('th', { scope: 'col' }, x)))),
       h('tbody', {}, ...r.data.map((s) => h('tr', {}, h('td', {}, icon('doc'), ' ', h('a', { href: strategyHref(s.id) }, s.name)), h('td', {}, statusChip(s.status)), h('td', {}, s.map_url ? chip('Linked', 'act', 'map') : chip('No map yet')), h('td', {}, when(s.doc_updated_at ?? s.updated_at)))))))
-      : emptyState({ title: q || status ? 'No strategy matches' : show === 'archived' ? 'Nothing archived' : 'No funnel strategies yet', body: q || status ? 'Try another word or status.' : canNew ? 'Write one strategy per funnel: who it is for, the offer, the journey and what success looks like.' : 'Strategies your team writes appear here.', ic: 'doc', first: !q && !status && show === 'active', action: canNew && show === 'active' && !q && !status ? btn('New Funnel Strategy', create, 'pri') : null }));
+      : emptyState({ title: q || status ? 'No strategy matches' : show === 'archived' ? 'Nothing archived' : 'No funnel strategies yet', body: q || status ? 'Try another word or status.' : canNew ? 'Write one strategy per funnel: who it is for, the offer, the journey and what success looks like.' : 'Strategies your team writes appear here.', ic: 'doc', first: !q && !status && show === 'active', action: canNew && show === 'active' && !q && !status ? btn('New Funnel Strategy', create, 'primary') : null }));
   }
   function create() {
     const name = field({ id: 'ns-name', label: 'Funnel name', maxlength: 200, hint: 'For example: Webinar funnel' });
-    dialog({ title: 'New Funnel Strategy', body: [name.el, h('p', { class: 'fine muted' }, 'One strategy per funnel. The map stays in Funnel Mapper Pro; you can link it from the strategy.')], actions: [{ label: 'Create', cls: 'pri', on: async () => {
+    dialog({ title: 'New Funnel Strategy', body: [name.el, h('p', { class: 'fine muted' }, 'One strategy per funnel. The map stays in Funnel Mapper Pro; you can link it from the strategy.')], actions: [{ label: 'Create', cls: 'primary', on: async () => {
       const nm = name.input.value.trim(); if (!nm || /[\/\\]/.test(nm)) return name.error('Give it a name without slashes.');
       const d = await api.call('drive.files.create', { app: 'funnels', space: 'shared', name: nm, kind: 'document', mime_type: DOC_MIME, body: serialize({ v: 1, blocks: [{ t: 'h1', c: [{ x: nm }] }, { t: 'h2', c: [{ x: 'Funnel overview' }] }, { t: 'p', c: [] }, { t: 'h2', c: [{ x: 'Target audience' }] }, { t: 'p', c: [] }, { t: 'h2', c: [{ x: 'Offer and value' }] }, { t: 'p', c: [] }, { t: 'h2', c: [{ x: 'Customer journey' }] }, { t: 'p', c: [] }, { t: 'h2', c: [{ x: 'Messaging direction' }] }, { t: 'p', c: [] }, { t: 'h2', c: [{ x: 'Success criteria' }] }, { t: 'p', c: [] }] }) });
       if (!d.ok) { toast('Couldn’t create the document here. Strategies need Drive access to write.', false); return false; }
@@ -37,8 +37,8 @@ export function strategiesListView(ctx) {
   search.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { q = search.value.trim(); load(); }, 200); });
   const st = h('select', { 'aria-label': 'Status' }, h('option', { value: '' }, 'All statuses'), ...STATUS.map(([k, l]) => h('option', { value: k }, l))); st.addEventListener('change', () => { status = st.value; load(); });
   const sh = h('select', { 'aria-label': 'Show' }, h('option', { value: 'active' }, 'Active'), h('option', { value: 'archived' }, 'Archived')); sh.addEventListener('change', () => { show = sh.value; load(); });
-  put(root, h('div', { class: 'crumb' }, 'Office · Funnels'), h('div', { class: 'pj-head' }, h('div', {}, h('h1', { 'data-page-title': true }, 'Funnel Strategies'), h('p', { class: 'sub' }, 'One written strategy per funnel. Maps stay in Funnel Mapper Pro.')), canNew ? btn('New Funnel Strategy', create, 'pri') : null),
-    h('div', { class: 'cl-bar' }, search, st, sh), body);
+  put(root, h('div', { class: 'crumb' }, 'Office · Funnels'), h('div', { class: 'pj-head' }, h('div', {}, h('h1', { 'data-page-title': true }, 'Funnel Strategies'), h('p', { class: 'sub' }, 'One written strategy per funnel. Maps stay in Funnel Mapper Pro.')), canNew ? btn('New Funnel Strategy', create, 'primary') : null),
+    h('div', { class: 'toolbar' }, search, st, sh), body);
   load(); return root;
 }
 
@@ -56,7 +56,7 @@ export function strategyView(ctx, id) {
         : [h('p', { class: 'muted' }, 'No map linked yet.'), canEdit ? btn('Link a map', linkMap, '') : null]);
       function linkMap() {
         const url = field({ id: 'mp-url', label: 'Map address', hint: 'Starts with https://' }); const label = field({ id: 'mp-label', label: 'Name (optional)', maxlength: 200 });
-        dialog({ title: 'Link a funnel map', body: [url.el, label.el], actions: [{ label: 'Save link', cls: 'pri', on: async () => { const u = url.input.value.trim(); if (!/^https:\/\/\S+$/.test(u)) return url.error('Use a web address that starts with https://'); const ok = await save({ map_url: u, ...(label.input.value.trim() ? { map_label: label.input.value.trim() } : {}) }, 'Map linked.'); if (!ok) return false; paintMap(); } }, { label: 'Cancel' }] });
+        dialog({ title: 'Link a funnel map', body: [url.el, label.el], actions: [{ label: 'Save link', cls: 'primary', on: async () => { const u = url.input.value.trim(); if (!/^https:\/\/\S+$/.test(u)) return url.error('Use a web address that starts with https://'); const ok = await save({ map_url: u, ...(label.input.value.trim() ? { map_label: label.input.value.trim() } : {}) }, 'Map linked.'); if (!ok) return false; paintMap(); } }, { label: 'Cancel' }] });
       }
       paintMap();
       const links = h('div', {}); const loadLinks = async () => {
@@ -72,7 +72,7 @@ export function strategyView(ctx, id) {
         const fill = () => { const opts = [...byId.values()].filter((x) => x.kind[0] === kind.value && !x.rec.client_id && !done.has(x.rec.id)); put(pick, ...(opts.length ? opts.map((x) => h('option', { value: x.rec.id }, x.rec[x.kind[3]])) : [h('option', { value: '' }, 'Nothing left to link')])); };
         kind.addEventListener('change', fill); fill();
         dialog({ title: 'Link a record', body: [h('div', { class: 'fld' }, h('label', { for: 'lr-kind' }, 'Kind'), kind), h('div', { class: 'fld' }, h('label', { for: 'lr-rec' }, 'From the library'), pick), h('p', { class: 'fine muted' }, 'Linking is by reference. The record is not copied.')],
-          actions: [{ label: 'Link', cls: 'pri', on: async () => { if (!pick.value) return false; const x = await api.call('funnels.references.link', { referrer_app: 'funnels', referrer_type: 'strategy', referrer_id: id, target_type: kind.value, target_id: pick.value }); if (!x.ok) { toast('Couldn’t link that.', false); return false; } loadLinks(); } }, { label: 'Cancel' }] });
+          actions: [{ label: 'Link', cls: 'primary', on: async () => { if (!pick.value) return false; const x = await api.call('funnels.references.link', { referrer_app: 'funnels', referrer_type: 'strategy', referrer_id: id, target_type: kind.value, target_id: pick.value }); if (!x.ok) { toast('Couldn’t link that.', false); return false; } loadLinks(); } }, { label: 'Cancel' }] });
       }
       loadLinks();
       const notes = h('textarea', { rows: 4, maxlength: '8000', 'aria-label': 'Internal notes', ...(canEdit ? {} : { readonly: true }) }); notes.value = s.notes ?? ''; notes.addEventListener('change', () => save({ notes: notes.value }));
@@ -80,8 +80,8 @@ export function strategyView(ctx, id) {
         h('section', {}, h('h3', {}, 'Status'), st, h('p', { class: 'fine muted' }, 'Draft, In review, Approved.')),
         h('section', {}, h('h3', {}, icon('map'), ' Funnel map'), map), h('section', {}, h('h3', {}, 'Linked assets'), links),
         h('section', {}, h('h3', {}, icon('lock'), ' Internal notes · never shared'), notes),
-        canEdit ? h('section', {}, btn('Archive strategy', () => dialog({ title: `Archive “${s.name}”?`, body: h('p', {}, 'It leaves the list. Nothing is deleted and you can restore it from Archived.'), actions: [{ label: 'Archive', cls: 'pri', on: async () => { const x = await api.call('funnels.strategies.archive', { id }); if (!x.ok) { toast('Couldn’t archive it.', false); return false; } ctx.go(strategiesHref()); } }, { label: 'Cancel', focus: true }] }), '')) : null,
-        archived && ctx.can('funnels.strategy.edit', s.client_id) ? h('section', {}, notice('info', 'archive', 'This strategy is archived.'), btn('Restore', async () => { const x = await api.call('funnels.strategies.restore', { id }); if (x.ok) { toast('Restored.'); ctx.rerender(); } }, 'pri')) : null);
+        canEdit ? h('section', {}, btn('Archive strategy', () => dialog({ title: `Archive “${s.name}”?`, body: h('p', {}, 'It leaves the list. Nothing is deleted and you can restore it from Archived.'), actions: [{ label: 'Archive', cls: 'primary', on: async () => { const x = await api.call('funnels.strategies.archive', { id }); if (!x.ok) { toast('Couldn’t archive it.', false); return false; } ctx.go(strategiesHref()); } }, { label: 'Cancel', focus: true }] }), '')) : null,
+        archived && ctx.can('funnels.strategy.edit', s.client_id) ? h('section', {}, notice('info', 'archive', 'This strategy is archived.'), btn('Restore', async () => { const x = await api.call('funnels.strategies.restore', { id }); if (x.ok) { toast('Restored.'); ctx.rerender(); } }, 'primary')) : null);
     };
     put(root, docView({ api, id: s.file_id, ctx, opts: {
       crumbs: () => [h('a', { href: '#/office/funnels' }, 'Funnels'), h('a', { href: strategiesHref() }, 'Funnel Strategies'), s.name],

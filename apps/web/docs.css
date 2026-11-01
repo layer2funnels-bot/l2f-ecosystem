@@ -29,10 +29,12 @@
 .docpage[contenteditable=false]{cursor:default}
 @media (max-width:900px){.docbody{grid-template-columns:1fr}.docoutline-wrap{position:static}.docoutline-wrap summary{display:block;min-height:44px;line-height:44px;font-weight:600;cursor:pointer}.docoutline-wrap:not([open]) .docoutline{display:none}}
 @media (max-width:600px){.doctools{position:static}.docacts{width:100%}}
-.docs .crumbs a{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;color:var(--text2)}
+.docs .fpath a{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;color:var(--text2)}
 .docbody.has-side{grid-template-columns:220px minmax(0,1fr) 300px}
 @media (max-width:1100px){.docbody.has-side{grid-template-columns:220px minmax(0,1fr)}.docbody.has-side .strat-side{grid-column:1/-1}}
 @media (max-width:900px){.docbody.has-side{grid-template-columns:1fr}}
 .strat-side{display:grid;gap:var(--space-4);align-content:start}
 .strat-side section{border:1px solid var(--line2);border-radius:var(--radius-md);padding:var(--space-4);background:var(--surface)}
 .strat-side h3{font-size:14px;margin:0 0 var(--space-2)}
+/* v4's paper rules size p and li on their own; inside the editor they must inherit, or the browser's editing commands write inline styles (blocked by our policy) to keep the sizes apart */
+.docpage p,.docpage li{font-size:inherit;line-height:inherit;color:inherit}

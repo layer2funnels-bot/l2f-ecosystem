@@ -13,7 +13,7 @@ const areaOf = (permissionKey) => String(permissionKey).split('.')[0];      // t
 const areaName = (k) => AREA[k] ?? k.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
 const EDIT_WORDS = new Set(['create', 'edit', 'manage', 'delete', 'write', 'update', 'share', 'archive', 'upload']);
 
-const levelPill = (r) => pill(LABEL[r] ?? r, r === 'owner' ? 'pri' : '');
+const levelPill = (r) => pill(LABEL[r] ?? r, r === 'owner' ? 'primary' : '');
 const statusPill = (s) => (s === 'active' ? pill('Active', 'ok', 'check') : s === 'invited' ? pill('Invited', 'warn', 'mail') : pill('Deactivated'));
 const failText = (res) => (res.error?.code === 'not_found' ? 'That didn’t go through. Nothing was changed.' : messageFor(res.error?.code));
 
@@ -86,8 +86,8 @@ export function adminView({ api, live, org, role, route, rerender, go, clients }
       h('td', { 'data-l': 'Level' }, levelPill(m.role)), h('td', { 'data-l': 'Status' }, statusPill(m.status)),
       h('td', {}, btn(['Manage', h('span', { class: 'sr' }, ` ${name(m)}`)], () => manage(m, owners), '', { 'data-manage': m.user_id ?? m.invitation_id }))));
     setPane(h('div', { style: 'display:flex;justify-content:space-between;align-items:center;gap:var(--space-3);margin-bottom:var(--space-3);flex-wrap:wrap' },
-      h('p', { class: 'fine' }, `${list.length} ${list.length === 1 ? 'person' : 'people'}. Joining is by invitation only.`), btn([icon('plus'), 'Invite someone'], invite, 'pri', { id: 'invite' })),
-    list.length ? h('div', { class: 'card tbl-wrap' }, h('table', { class: 'tbl stack' }, h('caption', { class: 'sr' }, `Members of ${org.name}`),
+      h('p', { class: 'fine' }, `${list.length} ${list.length === 1 ? 'person' : 'people'}. Joining is by invitation only.`), btn([icon('plus'), 'Invite someone'], invite, 'primary', { id: 'invite' })),
+    list.length ? h('div', { class: 'card tbl-wrap' }, h('table', { class: 'tbl stk' }, h('caption', { class: 'sr' }, `Members of ${org.name}`),
       h('thead', {}, h('tr', {}, h('th', {}, 'Person'), h('th', {}, 'Level'), h('th', {}, 'Status'), h('th', {}, h('span', { class: 'sr' }, 'Actions')))), h('tbody', {}, ...rows)))
       : emptyState({ title: 'No one yet', body: 'Invite someone to get started.', ic: 'user' }));
   }
@@ -99,7 +99,7 @@ export function adminView({ api, live, org, role, route, rerender, go, clients }
     lv.input.addEventListener('change', () => { hint.textContent = LEVEL_TEXT[lv.input.value]; });
     lv.el.insertBefore(hint, lv.el.querySelector('.err'));
     dialog({ title: 'Invite someone', wide: true, body: [em.el, lv.el, h('p', { class: 'fine' }, 'They’ll see nothing until they accept. You can change or cancel this any time.')],
-      actions: [{ label: 'Send invitation', cls: 'pri', keep: true, on: async (close) => {
+      actions: [{ label: 'Send invitation', cls: 'primary', keep: true, on: async (close) => {
         em.ok(); const email = em.input.value.trim();
         if (!/^\S+@\S+\.\S+$/.test(email)) { em.error('Enter an email, like name@example.com.'); return false; }
         const r = await run('invitation.create', { email, kind: 'staff', role: lv.input.value });
@@ -113,7 +113,7 @@ export function adminView({ api, live, org, role, route, rerender, go, clients }
     if (!token) return toast(`Invitation saved for ${email}.`);
     const url = `${location.origin}/#/invite?token=${encodeURIComponent(token)}`;
     const f = field({ id: 'il2', label: 'Invitation link', value: url, readonly: true, hint: 'Email sending is switched on at go-live. Until then, send this link yourself. It only works for that email address.' });
-    dialog({ title: `Invitation saved for ${email}`, wide: true, body: f.el, actions: [{ label: 'Copy link', cls: 'pri', keep: true, on: async () => { try { await navigator.clipboard.writeText(url); toast('Link copied.'); } catch { f.input.select(); toast('Select the link and copy it.', false); } return false; } }, { label: 'Done', focus: true }] });
+    dialog({ title: `Invitation saved for ${email}`, wide: true, body: f.el, actions: [{ label: 'Copy link', cls: 'primary', keep: true, on: async () => { try { await navigator.clipboard.writeText(url); toast('Link copied.'); } catch { f.input.select(); toast('Select the link and copy it.', false); } return false; } }, { label: 'Done', focus: true }] });
     f.input.addEventListener('focus', () => f.input.select());
   }
 
@@ -131,13 +131,13 @@ export function adminView({ api, live, org, role, route, rerender, go, clients }
       isInvite ? h('p', { class: 'fine' }, 'Invitation not accepted yet.') : null];
     const confirmThen = (verb) => dialog({ title: `${verb} ${nm}?`, body: h('p', {}, verb === 'Remove' ? `${nm} loses access to ${org.name} straight away. Their work stays here. You can invite them again later.`
       : verb === 'Reactivate' ? `${nm} can sign in to ${org.name} again.` : `${nm} can’t sign in to ${org.name} until you turn them back on. Nothing is deleted.`),
-      actions: [{ label: verb, cls: verb === 'Reactivate' ? 'pri' : 'dng', on: async () => {
+      actions: [{ label: verb, cls: verb === 'Reactivate' ? 'primary' : 'dng', on: async () => {
         const r = verb === 'Remove' ? await run('members.remove', { user: m.user_id }) : await run('members.setStatus', { user: m.user_id, status: verb === 'Reactivate' ? 'active' : 'deactivated' });
         if (!r.ok) { toast(failText(r), false); return; }
         toast(`${nm} ${verb === 'Remove' ? 'removed' : verb === 'Reactivate' ? 'is active again' : 'deactivated'}.`, verb === 'Reactivate'); members();
       } }, { label: 'Cancel', focus: true }] });
     const acts = ownerLock ? [{ label: 'Close', focus: true }] : [
-      ...(!isInvite && !last ? [{ label: 'Save changes', cls: 'pri', on: async () => {
+      ...(!isInvite && !last ? [{ label: 'Save changes', cls: 'primary', on: async () => {
         if (lv.input.value === m.role) return;
         const r = await run('members.setRole', { user: m.user_id, role: lv.input.value });
         if (!r.ok) { toast(failText(r), false); return; }
@@ -172,17 +172,17 @@ export function adminView({ api, live, org, role, route, rerender, go, clients }
       h('td', {}, btn(['Manage', h('span', { class: 'sr' }, ` ${x.email}`)], () => manageClient(x), '', { 'data-manage-client': x.id }))); });
     setPane(
       h('div', { style: 'display:flex;justify-content:space-between;align-items:center;gap:var(--space-3);margin-bottom:var(--space-3);flex-wrap:wrap' },
-        h('p', { class: 'fine' }, `${list.length} ${list.length === 1 ? 'person' : 'people'}. Clients join by invitation only, and only for ${org.name}.`), btn([icon('plus'), 'Invite a client'], inviteClient, 'pri', { id: 'invite-client' })),
+        h('p', { class: 'fine' }, `${list.length} ${list.length === 1 ? 'person' : 'people'}. Clients join by invitation only, and only for ${org.name}.`), btn([icon('plus'), 'Invite a client'], inviteClient, 'primary', { id: 'invite-client' })),
       portalLive ? notice('info', 'info', [h('b', {}, 'The Client Portal is open.'), ' Active clients see only what staff have shared with them.'])
         : notice('warn', 'lock', [h('b', {}, 'The Client Portal is locked.'), ' Clients you invite can sign in, but they won’t see anything until an owner opens the Portal. Nothing here opens it.']),
-      list.length ? h('div', { class: 'card tbl-wrap' }, h('table', { class: 'tbl stack' }, h('caption', { class: 'sr' }, `Client access for ${org.name}`),
+      list.length ? h('div', { class: 'card tbl-wrap' }, h('table', { class: 'tbl stk' }, h('caption', { class: 'sr' }, `Client access for ${org.name}`),
         h('thead', {}, h('tr', {}, h('th', {}, 'Client'), h('th', {}, 'Status'), h('th', {}, 'Since'), h('th', {}, h('span', { class: 'sr' }, 'Actions')))), h('tbody', {}, ...rows)))
         : emptyState({ title: 'No client has access yet', body: 'Invite a client by email. The client record is created for you, in this organization only.', ic: 'user' }));
   }
   const clientLinkDialog = (email, token, reused) => {
     const url = `${location.origin}/#/invite?token=${encodeURIComponent(token)}`;
     const f = field({ id: 'cl-link', label: 'Invitation link', value: url, readonly: true, hint: 'Shown once. Email sending is switched on at go-live; until then send this link yourself. It only works for that email address, and any older link for them no longer works.' });
-    dialog({ title: reused ? `New link for ${email}` : `Invitation ready for ${email}`, wide: true, body: f.el, actions: [{ label: 'Copy link', cls: 'pri', keep: true, on: async () => { try { await navigator.clipboard.writeText(url); toast('Link copied.'); } catch { f.input.select(); toast('Select the link and copy it.', false); } return false; } }, { label: 'Done' }] });
+    dialog({ title: reused ? `New link for ${email}` : `Invitation ready for ${email}`, wide: true, body: f.el, actions: [{ label: 'Copy link', cls: 'primary', keep: true, on: async () => { try { await navigator.clipboard.writeText(url); toast('Link copied.'); } catch { f.input.select(); toast('Select the link and copy it.', false); } return false; } }, { label: 'Done' }] });
     f.input.addEventListener('focus', () => f.input.select());
   };
   async function sendInvite(input, em) {
@@ -200,7 +200,7 @@ export function adminView({ api, live, org, role, route, rerender, go, clients }
     const nn = field({ id: 'ci-name', label: 'Name for the new client record (optional)', maxlength: 200, hint: 'Leave empty to use their name or email.' });
     const sync = () => { nn.el.hidden = !!which.input.value; }; which.input.addEventListener('change', sync); sync();
     dialog({ title: 'Invite a client', wide: true, body: [em.el, pn.el, which.el, nn.el, h('p', { class: 'fine' }, `They’ll sign in with this email and accept. They get no access to ${org.name}’s team apps, only to what you share with them in the Client Portal, once it is open.`)],
-      actions: [{ label: 'Create invitation', cls: 'pri', keep: true, on: async (close) => {
+      actions: [{ label: 'Create invitation', cls: 'primary', keep: true, on: async (close) => {
         em.ok(); const email = em.input.value.trim();
         if (!/^\S+@\S+\.\S+$/.test(email)) { em.error('Enter an email, like name@example.com.'); return false; }
         const x = await sendInvite({ email, ...(pn.input.value.trim() ? { person_name: pn.input.value.trim() } : {}), ...(which.input.value ? { client: which.input.value } : (nn.input.value.trim() ? { client_name: nn.input.value.trim() } : {})) }, em);
@@ -214,13 +214,13 @@ export function adminView({ api, live, org, role, route, rerender, go, clients }
     run('clients.access.events', { access: x.id }).then((r) => { if (!hist.isConnected) return; put(hist, ...(r.ok && r.data.length ? r.data.map((e) => h('li', {}, `${CA_EVENT[e.event] ?? e.event} · ${caWhen(e.created_at)}`)) : [h('li', {}, 'No history yet.')])); });
     const move = (status, verb, done) => dialog({ title: `${verb} ${x.client_name}?`, body: h('p', {}, status === 'revoked' ? `${x.email} loses access for good. The client record and its history stay. You can invite them again later.`
       : status === 'suspended' ? `${x.email} is signed out of the Portal straight away. Nothing is deleted, and you can restore the access.` : `${x.email} can use the Portal again, once it is open.`),
-      actions: [{ label: verb, cls: status === 'active' ? 'pri' : 'dng', on: async () => { const r = await run('clients.access.set_status', { id: x.id, status }); if (!r.ok) { toast(failText(r), false); return false; } toast(done); clientAccess(); } }, { label: 'Cancel', focus: true }] });
+      actions: [{ label: verb, cls: status === 'active' ? 'primary' : 'dng', on: async () => { const r = await run('clients.access.set_status', { id: x.id, status }); if (!r.ok) { toast(failText(r), false); return false; } toast(done); clientAccess(); } }, { label: 'Cancel', focus: true }] });
     const acts = [];
-    if (x.status === 'invited') acts.push({ label: 'Send a new link', cls: 'pri', keep: true, on: async (close) => { const r = await sendInvite({ email: x.email }); if (!r) return false; close(); clientLinkDialog(x.email, r.token, true); clientAccess(); } },
+    if (x.status === 'invited') acts.push({ label: 'Send a new link', cls: 'primary', keep: true, on: async (close) => { const r = await sendInvite({ email: x.email }); if (!r) return false; close(); clientLinkDialog(x.email, r.token, true); clientAccess(); } },
       { label: 'Cancel invitation', cls: 'dng', keep: true, on: (close) => { close(); move('revoked', 'Cancel invitation', 'Invitation cancelled.'); } });
     if (x.status === 'active') acts.push({ label: 'Suspend access', keep: true, on: (close) => { close(); move('suspended', 'Suspend', 'Access suspended.'); } }, { label: 'Revoke access', cls: 'dng', keep: true, on: (close) => { close(); move('revoked', 'Revoke', 'Access revoked.'); } });
-    if (x.status === 'suspended') acts.push({ label: 'Restore access', cls: 'pri', keep: true, on: (close) => { close(); move('active', 'Restore', 'Access restored.'); } }, { label: 'Revoke access', cls: 'dng', keep: true, on: (close) => { close(); move('revoked', 'Revoke', 'Access revoked.'); } });
-    if (x.status === 'revoked') acts.push({ label: 'Invite again', cls: 'pri', keep: true, on: async (close) => { const r = await sendInvite({ email: x.email, client: x.client_id }); if (!r) return false; close(); clientLinkDialog(x.email, r.token, false); clientAccess(); } });
+    if (x.status === 'suspended') acts.push({ label: 'Restore access', cls: 'primary', keep: true, on: (close) => { close(); move('active', 'Restore', 'Access restored.'); } }, { label: 'Revoke access', cls: 'dng', keep: true, on: (close) => { close(); move('revoked', 'Revoke', 'Access revoked.'); } });
+    if (x.status === 'revoked') acts.push({ label: 'Invite again', cls: 'primary', keep: true, on: async (close) => { const r = await sendInvite({ email: x.email, client: x.client_id }); if (!r) return false; close(); clientLinkDialog(x.email, r.token, false); clientAccess(); } });
     dialog({ title: x.client_name, wide: true, body: [h('p', {}, h('b', {}, x.email), ` · ${(CA_STATUS[x.status] ?? [x.status])[0]}`), h('h3', { style: 'margin:var(--space-3) 0 var(--space-2)' }, 'History'), hist], actions: [...acts, { label: 'Close', focus: true }] });
   }
 
@@ -273,16 +273,16 @@ export function adminView({ api, live, org, role, route, rerender, go, clients }
       ...a.data.filter((x) => x.principal_type === 'user').map((x) => ({ kind: 'allow', person: x.person ?? 'Someone', level: x.level, app: x.app_key, where: where(x), from: 'Direct', remove: () => run('access.assignments.delete', { id: x.id }) })),
       ...d.data.map((x) => ({ kind: 'deny', person: x.person ?? 'Someone', level: x.level, app: x.app_key, where: where(x), from: x.reason ?? 'Direct', remove: () => run('access.denials.delete', { user: x.user_id, level: x.level_id, ...(x.client_id ? { client: x.client_id } : {}) }) }))];
     const people = ms.ok ? ms.data.filter((m) => m.row_kind === 'member' && m.status === 'active') : [];
-    const table = items.length ? h('div', { class: 'card tbl-wrap' }, h('table', { class: 'tbl stack' }, h('caption', { class: 'sr' }, `Assignments in ${org.name}`),
+    const table = items.length ? h('div', { class: 'card tbl-wrap' }, h('table', { class: 'tbl stk' }, h('caption', { class: 'sr' }, `Assignments in ${org.name}`),
       h('thead', {}, h('tr', {}, ...['Person', 'Access', 'Where', 'Comes from'].map((t) => h('th', {}, t)), h('th', {}, h('span', { class: 'sr' }, 'Remove')))),
       h('tbody', {}, ...items.map((x) => h('tr', {}, h('td', {}, h('b', {}, x.person)),
-        h('td', { 'data-l': 'Access' }, x.kind === 'deny' ? pill(`Denied: ${x.level}`, 'bad', 'cross') : pill(`${areaName(x.app)} · ${x.level}`, 'pri')),
+        h('td', { 'data-l': 'Access' }, x.kind === 'deny' ? pill(`Denied: ${x.level}`, 'bad', 'cross') : pill(`${areaName(x.app)} · ${x.level}`, 'primary')),
         h('td', { 'data-l': 'Where' }, x.where), h('td', { 'data-l': 'From', class: 'muted' }, x.from),
         h('td', {}, btn(['Remove', h('span', { class: 'sr' }, ` ${x.person} ${x.level}`)], () => dialog({ title: 'Remove this assignment?', body: h('p', {}, x.kind === 'deny' ? 'The restriction is lifted. Their other access stays as it is.' : 'Their other access stays as it is.'),
           actions: [{ label: 'Remove', cls: 'dng', on: async () => { const r = await x.remove(); toast(r.ok ? 'Assignment removed.' : failText(r), false); access(); } }, { label: 'Cancel', focus: true }] }))))))))
       : emptyState({ title: 'No assignments yet', body: 'Levels from the Levels view apply on their own. Add an assignment to give someone more, or take something away.', ic: 'key' });
     put(body, h('div', { style: 'display:flex;justify-content:space-between;gap:var(--space-3);margin-bottom:var(--space-3);flex-wrap:wrap' }, h('p', { class: 'fine' }, 'Give someone a level in one place, or take something away.'),
-      btn([icon('plus'), 'Add assignment'], () => addAssignment(people, lv.ok ? lv.data : []), 'pri', { id: 'add-asg' })), table);
+      btn([icon('plus'), 'Add assignment'], () => addAssignment(people, lv.ok ? lv.data : []), 'primary', { id: 'add-asg' })), table);
   }
 
   function addAssignment(people, levelList) {
@@ -294,7 +294,7 @@ export function adminView({ api, live, org, role, route, rerender, go, clients }
     const reason = field({ id: 'ar', label: 'Reason (kept in the audit history)', maxlength: 200 }); reason.el.hidden = true;
     deny.addEventListener('change', () => { reason.el.hidden = !deny.checked; });
     dialog({ title: 'Add assignment', wide: true, body: [who.el, lvl.el, wh.el, h('label', { class: 'chk', for: 'ad' }, deny, h('span', {}, h('b', {}, 'Deny instead'), h('br'), h('span', { class: 'fine' }, 'Blocks access here even if another rule allows it.'))), reason.el],
-      actions: [{ label: 'Add', cls: 'pri', keep: true, on: async (close) => {
+      actions: [{ label: 'Add', cls: 'primary', keep: true, on: async (close) => {
         reason.ok();
         const base = { user: who.input.value, level: lvl.input.value, ...(wh.input.value ? { client: wh.input.value } : {}) };
         if (deny.checked && !reason.input.value.trim()) { reason.error('Say why, in a few words.'); return false; }
@@ -317,10 +317,10 @@ export function adminView({ api, live, org, role, route, rerender, go, clients }
       if (!live()) return;
       if (!r.ok) return put(out, errorState(show));
       const rows = foldEffective(r.data); const nm = pick.selectedOptions[0].textContent;
-      put(out, h('div', { class: 'card tbl-wrap' }, h('table', { class: 'tbl stack' }, h('caption', { class: 'sr' }, `Effective access for ${nm}`),
+      put(out, h('div', { class: 'card tbl-wrap' }, h('table', { class: 'tbl stk' }, h('caption', { class: 'sr' }, `Effective access for ${nm}`),
         h('thead', {}, h('tr', {}, h('th', {}, 'Area'), h('th', {}, 'Result'), h('th', {}, 'Why'))),
         h('tbody', {}, ...rows.map((x) => h('tr', {}, h('td', {}, h('b', {}, x.area)),
-          h('td', { 'data-l': 'Result' }, x.result === 'edit' ? pill('Can edit', 'ok', 'check') : x.result === 'view' ? pill('Can view', 'pri', 'eye') : pill('No access', 'bad', 'cross')),
+          h('td', { 'data-l': 'Result' }, x.result === 'edit' ? pill('Can edit', 'ok', 'check') : x.result === 'view' ? pill('Can view', 'primary', 'eye') : pill('No access', 'bad', 'cross')),
           h('td', { 'data-l': 'Why' }, h('div', { class: 'why' }, ...x.why.map((w) => pill(w, /Deny|Denied/.test(w) ? 'bad' : ''))))))))),
       h('p', { class: 'fine', style: 'margin-top:var(--space-3)' }, 'This is the final answer the system gives, after levels, assignments and denials are combined.'));
     };

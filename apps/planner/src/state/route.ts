@@ -48,20 +48,25 @@ export function buildHash(page: Page, params: Record<string, string | null | und
   return `#/planner/${page}${s ? '?' + s : ''}`;
 }
 
+/** Planner only reacts to its own addresses: once the shell has moved to another app, a late hash change must not pull the address back. */
+export const isPlannerHash = (hash: string) => /^#\/planner(\/|$|\?)/.test(hash);
+
 export function useRoute() {
   const [route, setRoute] = useState<Route>(() => parseHash(window.location.hash));
   useEffect(() => {
-    const on = () => setRoute(parseHash(window.location.hash));
+    const on = () => { if (isPlannerHash(window.location.hash)) setRoute(parseHash(window.location.hash)); };
     window.addEventListener('hashchange', on);
     return () => window.removeEventListener('hashchange', on);
   }, []);
   const navigate = useCallback((page: Page, params: Record<string, string | null | undefined> = {}, opts: { replace?: boolean } = {}) => {
+    if (opts.replace && !isPlannerHash(window.location.hash)) return;          // the shell is already on another page
     const hash = buildHash(page, params);
     if (opts.replace) window.history.replaceState(null, '', hash); else window.location.hash = hash;
     setRoute(parseHash(hash));
   }, []);
   /** Changes only some parameters of the current route (e.g. open a goal) without losing the rest. */
   const patch = useCallback((changes: Record<string, string | null>, opts: { replace?: boolean } = {}) => {
+    if (!isPlannerHash(window.location.hash)) return;
     const cur = parseHash(window.location.hash);
     const next: Record<string, string | null | undefined> = { ...cur.params, ...changes };
     navigate(cur.page, next, opts);

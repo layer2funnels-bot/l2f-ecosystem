@@ -22,4 +22,4 @@ export function announce(text) {
   live ??= document.body.appendChild(h('div', { class: 'sr-only', role: 'status', 'aria-live': 'polite' }));
   live.textContent = ''; setTimeout(() => { live.textContent = text; }, 30);
 }
-export function focusTitle(root) { const t = root.querySelector('[data-page-title]'); if (t) { t.setAttribute('tabindex', '-1'); t.focus({ preventScroll: false }); } }
+export function focusTitle(root) { const t = root.querySelector('[data-page-title]'); if (t) { t.setAttribute('tabindex', '-1'); t.focus({ preventScroll: true }); } }

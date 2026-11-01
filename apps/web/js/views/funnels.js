@@ -42,22 +42,43 @@ const showValue = (f, r, refs) => {
   return v ?? '';
 };
 const run = (ctx, op, input) => ctx.api.call(op, input);
-const subnav = (current) => h('div', { class: 'subnav', role: 'group', 'aria-label': 'Funnels sections' },
+const subnav = (current) => h('div', { hidden: true },   // the sections are the sub-menu of Funnels in the side rail (appnav.js)
   h('a', { class: 'btn', href: hrefFor.funnels(), ...(current === 'home' ? { 'aria-current': 'page' } : {}), style: current === 'home' ? 'background:var(--primary);color:var(--on-primary);border-color:var(--primary)' : '' }, 'Home'),
   ...FUNNEL_TYPES.map((t) => h('a', { class: 'btn', href: hrefFor.list(t.key), ...(current === t.key ? { 'aria-current': 'page' } : {}), style: current === t.key ? 'background:var(--primary);color:var(--on-primary);border-color:var(--primary)' : '' }, t.label)),
   h('a', { class: 'btn', href: '#/office/funnels/strategies' }, 'Funnel Strategies'));
 const pageHead = (crumb, title, sub, right) => [h('div', { class: 'crumb' }, crumb),
   h('div', { class: 'page-actions' }, h('div', {}, h('h1', { 'data-page-title': true }, title), sub ? h('p', { class: 'sub' }, sub) : null), right ? h('div', { class: 'acts' }, ...right) : null)];
 
-// ---- Customer Avatar: the portrait profile (v4). Only the fields this record really has are shown; nothing is invented.
-const portraitTone = (name) => `av-${[...String(name ?? '')].reduce((n, ch) => (n * 31 + ch.charCodeAt(0)) % 6, 0)}`;
-function portrait(r, sections) {
-  const col = (f) => h('div', { class: 'sec' }, h('h4', {}, f.label), r[f.k] ? h('p', {}, r[f.k]) : h('p', { class: 'muted' }, 'Not filled in yet.'));
-  const pains = sections.filter((f) => ['pains', 'objections'].includes(f.k)); const wants = sections.filter((f) => !['pains', 'objections'].includes(f.k) && f.k !== 'summary');
-  return h('section', { class: 'card portrait', 'aria-label': `Profile of ${r.name}` },
-    h('div', { class: `pcard ${portraitTone(r.name)}` }, h('span', { class: 'pface', 'aria-hidden': 'true' }, initials(r.name)), h('b', {}, r.name), h('span', { class: 'role' }, 'Customer avatar'),
-      r.summary ? h('q', {}, r.summary) : h('span', { class: 'fine muted' }, 'No summary yet.')),
-    h('div', { class: 'pcol' }, ...pains.map(col)), h('div', { class: 'pcol' }, ...wants.map(col)));
+// ---- Customer Avatar: the portrait profile (Design v4, `.ava`). Only the fields this record really has are shown; nothing is invented.
+// The illustration is drawn from the name (the same name always gets the same face), as the design's portraits are drawn from their profile.
+const PAL = { c: ['#FF8A6B', '#5FDCCB', '#A898FF', '#4CC6DC', '#E0638A', '#F5C84C'], skin: ['#E9BC98', '#C68A5E', '#8D5A3B', '#F1C9A8'], hair: ['#3A2418', '#1D1A18', '#141414', '#2A1810'], shirt: ['#2B63F6', '#F07C1A', '#16171B', '#B0305A', '#0C7F95'] };
+const hashOf = (s) => [...String(s ?? '')].reduce((n, ch) => (n * 31 + ch.charCodeAt(0)) >>> 0, 7);
+const NS = 'http://www.w3.org/2000/svg';
+const sv = (tag, attrs = {}, ...kids) => { const e = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v); e.append(...kids); return e; };
+function face(name) {
+  const n = hashOf(name); const pick = (list, i) => list[Math.floor(n / (i + 1)) % list.length];
+  const skin = pick(PAL.skin, 1); const hair = pick(PAL.hair, 2); const shirt = pick(PAL.shirt, 3); const long = n % 2 === 0; const id = `g${n}`;
+  return sv('svg', { viewBox: '0 0 200 200', 'aria-hidden': 'true' },
+    sv('defs', {}, sv('linearGradient', { id, x1: '0', y1: '0', x2: '0', y2: '1' }, sv('stop', { offset: '0', 'stop-color': shirt }), sv('stop', { offset: '1', 'stop-color': `color-mix(in srgb,${shirt} 60%,#000)` }))),
+    long ? sv('path', { d: 'M58 92c-4-40 18-60 42-60s48 18 42 62c4 30-4 52-10 62H68c-8-12-14-34-10-64z', fill: hair }) : null,
+    sv('path', { d: 'M26 206c4-40 36-62 74-62s70 22 74 62z', fill: shirt }), sv('path', { d: 'M26 206c4-40 36-62 74-62s70 22 74 62z', fill: `url(#${id})`, opacity: '.55' }),
+    sv('rect', { x: '86', y: '112', width: '28', height: '38', rx: '13', fill: skin }), sv('rect', { x: '86', y: '118', width: '28', height: '12', fill: '#000', opacity: '.08' }),
+    sv('ellipse', { cx: '100', cy: '88', rx: '33', ry: '39', fill: skin }),
+    long ? sv('path', { d: 'M67 86c0-30 16-46 34-46s33 16 33 44c-10-14-22-22-36-20-12 2-22 10-31 22z', fill: hair }) : sv('path', { d: 'M66 84c0-30 16-45 35-45 20 0 34 14 34 42-6-12-18-19-34-19s-27 8-35 22z', fill: hair }),
+    sv('circle', { cx: '88', cy: '92', r: '3.4', fill: '#231F1A' }), sv('circle', { cx: '112', cy: '92', r: '3.4', fill: '#231F1A' }),
+    sv('path', { d: 'M90 108q10 8 20 0', stroke: '#231F1A', 'stroke-width': '3', fill: 'none', 'stroke-linecap': 'round' }),
+    sv('ellipse', { cx: '80', cy: '102', rx: '6', ry: '3.5', fill: '#FF7A6B', opacity: '.25' }), sv('ellipse', { cx: '120', cy: '102', rx: '6', ry: '3.5', fill: '#FF7A6B', opacity: '.25' }));
+}
+function portrait(r, clientName) {
+  const c = PAL.c[hashOf(r.name) % PAL.c.length];
+  const lines = (s) => String(s ?? '').split(/\n+/).map((x) => x.trim()).filter(Boolean);
+  const sp = (i, title, ic, body) => h('section', { class: 'sp', style: `--i:${i};--c:${c}` }, h('h3', {}, icon(ic), title), body);
+  const list = (s, empty = 'Not filled in yet.') => (lines(s).length ? h('ul', {}, ...lines(s).map((x) => h('li', {}, x))) : h('p', { class: 'muted', style: 'font-size:14px' }, empty));
+  return h('div', { class: 'ava', 'aria-label': `Profile of ${r.name}` },
+    h('div', { class: 'specs left' }, sp(0, 'Who they are', 'user', r.summary ? h('p', { style: 'font-size:14.5px' }, r.summary) : h('p', { class: 'muted', style: 'font-size:14px' }, 'No summary yet.')), sp(1, 'Pains', 'alert', list(r.pains))),
+    h('div', { class: 'ava-center' }, h('div', { class: 'portrait', style: `--c:${c}` }, face(r.name), h('span', { class: 'ring' }), h('span', { class: 'badge' }, 'Customer avatar')),
+      h('h2', { class: 'ava-name' }, r.name), r.summary ? h('q', {}, r.summary) : null, clientName ? h('div', { style: 'display:flex;gap:6px;flex-wrap:wrap;justify-content:center' }, h('span', { class: 'tag' }, icon('clients'), clientName)) : null),
+    h('div', { class: 'specs right' }, sp(2, 'Desires', 'heart', list(r.desires)), sp(3, 'Objections', 'xcircle', list(r.objections))));
 }
 
 // ---- Funnels home
@@ -91,17 +112,17 @@ export function funnelListView(ctx, typeKey) {
   const canNew = ctx.canAnywhere(`funnels.${o}.create`);
   const q = h('input', { id: 'q', type: 'search', placeholder: `Search ${t.label.toLowerCase()}`, autocomplete: 'off', oninput: (e) => { state.q = e.target.value; paint(); } });
   const sel = h('select', { id: 'fl', 'aria-label': 'Show', onchange: (e) => { state.show = e.target.value; load(); } }, ...[['active', 'Active'], ['archived', 'Archived'], ['all', 'All']].map(([v, l]) => h('option', { value: v }, l)));
-  const scopeText = (r) => (r.client_id ? (r.client_visible ? pill(`Shared · ${ctx.clients.get(r.client_id) ?? 'client'}`, 'pri', 'share') : pill(ctx.clients.get(r.client_id) ?? 'Client')) : pill('Internal'));
+  const scopeText = (r) => (r.client_id ? (r.client_visible ? pill(`Shared · ${ctx.clients.get(r.client_id) ?? 'client'}`, 'primary', 'share') : pill(ctx.clients.get(r.client_id) ?? 'Client')) : pill('Internal'));
   function paint() {
     const list = rows.filter((r) => `${nameOf(typeKey, r)} ${r.summary ?? r.promise ?? ''}`.toLowerCase().includes(state.q.toLowerCase()));
     if (!list.length) {
       put(body, h('div', { class: 'card pad' }, emptyState({ first: !state.q && state.show === 'active',
         title: state.q ? 'No matches' : state.show === 'archived' ? 'Nothing archived' : `No ${t.label.toLowerCase()} yet`,
         body: state.q ? 'Try a different word, or clear the search.' : state.show === 'archived' ? 'Archived items wait here until you restore or delete them.' : canNew ? `Create your first ${t.one.toLowerCase()} to start building your library.` : 'When someone adds one, you’ll see it here.',
-        action: state.q ? btn('Clear search', () => { state.q = ''; q.value = ''; paint(); }) : canNew && state.show === 'active' ? h('a', { class: 'btn pri', href: hrefFor.record(typeKey, 'new') }, `New ${t.one.toLowerCase()}`) : null })));
+        action: state.q ? btn('Clear search', () => { state.q = ''; q.value = ''; paint(); }) : canNew && state.show === 'active' ? h('a', { class: 'btn primary', href: hrefFor.record(typeKey, 'new') }, `New ${t.one.toLowerCase()}`) : null })));
       return;
     }
-    put(body, h('div', { class: 'card tbl-wrap' }, h('table', { class: 'tbl stack' }, h('caption', { class: 'sr' }, t.full),
+    put(body, h('div', { class: 'card tbl-wrap' }, h('table', { class: 'tbl stk' }, h('caption', { class: 'sr' }, t.full),
       h('thead', {}, h('tr', {}, h('th', {}, 'Name'), h('th', {}, 'Sharing'), h('th', {}, 'Updated'), h('th', {}, h('span', { class: 'sr' }, 'Actions')))),
       h('tbody', {}, ...list.map((r) => h('tr', {},
         h('td', {}, h('a', { class: 'link', href: hrefFor.record(typeKey, r.id) }, h('b', {}, nameOf(typeKey, r) || '(untitled)')), h('div', { class: 'fine' }, r.summary ?? r.promise ?? '')),
@@ -119,7 +140,7 @@ export function funnelListView(ctx, typeKey) {
   }
   function confirmArchive(r) {
     dialog({ title: `Archive “${nameOf(typeKey, r)}”?`, body: h('p', {}, `It disappears from lists${r.client_visible ? ` and ${ctx.clients.get(r.client_id) ?? 'the client'} can no longer see it` : ''}. Nothing is deleted. You can restore it any time.`),
-      actions: [{ label: 'Archive', cls: 'pri', on: () => act(r, 'archive', 'Archived. Restore it from the Archived list.') }, { label: 'Cancel', focus: true }] });
+      actions: [{ label: 'Archive', cls: 'primary', on: () => act(r, 'archive', 'Archived. Restore it from the Archived list.') }, { label: 'Cancel', focus: true }] });
   }
   async function act(r, verb, done) {
     const res = await run(ctx, `funnels.${typeKey}.${verb}`, { id: r.id });
@@ -127,7 +148,7 @@ export function funnelListView(ctx, typeKey) {
     toast(res.ok ? done : messageFor(res.error?.code), res.ok); load();
   }
   load();
-  return h('section', {}, subnav(typeKey), ...pageHead(`Office · Funnels · ${t.label}`, t.full, null, canNew ? [h('a', { class: 'btn pri', href: hrefFor.record(typeKey, 'new') }, icon('plus'), `New ${t.one.toLowerCase()}`)] : null),
+  return h('section', {}, subnav(typeKey), ...pageHead(`Office · Funnels · ${t.label}`, t.full, null, canNew ? [h('a', { class: 'btn primary', href: hrefFor.record(typeKey, 'new') }, icon('plus'), `New ${t.one.toLowerCase()}`)] : null),
     !canNew ? readOnlyNotice('You can view these', 'Ask an editor to change them.') : null,
     h('div', { class: 'tools' }, h('label', { class: 'search' }, icon('search'), h('span', { class: 'sr' }, `Search ${t.label}`), q), h('label', { class: 'sr', for: 'fl' }, 'Show'), sel), body);
 }
@@ -170,8 +191,9 @@ export function funnelRecordView(ctx, typeKey, id) {
       !ctx.can(`funnels.${o}.edit`, r.client_id) && !archived ? readOnlyNotice(`You can view this ${t.one.toLowerCase()} but not change it`, '') : null,
       archived ? notice('warn', 'archive', [h('b', {}, `This ${t.one.toLowerCase()} is archived.`), ` It’s hidden from lists and clients can’t see it. ${canDelete ? 'You can restore it, or delete it permanently.' : 'An owner can delete it permanently.'}`],
         canDelete ? [btn([icon('trash'), 'Delete permanently'], () => del(r), 'dng', { id: 'delete' })] : []) : null,
-      h('div', { class: 'split' },
-        typeKey === 'avatars' ? portrait(r, sections) : h('section', { class: 'card' }, ...sections.map((f) => h('div', { class: 'sec' }, h('h4', {}, f.label), showValue(f, r, refs) ? h('p', {}, showValue(f, r, refs)) : h('p', { class: 'muted' }, 'Not filled in yet.')))),
+      typeKey === 'avatars' ? portrait(r, clientName) : null,
+      h('div', { class: typeKey === 'avatars' ? 'grid3' : 'split', style: typeKey === 'avatars' ? 'margin-top:24px' : '' },
+        typeKey === 'avatars' ? null : h('section', { class: 'card' }, ...sections.map((f) => h('div', { class: 'sec' }, h('h4', {}, f.label), showValue(f, r, refs) ? h('p', {}, showValue(f, r, refs)) : h('p', { class: 'muted' }, 'Not filled in yet.')))),
         h('div', { class: 'grid', style: 'align-content:start' }, h('section', { class: 'card pad' }, h('h3', {}, 'Shared with clients'),
           clientName ? (r.client_visible && !archived
             ? h('ul', { class: 'rows', style: 'margin:var(--space-2) calc(var(--space-5)*-1) 0' }, h('li', {}, h('span', {}, clientName), canShare ? btn(['Stop sharing', h('span', { class: 'sr' }, ` with ${clientName}`)], () => unshare(r, clientName)) : null))
@@ -197,7 +219,7 @@ export function funnelRecordView(ctx, typeKey, id) {
       fl[f.k] = x; return x;
     });
     const status = h('span', { class: 'fine', role: 'status', id: 'ds' }, 'No changes yet');
-    const saveBtn = h('button', { type: 'submit', class: 'btn pri' }, 'Save');
+    const saveBtn = h('button', { type: 'submit', class: 'btn primary' }, 'Save');
     const msg = h('div', { id: 'form-msg' });
     const mark = () => { status.textContent = 'Unsaved changes'; dirty.set(t.label, () => save(true)); };
     async function save(quiet) {
@@ -229,7 +251,7 @@ export function funnelRecordView(ctx, typeKey, id) {
     }
     const form = h('form', { class: 'card', novalidate: true, onsubmit: (e) => { e.preventDefault(); save(); } },
       h('div', { style: 'padding:var(--space-5) var(--space-5) 0' }, scope?.el ?? null, ...parts.map((x) => x.el), msg),
-      h('div', { class: 'sticky' }, saveBtn, btn('Cancel', () => ctx.guard(() => (isNew ? ctx.go(backTo) : view(r))), ''), status));
+      h('div', { class: 'stickybar' }, saveBtn, btn('Cancel', () => ctx.guard(() => (isNew ? ctx.go(backTo) : view(r))), ''), status));
     form.addEventListener('input', mark); form.addEventListener('change', mark);
     put(root, ...pageHead([h('a', { class: 'link', href: backTo }, t.full), ' / ', isNew ? `New ${t.one.toLowerCase()}` : 'Edit'], isNew ? `New ${t.one.toLowerCase()}` : `Edit ${nameOf(typeKey, r) || t.one.toLowerCase()}`, 'Changes aren’t saved until you press Save.'), form);
     (Object.values(fl)[0]).input.focus();
@@ -244,14 +266,14 @@ export function funnelRecordView(ctx, typeKey, id) {
   }
   function confirmArchive(r) {
     dialog({ title: `Archive “${nameOf(typeKey, r)}”?`, body: h('p', {}, `It disappears from lists${r.client_visible ? ` and ${ctx.clients.get(r.client_id) ?? 'the client'} can no longer see it` : ''}. Nothing is deleted. You can restore it any time.`),
-      actions: [{ label: 'Archive', cls: 'pri', on: () => act(r, 'archive', 'Archived. Restore it from the Archived list.') }, { label: 'Cancel', focus: true }] });
+      actions: [{ label: 'Archive', cls: 'primary', on: () => act(r, 'archive', 'Archived. Restore it from the Archived list.') }, { label: 'Cancel', focus: true }] });
   }
   function share(r) {
     if (!r.client_id) return dialog({ title: 'Share with a client', body: h('p', {}, 'Only a record that belongs to a client can be shared with that client. This one belongs to the organization. Create it under a client to share it.'), actions: [{ label: 'Got it', focus: true }] });
     const cn = ctx.clients.get(r.client_id) ?? 'the client';
     dialog({ title: `Share with ${cn}`, wide: true, body: [h('p', { style: 'margin-bottom:var(--space-3)' }, `${cn} sees only what you share, and only in their Client Portal. They can view it, not change it.`),
       notice('info', 'info', 'The Client Portal is locked for now. This saves the choice; nothing is visible to the client until the Portal is turned on.')],
-    actions: [{ label: 'Share', cls: 'pri', on: async () => { const x = await run(ctx, `funnels.${typeKey}.share`, { id: r.id, visible: true }); if (!x.ok) return toast(messageFor(x.error?.code), false); toast(`Shared with ${cn}.`); view(x.data[0]); } }, { label: 'Cancel', focus: true }] });
+    actions: [{ label: 'Share', cls: 'primary', on: async () => { const x = await run(ctx, `funnels.${typeKey}.share`, { id: r.id, visible: true }); if (!x.ok) return toast(messageFor(x.error?.code), false); toast(`Shared with ${cn}.`); view(x.data[0]); } }, { label: 'Cancel', focus: true }] });
   }
   function unshare(r, cn) {
     dialog({ title: `Stop sharing with ${cn}?`, body: h('p', {}, `${cn} loses access right away. Your team’s copy isn’t affected.`),

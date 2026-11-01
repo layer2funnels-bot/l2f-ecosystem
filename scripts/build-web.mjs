@@ -7,6 +7,9 @@ import { fileURLToPath } from 'node:url';
 import { loadManifests } from '../packages/core/manifests.mjs';
 
 const at = (p) => fileURLToPath(new URL(`../${p}`, import.meta.url));
+// On Cloudflare (CF_PAGES is set) a missing address must stop the build: falling back to the local stack would ship a sign-in page that talks to 127.0.0.1.
+// Cloudflare keeps separate variables for Production and Preview builds, so a branch preview needs its own copy of SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY.
+if (process.env.CF_PAGES && (!process.env.SUPABASE_URL || !process.env.SUPABASE_PUBLISHABLE_KEY)) { console.error(`Refusing: this Cloudflare ${process.env.CF_PAGES_BRANCH ? `build (branch ${process.env.CF_PAGES_BRANCH})` : 'build'} has no SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY. Add them under Settings > Variables and Secrets for the environment that built this (Production or Preview).`); process.exit(1); }
 const url = process.env.SUPABASE_URL || 'http://127.0.0.1:54321';
 const key = process.env.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH';
 if (/service_role|sb_secret_/i.test(key) || /^eyJ/.test(key)) { console.error('Refusing: that looks like a privileged or legacy JWT key. Use the publishable key.'); process.exit(1); }

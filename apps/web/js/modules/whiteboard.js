@@ -22,8 +22,8 @@ const theme = () => (document.documentElement.dataset.theme === 'dark' ? 'dark' 
 const timeOf = (d) => new Date(d).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
 /** Creates a board in a context. context: { space: 'shared' } | { space: 'client', client } | { space: 'client'|'shared', project[, client] }. Returns the API result. */
-export const createBoard = (api, name, context = { space: 'shared' }) =>
-  api.call('drive.files.create', { app: 'whiteboard', space: context.space, ...(context.client ? { client: context.client } : {}), ...(context.project ? { project: context.project } : {}), name, kind: 'document', mime_type: BOARD_MIME, body: emptyBoard() });
+export const createBoard = (api, name, context = { space: 'shared' }, scene = emptyBoard()) =>
+  api.call('drive.files.create', { app: 'whiteboard', space: context.space, ...(context.client ? { client: context.client } : {}), ...(context.project ? { project: context.project } : {}), name, kind: 'document', mime_type: BOARD_MIME, body: scene });
 
 export function boardView({ api, id, ctx }) {
   const root = h('section', { class: 'board', 'aria-busy': 'true' }, skeleton(4));
@@ -33,7 +33,7 @@ export function boardView({ api, id, ctx }) {
     if (!ctx.live()) return;
     if (!f.ok) return fail(f.status === 404 ? noAccessState({ action: h('a', { class: 'btn', href: '#/launcher' }, 'Back to the Launcher') }) : errorState(() => { root.replaceChildren(skeleton(4)); load(); }));
     const file = f.data[0];
-    if (file.kind !== 'document' || file.mime_type !== BOARD_MIME) return fail(h('div', { class: 'empty', role: 'status' }, icon('wb'), h('h2', { 'data-page-title': true }, file.name), h('p', { class: 'muted' }, 'This is not a whiteboard.'), file.kind === 'document' ? h('a', { class: 'btn pri', href: `#/doc/${file.id}` }, 'Open it as a document') : null));
+    if (file.kind !== 'document' || file.mime_type !== BOARD_MIME) return fail(h('div', { class: 'empty', role: 'status' }, icon('wb'), h('h2', { 'data-page-title': true }, file.name), h('p', { class: 'muted' }, 'This is not a whiteboard.'), file.kind === 'document' ? h('a', { class: 'btn primary', href: `#/doc/${file.id}` }, 'Open it as a document') : null));
     const v = await api.call('drive.files.version', { file: id });
     if (!ctx.live()) return;
     if (!v.ok) return fail(errorState(() => { root.replaceChildren(skeleton(4)); load(); }));
@@ -51,9 +51,9 @@ export function boardView({ api, id, ctx }) {
     const getBody = () => { if (cache.sig !== sig || cache.body === null) cache = { sig, body: serializeBoard(els, bg) }; return cache.body; };
     const surface = h('div', { class: 'boardsurface', role: 'application', 'aria-label': `Whiteboard ${meta.name}` });
     const statusEl = h('span', { class: 'docstate', role: 'status', 'aria-live': 'polite' }); const counter = h('span', { class: 'docstat muted' });
-    const saveBtn = btn('Save', () => sess.save({ manual: true }), 'pri');
+    const saveBtn = btn('Save', () => sess.save({ manual: true }), 'primary');
     const titleIn = h('input', { class: 'doctitle', value: meta.name, 'aria-label': 'Board name', maxlength: '200', ...(readOnly ? { readonly: true } : {}) });
-    const crumb = h('nav', { class: 'crumbs fine', 'aria-label': 'Where this board lives' });
+    const crumb = h('nav', { class: 'fpath fine', 'aria-label': 'Where this board lives' });
     let board = null;
     const paint = ({ status, savedAt, readOnly: ro, saving }) => {
       const t = { saved: `Saved ${timeOf(savedAt)}`, dirty: 'Unsaved changes', saving: 'Saving…', failed: 'Couldn’t save. Your changes are still here.', readonly: 'Read only' }[status];

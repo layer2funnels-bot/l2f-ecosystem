@@ -1,7 +1,7 @@
 // Form Builder (v4): build (11 question types, properties, show-if), preview (phone / desktop), submissions, settings, versions. The same builder opens as a page
 // (#/forms/f/<id>) and as an overlay inside Clients (Brand Base). Saving the questions always creates a new immutable version; submissions stay tied to the
 // version they answered. There is no public link or embed: forms are filled in by signed-in staff, and publishing only means "staff can record answers".
-import { h, put, icon, btn, chip, dialog, toast, field, notice, skeleton, emptyState, errorState, noAccessState, seg, tabs, readOnlyNotice } from '../ui.js';
+import { setCrumbs, h, put, icon, btn, chip, dialog, toast, field, notice, skeleton, emptyState, errorState, noAccessState, seg, tabs, readOnlyNotice } from '../ui.js';
 import { dirty } from '../dirty.js';
 import { FIELD_TYPES, OPS, typeLabel, newField, cleanField, checkFields, keyFromLabel, MAX_FIELDS } from './formmodel.js';
 import { renderForm } from './formrender.js';
@@ -30,12 +30,13 @@ export function builderView({ api, ctx, id, embedded = false, onClose = null }) 
   }
   function paintHead() {
     if (!form) return;
+    if (!embedded) setCrumbs(root, [['Forms', '#/forms'], [form.name]]);
     const edit = canEdit();
     put(headEl, h('div', {}, h('div', { class: 'crumbs fine' }, embedded ? 'Form builder' : h('a', { href: '#/forms' }, 'Forms'), ' / ', form.client_id ? ctx.clients?.get?.(form.client_id) ?? 'Client' : ctx.orgName), h('h1', { 'data-page-title': !embedded }, form.name),
       h('div', { class: 'pj-meta' }, chip(form.status === 'published' ? 'Published' : 'Draft', form.status === 'published' ? 'ok' : ''), form.is_template ? chip('Template', 'act') : null, form.archived_at ? chip('Archived', 'warn') : null, h('span', { class: 'fine muted' }, form.current_version ? `Version ${form.current_version}` : 'No version yet'), isDirty() ? h('span', { class: 'fine', role: 'status' }, 'Unsaved changes') : null)),
-      h('div', { class: 'pj-actions' }, edit ? btn('Save as new version', () => saveFields(), 'pri', { disabled: !isDirty() }) : null,
+      h('div', { class: 'pj-actions' }, edit ? btn('Save as new version', () => saveFields(), 'primary', { disabled: !isDirty() }) : null,
         edit && form.status !== 'published' ? btn('Publish', publish, '') : null, edit && form.status === 'published' ? btn('Unpublish', async () => { const r = await api.call('forms.unpublish', { id }); if (r.ok) { toast('Unpublished.'); load(true); } else fail(r, 'unpublish this form'); }, '') : null,
-        embedded ? btn('Close', () => (isDirty() ? dialog({ title: 'Close with unsaved changes?', body: h('p', {}, 'Your changes to the questions have not been saved as a version.'), actions: [{ label: 'Save and close', cls: 'pri', on: async () => { if (await saveFields()) onClose?.(); else return false; } }, { label: 'Discard and close', on: () => { dirty.clear(); onClose?.(); } }, { label: 'Keep editing', focus: true }] }) : onClose?.()), '') : null));
+        embedded ? btn('Close', () => (isDirty() ? dialog({ title: 'Close with unsaved changes?', body: h('p', {}, 'Your changes to the questions have not been saved as a version.'), actions: [{ label: 'Save and close', cls: 'primary', on: async () => { if (await saveFields()) onClose?.(); else return false; } }, { label: 'Discard and close', on: () => { dirty.clear(); onClose?.(); } }, { label: 'Keep editing', focus: true }] }) : onClose?.()), '') : null));
   }
   async function saveFields() {
     const errs = checkFields(fields); const n = Object.values(errs).flat().length;
@@ -47,7 +48,7 @@ export function builderView({ api, ctx, id, embedded = false, onClose = null }) 
   function publish() {
     if (isDirty() || !form.current_version) return toast('Save the questions as a version first.', false);
     dialog({ title: 'Publish this form?', body: [h('p', {}, 'Published means your team can record answers to it. Each answer is saved against this version.'), notice('info', 'lock', 'There is no public link or embed. Public forms stay switched off until a security review (spam, rate limits, privacy notice) and your approval.')],
-      actions: [{ label: 'Publish', cls: 'pri', on: async () => { const r = await api.call('forms.publish', { id }); if (!r.ok) { fail(r, 'publish this form'); return false; } toast('Published.'); load(true); } }, { label: 'Cancel', focus: true }] });
+      actions: [{ label: 'Publish', cls: 'primary', on: async () => { const r = await api.call('forms.publish', { id }); if (!r.ok) { fail(r, 'publish this form'); return false; } toast('Published.'); load(true); } }, { label: 'Cancel', focus: true }] });
   }
   function draw() {
     tabBar.querySelectorAll('[role=tab]').forEach((b) => { b.setAttribute('aria-selected', String(b.dataset.k === tab)); b.tabIndex = b.dataset.k === tab ? 0 : -1; });
@@ -92,7 +93,7 @@ export function builderView({ api, ctx, id, embedded = false, onClose = null }) 
   function preview(ro) {
     const errs = checkFields(fields); const bad = Object.keys(errs).length;
     const r = renderForm({ fields: fields.map(cleanField), disabled: false });
-    const sub = btn('Submit (preview)', async () => { const a = await r.collect(); if (a) toast('Preview only. Nothing was recorded.', true); }, 'pri');
+    const sub = btn('Submit (preview)', async () => { const a = await r.collect(); if (a) toast('Preview only. Nothing was recorded.', true); }, 'primary');
     put(body, ro, bad ? notice('warn', 'warn', 'Fix the problems in Build to preview the final form.') : null, h('div', { class: 'pj-calbar' }, seg([['phone', 'Phone'], ['desktop', 'Desktop']], device, (k) => { device = k; preview(ro); }, 'Preview size'), form.status === 'published' && !isDirty() && ctx.can('forms.submission.create', form.client_id) ? btn('Record a submission', record, '') : null),
       fields.length ? h('div', { class: `fb-frame ${device}` }, h('h2', {}, form.name), form.description ? h('p', { class: 'muted' }, form.description) : null, r.el, sub, h('p', { class: 'fine muted' }, 'Preview only. Nothing is recorded or sent.')) : emptyState({ title: 'Nothing to preview', body: 'Add a question in Build.', ic: 'doc' }));
   }
@@ -104,7 +105,7 @@ export function builderView({ api, ctx, id, embedded = false, onClose = null }) 
       const c = await api.call('drive.files.create', { app: 'forms', space, ...(form.client_id ? { client: form.client_id } : {}), name: file.name, kind: 'file', mime_type: file.type || 'application/octet-stream', size_bytes: Math.max(1, file.size), storage_path: s.data[0].path }); return c.ok ? c.data[0].id : null;
     };
     const r = renderForm({ fields: spec, uploadFile });
-    dialog({ title: `Record an answer · ${form.name}`, wide: true, body: [h('p', { class: 'fine muted' }, `Recorded against version ${form.current_version}.`), r.el], actions: [{ label: 'Record submission', cls: 'pri', on: async () => { const a = await r.collect(); if (!a) return false; const x = await api.call('forms.submissions.submit', { form: id, answers: a }); if (!x.ok) { fail(x, 'record answers'); return false; } toast('Submission recorded.'); tab = 'submissions'; draw(); } }, { label: 'Cancel' }] });
+    dialog({ title: `Record an answer · ${form.name}`, wide: true, body: [h('p', { class: 'fine muted' }, `Recorded against version ${form.current_version}.`), r.el], actions: [{ label: 'Record submission', cls: 'primary', on: async () => { const a = await r.collect(); if (!a) return false; const x = await api.call('forms.submissions.submit', { form: id, answers: a }); if (!x.ok) { fail(x, 'record answers'); return false; } toast('Submission recorded.'); tab = 'submissions'; draw(); } }, { label: 'Cancel' }] });
   }
 
   // ---------------------------------------------------------------- submissions
@@ -120,7 +121,7 @@ export function builderView({ api, ctx, id, embedded = false, onClose = null }) 
         h('tbody', {}, ...rows.map((s) => h('tr', {}, h('td', {}, when(s.created_at)), h('td', {}, `v${s.form_version}`), h('td', {}, Object.values(s.answers).slice(0, 2).map((v) => (Array.isArray(v) ? `${v.length} item${v.length === 1 ? '' : 's'}` : String(v))).join(' · ').slice(0, 90)), h('td', {}, btn(['View', h('span', { class: 'sr' }, ` submission from ${when(s.created_at)}`)], () => detail(s, byV.get(s.form_version) ?? []), 'link'))))))) : emptyState({ title: q ? 'No answer matches' : 'No submissions yet', body: q ? 'Try another word.' : form.status === 'published' ? 'Use Record a submission in Preview to add one.' : 'Publish the form so your team can record answers.', ic: 'inbox' }));
     };
     search.addEventListener('input', () => { q = search.value.trim().toLowerCase(); draw2(); });
-    put(body, ro, form.retention_note ? notice('info', 'info', [h('b', {}, 'Retention.'), ` ${form.retention_note}`]) : null, h('div', { class: 'cl-bar' }, search), list); draw2();
+    put(body, ro, form.retention_note ? notice('info', 'info', [h('b', {}, 'Retention.'), ` ${form.retention_note}`]) : null, h('div', { class: 'toolbar' }, search), list); draw2();
   }
   function detail(s, spec) {
     const rows = spec.map((f) => ({ f, v: s.answers[f.key] })).filter((x) => x.v !== undefined);
@@ -137,11 +138,11 @@ export function builderView({ api, ctx, id, embedded = false, onClose = null }) 
     const tpl = h('label', { class: 'fr-opt' }, h('input', { type: 'checkbox', checked: form.is_template, ...(edit && !form.client_id ? {} : { disabled: true }), id: 'fs-tpl' }), ' Use as a template (organization forms only)');
     put(body, ro, h('div', { class: 'card pad' }, ...Object.values(f).map((x) => x.el), tpl,
       edit ? btn('Save settings', async () => { const n = f.name.input.value.trim(); if (!n) return f.name.error('A form needs a name.'); const u = f.url.input.value.trim(); if (u && !/^https:\/\/\S+$/.test(u)) return f.url.error('Use a web address that starts with https://');
-        const r = await api.call('forms.update', { id, name: n, description: f.desc.input.value, confirmation_message: f.msg.input.value, redirect_url: u, retention_note: f.ret.input.value, is_template: tpl.querySelector('input').checked }); if (!r.ok) return fail(r, 'change this form'); toast('Saved.'); load(true); }, 'pri') : null),
+        const r = await api.call('forms.update', { id, name: n, description: f.desc.input.value, confirmation_message: f.msg.input.value, redirect_url: u, retention_note: f.ret.input.value, is_template: tpl.querySelector('input').checked }); if (!r.ok) return fail(r, 'change this form'); toast('Saved.'); load(true); }, 'primary') : null),
       h('div', { class: 'card pad' }, h('h2', { class: 'pj-gh' }, 'Public link and embed'), notice('warn', 'lock', 'Switched off. Public forms need a security review (spam protection, rate limits, a privacy notice) and your approval first. Until then forms are filled in by signed-in staff only.'), btn('Create public link', null, '', { disabled: true, 'aria-disabled': 'true', title: 'Switched off until the security review and owner approval' })),
       h('div', { class: 'card pad' }, h('div', { class: 'pj-actions' }, ctx.can('forms.form.create', form.client_id) || ctx.canAnywhere('forms.form.create') ? btn('Duplicate', async () => { const r = await api.call('forms.duplicate', { id, ...(form.client_id ? { client: form.client_id } : {}) }); if (r.ok) { toast('Duplicated as a draft.'); ctx.go(`#/forms/f/${r.data[0].id}`); } else fail(r, 'duplicate this form'); }, '') : null,
-        edit ? btn('Archive form', () => dialog({ title: `Archive “${form.name}”?`, body: h('p', {}, 'The form leaves the list and stops taking answers. Submissions are kept.'), actions: [{ label: 'Archive', cls: 'pri', on: async () => { const r = await api.call('forms.archive', { id }); if (!r.ok) { fail(r, 'archive this form'); return false; } toast('Archived.'); load(true); } }, { label: 'Cancel', focus: true }] }), '') : null,
-        form.archived_at && ctx.can('forms.form.edit', form.client_id) ? btn('Restore form', async () => { const r = await api.call('forms.restore', { id }); if (r.ok) { toast('Restored.'); load(true); } else fail(r, 'restore this form'); }, 'pri') : null)));
+        edit ? btn('Archive form', () => dialog({ title: `Archive “${form.name}”?`, body: h('p', {}, 'The form leaves the list and stops taking answers. Submissions are kept.'), actions: [{ label: 'Archive', cls: 'primary', on: async () => { const r = await api.call('forms.archive', { id }); if (!r.ok) { fail(r, 'archive this form'); return false; } toast('Archived.'); load(true); } }, { label: 'Cancel', focus: true }] }), '') : null,
+        form.archived_at && ctx.can('forms.form.edit', form.client_id) ? btn('Restore form', async () => { const r = await api.call('forms.restore', { id }); if (r.ok) { toast('Restored.'); load(true); } else fail(r, 'restore this form'); }, 'primary') : null)));
   }
 
   // ---------------------------------------------------------------- versions

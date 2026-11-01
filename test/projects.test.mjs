@@ -196,6 +196,8 @@ r = await J('my.work', {}, U.ED0);
 check('PA6', 'my.work shows nothing for someone with no access, even if tasks are assigned to them', r.data.length === 0);
 r = await J('projects.deadlines', { days: 30 }, U.ED);
 check('PA7', 'projects.deadlines lists tasks and projects due soon', r.data.some((d) => d.kind === 'task' && d.id === AT) && r.data.some((d) => d.kind === 'project' && d.id === AP));
+r = await J('projects.recent', { limit: 5 }, U.ED);
+check('PA7b', 'projects.recent lists the latest task changes, newest first, and nothing for someone with no access', r.status === 200 && r.data.length > 0 && r.data.length <= 5 && r.data.every((x, n, a) => !n || x.updated_at <= a[n - 1].updated_at) && (await J('projects.recent', {}, U.ED0)).data.length === 0);
 r = await J('time.start', { project: P1, task: t1.id, note: 'start' }, U.ED2);
 check('PA8', 'time.start starts a timer for the caller', r.status === 200 && r.row.user_id === U.ED2 && r.row.ended_at === null);
 r = await J('time.running', {}, U.ED2);

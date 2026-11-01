@@ -13,7 +13,7 @@ export function sheetView({ api, id, ctx }) {
     const f = await api.call('drive.files.get', { id }); if (!ctx.live()) return;
     if (!f.ok) return put(root, f.status === 404 ? noAccessState({ action: h('a', { class: 'btn', href: '#/launcher' }, 'Back to the Launcher') }) : errorState(() => { put(root, skeleton(4)); load(); }));
     const file = f.data[0];
-    if (file.kind !== 'document' || file.mime_type !== MIME) return put(root, h('div', { class: 'empty', role: 'status' }, icon('doc'), h('h2', { 'data-page-title': true }, file.name), h('p', { class: 'muted' }, 'This is not a spreadsheet.'), file.kind === 'document' ? h('a', { class: 'btn pri', href: `#/doc/${file.id}` }, 'Open it as a document') : null));
+    if (file.kind !== 'document' || file.mime_type !== MIME) return put(root, h('div', { class: 'empty', role: 'status' }, icon('doc'), h('h2', { 'data-page-title': true }, file.name), h('p', { class: 'muted' }, 'This is not a spreadsheet.'), file.kind === 'document' ? h('a', { class: 'btn primary', href: `#/doc/${file.id}` }, 'Open it as a document') : null));
     const v = await api.call('drive.files.version', { file: id }); if (!ctx.live()) return;
     if (!v.ok) return put(root, errorState(() => { put(root, skeleton(4)); load(); }));
     mount(file, v.data[0]);
@@ -25,9 +25,9 @@ export function sheetView({ api, id, ctx }) {
     const sheet = () => book.sheets[cur];
     let calc = evaluateSheet(sheet());
     const statusEl = h('span', { class: 'docstate', role: 'status', 'aria-live': 'polite' }); const counter = h('span', { class: 'docstat muted' });
-    const saveBtn = btn('Save', () => sess.save({ manual: true }), 'pri');
+    const saveBtn = btn('Save', () => sess.save({ manual: true }), 'primary');
     const titleIn = h('input', { class: 'doctitle', value: meta.name, 'aria-label': 'Spreadsheet name', maxlength: '200', ...(readOnly ? { readonly: true } : {}) });
-    const crumb = h('nav', { class: 'crumbs fine', 'aria-label': 'Where this spreadsheet lives' });
+    const crumb = h('nav', { class: 'fpath fine', 'aria-label': 'Where this spreadsheet lives' });
     const paint = ({ status, savedAt, readOnly: ro, saving }) => {
       const t = { saved: `Saved ${timeOf(savedAt)}`, dirty: 'Unsaved changes', saving: 'Saving…', failed: 'Couldn’t save. Your changes are still here.', readonly: 'Read only' }[status];
       put(statusEl, h('span', { class: `dot ${status}` }), t, status === 'failed' ? btn('Retry', () => sess.save({ manual: true }), 'link') : null); saveBtn.disabled = ro || status === 'saved' || saving;
@@ -112,10 +112,10 @@ export function sheetView({ api, id, ctx }) {
     function addSheet() { let n = book.sheets.length + 1; while (book.sheets.some((s) => s.name === `Sheet ${n}`)) n += 1; book.sheets.push(emptySheet(`Sheet ${n}`)); cur = book.sheets.length - 1; sel = { col: 0, row: 0 }; dirtyBody = true; recalc(); drawGrid(); drawTabs(); sess.markChanged(); paintCount(); }
     function renameSheet(i) {
       if (readOnly) return; const f = field({ id: 'sh-name', label: 'Sheet name', value: book.sheets[i].name, maxlength: 40 });
-      dialog({ title: 'Rename sheet', body: f.el, actions: [{ label: 'Rename', cls: 'pri', on: () => { const n = f.input.value.trim(); if (!n) return f.error('A sheet needs a name.'); if (book.sheets.some((s, j) => j !== i && s.name === n)) return f.error('Another sheet already has that name.'); book.sheets[i].name = n; dirtyBody = true; drawTabs(); sess.markChanged(); } }, { label: 'Cancel' }] });
+      dialog({ title: 'Rename sheet', body: f.el, actions: [{ label: 'Rename', cls: 'primary', on: () => { const n = f.input.value.trim(); if (!n) return f.error('A sheet needs a name.'); if (book.sheets.some((s, j) => j !== i && s.name === n)) return f.error('Another sheet already has that name.'); book.sheets[i].name = n; dirtyBody = true; drawTabs(); sess.markChanged(); } }, { label: 'Cancel' }] });
     }
     function deleteSheet() {
-      dialog({ title: `Delete “${sheet().name}”?`, body: h('p', {}, 'Its cells are removed from this version. Earlier versions keep them: you can restore from History.'), actions: [{ label: 'Delete sheet', cls: 'pri', on: () => { book.sheets.splice(cur, 1); cur = Math.max(0, cur - 1); sel = { col: 0, row: 0 }; dirtyBody = true; recalc(); drawGrid(); drawTabs(); sess.markChanged(); paintCount(); } }, { label: 'Cancel', focus: true }] });
+      dialog({ title: `Delete “${sheet().name}”?`, body: h('p', {}, 'Its cells are removed from this version. Earlier versions keep them: you can restore from History.'), actions: [{ label: 'Delete sheet', cls: 'primary', on: () => { book.sheets.splice(cur, 1); cur = Math.max(0, cur - 1); sel = { col: 0, row: 0 }; dirtyBody = true; recalc(); drawGrid(); drawTabs(); sess.markChanged(); paintCount(); } }, { label: 'Cancel', focus: true }] });
     }
     const rename = async () => {
       const name = titleIn.value.trim(); if (readOnly || name === meta.name) { titleIn.value = meta.name; return; }

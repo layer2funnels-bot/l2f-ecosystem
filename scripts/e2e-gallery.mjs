@@ -32,7 +32,7 @@ for (const org of ['l2f', 'aurj']) for (const theme of ['light', 'dark']) for (c
   const tag = `${org}/${theme}/${w}`;
   const ctx = await browser.newContext({ viewport: { width: w, height: 900 }, reducedMotion: w === 768 ? 'reduce' : 'no-preference' });
   const p = await ctx.newPage();
-  p.on('console', (m) => { if (['error', 'warning'].includes(m.type())) problems.push(`${tag} ${m.type()}: ${m.text().slice(0, 140)}`); });
+  p.on('console', (m) => { if (['error', 'warning'].includes(m.type())) problems.push(`${tag} ${m.type()}: ${m.text().slice(0, 140)} @ ${JSON.stringify(m.location()).slice(0, 120)}`); });
   p.on('pageerror', (e) => problems.push(`${tag} pageerror: ${e.message}`));
   await p.goto(`${base}/gallery.html?org=${org}&theme=${theme}`); await p.waitForSelector('h1');
   await p.evaluate(() => document.fonts.ready);
@@ -83,7 +83,7 @@ for (const org of ['l2f', 'aurj']) for (const theme of ['light', 'dark']) for (c
     await p.screenshot({ path: `${SHOTS}/gallery-docs-${org}.png`, fullPage: true });
   }
   if (w === 390 && theme === 'light') {
-    const stacked = await p.evaluate(() => getComputedStyle(document.querySelector('table.stack td')).display);
+    const stacked = await p.evaluate(() => getComputedStyle(document.querySelector('table.stk td')).display);
     check(`G9 ${org}`, 'On a phone the table turns into stacked rows', stacked === 'block');
   }
   if (w === 768) {

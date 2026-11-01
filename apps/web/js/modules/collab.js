@@ -50,7 +50,7 @@ export function commentsPanel({ api, type, id, people = [], canComment, onChange
     if (left.length) toast(`${left.map(nameOf).join(', ')} can’t open this, so they weren’t told.`, false);
     load(); onChange();
   };
-  const post = btn('Comment', send, 'pri');
+  const post = btn('Comment', send, 'primary');
   const row = (c) => {
     const mine = c.author_id === me; const bodyEl = h('p', { class: 'cm-body' }, c.body);
     const li = h('li', { class: 'cm-item' }, avatar(c.author_name, 32), h('div', { class: 'cm-main' },
@@ -60,7 +60,7 @@ export function commentsPanel({ api, type, id, people = [], canComment, onChange
   };
   const edit = (c, li, bodyEl) => {
     const ta = h('textarea', { rows: 3, maxlength: '10000', 'aria-label': 'Edit comment' }); ta.value = c.body;
-    const done = h('div', { class: 'cm-acts' }, btn('Save', async () => { const v = ta.value.trim(); if (!v) return; const r = await api.call('comments.edit', { id: c.id, body: v }); if (r.ok) load(); else toast('That change wasn’t saved.', false); }, 'pri'), btn('Cancel', () => load(), ''));
+    const done = h('div', { class: 'cm-acts' }, btn('Save', async () => { const v = ta.value.trim(); if (!v) return; const r = await api.call('comments.edit', { id: c.id, body: v }); if (r.ok) load(); else toast('That change wasn’t saved.', false); }, 'primary'), btn('Cancel', () => load(), ''));
     bodyEl.replaceWith(ta); li.querySelector('.cm-acts')?.replaceWith(done); ta.focus();
   };
   async function load(first) {

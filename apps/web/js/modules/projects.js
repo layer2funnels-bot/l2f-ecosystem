@@ -1,7 +1,7 @@
 // Projects: the shared Projects experience (home list, My Work, project workspace with List / Board / Calendar / Timeline / Docs / Whiteboards,
 // task drawer with timer, smart search). One module so that the Projects app and, later, Office > Projects (V4-2) mount the very same screens and data.
 // Everything goes through the permission-checked API; buttons follow `ctx.can`, the database decides. Logic lives in projectmodel.js (tested without a browser).
-import { h, put, icon, btn, chip, dialog, drawer, toast, field, notice, skeleton, emptyState, errorState, noAccessState, seg, tabs, readOnlyNotice } from '../ui.js';
+import { setCrumbs, h, put, icon, btn, chip, dialog, drawer, toast, field, notice, skeleton, emptyState, errorState, noAccessState, seg, tabs, readOnlyNotice } from '../ui.js';
 import { workloadGrid, WEEK_CAPACITY_MINUTES, splitProjects, PROJECT_STATUS, TASK_STATUS, PRIORITY, label, byStatus, sortTasks, viewTasks, groupTasks, progress, monthGrid, monthTitle, shiftMonth, timeline, dueLabel, myWorkGroups, parseSearch, searchInput, duration, clock } from './projectmodel.js';
 import { createBoard, BOARD_MIME } from './whiteboard.js';
 import { emptyDoc, serialize } from './docmodel.js';
@@ -39,7 +39,7 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
   const paintTimer = () => {
     const t = state.timer; timerBar.hidden = !t; clearInterval(state.tick); if (!t) return;
     const clk = h('b', { class: 'mono' }, clock(t.started_at, Date.now()));
-    timerBar.replaceChildren(icon('clock'), 'Timer running ', clk, btn('Stop', async () => { const r = await api.call('time.stop', {}); if (r.ok) { toast('Timer stopped.'); state.timer = null; paintTimer(); } else fail(r, 'stop that timer'); }, 'pri'));
+    timerBar.replaceChildren(icon('clock'), 'Timer running ', clk, btn('Stop', async () => { const r = await api.call('time.stop', {}); if (r.ok) { toast('Timer stopped.'); state.timer = null; paintTimer(); } else fail(r, 'stop that timer'); }, 'primary'));
     state.tick = setInterval(() => { if (!live()) return clearInterval(state.tick); clk.textContent = clock(t.started_at, Date.now()); }, 1000);
   };
   const loadTimer = async () => { const r = await api.call('time.running', {}); if (live()) { state.timer = r.ok ? r.data[0] ?? null : null; paintTimer(); } };
@@ -49,20 +49,22 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
   // the sidebar and the home list use the same two labelled sections: client projects (grouped by client) and the organization's own (internal) projects
   const sideGroups = (cur) => {
     const sp = splitProjects(state.projects.filter((p) => !p.archived_at && p.status !== 'done'), clientName, ctx.orgName);
-    const link = (p) => h('li', {}, h('a', { class: 'pj-link', href: hrefs.project(p.id), ...(cur === p.id ? { 'aria-current': 'page' } : {}) }, p.name));
+    const link = (p) => h('li', {}, h('a', { class: 'pj-link', href: hrefs.project(p.id), ...(cur === p.id ? { 'aria-current': 'page' } : {}) }, h('span', { class: 'pdot', style: `--c:${dotOf(p.id)}` }), h('span', {}, p.name)));
     return [
       h('h2', {}, 'Client projects'),
       sp.clients.length ? h('div', {}, ...sp.clients.map((g) => h('div', { class: 'pj-group' }, h('h3', { class: 'pj-gname' }, g.name), h('ul', {}, ...g.projects.slice(0, 15).map(link))))) : h('p', { class: 'fine muted pj-none' }, 'None yet'),
       h('h2', {}, sp.internalTitle),
       sp.internal.length ? h('ul', {}, ...sp.internal.slice(0, 30).map(link)) : h('p', { class: 'fine muted pj-none' }, 'None yet')];
   };
+  const DOTS = ['#E8553D', '#6B4FF0', '#2B5CF0', '#F07C1A', '#13A592', '#E9488F'];
+  const dotOf = (id) => DOTS[[...String(id)].reduce((n, c) => n + c.charCodeAt(0), 0) % DOTS.length];
   const paintSide = (cur) => {
     side.replaceChildren(
-      h('a', { class: 'pj-link', href: hrefs.home(), ...(route.view === 'home' ? { 'aria-current': 'page' } : {}) }, icon('prj'), 'Projects'),
-      h('a', { class: 'pj-link', href: hrefs.mine(), ...(route.view === 'mine' ? { 'aria-current': 'page' } : {}) }, icon('check'), 'My Work'),
-      h('a', { class: 'pj-link', href: hrefs.workload(), ...(route.view === 'workload' ? { 'aria-current': 'page' } : {}) }, icon('user'), 'Workload'),
-      h('a', { class: 'pj-link', href: hrefs.portfolio(), ...(route.view === 'portfolio' ? { 'aria-current': 'page' } : {}) }, icon('grid'), 'Portfolio'),
-      h('button', { type: 'button', class: 'pj-link', onclick: () => openSearch() }, icon('search'), 'Search', h('kbd', { 'aria-hidden': 'true' }, 'Ctrl K')),
+      ...(embedded ? [h('a', { class: 'pj-link', href: hrefs.home(), ...(route.view === 'home' ? { 'aria-current': 'page' } : {}) }, icon('projects'), 'Projects'),
+        h('a', { class: 'pj-link', href: hrefs.mine(), ...(route.view === 'mine' ? { 'aria-current': 'page' } : {}) }, icon('mywork'), 'My Work'),
+        h('a', { class: 'pj-link', href: hrefs.workload(), ...(route.view === 'workload' ? { 'aria-current': 'page' } : {}) }, icon('team'), 'Workload'),
+        h('a', { class: 'pj-link', href: hrefs.portfolio(), ...(route.view === 'portfolio' ? { 'aria-current': 'page' } : {}) }, icon('dash'), 'Portfolio')] : []),
+      h('button', { type: 'button', class: 'pj-link pj-searchbtn', onclick: () => openSearch() }, icon('search'), 'Search', h('kbd', { 'aria-hidden': 'true' }, 'Ctrl K')),
       ...sideGroups(cur));
   };
   const loadProjects = async () => { const r = await api.call('projects.list', { scope: 'all' }); if (live()) { state.projects = r.ok ? r.data : []; paintSide(route.id); } return r; };
@@ -78,7 +80,7 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
     const showStart = () => { start.el.hidden = !from.value; due.el.hidden = Boolean(from.value); };
     from.addEventListener('change', showStart);
     dialog({ title: 'New project', body: [name.el, (state.templates ?? []).length ? h('div', { class: 'fld' }, h('label', { for: 'np-from' }, 'Start from'), from) : null, h('div', { class: 'fld' }, h('label', { for: 'np-client' }, 'For'), client), due.el, start.el].filter(Boolean),
-      actions: [{ label: 'Create project', cls: 'pri', on: async () => {
+      actions: [{ label: 'Create project', cls: 'primary', on: async () => {
         const nm = name.input.value.trim(); if (!nm) return name.error('Give the project a name.');
         const r = from.value ? await api.call('projects.duplicate', { id: from.value, name: nm, ...(client.value ? { client: client.value } : {}), ...(start.input.value ? { start_on: start.input.value } : {}) })
           : await api.call('projects.create', { name: nm, ...(client.value ? { client: client.value } : {}), ...(due.input.value ? { due_on: due.input.value } : {}) });
@@ -87,11 +89,66 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
       } }, { label: 'Cancel' }] });
   };
 
-  // ---------------------------------------------------------------- home
+  // ---------------------------------------------------------------- home (Design v4): greeting, priorities, projects, recent updates
+  const greeting = () => { const hr = new Date().getHours(); return `Good ${hr < 12 ? 'morning' : hr < 18 ? 'afternoon' : 'evening'}${ctx.userName ? `, ${String(ctx.userName).trim().split(/\s+/)[0]}` : ''}`; };
+  const ago = (iso) => { const m = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000)); return m < 1 ? 'just now' : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : m < 2880 ? 'Yesterday' : `${Math.round(m / 1440)} days ago`; };
   async function home() {
-    put(main, h('div', { class: 'pj-head' }, h('div', {}, h('div', { class: 'crumbs fine' }, 'Projects'), h('h1', { 'data-page-title': true }, 'Projects')), ctx.canAnywhere('projects.project.create') ? btn('New project', newProject, 'pri') : null), skeleton(4));
-    const [r, tr] = await Promise.all([loadProjects(), api.call('projects.list', { templates: true })]); if (!live()) return;
+    put(main, h('div', { class: 'pj-head' }, h('div', {}, h('div', { class: 'crumbs fine' }, 'Projects'), h('h1', { 'data-page-title': true }, greeting()))), skeleton(4));
+    const [r, w, rec, tr] = await Promise.all([loadProjects(), api.call('my.work', { limit: 50 }), api.call('projects.recent', { limit: 5 }), api.call('projects.list', { templates: true })]); await people(); if (!live()) return;
+    state.templates = tr.ok ? tr.data : [];
     if (!r.ok) return put(main, errorState(home));
+    const active = state.projects.filter((p) => !p.archived_at && p.status !== 'done');
+    const work = w.ok ? w.data : []; const soon = new Date(); soon.setDate(soon.getDate() + 1); const limit = `${soon.getFullYear()}-${String(soon.getMonth() + 1).padStart(2, '0')}-${String(soon.getDate()).padStart(2, '0')}`;
+    const dueSoon = work.filter((t) => t.due_on && String(t.due_on).slice(0, 10) <= limit).length;
+    const prio = (pr) => (pr === 'urgent' || pr === 'high' ? 'High' : pr === 'low' ? 'Low' : 'Normal');
+    const row = (t) => h('li', { class: 'pj-prow' }, h('span', { class: 'pj-ring', 'aria-hidden': 'true' }), h('a', { class: 'pj-title', href: hrefs.task(t.project_id, t.id) }, t.title), h('span', { class: `fine ${t.overdue ? 'danger' : 'muted'}` }, t.due_on ? dueLabel(String(t.due_on).slice(0, 10), todayIso()) : 'No date'), h('span', { class: 'fine muted' }, prio(t.priority)), icon('right'));
+    const chipOf = (p) => statusChip(p.status);
+    const prow = (p) => h('li', {}, h('a', { class: 'pj-prj', href: hrefs.project(p.id) }, h('span', { class: 'pdot', style: `--c:${dotOf(p.id)}` }), h('span', { class: 'nm' }, p.name), chipOf(p)));
+    const split = splitProjects(active.slice(0, 40), clientName, ctx.orgName);
+    const upd = (rec.ok ? rec.data : []).map((t) => h('li', { class: 'pj-upd' }, h('span', { class: 'avatar', 'aria-hidden': 'true' }, personName(t.assignee_id).split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase()),
+      h('div', {}, h('p', {}, h('b', {}, t.assignee_id ? personName(t.assignee_id) : 'Someone'), ' moved ', h('a', { href: hrefs.task(t.project_id, t.id) }, h('b', {}, t.title)), ` to ${label(TASK_STATUS, t.status)}`), h('span', { class: 'fine muted' }, `${t.project_name} · ${ago(t.updated_at)}`))));
+    const head = h('div', { class: 'pj-head' }, h('div', {}, h('div', { class: 'crumbs fine' }, 'Projects'), h('h1', { 'data-page-title': true }, greeting()),
+      h('p', { class: 'sub' }, `${dueSoon} ${dueSoon === 1 ? 'task' : 'tasks'} due by tomorrow across ${active.length} ${active.length === 1 ? 'project' : 'projects'}.`)),
+      h('div', { class: 'acts' }, h('button', { type: 'button', class: 'btn', onclick: () => openSearch() }, icon('search'), 'Search'), ctx.canAnywhere('projects.project.create') ? btn('New project', newProject, 'primary') : null));
+    const left = h('section', { class: 'panel', 'aria-labelledby': 'pj-pr' }, h('div', { class: 'sec-h' }, h('h2', { id: 'pj-pr' }, 'Your priorities'), h('span', { class: 'n' }, String(Math.min(work.length, 5))), h('a', { class: 'linkbtn', href: hrefs.mine() }, 'My Work')),
+      work.length ? h('ul', { class: 'pj-prows' }, ...work.slice(0, 5).map(row)) : emptyState({ title: 'Nothing assigned to you', body: 'Tasks assigned to you across all projects appear here.', ic: 'check' }));
+    const prj = h('section', { class: 'panel pj-sections', 'aria-labelledby': 'pj-pj' }, h('div', { class: 'sec-h' }, h('h2', { id: 'pj-pj' }, 'Projects'), h('a', { class: 'linkbtn', href: `${base}/all` }, 'All projects')),
+      active.length ? h('div', {}, split.clients.length ? h('div', {}, h('h3', { class: 'pj-sub' }, 'Client projects'), ...split.clients.map((g) => h('div', { class: 'pj-group' }, h('h4', { class: 'pj-gname' }, g.name), h('ul', {}, ...g.projects.slice(0, 5).map(prow))))) : null,
+        h('h3', { class: 'pj-sub' }, split.internalTitle), split.internal.length ? h('ul', {}, ...split.internal.slice(0, 6).map(prow)) : h('p', { class: 'fine muted pj-none' }, 'None yet'))
+        : emptyState({ title: 'No projects yet', body: ctx.canAnywhere('projects.project.create') ? 'Create the first project to start planning work.' : 'Projects you can open appear here.', ic: 'projects', first: true, ...(ctx.canAnywhere('projects.project.create') ? { action: btn('New project', newProject, 'primary') } : {}) }));
+    const recent = h('section', { class: 'panel', 'aria-labelledby': 'pj-up' }, h('div', { class: 'sec-h' }, h('h2', { id: 'pj-up' }, 'Recent updates')), upd.length ? h('ul', { class: 'pj-upds' }, ...upd) : h('p', { class: 'fine muted' }, 'Task changes in your projects appear here.'));
+    const tplCard = (t) => h('div', { class: 'pj-card pj-tpl' }, h('div', { class: 'pj-card-top' }, h('strong', {}, t.name), chip('Template')), h('div', { class: 'fine muted' }, `${t.tasks_total} task${t.tasks_total === 1 ? '' : 's'}`),
+      h('div', { class: 'pj-timeacts' }, ctx.canAnywhere('projects.project.create') ? btn('Use template', () => newProject(t.id), 'primary') : null, h('a', { class: 'btn', href: hrefs.project(t.id) }, 'Edit')));
+    const tpls = state.templates.length ? h('section', { 'aria-labelledby': 'pj-tp', class: 'pj-tpls' }, h('h2', { id: 'pj-tp', class: 'pj-gh' }, 'Templates'), h('p', { class: 'fine muted' }, 'Start a project with these sections and tasks already in place. Make one from any project: Save as template.'), h('div', { class: 'pj-cards' }, ...state.templates.map(tplCard))) : null;
+    put(main, head, h('div', { class: 'pj-home' }, left, h('div', { class: 'pj-homeside' }, prj, recent)), tpls);
+  }
+
+  // ---------------------------------------------------------------- Docs: every document that lives in a project
+  async function docs() {
+    put(main, h('div', { class: 'pj-head' }, h('div', {}, h('div', { class: 'crumbs fine' }, 'Projects'), h('h1', { 'data-page-title': true }, 'Docs'), h('p', { class: 'sub' }, 'Documents kept inside projects. Each opens in its project context.'))), skeleton(4));
+    await loadProjects(); const r = await api.call('drive.project.files', { kind: 'document' }); if (!live()) return;
+    if (!r.ok) return put(main, errorState(docs));
+    const rows = r.data.filter((f) => f.mime_type !== BOARD_MIME); const nm = (id) => state.projects.find((p) => p.id === id)?.name ?? 'Project';
+    put(main, h('div', { class: 'pj-head' }, h('div', {}, h('div', { class: 'crumbs fine' }, 'Projects'), h('h1', { 'data-page-title': true }, 'Docs'), h('p', { class: 'sub' }, 'Documents kept inside projects. Each opens in its project context.'))),
+      rows.length ? h('div', { class: 'tblwrap' }, h('table', { class: 'tbl stk' }, h('caption', { class: 'sr' }, 'Project documents'), h('thead', {}, h('tr', {}, ...['Document', 'Project', 'Updated'].map((x) => h('th', { scope: 'col' }, x)))),
+        h('tbody', {}, ...rows.map((f) => h('tr', {}, h('td', { class: 't1', 'data-l': 'Document' }, h('a', { class: 'fname', href: `#/doc/${f.id}` }, h('span', {}, f.name))), h('td', { 'data-l': 'Project' }, h('a', { href: hrefs.project(f.project_id, 'docs') }, nm(f.project_id))), h('td', { 'data-l': 'Updated' }, ago(f.updated_at)))))))
+        : emptyState({ title: 'No project documents yet', body: 'Create a document from a project’s Docs tab. It stays with that project and does not appear in Drive.', ic: 'doc', first: true }));
+  }
+
+  // ---------------------------------------------------------------- pages that are designed but switched off
+  const offPage = (title, sub, why, ic) => async () => {
+    put(main, h('div', { class: 'pj-head' }, h('div', {}, h('div', { class: 'crumbs fine' }, 'Projects'), h('h1', { 'data-page-title': true }, title), h('p', { class: 'sub' }, sub))),
+      emptyState({ title: `${title} is not available yet`, body: why, ic, first: true }));
+    await loadProjects();
+  };
+  const dashboards = offPage('Dashboards', 'Charts across your projects.', 'Dashboards arrive after the reporting design is approved. Nothing here is hidden from you in the meantime.', 'chart');
+  const ai = offPage('AI Assist', 'Help with planning and summaries.', 'AI is switched off for this organization. No AI provider is connected, and no project data is sent anywhere.', 'star2');
+
+  // ---------------------------------------------------------------- all projects (the two labelled sections)
+  async function list() {
+    put(main, h('div', { class: 'pj-head' }, h('div', {}, h('div', { class: 'crumbs fine' }, 'Projects'), h('h1', { 'data-page-title': true }, 'Projects')), ctx.canAnywhere('projects.project.create') ? btn('New project', newProject, 'primary') : null), skeleton(4));
+    const [r, tr] = await Promise.all([loadProjects(), api.call('projects.list', { templates: true })]); if (!live()) return;
+    if (!r.ok) return put(main, errorState(list));
     state.templates = tr.ok ? tr.data : [];
     const head = main.firstChild; put(main, head);
     let filter = 'open';
@@ -99,7 +156,7 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
     const card = (p) => h('a', { class: 'pj-card', href: hrefs.project(p.id) }, h('div', { class: 'pj-card-top' }, h('strong', {}, p.name), statusChip(p.status)), h('div', { class: 'pj-card-sub' }, projectChip(p), p.due_on ? h('span', { class: 'fine muted' }, `Due ${dueLabel(p.due_on, todayIso())}`) : null), bar(p), h('div', { class: 'fine muted' }, `${p.tasks_done} of ${p.tasks_total} tasks done`));
     const draw = () => {
       const shown = state.projects.filter((p) => !p.archived_at && (filter === 'all' || (filter === 'open' ? p.status !== 'done' : p.status === filter)));
-      if (!shown.length) return put(list, state.projects.length ? emptyState({ title: 'No projects match', body: 'Try another filter, or search for archived work with Ctrl K.', ic: 'search' }) : emptyState({ title: 'No projects yet', body: ctx.canAnywhere('projects.project.create') ? 'Create the first project to start planning work.' : 'Nothing has been shared with you yet.', ic: 'prj', first: true, action: ctx.canAnywhere('projects.project.create') ? btn('New project', newProject, 'pri') : null }));
+      if (!shown.length) return put(list, state.projects.length ? emptyState({ title: 'No projects match', body: 'Try another filter, or search for archived work with Ctrl K.', ic: 'search' }) : emptyState({ title: 'No projects yet', body: ctx.canAnywhere('projects.project.create') ? 'Create the first project to start planning work.' : 'Nothing has been shared with you yet.', ic: 'prj', first: true, action: ctx.canAnywhere('projects.project.create') ? btn('New project', newProject, 'primary') : null }));
       const sp = splitProjects(shown, clientName, ctx.orgName);
       put(list,
         h('section', { 'aria-labelledby': 'pj-cp' }, h('h2', { id: 'pj-cp', class: 'pj-gh' }, 'Client projects'),
@@ -108,7 +165,7 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
           sp.internal.length ? h('div', { class: 'pj-cards' }, ...sp.internal.map(card)) : h('p', { class: 'muted' }, `No ${ctx.orgName} projects match.`)));
     };
     const tplCard = (t) => h('div', { class: 'pj-card pj-tpl' }, h('div', { class: 'pj-card-top' }, h('strong', {}, t.name), chip('Template')), h('div', { class: 'fine muted' }, `${t.tasks_total} task${t.tasks_total === 1 ? '' : 's'}`),
-      h('div', { class: 'pj-timeacts' }, ctx.canAnywhere('projects.project.create') ? btn('Use template', () => newProject(t.id), 'pri') : null, h('a', { class: 'btn', href: hrefs.project(t.id) }, 'Edit')));
+      h('div', { class: 'pj-timeacts' }, ctx.canAnywhere('projects.project.create') ? btn('Use template', () => newProject(t.id), 'primary') : null, h('a', { class: 'btn', href: hrefs.project(t.id) }, 'Edit')));
     const tpls = state.templates.length ? h('section', { 'aria-labelledby': 'pj-tp', class: 'pj-tpls' }, h('h2', { id: 'pj-tp', class: 'pj-gh' }, 'Templates'), h('p', { class: 'fine muted' }, 'Start a project with these sections and tasks already in place. Make one from any project: Save as template.'), h('div', { class: 'pj-cards' }, ...state.templates.map(tplCard))) : null;
     main.append(seg([['open', 'Open'], ['all', 'All'], ['done', 'Done']], filter, (k) => { filter = k; draw(); }, 'Show projects'), list, tpls); draw();
   }
@@ -191,6 +248,7 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
     const openTask = (t) => taskDrawer(t, p, { onChange: reload, canEdit: tasksOk });
     const tops = () => tasks.filter((t) => !t.parent_task_id);     // List and Board show tasks; subtasks live inside their task (Calendar and Timeline show both)
 
+    setCrumbs(root, [['Projects', hrefs.home()], [p.client_id ? clientName(p.client_id) : 'Internal'], [p.name]]);
     const head = h('div', { class: 'pj-head' }, h('div', {}, h('div', { class: 'crumbs fine' }, h('a', { href: hrefs.home() }, 'Projects'), ' / ', p.client_id ? clientName(p.client_id) : 'Internal'),
       h('h1', { 'data-page-title': true }, p.name), h('div', { class: 'pj-meta' }, statusChip(p.status), p.is_template ? chip('Template', 'act') : null, p.due_on ? h('span', { class: 'fine muted' }, `Due ${dueLabel(p.due_on, todayIso())}`) : null, archived ? chip('Archived', 'warn') : null)),
       h('div', { class: 'pj-actions' }, editable ? btn('Edit details', () => editProject(p), '') : null, editable || archived ? projectMenu(p, archived) : null));
@@ -219,10 +277,10 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
     const view = (() => { try { return { group: 'status', sort: 'manual', q: '', assignee: '', tag: '', hideDone: false, ...JSON.parse(localStorage.getItem(VIEW_KEY) || '{}'), q: '' }; } catch { return { group: 'status', sort: 'manual', q: '', assignee: '', tag: '', hideDone: false }; } })();
     const setView = (patch) => { Object.assign(view, patch); try { const { q: _q, ...keep } = view; localStorage.setItem(VIEW_KEY, JSON.stringify(keep)); } catch { /* not remembered */ } draw(); };
     const sectionOps = {
-      add: () => { const nm = field({ id: 'ns-name', label: 'Section name', maxlength: 100 }); dialog({ title: 'New section', body: nm.el, actions: [{ label: 'Add section', cls: 'pri', on: async () => { const v = nm.input.value.trim(); if (!v) return nm.error('Give the section a name.'); const x = await api.call('sections.create', { project: p.id, name: v }); if (!x.ok) { fail(x, 'add sections'); return false; } sections.push(x.data[0]); state.sections = sections; if (view.group !== 'section') setView({ group: 'section' }); else draw(); } }, { label: 'Cancel' }] }); },
-      rename: (sec) => { const nm = field({ id: 'rs-name', label: 'Section name', value: sec.name, maxlength: 100 }); dialog({ title: 'Rename section', body: nm.el, actions: [{ label: 'Save', cls: 'pri', on: async () => { const v = nm.input.value.trim(); if (!v) return nm.error('A section needs a name.'); const x = await api.call('sections.update', { id: sec.id, name: v }); if (!x.ok) { fail(x, 'rename sections'); return false; } sec.name = v; draw(); } }, { label: 'Cancel' }] }); },
+      add: () => { const nm = field({ id: 'ns-name', label: 'Section name', maxlength: 100 }); dialog({ title: 'New section', body: nm.el, actions: [{ label: 'Add section', cls: 'primary', on: async () => { const v = nm.input.value.trim(); if (!v) return nm.error('Give the section a name.'); const x = await api.call('sections.create', { project: p.id, name: v }); if (!x.ok) { fail(x, 'add sections'); return false; } sections.push(x.data[0]); state.sections = sections; if (view.group !== 'section') setView({ group: 'section' }); else draw(); } }, { label: 'Cancel' }] }); },
+      rename: (sec) => { const nm = field({ id: 'rs-name', label: 'Section name', value: sec.name, maxlength: 100 }); dialog({ title: 'Rename section', body: nm.el, actions: [{ label: 'Save', cls: 'primary', on: async () => { const v = nm.input.value.trim(); if (!v) return nm.error('A section needs a name.'); const x = await api.call('sections.update', { id: sec.id, name: v }); if (!x.ok) { fail(x, 'rename sections'); return false; } sec.name = v; draw(); } }, { label: 'Cancel' }] }); },
       move: async (sec, by) => { const i = sections.indexOf(sec), j = i + by; if (j < 0 || j >= sections.length) return; [sections[i], sections[j]] = [sections[j], sections[i]]; draw(); await Promise.all(sections.map((x, n) => api.call('sections.update', { id: x.id, position: n }))); },
-      remove: (sec) => dialog({ title: `Remove “${sec.name}”?`, body: h('p', {}, 'Its tasks stay in the project, under “No section”.'), actions: [{ label: 'Remove section', cls: 'pri', on: async () => { const x = await api.call('sections.delete', { id: sec.id }); if (!x.ok) { fail(x, 'remove sections'); return false; } sections = sections.filter((y) => y.id !== sec.id); state.sections = sections; await reload(); } }, { label: 'Cancel', focus: true }] }),
+      remove: (sec) => dialog({ title: `Remove “${sec.name}”?`, body: h('p', {}, 'Its tasks stay in the project, under “No section”.'), actions: [{ label: 'Remove section', cls: 'primary', on: async () => { const x = await api.call('sections.delete', { id: sec.id }); if (!x.ok) { fail(x, 'remove sections'); return false; } sections = sections.filter((y) => y.id !== sec.id); state.sections = sections; await reload(); } }, { label: 'Cancel', focus: true }] }),
     };
     const toolbar = () => {
       const tagsSeen = [...new Map(tops().flatMap((t) => t.tags ?? []).map((g) => [g.id, g])).values()].sort((a, b) => a.name.localeCompare(b.name));
@@ -244,12 +302,12 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
       const pick = (lbl, list, on) => h('select', { 'aria-label': lbl, onchange: (e) => { const v = e.target.value; e.target.value = ''; if (v) on(v); } }, h('option', { value: '' }, lbl), ...list.map(([k, t]) => h('option', { value: k }, t)));
       const due = h('input', { type: 'date', 'aria-label': 'Set due date', onchange: (e) => { if (e.target.value) run({ due_on: e.target.value }, 'New due date on'); } });
       return h('div', { class: 'pj-bulk', role: 'region', 'aria-label': 'Change selected tasks' }, h('b', {}, `${selected.size} selected`),
-        btn('Mark done', () => run({ status: 'done' }, 'Marked done:'), 'pri'),
+        btn('Mark done', () => run({ status: 'done' }, 'Marked done:'), 'primary'),
         pick('Status…', TASK_STATUS, (v) => run({ status: v }, 'Status changed on')),
         pick('Assign to…', [...(state.people ?? []).map((x) => [x.user_id, x.display_name]), ['none', 'Nobody']], (v) => run(v === 'none' ? { clear_assignee: true } : { assignee: v }, 'Reassigned')),
         pick('Priority…', PRIORITY, (v) => run({ priority: v }, 'Priority changed on')),
         sections.length ? pick('Section…', [...sections.map((x) => [x.id, x.name]), ['none', 'No section']], (v) => run(v === 'none' ? { clear_section: true } : { section: v }, 'Moved')) : null,
-        due, btn('Archive', () => dialog({ title: `Archive ${selected.size} task${selected.size === 1 ? '' : 's'}?`, body: h('p', {}, 'They leave the lists. You can find and restore them with search (is:archived).'), actions: [{ label: 'Archive', cls: 'pri', on: () => run({ archive: true }, 'Archived') }, { label: 'Cancel', focus: true }] }), ''),
+        due, btn('Archive', () => dialog({ title: `Archive ${selected.size} task${selected.size === 1 ? '' : 's'}?`, body: h('p', {}, 'They leave the lists. You can find and restore them with search (is:archived).'), actions: [{ label: 'Archive', cls: 'primary', on: () => run({ archive: true }, 'Archived') }, { label: 'Cancel', focus: true }] }), ''),
         btn('Clear', () => { selected.clear(); draw(); }, 'link'));
     };
 
@@ -340,7 +398,7 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
           if (a === 'assign' && !input.assignee) return toast('Pick a person.', false);
           add.disabled = true; const x = await api.call('rules.add', input); add.disabled = false;
           if (x.ok) { toast('Rule added. It applies from now on.'); rules(); } else fail(x, 'change rules');
-        }, 'pri');
+        }, 'primary');
         return h('section', { class: 'pj-sec' }, h('h2', {}, 'Add a rule'), h('div', { class: 'pj-rule-form' }, when.el, slot1, act.el, slot2, add));
       };
       put(body, archived ? readOnlyNotice('This project is archived') : null,
@@ -391,14 +449,14 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
       const rows = r2.data.filter((f) => (kind === 'board') === (f.mime_type === BOARD_MIME));
       const mk = async () => {
         const nm = field({ id: 'nf-name', label: kind === 'board' ? 'Whiteboard name' : 'Document name', value: kind === 'board' ? 'New whiteboard' : 'Untitled document', maxlength: 200 });
-        dialog({ title: kind === 'board' ? 'New whiteboard' : 'New document', body: nm.el, actions: [{ label: 'Create', cls: 'pri', on: async () => {
+        dialog({ title: kind === 'board' ? 'New whiteboard' : 'New document', body: nm.el, actions: [{ label: 'Create', cls: 'primary', on: async () => {
           const name = nm.input.value.trim(); if (!name || /[\/\\]/.test(name)) return nm.error('Use a name without slashes.');
           const ctxSpace = p.client_id ? { space: 'client', client: p.client_id, project: p.id } : { space: 'shared', project: p.id };
           const x = kind === 'board' ? await createBoard(api, name, ctxSpace) : await api.call('drive.files.create', { app: 'projects', ...ctxSpace, name, kind: 'document', mime_type: DOC_MIME, body: serialize(emptyDoc()) });
           if (!x.ok) { fail(x, 'add files'); return false; } go(kind === 'board' ? `#/board/${x.data[0].id}` : `#/doc/${x.data[0].id}`);
         } }, { label: 'Cancel' }] });
       };
-      put(body, archived ? readOnlyNotice('This project is archived') : null, h('div', { class: 'pj-calbar' }, h('h2', {}, kind === 'board' ? 'Whiteboards' : 'Docs'), tasksOk && ctx.canAnywhere('drive.file.upload') ? btn(kind === 'board' ? 'New whiteboard' : 'New document', mk, 'pri') : null),
+      put(body, archived ? readOnlyNotice('This project is archived') : null, h('div', { class: 'pj-calbar' }, h('h2', {}, kind === 'board' ? 'Whiteboards' : 'Docs'), tasksOk && ctx.canAnywhere('drive.file.upload') ? btn(kind === 'board' ? 'New whiteboard' : 'New document', mk, 'primary') : null),
         rows.length ? h('ul', { class: 'pj-rows' }, ...rows.map((f) => h('li', { class: 'pj-row' }, icon(kind === 'board' ? 'wb' : 'doc'), h('a', { class: 'pj-title', href: kind === 'board' ? `#/board/${f.id}` : `#/doc/${f.id}` }, f.name), h('span', { class: 'fine muted' }, `Version ${f.current_version}`), h('span', { class: 'fine muted' }, new Date(f.updated_at).toLocaleDateString()))))
           : emptyState({ title: kind === 'board' ? 'No whiteboards yet' : 'No documents yet', body: `${kind === 'board' ? 'Boards' : 'Documents'} made here belong to this project and open inside it. They are not listed in Drive unless you add them there.`, ic: kind === 'board' ? 'wb' : 'doc', first: true }));
     }
@@ -411,7 +469,7 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
     const name = field({ id: 'cp-name', label: asTemplate ? 'Template name' : 'Name of the copy', value: asTemplate ? `${p.name} template` : `${p.name} (copy)`, maxlength: 200 });
     const start = field({ id: 'cp-start', label: 'Start date (moves the dates)', type: 'date', value: todayIso() });
     dialog({ title: asTemplate ? 'Save as template' : 'Duplicate project', body: [h('p', { class: 'fine muted' }, 'Copies the sections and open tasks, with their subtasks, checklists, tags and what they wait on. Comments, time and finished tasks stay here.'), name.el, asTemplate ? null : start.el].filter(Boolean),
-      actions: [{ label: asTemplate ? 'Save template' : 'Duplicate', cls: 'pri', on: async () => {
+      actions: [{ label: asTemplate ? 'Save template' : 'Duplicate', cls: 'primary', on: async () => {
         const nm = name.input.value.trim(); if (!nm) return name.error('Give it a name.');
         const r = await api.call('projects.duplicate', { id: p.id, name: nm, template: asTemplate, ...(p.client_id && !asTemplate ? { client: p.client_id } : {}), ...(!asTemplate && start.input.value ? { start_on: start.input.value } : {}) });
         if (!r.ok) { fail(r, asTemplate ? 'save templates' : 'copy this project'); return false; }
@@ -420,12 +478,12 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
   };
   const projectMenu = (p, archived) => h('div', { class: 'pj-menu' }, !archived && ctx.canAnywhere('projects.project.create') ? [btn('Duplicate', () => copyProject(p, false), ''), p.is_template ? null : btn('Save as template', () => copyProject(p, true), '')] : null, archived
     ? btn('Restore project', async () => { const r = await api.call('projects.restore', { id: p.id }); if (r.ok) { toast('Project restored.'); go(hrefs.project(p.id)); } else fail(r, 'restore this project'); })
-    : btn('Archive project', () => dialog({ title: 'Archive this project?', body: h('p', {}, 'It leaves the lists and your dashboards. You can still find it with search (is:archived) and restore it.'), actions: [{ label: 'Archive', cls: 'pri', on: async () => { const r = await api.call('projects.archive', { id: p.id }); if (!r.ok) { fail(r, 'archive this project'); return false; } toast('Project archived.'); go(hrefs.home()); } }, { label: 'Cancel', focus: true }] })));
+    : btn('Archive project', () => dialog({ title: 'Archive this project?', body: h('p', {}, 'It leaves the lists and your dashboards. You can still find it with search (is:archived) and restore it.'), actions: [{ label: 'Archive', cls: 'primary', on: async () => { const r = await api.call('projects.archive', { id: p.id }); if (!r.ok) { fail(r, 'archive this project'); return false; } toast('Project archived.'); go(hrefs.home()); } }, { label: 'Cancel', focus: true }] })));
   const editProject = (p) => {
     const name = field({ id: 'ep-name', label: 'Name', value: p.name, maxlength: 200 }); const desc = field({ id: 'ep-desc', label: 'Description', value: p.description ?? '', rows: 4 });
     const st = h('select', { id: 'ep-status', 'aria-label': 'Status' }, ...opts(PROJECT_STATUS, p.status)); const start = field({ id: 'ep-start', label: 'Start', type: 'date', value: p.start_on ?? '' }); const due = field({ id: 'ep-due', label: 'Due', type: 'date', value: p.due_on ?? '' });
     dialog({ title: 'Edit project', wide: true, body: [name.el, desc.el, h('div', { class: 'fld' }, h('label', { for: 'ep-status' }, 'Status'), st), start.el, due.el],
-      actions: [{ label: 'Save', cls: 'pri', on: async () => { const nm = name.input.value.trim(); if (!nm) return name.error('A project needs a name.');
+      actions: [{ label: 'Save', cls: 'primary', on: async () => { const nm = name.input.value.trim(); if (!nm) return name.error('A project needs a name.');
         const r = await api.call('projects.update', { id: p.id, name: nm, description: desc.input.value, status: st.value, ...(start.input.value ? { start_on: start.input.value } : {}), ...(due.input.value ? { due_on: due.input.value } : {}) });
         if (!r.ok) { fail(r, 'change this project'); return false; } toast('Saved.'); project(); } }, { label: 'Cancel' }] });
   };
@@ -511,7 +569,7 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
     const timeBox = h('div', { class: 'pj-time' });
     const drawTime = async (first) => { const secs = first !== undefined ? first : ((await api.call('time.list', { task: t.id })).data ?? []).reduce((a, e) => a + (e.seconds ?? 0), 0); const running = state.timer && state.timer.task_id === t.id;
       put(timeBox, h('div', {}, h('b', {}, duration(secs)), h('span', { class: 'fine muted' }, ' logged on this task')),
-        canTime() ? h('div', { class: 'pj-timeacts' }, running ? btn('Stop timer', async () => { const x = await api.call('time.stop', {}); if (x.ok) { state.timer = null; paintTimer(); drawTime(); } else fail(x, 'stop that timer'); }, 'pri') : btn('Start timer', async () => { const x = await api.call('time.start', { project: p.id, task: t.id }); if (x.ok) { await loadTimer(); drawTime(); } else if (x.status === 409 || x.status === 422) toast('A timer is already running. Stop it first.', false); else fail(x, 'start a timer'); }, ''),
+        canTime() ? h('div', { class: 'pj-timeacts' }, running ? btn('Stop timer', async () => { const x = await api.call('time.stop', {}); if (x.ok) { state.timer = null; paintTimer(); drawTime(); } else fail(x, 'stop that timer'); }, 'primary') : btn('Start timer', async () => { const x = await api.call('time.start', { project: p.id, task: t.id }); if (x.ok) { await loadTimer(); drawTime(); } else if (x.status === 409 || x.status === 422) toast('A timer is already running. Stop it first.', false); else fail(x, 'start a timer'); }, ''),
           btn('Log time by hand', () => logTime(t, p, drawTime), '')) : null); };
     // subtasks: real tasks (own assignee, due date, comments); added here, opened like any task
     const archivedProject = Boolean(p.archived_at);
@@ -532,7 +590,7 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
       (() => { const hist = activityPanel({ api, type: 'project_task', id: t.id, describe: describeStep }); return h('details', { class: 'pj-history', ontoggle: (e) => { if (e.target.open) hist.load(); } }, h('summary', {}, 'History'), hist); })()];
     title.id = 'td-title';
     body.unshift(h('div', { class: 'pj-drawer-top' }, t.parent_task_id ? btn('↑ Back to the parent task', async () => { const x = await api.call('tasks.get', { id: t.parent_task_id }); if (x.ok) { closeDrawer(); taskDrawer(x.data[0], p, { onChange, canEdit }); } else fail(x, 'open that task'); }, 'link') : h('span'), followButton({ api, type: 'project_task', id: t.id, initial: pre?.following })));
-    const closeDrawer = drawer({ title: t.parent_task_id ? 'Subtask' : 'Task', label: `Task: ${t.title}`, body, actions: canEdit ? [{ label: 'Archive task', on: async () => { const r = await api.call('tasks.archive', { id: t.id }); if (!r.ok) { fail(r, 'archive that task'); return; } toast('Task archived.'); onChange(); } }, { label: 'Done', cls: 'pri' }] : [{ label: 'Close', cls: 'pri' }] });
+    const closeDrawer = drawer({ title: t.parent_task_id ? 'Subtask' : 'Task', label: `Task: ${t.title}`, body, actions: canEdit ? [{ label: 'Archive task', on: async () => { const r = await api.call('tasks.archive', { id: t.id }); if (!r.ok) { fail(r, 'archive that task'); return; } toast('Task archived.'); onChange(); } }, { label: 'Done', cls: 'primary' }] : [{ label: 'Close', cls: 'primary' }] });
     drawChecklist(pre?.checklist); drawTime(pre ? pre.time_seconds : undefined); drawTags(pre?.tags_all); drawFiles(pre?.files); drawDeps(pre?.deps); if (!t.parent_task_id) drawSubtasks(pre?.subtasks);
   }
   // pick one of the project's Drive files to attach to the task
@@ -540,7 +598,7 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
     const r = await api.call('drive.project.files', { project: p.id }); if (!r.ok) return fail(r, 'list this project\'s files');
     const have = new Set(already.map((f) => f.id)); const files = r.data.filter((f) => !have.has(f.id));
     const close = dialog({ title: 'Attach a project file', wide: true, body: files.length ? h('ul', { class: 'pj-rows' }, ...files.map((f) => h('li', { class: 'pj-row' }, icon(f.mime_type === BOARD_MIME ? 'wb' : 'doc'), h('span', { class: 'pj-title' }, f.name),
-      btn(['Attach', h('span', { class: 'sr' }, ` ${f.name}`)], async () => { const x = await api.call('tasks.files.attach', { task: t.id, file: f.id }); if (x.ok) { toast('File attached.'); close(); after(); } else fail(x, 'attach that file'); }, 'pri')))) : h('p', { class: 'muted' }, 'This project has no other files yet. Upload one, or make a document in the Docs tab.'), actions: [{ label: 'Close' }] });
+      btn(['Attach', h('span', { class: 'sr' }, ` ${f.name}`)], async () => { const x = await api.call('tasks.files.attach', { task: t.id, file: f.id }); if (x.ok) { toast('File attached.'); close(); after(); } else fail(x, 'attach that file'); }, 'primary')))) : h('p', { class: 'muted' }, 'This project has no other files yet. Upload one, or make a document in the Docs tab.'), actions: [{ label: 'Close' }] });
   }
   // upload into the project's own place in Drive (the client's space for a client project, the shared Drive otherwise), then attach it
   function uploadToTask(t, p, after) {
@@ -564,7 +622,7 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
   }
   const logTime = (t, p, after) => {
     const mins = field({ id: 'lt-min', label: 'Minutes', type: 'number', value: '30' }); const note = field({ id: 'lt-note', label: 'Note (optional)', maxlength: 500 });
-    dialog({ title: 'Log time', body: [mins.el, note.el], actions: [{ label: 'Log', cls: 'pri', on: async () => { const m = Math.round(Number(mins.input.value)); if (!(m >= 1 && m <= 1440)) return mins.error('Enter minutes between 1 and 1440.');
+    dialog({ title: 'Log time', body: [mins.el, note.el], actions: [{ label: 'Log', cls: 'primary', on: async () => { const m = Math.round(Number(mins.input.value)); if (!(m >= 1 && m <= 1440)) return mins.error('Enter minutes between 1 and 1440.');
       const end = new Date(); const start = new Date(end.getTime() - m * 60000);
       const r = await api.call('time.log', { project: p.id, task: t.id, started_at: start.toISOString(), ended_at: end.toISOString(), ...(note.input.value ? { note: note.input.value } : {}) });
       if (!r.ok) { fail(r, 'log time'); return false; } toast('Time logged.'); after(); } }, { label: 'Cancel' }] });
@@ -586,7 +644,9 @@ export function projectsView({ api, ctx, route, base = '#/projects', embedded = 
   document.addEventListener('keydown', key);
 
   // ---------------------------------------------------------------- mount
-  root.append(timerBar, h('div', { class: 'pj-grid' }, side, main)); paintSide(route.id); loadTimer();
-  ({ mine, project, workload, portfolio }[route.view] ?? home)();
+  // standalone: the project list lives in the app's side rail (the shell lifts it); inside Office it stays beside the page
+  if (embedded) root.append(timerBar, h('div', { class: 'pj-grid embedded' }, side, main)); else { root.append(timerBar, h('div', { class: 'pj-grid' }, main)); root.__side = side; }
+  paintSide(route.id); loadTimer();
+  ({ mine, project, workload, portfolio, all: list, docs, dashboards, ai }[route.view] ?? home)();
   return root;
 }

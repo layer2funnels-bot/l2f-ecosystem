@@ -1,18 +1,19 @@
 // Social Planner (v4): Calendar, Posts, Campaigns and Channels, and the campaign page. It PLANS. Nothing is published from here: "posted" is a person's own record
 // ("Mark as posted manually"), connecting accounts is switched off and says why. Review goes through Approvals; the post follows the decision.
-import { h, put, icon, btn, chip, dialog, drawer, toast, field, notice, skeleton, emptyState, errorState, noAccessState, tabs, readOnlyNotice } from '../ui.js';
+import { setCrumbs, h, put, icon, btn, chip, dialog, drawer, toast, field, notice, skeleton, emptyState, errorState, noAccessState, tabs, readOnlyNotice } from '../ui.js';
 import { STATES, stateLabel, CAMPAIGN_STATES, postActions, counter, mediaWarning, monthGrid, byDay, progress, campaignMoves, toLocalInput, fromLocalInput, ymd } from './socialmodel.js';
 
 export const socialHref = (view, id) => (view === 'c' ? `#/social/c/${id}` : view && view !== 'calendar' ? `#/social?tab=${view}` : '#/social');
 const when = (iso) => (iso ? new Date(iso).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '');
 const day = (d) => (d ? new Date(d).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '');
-const TABS = [['calendar', 'Calendar'], ['posts', 'Posts'], ['campaigns', 'Campaigns'], ['channels', 'Channels']];
+const TABS = [['calendar', 'Calendar'], ['posts', 'Posts'], ['queue', 'Queue'], ['approvals', 'Approvals'], ['campaigns', 'Campaigns'], ['channels', 'Channels']];
 const NO_CONNECT = 'Connecting accounts isn’t available yet. Posts are planned here and published by a person.';
 
 export function socialView({ api, ctx, route }) {
-  const root = h('section', { class: 'sp' }); const live = () => ctx.live() && root.isConnected;
+  const root = h('section', { class: 'soc' }); const live = () => ctx.live() && root.isConnected;
   const canCreate = ctx.canAnywhere('social.post.create'); const canEdit = ctx.canAnywhere('social.post.edit'); const canSched = ctx.canAnywhere('social.post.schedule');
   let channels = []; let campaigns = [];
+  const CHC = { instagram: '#E9488F', linkedin: '#2B5CF0', youtube: '#E8553D', facebook: '#4A6CF0', x: '#1B1D23', tiktok: '#13A592', pinterest: '#D93A4A', email: '#F07C1A' };
   const chan = (k) => channels.find((c) => c.key === k); const chLabel = (k) => chan(k)?.label ?? k;
   const clientName = (c) => (c ? (ctx.clients?.get(c) ?? 'A client') : ctx.orgName);
   const fail = (r, what = 'do that') => toast(r?.status === 404 ? `You can’t ${what} here.` : (r?.message ?? 'Something went wrong. Try again.'), false);
@@ -59,14 +60,14 @@ export function socialView({ api, ctx, route }) {
       if (!r.ok) return fail(r, 'save posts'); toast('Saved.'); close(); refresh();
     };
     const move = async (status, extra = {}, msg) => { const r = await api.call('social.posts.set_status', { id, status, ...extra }); if (!r.ok) return fail(r); toast(msg ?? 'Updated.'); close(); refresh(); };
-    const ask = (titleText, bodyEls, label, on, cls = 'pri') => dialog({ title: titleText, body: bodyEls, actions: [{ label, cls, on: async () => { const k = await on(); return k === false ? false : undefined; } }, { label: 'Cancel' }] });
+    const ask = (titleText, bodyEls, label, on, cls = 'primary') => dialog({ title: titleText, body: bodyEls, actions: [{ label, cls, on: async () => { const k = await on(); return k === false ? false : undefined; } }, { label: 'Cancel' }] });
     const acts = {
       to_draft: ['Back to draft', () => move('draft', {}, 'Back to draft.')],
-      review: ['Send for review', () => { const n = field({ id: 'sp-note', label: 'Note for the reviewer (optional)', rows: 3 }); ask('Send for review', n.el, 'Send', async () => { const r = await api.call('social.posts.submit_for_review', { id, ...(n.input.value.trim() ? { note: n.input.value.trim() } : {}) }); if (!r.ok) { fail(r, 'send posts for review'); return false; } toast('Sent for review.'); close(); refresh(); }); }, 'pri'],
-      schedule: ['Schedule', () => { const w = field({ id: 'sp-sch', label: 'Post at', type: 'datetime-local', value: toLocalInput(post.scheduled_for) }); ask('Schedule post', [w.el, h('p', { class: 'fine muted' }, 'Planner doesn’t publish. This puts the post on the calendar for the person who will post it.')], 'Schedule', async () => { const v = fromLocalInput(w.input.value); if (!v) return w.error('Choose a date and time.'); const r = await api.call('social.posts.set_status', { id, status: 'scheduled', scheduled_for: v }); if (!r.ok) { fail(r); return false; } toast('Scheduled.'); close(); refresh(); }); }, 'pri'],
-      posted: ['Mark as posted manually', () => { const u = field({ id: 'sp-url', label: 'Link to the live post (optional)', hint: 'Starts with https://' }); ask('Mark as posted', [u.el, h('p', { class: 'fine muted' }, 'This records that you posted it yourself. Planner can’t check.')], 'Mark as posted', async () => { const v = u.input.value.trim(); if (v && !/^https?:\/\/\S+$/.test(v)) return u.error('Use a web address that starts with https://'); const r = await api.call('social.posts.set_status', { id, status: 'published', ...(v ? { post_url: v } : {}) }); if (!r.ok) { fail(r); return false; } toast('Recorded as posted.'); close(); refresh(); }); }, 'pri'],
+      review: ['Send for review', () => { const n = field({ id: 'sp-note', label: 'Note for the reviewer (optional)', rows: 3 }); ask('Send for review', n.el, 'Send', async () => { const r = await api.call('social.posts.submit_for_review', { id, ...(n.input.value.trim() ? { note: n.input.value.trim() } : {}) }); if (!r.ok) { fail(r, 'send posts for review'); return false; } toast('Sent for review.'); close(); refresh(); }); }, 'primary'],
+      schedule: ['Schedule', () => { const w = field({ id: 'sp-sch', label: 'Post at', type: 'datetime-local', value: toLocalInput(post.scheduled_for) }); ask('Schedule post', [w.el, h('p', { class: 'fine muted' }, 'Planner doesn’t publish. This puts the post on the calendar for the person who will post it.')], 'Schedule', async () => { const v = fromLocalInput(w.input.value); if (!v) return w.error('Choose a date and time.'); const r = await api.call('social.posts.set_status', { id, status: 'scheduled', scheduled_for: v }); if (!r.ok) { fail(r); return false; } toast('Scheduled.'); close(); refresh(); }); }, 'primary'],
+      posted: ['Mark as posted manually', () => { const u = field({ id: 'sp-url', label: 'Link to the live post (optional)', hint: 'Starts with https://' }); ask('Mark as posted', [u.el, h('p', { class: 'fine muted' }, 'This records that you posted it yourself. Planner can’t check.')], 'Mark as posted', async () => { const v = u.input.value.trim(); if (v && !/^https?:\/\/\S+$/.test(v)) return u.error('Use a web address that starts with https://'); const r = await api.call('social.posts.set_status', { id, status: 'published', ...(v ? { post_url: v } : {}) }); if (!r.ok) { fail(r); return false; } toast('Recorded as posted.'); close(); refresh(); }); }, 'primary'],
       failed: ['Mark as failed', () => { const w = field({ id: 'sp-why', label: 'What went wrong?', rows: 3, maxlength: 500 }); ask('Mark as failed', w.el, 'Mark as failed', async () => { const v = w.input.value.trim(); if (!v) return w.error('Say what went wrong so the next person knows.'); const r = await api.call('social.posts.set_status', { id, status: 'failed', failure_reason: v }); if (!r.ok) { fail(r); return false; } toast('Marked as failed.'); close(); refresh(); }, 'danger'); }],
-      retry: ['Schedule again', () => { const w = field({ id: 'sp-sch', label: 'Post at', type: 'datetime-local', value: toLocalInput(post.scheduled_for) }); ask('Schedule again', w.el, 'Schedule', async () => { const v = fromLocalInput(w.input.value); if (!v) return w.error('Choose a date and time.'); const r = await api.call('social.posts.set_status', { id, status: 'scheduled', scheduled_for: v }); if (!r.ok) { fail(r); return false; } toast('Scheduled again.'); close(); refresh(); }); }, 'pri'],
+      retry: ['Schedule again', () => { const w = field({ id: 'sp-sch', label: 'Post at', type: 'datetime-local', value: toLocalInput(post.scheduled_for) }); ask('Schedule again', w.el, 'Schedule', async () => { const v = fromLocalInput(w.input.value); if (!v) return w.error('Choose a date and time.'); const r = await api.call('social.posts.set_status', { id, status: 'scheduled', scheduled_for: v }); if (!r.ok) { fail(r); return false; } toast('Scheduled again.'); close(); refresh(); }); }, 'primary'],
       cancel: ['Cancel post', () => ask('Cancel this post?', h('p', {}, 'It stays in the list as cancelled and can be reopened as a draft.'), 'Cancel post', async () => { const r = await api.call('social.posts.set_status', { id, status: 'cancelled' }); if (!r.ok) { fail(r); return false; } toast('Cancelled.'); close(); refresh(); }, 'danger')],
       reopen: ['Reopen as draft', () => move('draft', {}, 'Reopened as a draft.')],
     };
@@ -80,7 +81,7 @@ export function socialView({ api, ctx, route }) {
     const body = h('div', { class: 'sp-form' }, statusBlock, title.el, h('div', { class: 'sp-row' }, chSel.el, clientSel.el), cap.el, count, warn, h('div', { class: 'sp-row' }, planned.el, campSel.el), mediaBox, h('h3', {}, 'Preview'), preview,
       id && canCreate && !post.archived_at ? btn('Write it for other channels', () => variants(post, () => { close(); refresh(); }), '') : null);
     const bar = h('div', { class: 'sp-actions' },
-      ...(editable || (id && canEdit && !['published', 'cancelled'].includes(post.status)) ? [btn(id ? 'Save' : 'Create post', save, 'pri')] : []),
+      ...(editable || (id && canEdit && !['published', 'cancelled'].includes(post.status)) ? [btn(id ? 'Save' : 'Create post', save, 'primary')] : []),
       ...moves.map((m) => btn(acts[m][0], acts[m][1], acts[m][2] ?? '')),
       id && canEdit && !post.archived_at && ['idea', 'draft', 'cancelled', 'published'].includes(post.status) ? btn('Archive', async () => { const r = await api.call('social.posts.archive', { id }); if (!r.ok) return fail(r); toast('Archived.'); close(); refresh(); }, '') : null,
       id && canEdit && post.archived_at ? btn('Restore', async () => { const r = await api.call('social.posts.restore', { id }); if (!r.ok) return fail(r); toast('Restored.'); close(); refresh(); }, '') : null);
@@ -93,13 +94,13 @@ export function socialView({ api, ctx, route }) {
     const ch = chan(post.channel);
     dialog({ title: 'Choose media from Drive', wide: true, body: files.length ? h('div', { class: 'sp-pick' }, ...files.map((f) => { const id = `pm-${f.id}`; const cb = h('input', { type: 'checkbox', id, checked: chosen.has(f.id) }); cb.addEventListener('change', () => (cb.checked ? chosen.add(f.id) : chosen.delete(f.id))); return h('label', { for: id }, cb, ' ', f.name); }))
       : emptyState({ title: 'No pictures or videos in Drive yet', body: 'Upload them in Drive first, then come back.', ic: 'drv' }),
-      actions: [{ label: 'Attach', cls: 'pri', on: async () => { if (chosen.size > 10 || (ch && chosen.size > ch.max_media)) { toast(`${ch?.label ?? 'A post'} takes at most ${Math.min(10, ch?.max_media ?? 10)} files.`, false); return false; } const w = await api.call('social.posts.files.set', { id: post.id, files: [...chosen] }); if (!w.ok) { fail(w, 'attach media'); return false; } toast('Media attached.'); done(); } }, { label: 'Cancel' }] });
+      actions: [{ label: 'Attach', cls: 'primary', on: async () => { if (chosen.size > 10 || (ch && chosen.size > ch.max_media)) { toast(`${ch?.label ?? 'A post'} takes at most ${Math.min(10, ch?.max_media ?? 10)} files.`, false); return false; } const w = await api.call('social.posts.files.set', { id: post.id, files: [...chosen] }); if (!w.ok) { fail(w, 'attach media'); return false; } toast('Media attached.'); done(); } }, { label: 'Cancel' }] });
   }
 
   function variants(post, done) {
     const boxes = channels.filter((c) => c.key !== post.channel).map((c) => { const id = `vr-${c.key}`; const cb = h('input', { type: 'checkbox', id, value: c.key }); return [cb, h('label', { for: id }, cb, ' ', c.label, c.max_text !== null && counter(post.caption, c).over ? h('span', { class: 'fine over' }, ` (caption is ${counter(post.caption, c).len - c.max_text} over)`) : null)]; });
     dialog({ title: 'Write it for other channels', body: [h('p', { class: 'fine muted' }, 'Each one becomes a draft with the same words and media, so you can adjust it for that channel.'), h('div', { class: 'sp-pick' }, ...boxes.map((b) => b[1]))],
-      actions: [{ label: 'Make drafts', cls: 'pri', on: async () => { const picked = boxes.map((b) => b[0]).filter((c) => c.checked).map((c) => c.value); if (!picked.length) { toast('Choose at least one channel.', false); return false; } const r = await api.call('social.posts.variants', { id: post.id, channels: picked }); if (!r.ok) { fail(r, 'add posts'); return false; } toast(`${r.data.length} draft${r.data.length === 1 ? '' : 's'} made.`); done(); } }, { label: 'Cancel' }] });
+      actions: [{ label: 'Make drafts', cls: 'primary', on: async () => { const picked = boxes.map((b) => b[0]).filter((c) => c.checked).map((c) => c.value); if (!picked.length) { toast('Choose at least one channel.', false); return false; } const r = await api.call('social.posts.variants', { id: post.id, channels: picked }); if (!r.ok) { fail(r, 'add posts'); return false; } toast(`${r.data.length} draft${r.data.length === 1 ? '' : 's'} made.`); done(); } }, { label: 'Cancel' }] });
   }
 
   // ---------------------------------------------------------------- campaigns: create / edit
@@ -108,7 +109,7 @@ export function socialView({ api, ctx, route }) {
     const goal = field({ id: 'sc-goal', label: 'Goal (optional)', value: c?.goal ?? '', rows: 3, maxlength: 1000 });
     const from = field({ id: 'sc-from', label: 'Starts', type: 'date', value: c?.starts_on?.slice(0, 10) ?? '' }); const to = field({ id: 'sc-to', label: 'Ends', type: 'date', value: c?.ends_on?.slice(0, 10) ?? '' });
     const cl = field({ id: 'sc-client', label: 'For', value: c?.client_id ?? '', options: c ? [[c.client_id ?? '', clientName(c.client_id)]] : [['', ctx.orgName], ...ctx.clientsWhere('social.post.create')], readonly: !!c });
-    dialog({ title: c ? 'Edit campaign' : 'New campaign', body: [name.el, goal.el, h('div', { class: 'sp-row' }, from.el, to.el), cl.el], actions: [{ label: c ? 'Save' : 'Create', cls: 'pri', on: async () => {
+    dialog({ title: c ? 'Edit campaign' : 'New campaign', body: [name.el, goal.el, h('div', { class: 'sp-row' }, from.el, to.el), cl.el], actions: [{ label: c ? 'Save' : 'Create', cls: 'primary', on: async () => {
       const n = name.input.value.trim(); if (!n) return name.error('Give the campaign a name.');
       if (from.input.value && to.input.value && to.input.value < from.input.value) return to.error('The end can’t be before the start.');
       const dates = { ...(from.input.value ? { starts_on: from.input.value } : {}), ...(to.input.value ? { ends_on: to.input.value } : {}) };
@@ -120,17 +121,18 @@ export function socialView({ api, ctx, route }) {
   async function home() {
     put(root, skeleton(3)); if (!(await boot())) return;
     let tab = TABS.some(([k]) => k === route?.query?.tab) ? route.query.tab : 'calendar';
-    const body = h('div', {}); const strip = tabs(TABS, tab, (k) => { tab = k; ctx.go(socialHref(k)); }, 'Social Planner');
-    const newPost = canCreate ? btn('New post', () => openPost(null), 'pri') : null;
-    put(root, h('div', { class: 'pj-head' }, h('div', {}, h('div', { class: 'crumbs fine' }, 'Social Planner'), h('h1', { 'data-page-title': true }, 'Social Planner'), h('p', { class: 'sub' }, 'Plan posts and campaigns. A person posts them; Planner keeps the record.')), newPost), strip, !canCreate ? readOnlyNotice('Your access level can’t add posts') : null, body);
-    ({ calendar, posts, campaigns: campaignsTab, channels: channelsTab })[tab](body);
+    const body = h('div', {});     // the four views are the app's side-rail pages (appnav.js)
+    const newPost = canCreate ? btn('New post', () => openPost(null), 'primary') : null;
+    put(root, h('div', { class: 'pj-head' }, h('div', {}, h('div', { class: 'crumbs fine' }, 'Social Planner'), h('h1', { 'data-page-title': true }, TABS.find(([k]) => k === tab)?.[1] ?? 'Calendar'), h('p', { class: 'sub' }, tab === 'calendar' ? `Planned and scheduled posts for ${ctx.orgName}.` : 'Plan posts and campaigns. A person posts them; Planner keeps the record.')), newPost), !canCreate ? readOnlyNotice('Your access level can’t add posts') : null, body);
+    ({ calendar, posts, queue: (b) => posts(b, { only: ['approved', 'scheduled'], title: 'Queue', blurb: 'Approved and scheduled posts, in the order they are planned. Nothing is published by us: a person posts, then marks it posted.' }),
+      approvals: (b) => posts(b, { only: ['in_review'], title: 'Approvals', blurb: 'Posts waiting for a decision. Open one to approve it or ask for changes.' }), campaigns: campaignsTab, channels: channelsTab })[tab](body);
   }
 
   async function calendar(body) {
     const now = new Date(); let y = now.getFullYear(); let m = now.getMonth(); let ch = ''; const grid = h('div', {}); const head = h('h2', { class: 'sp-month', 'aria-live': 'polite' });
-    const chSel = h('select', { 'aria-label': 'Channel' }, h('option', { value: '' }, 'All channels'), ...channels.map((c) => h('option', { value: c.key }, c.label))); chSel.addEventListener('change', () => { ch = chSel.value; load(); });
-    const nav = h('div', { class: 'sp-nav' }, btn('Previous month', () => { m -= 1; if (m < 0) { m = 11; y -= 1; } load(); }, '', { 'aria-label': 'Previous month' }), btn('Today', () => { y = now.getFullYear(); m = now.getMonth(); load(); }), btn('Next month', () => { m += 1; if (m > 11) { m = 0; y += 1; } load(); }, '', { 'aria-label': 'Next month' }), chSel);
-    put(body, h('div', { class: 'cl-bar' }, head, nav), grid);
+    const chSel = h('select', { class: 'sel', 'aria-label': 'Channel' }, h('option', { value: '' }, 'All channels'), ...channels.map((c) => h('option', { value: c.key }, c.label))); chSel.addEventListener('change', () => { ch = chSel.value; load(); });
+    const nav = h('div', { class: 'sp-nav' }, h('button', { type: 'button', class: 'btn sp-step', 'aria-label': 'Previous month', onclick: () => { m -= 1; if (m < 0) { m = 11; y -= 1; } load(); } }, icon('chev', 'sp-arrl')), btn('Today', () => { y = now.getFullYear(); m = now.getMonth(); load(); }), h('button', { type: 'button', class: 'btn sp-step', 'aria-label': 'Next month', onclick: () => { m += 1; if (m > 11) { m = 0; y += 1; } load(); } }, icon('chev', 'sp-arrr')), chSel);
+    put(body, notice('plain', 'plug', 'No channels are connected yet. Posts can be planned and approved here; publishing turns on after channels are connected and approved. Until then a person posts and marks it posted.'), h('div', { class: 'sp-head' }, head, h('div', { class: 'sp-legend', 'aria-hidden': 'true' }, ...['instagram', 'linkedin', 'youtube', 'facebook'].filter((k) => chan(k)).map((k) => h('span', { class: 'sp-lg', style: `--chc:${CHC[k]}` }, chLabel(k)))), nav), grid);
     async function load() {
       const weeks = monthGrid(y, m); const from = ymd(weeks[0][0]); const to = ymd(weeks.at(-1)[6]);
       put(head, new Date(y, m, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }));
@@ -142,7 +144,7 @@ export function socialView({ api, ctx, route }) {
         ...weeks.flat().map((d) => { const k = ymd(d); const list = days.get(k) ?? [];
           return h('div', { class: `sp-day${d.getMonth() !== m ? ' out' : ''}${k === today ? ' today' : ''}`, role: 'gridcell', 'aria-label': `${d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}, ${list.length} post${list.length === 1 ? '' : 's'}` },
             h('span', { class: 'sp-dn' }, d.getDate()),
-            ...list.slice(0, 3).map((p) => h('button', { type: 'button', class: `sp-chip s-${p.status}`, onclick: () => openPost(p.id) }, h('span', { class: 'sp-ch' }, chLabel(p.channel)), ' ', p.title)),
+            ...list.slice(0, 3).map((p) => h('button', { type: 'button', class: `sp-chip s-${p.status}`, style: `--chc:${CHC[p.channel] ?? 'var(--action)'}`, onclick: () => openPost(p.id) }, h('span', { class: 'sp-ch' }, chLabel(p.channel)), ' ', p.title)),
             list.length > 3 ? h('span', { class: 'fine muted' }, `+${list.length - 3} more`) : null,
             canCreate ? h('button', { type: 'button', class: 'sp-add', 'aria-label': `New post on ${d.toLocaleDateString(undefined, { day: 'numeric', month: 'long' })}`, onclick: () => openPost(null, { scheduled_for: new Date(d.getFullYear(), d.getMonth(), d.getDate(), 9).toISOString() }) }, icon('plus')) : null); })),
         undated.length ? h('div', { class: 'card sp-undated' }, h('h3', {}, 'Not dated yet'), h('ul', {}, ...undated.slice(0, 12).map((p) => h('li', {}, h('button', { type: 'button', class: 'btn link', onclick: () => openPost(p.id) }, p.title), ' ', statePill(p.status), ' ', chip(chLabel(p.channel)))))) : null);
@@ -150,20 +152,21 @@ export function socialView({ api, ctx, route }) {
     load();
   }
 
-  async function posts(body) {
+  async function posts(body, opts = {}) {
     let q = ''; let status = ''; let archived = false; let t = null; const list = h('div', {}, skeleton(3));
     const load = async () => {
-      const r = await api.call('social.posts.list', { archived, ...(q ? { q } : {}), ...(status ? { status } : {}) }); if (!live()) return;
+      const res = await Promise.all((opts.only ?? [status]).map((s) => api.call('social.posts.list', { archived, ...(q ? { q } : {}), ...(s ? { status: s } : {}) }))); if (!live()) return;
+      const r = res.find((x) => !x.ok) ?? { ok: true, data: res.flatMap((x) => x.data).sort((a, b) => String(a.scheduled_for ?? '9').localeCompare(String(b.scheduled_for ?? '9'))) };
       if (!r.ok) return put(list, errorState(load));
-      put(list, r.data.length ? h('div', { class: 'card tbl-wrap' }, h('table', { class: 'tbl' }, h('caption', { class: 'sr' }, 'Posts'), h('thead', {}, h('tr', {}, ...['Post', 'Channel', 'State', 'Planned', 'Campaign', 'For'].map((x) => h('th', { scope: 'col' }, x)))),
+      put(list, r.data.length ? h('div', { class: 'tblwrap' }, h('table', { class: 'tbl stk' }, h('caption', { class: 'sr' }, 'Posts'), h('thead', {}, h('tr', {}, ...['Post', 'Channel', 'State', 'Planned', 'Campaign', 'For'].map((x) => h('th', { scope: 'col' }, x)))),
         h('tbody', {}, ...r.data.map((p) => h('tr', {}, h('td', {}, h('button', { type: 'button', class: 'btn link', onclick: () => openPost(p.id) }, p.title)), h('td', {}, chLabel(p.channel)), h('td', {}, statePill(p.status)), h('td', {}, when(p.scheduled_for) || '—'),
           h('td', {}, p.campaign_id ? h('a', { href: socialHref('c', p.campaign_id) }, campaigns.find((c) => c.id === p.campaign_id)?.name ?? 'Campaign') : '—'), h('td', {}, clientName(p.client_id)))))))
-        : emptyState({ title: q || status ? 'No post matches' : archived ? 'Nothing archived' : 'No posts yet', body: q || status ? 'Try another word or state.' : 'Ideas, drafts and scheduled posts show up here.', ic: 'soc', first: !q && !status && !archived, action: canCreate && !q && !status && !archived ? btn('New post', () => openPost(null), 'pri') : null }));
+        : emptyState({ title: q || status ? 'No post matches' : archived ? 'Nothing archived' : opts.only ? `Nothing in ${opts.title} right now` : 'No posts yet', body: q || status ? 'Try another word or state.' : opts.only ? opts.blurb : 'Ideas, drafts and scheduled posts show up here.', ic: 'soc', first: !q && !status && !archived, action: canCreate && !q && !status && !archived ? btn('New post', () => openPost(null), 'primary') : null }));
     };
     const search = h('input', { type: 'search', placeholder: 'Search posts', 'aria-label': 'Search posts', autocomplete: 'off' }); search.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { q = search.value.trim(); load(); }, 200); });
     const st = h('select', { 'aria-label': 'State' }, h('option', { value: '' }, 'Any state'), ...Object.entries(STATES).map(([k, v]) => h('option', { value: k }, v.label))); st.addEventListener('change', () => { status = st.value; load(); });
     const sh = h('select', { 'aria-label': 'Show' }, h('option', { value: 'active' }, 'Active'), h('option', { value: 'archived' }, 'Archived')); sh.addEventListener('change', () => { archived = sh.value === 'archived'; load(); });
-    put(body, h('div', { class: 'cl-bar' }, search, st, sh), list); load();
+    put(body, opts.blurb ? h('p', { class: 'sub', style: 'margin-top:0' }, opts.blurb) : null, h('div', { class: 'toolbar' }, search, opts.only ? null : st, sh), list); load();
   }
 
   async function campaignsTab(body) {
@@ -172,10 +175,10 @@ export function socialView({ api, ctx, route }) {
       const r = await api.call('social.campaigns.list', { archived }); if (!live()) return; if (!r.ok) return put(list, errorState(load)); campaigns = archived ? campaigns : r.data;
       put(list, r.data.length ? h('div', { class: 'pj-cards' }, ...r.data.map((c) => h('a', { class: 'pj-card', href: socialHref('c', c.id) }, h('div', { class: 'pj-card-top' }, h('strong', {}, c.name), chip(CAMPAIGN_STATES[c.status])), h('p', { class: 'fine muted' }, `${clientName(c.client_id)}${c.starts_on ? ` · ${day(c.starts_on)}${c.ends_on ? ` to ${day(c.ends_on)}` : ''}` : ''}`),
         bar(c), h('p', { class: 'fine' }, `${c.published} of ${c.posts - c.cancelled} posted`))))
-        : emptyState({ title: archived ? 'Nothing archived' : 'No campaigns yet', body: archived ? '' : 'A campaign groups the posts for one launch or push, with dates and a goal, so you can see how far along it is.', ic: 'soc', first: !archived, action: canCreate && !archived ? btn('New campaign', () => campaignForm(null, (c) => ctx.go(socialHref('c', c.id))), 'pri') : null }));
+        : emptyState({ title: archived ? 'Nothing archived' : 'No campaigns yet', body: archived ? '' : 'A campaign groups the posts for one launch or push, with dates and a goal, so you can see how far along it is.', ic: 'soc', first: !archived, action: canCreate && !archived ? btn('New campaign', () => campaignForm(null, (c) => ctx.go(socialHref('c', c.id))), 'primary') : null }));
     };
     const sh = h('select', { 'aria-label': 'Show' }, h('option', { value: 'active' }, 'Active'), h('option', { value: 'archived' }, 'Archived')); sh.addEventListener('change', () => { archived = sh.value === 'archived'; load(); });
-    put(body, h('div', { class: 'cl-bar' }, sh, canCreate ? btn('New campaign', () => campaignForm(null, (c) => ctx.go(socialHref('c', c.id))), 'pri') : null), list); load();
+    put(body, h('div', { class: 'toolbar' }, sh, canCreate ? btn('New campaign', () => campaignForm(null, (c) => ctx.go(socialHref('c', c.id))), 'primary') : null), list); load();
   }
   const bar = (c) => { const p = progress(c); return h('div', { class: 'sp-bar', role: 'img', 'aria-label': `${p}% posted` }, h('i', { style: `width:${p}%` })); };
 
@@ -195,12 +198,13 @@ export function socialView({ api, ctx, route }) {
     const pr = await api.call('social.posts.list', { campaign: id }); if (!live()) return;
     const move = async (to) => { const w = await api.call('social.campaigns.update', { id, status: to }); if (!w.ok) return fail(w); toast('Updated.'); refresh(); };
     const posts_ = pr.ok ? pr.data : [];
+    setCrumbs(root, [['Campaigns', socialHref('campaigns')], [c.name]]);
     put(root, h('div', { class: 'pj-head' }, h('div', {}, h('div', { class: 'crumbs fine' }, h('a', { href: socialHref('campaigns') }, 'Campaigns')), h('h1', { 'data-page-title': true }, c.name), h('p', { class: 'pj-meta' }, chip(CAMPAIGN_STATES[c.status]), ` ${clientName(c.client_id)}`, c.starts_on ? ` · ${day(c.starts_on)}${c.ends_on ? ` to ${day(c.ends_on)}` : ''}` : '', c.archived_at ? ' · Archived' : '')),
-      h('div', { class: 'sp-actions' }, ...(canEdit && !c.archived_at ? [...campaignMoves(c.status).map(([to, label]) => btn(label, () => move(to), to === 'active' || to === 'planned' ? 'pri' : '')), btn('Edit', () => campaignForm(c, () => refresh()))] : []),
+      h('div', { class: 'sp-actions' }, ...(canEdit && !c.archived_at ? [...campaignMoves(c.status).map(([to, label]) => btn(label, () => move(to), to === 'active' || to === 'planned' ? 'primary' : '')), btn('Edit', () => campaignForm(c, () => refresh()))] : []),
         canEdit ? btn(c.archived_at ? 'Restore' : 'Archive', async () => { const w = await api.call(c.archived_at ? 'social.campaigns.restore' : 'social.campaigns.archive', { id }); if (!w.ok) return fail(w); toast(c.archived_at ? 'Restored.' : 'Archived.'); refresh(); }) : null)),
       c.goal ? h('p', {}, h('b', {}, 'Goal. '), c.goal) : null,
       h('div', { class: 'card sp-prog' }, bar(c), h('p', {}, h('b', {}, `${progress(c)}%`), ` posted · ${c.published} of ${c.posts - c.cancelled}`, c.scheduled ? ` · ${c.scheduled} scheduled` : '', c.failed ? ` · ${c.failed} failed` : '', c.cancelled ? ` · ${c.cancelled} cancelled` : '')),
-      h('div', { class: 'pj-head' }, h('h2', {}, 'Posts'), canCreate && !c.archived_at ? btn('New post in this campaign', () => openPost(null, { campaign: id, client: c.client_id ?? '' }), 'pri') : null),
+      h('div', { class: 'pj-head' }, h('h2', {}, 'Posts'), canCreate && !c.archived_at ? btn('New post in this campaign', () => openPost(null, { campaign: id, client: c.client_id ?? '' }), 'primary') : null),
       posts_.length ? h('div', { class: 'card tbl-wrap' }, h('table', { class: 'tbl' }, h('caption', { class: 'sr' }, 'Posts in this campaign'), h('thead', {}, h('tr', {}, ...['Post', 'Channel', 'State', 'Planned'].map((x) => h('th', { scope: 'col' }, x)))),
         h('tbody', {}, ...posts_.map((p) => h('tr', {}, h('td', {}, h('button', { type: 'button', class: 'btn link', onclick: () => openPost(p.id) }, p.title)), h('td', {}, chLabel(p.channel)), h('td', {}, statePill(p.status)), h('td', {}, when(p.scheduled_for) || '—'))))))
         : emptyState({ title: 'No posts in this campaign yet', body: 'Add the first one, or move an existing post into it from its drawer.', ic: 'soc' }));

@@ -10,13 +10,13 @@ const byKey = Object.fromEntries(FUNNEL_TYPES.map((t) => [t.key, t]));
 // The Office menu (design 04). Pages marked built:false show the shared "not built yet" state until their own design lands.
 export const OFFICE_PAGES = [
   { key: 'home', label: 'Home', icon: 'home', href: '#/office', built: true },
-  { key: 'planner', label: 'Planner', icon: 'clock', href: '#/planner', built: true },
-  { key: 'projects', label: 'Projects', icon: 'doc', href: '#/office/projects', built: true },
-  { key: 'funnels', label: 'Funnels', icon: 'star', href: '#/office/funnels', built: true },
+  { key: 'planner', label: 'Planner', icon: 'planner', href: '#/planner', built: true },
+  { key: 'projects', label: 'Projects', icon: 'projects', href: '#/office/projects', built: true },
+  { key: 'funnels', label: 'Funnels', icon: 'funnels', href: '#/office/funnels', built: true },
   { key: 'documents', label: 'Documents', icon: 'doc', href: '#/office/documents', built: true },
-  { key: 'team', label: 'Team', icon: 'user', href: '#/office/team', built: true },
-  { key: 'apps', label: 'Apps', icon: 'grid', href: '#/office/apps', built: true },
-  { key: 'admin', label: 'Admin', icon: 'key', href: '#/office/admin', built: true, adminOnly: true },
+  { key: 'team', label: 'Team', icon: 'team', href: '#/office/team', built: true },
+  { key: 'apps', label: 'Apps', icon: 'apps', href: '#/office/apps', built: true },
+  { key: 'admin', label: 'Admin', icon: 'shield', href: '#/office/admin', built: true, adminOnly: true },
 ];
 const OFFICE_OTHER = new Set(['projects', 'documents', 'team', 'apps']);
 export const ADMIN_ACCESS_TABS = ['levels', 'assignments', 'effective', 'history'];
@@ -47,15 +47,17 @@ export function parseRoute(hash) {
   if (a === 'ladder' && b === 'l' && c && seg.length === 3) return r('ladder', { view: 'l', id: c });
   if ((a === 'forms' && !b) || (a === 'app' && b === 'forms' && seg.length === 2)) return r('forms', { view: 'list' });
   if (a === 'forms' && b === 'templates' && seg.length === 2) return r('forms', { view: 'templates' });
+  if (a === 'forms' && b === 'submissions' && seg.length === 2) return r('forms', { view: 'submissions' });
   if (a === 'forms' && b === 'f' && c && seg.length === 3) return r('forms', { view: 'f', id: c });
   if ((a === 'portal' && !b) || (a === 'app' && b === 'portal' && seg.length === 2)) return r('portal', {});
   if (a === 'portal' && b && seg.length <= 3) return r('portal', { client: b, page: c ?? 'home' });
   if (a === 'sheet' && b && seg.length === 2) return r('sheet', { id: b });
   if (a === 'clients' && !b) return r('clients', { view: 'list' });
+  if (a === 'clients' && ['requests', 'sops', 'tools', 'settings'].includes(b) && seg.length === 2) return r('clients', { view: b });
   if (a === 'clients' && b === 'c' && c && seg.length === 3) return r('clients', { view: 'client', id: c });
   if ((a === 'projects' && !b) || (a === 'app' && b === 'projects' && seg.length === 2)) return r('projects', { view: 'home' });
   if (a === 'projects' && b === 'mine' && seg.length === 2) return r('projects', { view: 'mine' });
-  if (a === 'projects' && (b === 'workload' || b === 'portfolio') && seg.length === 2) return r('projects', { view: b });
+  if (a === 'projects' && ['all', 'docs', 'dashboards', 'ai', 'workload', 'portfolio'].includes(b) && seg.length === 2) return r('projects', { view: b });
   if (a === 'projects' && b === 'p' && c && seg.length === 3) return r('projects', { view: 'project', id: c });
   if (a === 'doc' && b && seg.length === 2) return r('doc', { id: b });
   if (a === 'board' && b && seg.length === 2) return r('board', { id: b });

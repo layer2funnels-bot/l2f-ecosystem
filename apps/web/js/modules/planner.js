@@ -45,7 +45,7 @@ export function plannerView({ api, org, orgs, me, loader = () => import('/planne
     return off;
   }).catch(() => {
     if (current !== entry) return null;
-    put(slot, notice('err', 'cross', [h('b', {}, 'Planner couldn’t load.'), ' Your plans are safe. Check your connection and try again.'], [btn('Try again', () => location.reload(), 'pri')]));
+    put(slot, notice('err', 'cross', [h('b', {}, 'Planner couldn’t load.'), ' Your plans are safe. Check your connection and try again.'], [btn('Try again', () => location.reload(), 'primary')]));
     return null;
   });
   return wrap;

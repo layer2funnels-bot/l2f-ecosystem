@@ -27,7 +27,7 @@ import { permissionSet, canWith, canAnywhereWith } from './perm.js';
 import { switchOrganization } from '/packages/core/org-switch.mjs';
 import { dialog, toast, btn, notice, skeleton, notFoundState, designBadge, icon, emptyState } from './ui.js';
 import * as authViews from './views/auth.js';
-import { shellView, appNav, markAppNav } from './views/shell.js';
+import { shellView, markAppNav } from './views/shell.js';
 import { launcherView, appNotBuiltView } from './views/launcher.js';
 import { officeHomeView } from './views/home.js';
 import { adminView } from './views/admin.js';
@@ -101,9 +101,10 @@ async function boot() {
   if (back && AUTH_ROUTES.has(r.name)) { try { return go(JSON.parse(back).hash); } catch { /* fall through */ } }
   go(AUTH_ROUTES.has(r.name) || r.name === 'home' || r.name === 'no-org' ? hrefFor.launcher() : location.hash);
 }
+let bootFailure = null;     // which call failed and how (status and error code only): shown on the load-error screen so a failure can be reported precisely
 async function loadOrgs() {
   const res = await api.call('org.list', {}, { org: NO_ORG });
-  if (!res.ok) { if (res.error?.code === 'session_expired') { ready = true; goExpired(); return 'expired'; } return null; }
+  if (!res.ok) { if (res.error?.code === 'session_expired') { ready = true; goExpired(); return 'expired'; } bootFailure = `org.list · ${res.status || 'no answer'} · ${res.error?.code ?? 'failed'}`; return null; }
   return res.data;
 }
 async function refreshNow() { const c = session.get(); if (!c?.refresh) return false; const r = await auth.refresh(c.refresh); if (r.ok && r.data?.access_token) { session.set(r.data); return true; } return false; }
@@ -170,7 +171,7 @@ const appApi = {
 // ---- unsaved work: ask before leaving the page or switching organization (nothing is ever lost silently)
 function askUnsaved(next) {
   dialog({ title: 'You have unsaved changes', body: h('p', {}, 'Save them before you leave, or they’ll be lost.'), role: 'alertdialog',
-    actions: [{ label: 'Save and leave', cls: 'pri', keep: true, on: async (close) => { const ok = await dirty.get()?.save(); if (!ok) return false; close(); dirty.clear(); next(); } },
+    actions: [{ label: 'Save and leave', cls: 'primary', keep: true, on: async (close) => { const ok = await dirty.get()?.save(); if (!ok) return false; close(); dirty.clear(); next(); } },
       { label: 'Discard and leave', on: () => { dirty.clear(); next(); } }, { label: 'Keep editing', focus: true }] });
 }
 const guard = (next) => (dirty.isDirty() ? askUnsaved(next) : next());
@@ -184,7 +185,7 @@ function switchFlow(targetId) {
     const e = dirty.get();
     dialog({ title: 'Save your changes before switching?', role: 'alertdialog',
       body: [h('p', {}, `You have unsaved changes in `, h('b', {}, e.label), `. They can’t come with you to ${target.name}.`), h('p', { class: 'fine', style: 'margin-top:var(--space-3)' }, `If saving fails, you stay in ${ctx.active.name} and your changes are kept.`)],
-      actions: [{ label: 'Save and switch', cls: 'pri', keep: true, on: async (close) => { const ok = await e.save(); if (!ok) return false; close(); dirty.clear(); doSwitch(target); } },
+      actions: [{ label: 'Save and switch', cls: 'primary', keep: true, on: async (close) => { const ok = await e.save(); if (!ok) return false; close(); dirty.clear(); doSwitch(target); } },
         { label: 'Discard and switch', on: () => { dirty.clear(); doSwitch(target); } },
         { label: 'Stay here', on: () => { announce(`Staying in ${ctx.active.name}. Your changes are kept.`); sw()?.focus(); } }] });
     announce('You have unsaved changes. Choose Save and switch, Discard and switch, or Stay here.');
@@ -209,7 +210,7 @@ async function doSwitch(target) {
       cache: api.cache, targetOrg: target.org_id, current: mine,
     });
   } catch {
-    banner = { kind: 'err', icon: 'cross', content: [h('b', {}, `Couldn’t switch to ${target.name}.`), ` The connection dropped before we could confirm your access. You’re still in ${from.name} and nothing was changed or lost.`], actions: [btn('Try again', () => switchFlow(target.org_id), 'pri'), btn('Dismiss', () => { banner = null; render(); })] };
+    banner = { kind: 'err', icon: 'cross', content: [h('b', {}, `Couldn’t switch to ${target.name}.`), ` The connection dropped before we could confirm your access. You’re still in ${from.name} and nothing was changed or lost.`], actions: [btn('Try again', () => switchFlow(target.org_id), 'primary'), btn('Dismiss', () => { banner = null; render(); })] };
     announce(`Could not switch to ${target.name}. You are still in ${from.name}.`);
     return render();
   }
@@ -245,7 +246,7 @@ const bannerEl = () => {
   if (!banner) return null; const b = banner; banner = null;
   return notice(b.kind, b.icon, b.content, b.actions ?? []);
 };
-const centered = (...c) => h('div', { class: 'authwrap' }, h('main', { class: 'auth', id: 'main' }, h('div', { class: 'card', style: 'padding:var(--space-6)' }, ...c)));
+const centered = (...c) => h('div', { class: 'authwrap' }, h('main', { class: 'authnarrow', id: 'main' }, h('div', { class: 'card', style: 'padding:32px' }, ...c)));
 
 // Planner isn't open to this person here (not switched on, coming soon, or no grant): say so plainly, in the shell's words.
 function plannerOffView(org, entry) {
@@ -277,7 +278,7 @@ async function render(opts = {}) {
   document.body.classList.remove('hasb');
   theme.setOrg(null);
   if (!ready) { put(root, centered(skeleton(3))); return; }
-  if (opts.bootError) { put(root, centered(h('h1', { 'data-page-title': true }, 'We couldn’t load this'), h('p', { class: 'sub' }, 'Your work is safe. Check your connection and try again.'), btn('Try again', () => boot(), 'pri'))); return focusTitle(root); }
+  if (opts.bootError) { put(root, centered(h('h1', { 'data-page-title': true }, 'We couldn’t load this'), h('p', { class: 'sub' }, 'Your work is safe. Check your connection and try again.'), bootFailure ? h('p', { class: 'fine muted' }, `Reference: ${bootFailure}`) : null, btn('Try again', () => boot(), 'primary'))); return focusTitle(root); }
 
   // signed-out and account screens
   if (!session.signedIn()) {
@@ -305,10 +306,11 @@ async function render(opts = {}) {
 
   // inside the ecosystem
   const org = ctx.active;
+  const registry = await loadRegistry(); if (!live()) return;   // before any view starts: a view that finished loading before it was attached to the page would drop its own result
   theme.setOrg(org);
   const role = org.role; const isAdmin = role === 'owner' || role === 'admin';
   const c = {
-    api, orgName: org.name, clients: ctx.clients, live, announce, go, guard, rerender: () => render(),
+    api, orgName: org.name, userName: session.get()?.name, clients: ctx.clients, catalog: ctx.catalog, live, announce, go, guard, rerender: () => render(),
     can: (p, clientId) => canWith(ctx.mine, p, clientId), canAnywhere: (p) => canAnywhereWith(ctx.mine, p),
     clientsWhere: (p) => [...ctx.clients].filter(([cid]) => canWith(ctx.mine, p, cid)),
   };
@@ -318,18 +320,18 @@ async function render(opts = {}) {
     const u = unavailable;
     content = h('div', { class: 'unavail' }, h('div', { class: 'ic' }, icon('warn')), h('h2', { 'data-page-title': true }, `${u.app} isn’t turned on for ${org.name}`),
       h('p', {}, `You’re now in ${org.name}. ${u.app} is only set up for ${u.from}, so there’s nothing to show here. Nothing from ${u.from} is on this screen.`),
-      h('div', { class: 'acts' }, btn(`Go to ${org.name} Office Home`, () => { unavailable = null; go(hrefFor.office()); }, 'pri'), btn(`Switch back to ${u.from}`, () => { unavailable = null; switchFlow(u.fromId); })),
+      h('div', { class: 'acts' }, btn(`Go to ${org.name} Office Home`, () => { unavailable = null; go(hrefFor.office()); }, 'primary'), btn(`Switch back to ${u.from}`, () => { unavailable = null; switchFlow(u.fromId); })),
       h('p', { style: 'margin:var(--space-4) 0 0;font-size:14px' }, `Need it here? `, btn(`Ask an ${org.name} admin`, () => toast('Message only for now. No request was sent.', false), 'link'), ' · ', h('a', { class: 'btn link', href: hrefFor.launcher(), onclick: () => { unavailable = null; } }, 'Browse all apps')));
   } else {
     switch (route.name) {
       case 'home': case 'launcher': case 'signin': case 'signup': case 'check-email': case 'forgot': case 'invite':
-        content = launcherView({ catalog: ctx.catalog, error: ctx.catalogError, org, orgs: ctx.orgs, role, name: session.get()?.name, registry: await loadRegistry(), loadWeather: () => loadWeather({ api, store: localStorage }), onSwitch: (i) => switchFlow(i), retry: async () => { await loadOrgContext(org); render(); } }); break;
+        content = launcherView({ catalog: ctx.catalog, error: ctx.catalogError, org, orgs: ctx.orgs, role, name: session.get()?.name, registry, loadWeather: () => loadWeather({ api, store: localStorage }), onSwitch: (i) => switchFlow(i), retry: async () => { await loadOrgContext(org); render(); } }); break;
       case 'office': content = officeHomeView({ org, role, isAdmin, api, live, portalState: ctx.catalog.find((a) => a.app_key === 'portal')?.state }); break;
       case 'office-page': {
         const pg = route.params.page;
         if (pg === 'documents') content = documentsView({ api, ctx: c });
         else if (pg === 'team') content = teamView({ api, ctx: c });
-        else if (pg === 'apps') content = appsView({ catalog: ctx.catalog, registry: await loadRegistry(), org, orgs: ctx.orgs });
+        else if (pg === 'apps') content = appsView({ catalog: ctx.catalog, registry, org, orgs: ctx.orgs });
         else if (pg === 'projects') content = projectsView({ api, ctx: c, base: '#/office/projects', embedded: true, route: { view: route.params.view ?? 'home', id: route.params.id, query: route.query } });
         else content = appNotBuiltView(OFFICE_PAGES.find((p) => p.key === pg)?.label ?? 'This page');
         break;
@@ -341,7 +343,7 @@ async function render(opts = {}) {
       case 'funnel-record': content = funnelRecordView(c, route.params.type, route.params.id); break;
       case 'doc': content = docView({ api, id: route.params.id, ctx: c }); break;
       case 'social': content = socialView({ api, ctx: c, route: { view: route.params.view, id: route.params.id, query: route.query } }); break;
-      case 'boards': content = boardsView({ api, ctx: c }); break;
+      case 'boards': content = boardsView({ api, ctx: c, route: { query: route.query } }); break;
       case 'ladder': content = ladderView({ api, ctx: c, route: { view: route.params.view, id: route.params.id, query: route.query } }); break;
       case 'forms': content = formsView({ api, ctx: c, route: { view: route.params.view, id: route.params.id } }); break;
       case 'portal': content = portalView({ api, ctx: c, route: { client: route.params.client, page: route.params.page } }); break;
@@ -356,7 +358,7 @@ async function render(opts = {}) {
         if (!ctx.catalogError && entry?.state !== 'available') { unmountPlanner(); content = plannerOffView(org, entry); break; }
         const s = session.get();
         content = plannerView({ api, org, orgs: ctx.orgs, me: { id: s?.userId, name: s?.name || s?.email || 'You' } });
-        nav = appNav('Planner', PLANNER_PAGES.filter((p) => !p.manage || c.can('planner.plan.manage')), plannerSection(route.params.page));
+        /* the Planner menu comes from appnav.js */
         break;
       }
       case 'admin': content = adminView({ api, live, org, role, route, rerender: () => render(), go, clients: ctx.clients }); break;
@@ -364,9 +366,9 @@ async function render(opts = {}) {
       default: content = notFoundState(hrefFor.office());
     }
   }
-  const view = shellView({ app: appApi, orgs: ctx.orgs, active: org, email: session.get()?.email, name: session.get()?.name, route, content, banner: bannerEl(), isAdmin, inOffice, nav, launcherCurrent: route.name === 'launcher' || route.name === 'home',
+  const view = shellView({ app: appApi, orgs: ctx.orgs, active: org, email: session.get()?.email, name: session.get()?.name, route, content, banner: bannerEl(), isAdmin, inOffice, launcherCurrent: route.name === 'launcher' || route.name === 'home',
     notifications: org.member_kind === 'client' ? null : notifications,
-    catalog: ctx.catalog, registry: await loadRegistry(), currentApp: inOffice ? 'office' : route.name === 'doc' || route.name === 'sheet' || route.name === 'drive' ? 'drive' : route.name === 'board' ? 'whiteboard' : route.name === 'projects' ? 'projects' : route.name === 'clients' ? 'clients' : route.name === 'portal' ? 'portal' : route.name === 'forms' ? 'forms' : route.name === 'ladder' ? 'value_ladder' : route.name === 'boards' ? 'whiteboard' : route.name === 'social' ? 'social_planner' : route.name === 'planner' ? 'planner' : route.name === 'app' ? route.params.app : null, theme,
+    catalog: ctx.catalog, registry, currentApp: inOffice ? 'office' : route.name === 'doc' || route.name === 'sheet' || route.name === 'drive' ? 'drive' : route.name === 'board' ? 'whiteboard' : route.name === 'projects' ? 'projects' : route.name === 'clients' ? 'clients' : route.name === 'portal' ? 'portal' : route.name === 'forms' ? 'forms' : route.name === 'ladder' ? 'value_ladder' : route.name === 'boards' ? 'whiteboard' : route.name === 'social' ? 'social_planner' : route.name === 'planner' ? 'planner' : route.name === 'app' ? route.params.app : null, theme,
     weather: { on: () => !weatherOff(localStorage), set: (on) => { setWeatherOff(localStorage, !on); try { sessionStorage.removeItem('l2f.wx'); } catch { /* none */ } render(); } } });
   put(root, view, designBadge('Built to design'));
   document.title = `${pageLabel(route)} · ${org.name}`;
@@ -386,7 +388,7 @@ window.addEventListener('hashchange', () => {
     document.querySelector('#main > .notice')?.remove();         // a shell message lasts one page, as in every other app
     return markAppNav(plannerSection(to.params.page));
   }
-  render();
+  window.scrollTo(0, 0); render();       // a new page starts at the top, as the design's navigation does
 });
 window.addEventListener('beforeunload', (e) => { if (dirty.isDirty()) { e.preventDefault(); e.returnValue = ''; } });
 window.addEventListener('offline', () => announce('You are offline. Changes will not be saved.'));

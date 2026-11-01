@@ -13,5 +13,6 @@ export const iconFor = (id) => ICON_FOR[id] ?? 'gen';
 /** The rounded-square app plate. `state` greys it out for locked, soon and not-set-up apps. */
 export function plateOf(manifest, size = 40, state = 'available') {
   const [c1, c2, c3] = manifest?.plate?.colors ?? ['#C9CBD3', '#9AA0AE', '#6E7483'];
-  return h('span', { class: `aplate${state === 'available' ? '' : ' dim'}`, style: `--s:${size}px;--c1:${c1};--c2:${c2};--c3:${c3};--g:${manifest?.plate?.glyph ?? '#FFFEFA'}`, 'aria-hidden': 'true' }, icon(iconFor(manifest?.id)));
+  const gl = icon(iconFor(manifest?.id), 'gl'); gl.setAttribute('width', String(Math.round(size * 0.47))); gl.setAttribute('height', String(Math.round(size * 0.47))); gl.setAttribute('stroke-width', '2');
+  return h('span', { class: `plate aplate${state === 'available' ? '' : ' dim'}`, style: `--s:${size}px;--c1:${c1};--c2:${c2};--c3:${c3};--g:${manifest?.plate?.glyph ?? '#FFFEFA'}`, 'aria-hidden': 'true' }, gl);
 }
