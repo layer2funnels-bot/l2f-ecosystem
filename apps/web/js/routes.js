@@ -10,7 +10,7 @@ const byKey = Object.fromEntries(FUNNEL_TYPES.map((t) => [t.key, t]));
 // The Office menu (design 04). Pages marked built:false show the shared "not built yet" state until their own design lands.
 export const OFFICE_PAGES = [
   { key: 'home', label: 'Home', icon: 'home', href: '#/office', built: true },
-  { key: 'planner', label: 'Planner', icon: 'planner', href: '/planner/', built: true },
+  { key: 'planner', label: 'Planner', icon: 'planner', href: '#/planner', built: true },
   { key: 'projects', label: 'Projects', icon: 'projects', href: '#/office/projects', built: true },
   { key: 'funnels', label: 'Funnels', icon: 'funnels', href: '#/office/funnels', built: true },
   { key: 'documents', label: 'Documents', icon: 'doc', href: '#/office/documents', built: true },
@@ -18,7 +18,7 @@ export const OFFICE_PAGES = [
   { key: 'apps', label: 'Apps', icon: 'apps', href: '#/office/apps', built: true },
   { key: 'admin', label: 'Admin', icon: 'shield', href: '#/office/admin', built: true, adminOnly: true },
 ];
-const OFFICE_OTHER = new Set(['planner', 'projects', 'documents', 'team', 'apps']);
+const OFFICE_OTHER = new Set(['projects', 'documents', 'team', 'apps']);
 export const ADMIN_ACCESS_TABS = ['levels', 'assignments', 'effective', 'history'];
 
 // '#/office/funnels/avatars/abc?x=1' -> { name, params, query }
@@ -31,6 +31,9 @@ export function parseRoute(hash) {
   const [a, b, c, d] = seg;
   if (['signin', 'signup', 'check-email', 'forgot', 'reset', 'invite', 'no-org', 'expired', 'launcher'].includes(a) && seg.length === 1) return r(a);
   if (a === 'app' && b === 'clients' && seg.length === 2) return r('clients', { view: 'list' });
+  // Planner (apps/planner, mounted by modules/planner.js) routes its own pages: #/planner/<page>?plan=…&goal=…
+  if (a === 'planner' && seg.length <= 2) return r('planner', { page: b ?? 'overview' });
+  if ((a === 'app' || a === 'office') && b === 'planner' && seg.length === 2) return r('planner', { page: 'overview' });
   if (a === 'app' && b && seg.length === 2 && b !== 'projects' && b !== 'drive' && b !== 'portal' && b !== 'forms' && b !== 'value_ladder' && b !== 'whiteboard' && b !== 'social_planner') return r('app', { app: b });
   if ((a === 'drive' && !b) || (a === 'app' && b === 'drive' && seg.length === 2)) return r('drive', { view: 'files', space: 'shared' });
   if (a === 'drive' && b === 'f' && c && seg.length === 3) return r('drive', { view: 'files', space: 'shared', folder: c });
@@ -54,12 +57,13 @@ export function parseRoute(hash) {
   if (a === 'clients' && b === 'c' && c && seg.length === 3) return r('clients', { view: 'client', id: c });
   if ((a === 'projects' && !b) || (a === 'app' && b === 'projects' && seg.length === 2)) return r('projects', { view: 'home' });
   if (a === 'projects' && b === 'mine' && seg.length === 2) return r('projects', { view: 'mine' });
-  if (a === 'projects' && ['all', 'docs', 'dashboards', 'ai'].includes(b) && seg.length === 2) return r('projects', { view: b });
+  if (a === 'projects' && ['all', 'docs', 'dashboards', 'ai', 'workload', 'portfolio'].includes(b) && seg.length === 2) return r('projects', { view: b });
   if (a === 'projects' && b === 'p' && c && seg.length === 3) return r('projects', { view: 'project', id: c });
   if (a === 'doc' && b && seg.length === 2) return r('doc', { id: b });
   if (a === 'board' && b && seg.length === 2) return r('board', { id: b });
   if (a === 'office' && seg.length === 1) return r('office');
   if (a === 'office' && b === 'projects' && c === 'mine' && seg.length === 3) return r('office-page', { page: 'projects', view: 'mine' });
+  if (a === 'office' && b === 'projects' && (c === 'workload' || c === 'portfolio') && seg.length === 3) return r('office-page', { page: 'projects', view: c });
   if (a === 'office' && b === 'projects' && c === 'p' && d && seg.length === 4) return r('office-page', { page: 'projects', view: 'project', id: d });
   if (a === 'office' && b === 'projects' && seg.length === 2) return r('office-page', { page: 'projects', view: 'home' });
   if (a === 'office' && OFFICE_OTHER.has(b) && seg.length === 2) return r('office-page', { page: b });
@@ -83,7 +87,7 @@ export function parseRoute(hash) {
 }
 export const hrefFor = {
   launcher: () => '#/launcher', office: () => '#/office', funnels: () => '#/office/funnels', page: (p) => `#/office/${p}`,
-  doc: (id) => `#/doc/${id}`, board: (id) => `#/board/${id}`, list: (type) => `#/office/funnels/${type}`, record: (type, id) => `#/office/funnels/${type}/${id}`, app: (k) => (k === 'projects' ? '#/projects' : k === 'clients' ? '#/clients' : k === 'drive' ? '#/drive' : k === 'portal' ? '#/portal' : k === 'forms' ? '#/forms' : k === 'value_ladder' ? '#/ladder' : k === 'whiteboard' ? '#/whiteboards' : k === 'social_planner' ? '#/social' : `#/app/${k}`),
+  doc: (id) => `#/doc/${id}`, board: (id) => `#/board/${id}`, list: (type) => `#/office/funnels/${type}`, record: (type, id) => `#/office/funnels/${type}/${id}`, app: (k) => (k === 'projects' ? '#/projects' : k === 'clients' ? '#/clients' : k === 'drive' ? '#/drive' : k === 'portal' ? '#/portal' : k === 'forms' ? '#/forms' : k === 'value_ladder' ? '#/ladder' : k === 'whiteboard' ? '#/whiteboards' : k === 'social_planner' ? '#/social' : k === 'planner' ? '#/planner' : `#/app/${k}`),
   admin: (tab = 'members', sub) => (tab === 'members' ? '#/office/admin/members' : tab === 'storage' ? '#/office/admin/storage' : tab === 'clients' ? '#/office/admin/clients' : `#/office/admin/access/${sub ?? 'levels'}`),
 };
 export const AUTH_ROUTES = new Set(['signin', 'signup', 'check-email', 'forgot', 'reset', 'invite', 'expired']);
@@ -117,6 +121,7 @@ export function pageKeyFor(route) {
     case 'ladder': return { app: 'value_ladder', page: null };
     case 'boards': return { app: 'whiteboard', page: null };
     case 'social': return { app: 'social_planner', page: null };
+    case 'planner': return { app: 'planner', page: null };        // a plan belongs to one organization: after a switch the person lands on Planner's home
     case 'board': return { app: 'whiteboard', page: null };        // a document belongs to one organization: after a switch the person lands on the app, not on a record
     default: return { app: 'office', page: 'home' };
   }

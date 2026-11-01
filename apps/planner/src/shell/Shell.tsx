@@ -14,6 +14,7 @@ import { Notifications } from '../components/Notifications.tsx';
 import { HoverTip } from '../ui/HoverTip.tsx';
 import GoalDrawer from '../components/GoalDrawer.tsx';
 import type { Can } from '../api/types.ts';
+import { eventInside, isTyping } from '../ui/dom.ts';
 
 const NEEDS_MANAGE: Page[] = ['templates', 'settings', 'model'];
 const allowed = (page: Page, can: Can) => !NEEDS_MANAGE.includes(page) || can['plan.manage'];
@@ -39,7 +40,7 @@ export function Shell({ banner, embedded = false }: { banner?: ReactNode; embedd
 
   return (
     <div className={cx('app', embedded && 'app--embedded')}>
-      <a className="skip" href="#planner-main" onClick={(e) => { e.preventDefault(); mainRef.current?.focus(); }}>Skip to content</a>
+      {!embedded && <a className="skip" href="#planner-main" onClick={(e) => { e.preventDefault(); mainRef.current?.focus(); }}>Skip to content</a>}   {/* in the shell, its own skip link leads to Planner */}
       {!embedded && (
         <>
           {menuOpen && <div className="rail-scrim" onClick={() => setMenuOpen(false)} aria-hidden="true" />}
@@ -86,10 +87,10 @@ export function Shell({ banner, embedded = false }: { banner?: ReactNode; embedd
                 <MenuItem disabled={!p.can['review.manage'] || !p.plan || archived} hint={!p.can['review.manage'] ? 'You need permission to manage reviews.' : 'Open a plan first.'} onClick={() => p.navigate('reviews', { plan: p.planId, new: '1' })}>Schedule a review</MenuItem>
               </>}
             </MenuButton>)}
-          {p.status === 'ready' && <Notifications />}
-          <IconButton className="themebtn" label={`Colour scheme: ${p.themePref}. Click to change.`} onClick={() => p.setThemePref(p.themePref === 'auto' ? 'light' : p.themePref === 'light' ? 'dark' : 'auto')}>
+          {p.status === 'ready' && <Notifications embedded={embedded} />}
+          {!embedded && <IconButton className="themebtn" label={`Colour scheme: ${p.themePref}. Click to change.`} onClick={() => p.setThemePref(p.themePref === 'auto' ? 'light' : p.themePref === 'light' ? 'dark' : 'auto')}>
             <Icon name={p.themePref === 'dark' ? 'moon' : p.themePref === 'light' ? 'sun' : 'auto'} />
-          </IconButton>
+          </IconButton>}
         </header>
 
         {p.status === 'ready' && (needsPlan || route.page === 'alignment') && p.plans.length > 0 && (
@@ -151,9 +152,9 @@ function GlobalSearch() {
     return () => { live = false; window.clearTimeout(t); };
   }, [q, p.workspace, p.client]);
   useEffect(() => {
-    const onDoc = (e: MouseEvent) => { if (!box.current?.contains(e.target as Node)) setOpen(false); };
+    const onDoc = (e: MouseEvent) => { if (!eventInside(box.current, e)) setOpen(false); };
     const onKey = (e: KeyboardEvent) => {
-      const typing = /input|textarea|select/i.test((e.target as HTMLElement)?.tagName ?? '');
+      const typing = isTyping(e);
       if ((e.key === '/' && !typing) || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k')) { e.preventDefault(); input.current?.focus(); setOpen(true); }
     };
     document.addEventListener('mousedown', onDoc); document.addEventListener('keydown', onKey);

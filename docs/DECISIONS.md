@@ -180,3 +180,8 @@ The owner approved `l2f-design-v4.zip` as the final design and said all future p
 
 ## V4-29 Fewer database messages per request (PR 16)
 - The per-request setup (begin, switch to the API role, claims, headers) now goes to the database as ONE message when the connection supports it (the real server does; values escaped by the driver), so a request is three messages instead of five. This cuts latency for a database far from the Worker (Pakistan to Mumbai) and the query count if Hyperdrive's free 100,000 a day is used. It does not remove the connection's password handshake, which is the larger CPU cost (V4-28); that still needs the live CPU test. Verified on the real local Supabase stack (71/71 checks) and with unit checks (`test/pg-executor.test.mjs`).
+
+## V4-30 Reads: 300 per minute per person (was 120)
+- Found in the Projects browser journey (29 Oct): a project page costs 10 to 12 reads (shell, project, tasks, sections, people, unread count…), so ten page opens in a minute reached the old limit of 120 and the page said "We couldn't load this". The owner had reported pages not loading.
+- Reads are cheap; what costs on Cloudflare Free is the database connection per request, and calls made together already share one connection (`/api/batch`). Writes stay at 30 a minute and sensitive actions (invitations) at 5.
+- A limited request is now named as such on screen (a toast), not as a connection problem.

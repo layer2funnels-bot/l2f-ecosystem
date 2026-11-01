@@ -1,8 +1,10 @@
-@import './signal-v4.css';   /* Design v4 Signal tokens used by Planner; the shell's own tokens live in packages/ui/tokens.css */
+/* Colours, fonts, radii and shadows come from the ecosystem's shared tokens (packages/ui/tokens.css, set on <html> by the shell, which also
+   sets data-theme and data-org). Inside the shell Planner renders in a shadow root, so every document-level rule here also names :host. */
 
 /* Planner base styles on Design v4 "Signal" (docs/planner/PLANNER_DESIGN_ADAPTATION.md).
    The older Planner token names below are aliases of v4 tokens, so every rule follows the active theme and organization. */
-:root {
+:root, :host {
+  --bw: 1px;
   --primary: var(--action); --on-primary: var(--action-ink); --accent: var(--brand); --on-accent: var(--brand-ink); --accent-text: var(--action);
   --tint: var(--action-tint); --control-border: var(--line2); --ink: var(--text); --panel: var(--surface); --shell: var(--bg); --line-soft: var(--line);
   --success: var(--action); --success-tint: var(--action-tint); --st-warn: #D98200;
@@ -14,9 +16,9 @@
   --seg-not_started: #9AA0AD; --seg-on_track: var(--action); --seg-at_risk: var(--st-warn); --seg-off_track: var(--danger); --seg-on_hold: #7C818D; --seg-completed: #13A592;
   --rail: 320px;
 }
-@media (prefers-reduced-motion: reduce) { :root { --motion-fast: 0ms; --motion-base: 0ms; } }
+@media (prefers-reduced-motion: reduce) { :root, :host { --motion-fast: 0ms; --motion-base: 0ms; } }
 *, *::before, *::after { box-sizing: border-box; }
-body { margin: 0; font-family: var(--font); color: var(--text); background: var(--bg); line-height: 1.5; font-size: 15px; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+body, :host { margin: 0; font-family: var(--font); color: var(--text); background: var(--bg); line-height: 1.5; font-size: 15px; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
 h1, h2, h3, h4 { font-family: var(--font-d); margin: 0; line-height: 1.2; letter-spacing: -0.02em; font-weight: 700; }
 p { margin: 0; }
 button, input, select, textarea { font: inherit; color: inherit; }

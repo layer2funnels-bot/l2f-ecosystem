@@ -1,7 +1,10 @@
 // Browser-side logic that must not depend on a browser: input validation rules shared with the server. UI state tests are added below.
 import { recorder } from './lib.mjs';
 import { validate } from '../packages/core/validate.mjs';
-import { parseRoute, routeForPage, pageKeyFor, defaultOrg, hrefFor, FUNNEL_TYPES } from '../apps/web/js/routes.js';
+import { createApiClient } from '../apps/web/js/api.js';
+const ORG_A = '11111111-1111-4111-8111-111111111111', ORG_B = '22222222-2222-4222-8222-222222222222';
+import { parseRoute, routeForPage, pageKeyFor, defaultOrg, hrefFor, FUNNEL_TYPES, OFFICE_PAGES } from '../apps/web/js/routes.js';
+import { PLANNER_PAGES, plannerSection } from '../apps/web/js/modules/planner.js';
 import { createSession, parseAuthHash } from '../apps/web/js/session.js';
 import { createAuthClient, isEmail } from '../apps/web/js/gotrue.js';
 import { MESSAGES, messageFor, fieldLabel } from '../apps/web/js/messages.js';
@@ -66,7 +69,7 @@ check('W19', 'No innerHTML, insertAdjacentHTML, document.write or eval anywhere 
 check('W20', 'Admin routes parse (members, access with its three views) and map to the registry pages used by the switcher',
   parseRoute('#/office/admin').params.tab === 'members' && parseRoute('#/office/admin/access/effective').params.sub === 'effective' && parseRoute('#/office/admin/access').params.sub === 'levels' && parseRoute('#/office/admin/nope').name === 'not-found'
   && pageKeyFor(parseRoute('#/office/admin/members')).page === 'admin.members' && pageKeyFor(parseRoute('#/office/admin/access/levels')).page === 'admin.access' && routeForPage('office', 'admin.access') === '#/office/admin/access/levels'
-  && parseRoute('#/office/planner').name === 'office-page' && parseRoute('#/office/team').params.page === 'team');
+  && parseRoute('#/office/team').params.page === 'team');
 const mine = permissionSet([{ permission_key: 'funnels.avatar.view', scope: 'workspace' }, { permission_key: 'funnels.avatar.edit', scope: 'client', client_id: 'c1' }]);
 check('W21', 'A person who holds a permission on one client only sees the buttons for that client, and no others', canWith(mine, 'funnels.avatar.edit', 'c1') && !canWith(mine, 'funnels.avatar.edit', 'c2') && !canWith(mine, 'funnels.avatar.edit', null)
   && canWith(mine, 'funnels.avatar.view', 'c2') && canAnywhereWith(mine, 'funnels.avatar.edit') && !canAnywhereWith(mine, 'funnels.avatar.create'));
@@ -83,5 +86,51 @@ check('W24', 'The Levels table is read from the permission catalog: defaults and
 check('W25', 'Passwords need at least 10 characters (design 02)', MIN_PASSWORD === 10);
 let saved = 0; dirty.set('Avatars', async () => { saved++; return true; });
 check('W26', 'Unsaved work is registered with a label and a save action, and clearing it forgets it', dirty.isDirty() && dirty.get().label === 'Avatars' && (await dirty.get().save()) === true && saved === 1 && (dirty.clear(), !dirty.isDirty()));
+
+// ---- the shell's API client sends calls made together as one batch (one database connection on the server)
+{
+  const sent = []; let refreshes = 0; let token = 'old';
+  const reply = (body, status = 200) => ({ status, json: async () => body });
+  const fetchImpl = async (url, init) => {
+    const body = JSON.parse(init.body); sent.push({ url, org: init.headers['x-org-id'], body, auth: init.headers.authorization });
+    if (init.headers.authorization === 'Bearer old') return reply({ ok: false, error: { code: 'session_expired' } }, 401);
+    if (url === '/api/batch') return reply({ ok: true, results: body.calls.map((c) => ({ status: 200, ok: true, data: [c.op] })) });
+    return reply({ ok: true, data: [url.slice(5)] });
+  };
+  const session = { get: () => ({ access: token, refresh: 'r1' }), set: (d) => { token = d.access_token; }, needsRefresh: () => false, expired: () => false };
+  const auth = { refresh: async () => { refreshes++; await new Promise((r) => setTimeout(r, 5)); return { ok: true, data: { access_token: 'new' } }; } };
+  const api = createApiClient({ session, auth, fetchImpl, onExpired: () => {} });
+  api.setOrg(ORG_A);
+  const five = await Promise.all(['a.one', 'a.two', 'a.three', 'a.four', 'a.five'].map((op) => api.call(op, {})));
+  check('W30', 'Five calls made together for one organization go out as two requests (4 + 1), every caller gets its own answer, and an expired token is refreshed once for all of them',
+    refreshes === 1 && five.map((r) => r.data[0]).join() === 'a.one,a.two,a.three,a.four,a.five' && sent.filter((x) => x.auth === 'Bearer new').length === 2 && sent.filter((x) => x.auth === 'Bearer new' && x.url === '/api/batch').length === 1);
+  sent.length = 0;
+  const mixed = await Promise.all([api.call('x.one', {}), api.call('x.two', {}, { org: ORG_B }), api.call('x.three', {})]);
+  check('W31', 'Calls for different organizations are never put in one request (each request carries one organization)',
+    sent.length === 2 && sent.every((x) => (x.url === '/api/batch' ? x.org === ORG_A && x.body.calls.length === 2 : x.org === ORG_B)) && mixed.every((r) => r.ok));
+  sent.length = 0; await api.call('y.alone', {});
+  check('W32', 'A call on its own goes to its own address, unchanged', sent.length === 1 && sent[0].url === '/api/y.alone');
+}
+
+check('W33', 'Projects has Workload and Portfolio pages, in the app and inside Office', parseRoute('#/projects/workload').params.view === 'workload' && parseRoute('#/projects/portfolio').params.view === 'portfolio'
+  && parseRoute('#/office/projects/workload').params.view === 'workload' && parseRoute('#/office/projects/portfolio').name === 'office-page');
+
+{
+  let told = null; const session = { get: () => ({ access: 't' }), needsRefresh: () => false, expired: () => false };
+  const api = createApiClient({ session, auth: {}, batching: false, onRateLimited: (secs) => { told = secs; }, fetchImpl: async () => ({ status: 429, json: async () => ({ ok: false, error: { code: 'rate_limited', retryAfterSeconds: 9 } }) }) });
+  const r = await api.call('x.y', {});
+  check('W34', 'When the server says "too many requests", the shell is told (with the wait), so people see that instead of "check your connection"', r.status === 429 && told === 9);
+}
+
+// ---- Planner inside the shell (apps/web/js/modules/planner.js mounts apps/planner/src/embed.tsx)
+check('W27', 'Planner has one address inside the shell: #/planner/<page> keeps its page and query; the old #/app/planner and #/office/planner lead there too',
+  parseRoute('#/planner').name === 'planner' && parseRoute('#/planner').params.page === 'overview' && parseRoute('#/planner/map?plan=p1').params.page === 'map' && parseRoute('#/planner/map?plan=p1').query.plan === 'p1'
+  && parseRoute('#/app/planner').name === 'planner' && parseRoute('#/office/planner').name === 'planner' && parseRoute('#/planner/a/b').name === 'not-found');
+check('W28', 'The Launcher, the app switcher and the Office menu open Planner in the shell, and an organization switch lands on Planner (never on another organization\'s plan)',
+  hrefFor.app('planner') === '#/planner' && OFFICE_PAGES.find((p) => p.key === 'planner').href === '#/planner'
+  && JSON.stringify(pageKeyFor(parseRoute('#/planner/map?plan=p1'))) === '{"app":"planner","page":null}' && routeForPage('planner', null) === '#/planner');
+check('W29', 'Planner\'s menu in the shell covers every Planner page once, and only Strategy model needs plan management',
+  ['overview', 'mine', 'plans', 'map', 'reviews', 'settings', 'alignment', 'reports', 'goals', 'metrics', 'model', 'templates'].every((pg) => PLANNER_PAGES.filter((x) => x.pages.includes(pg)).length === 1)
+  && PLANNER_PAGES.filter((x) => x.manage).map((x) => x.key).join() === 'model' && plannerSection('metrics') === 'reports' && plannerSection(undefined) === 'overview');
 for (const x of results) console.log(`${x.ok ? 'PASS' : 'FAIL'}  ${x.id.padEnd(4)} ${x.name}`);
 const p = results.filter((x) => x.ok).length; console.log(`\n${p}/${results.length} checks passed`); process.exit(p === results.length ? 0 : 1);

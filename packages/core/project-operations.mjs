@@ -2,6 +2,7 @@
 // Same conventions as the other operation files: column names are constants (never from the request), permissions are decided by row
 // policies and triggers in the database, and a refusal reads as "not found". Data and API only: the screens come with their own design.
 import { defineOperation } from './define.mjs';
+import { COMMENTS_SQL, FOLLOWING_SQL } from './collab-operations.mjs';
 
 const T = (max = 8000) => ({ type: 'text', min: 0, max });
 const id = { id: { type: 'uuid', required: true } };
@@ -12,7 +13,7 @@ const TASK_STATUS = ['todo', 'doing', 'blocked', 'done'];
 // ------------------------------------------------------------------ projects
 const PROJECT = { name: { type: 'text', required: true, max: 200 }, description: T(8000), status: { type: 'enum', values: PROJECT_STATUS }, owner: { type: 'uuid' }, start_on: { type: 'date' }, due_on: { type: 'date' } };
 const PCOL = { name: 'name', description: 'description', status: 'status', owner: 'owner_id', start_on: 'start_on', due_on: 'due_on' };
-const PSELECT = `select p.id, p.client_id, p.name, p.description, p.status, p.owner_id, p.start_on, p.due_on, p.client_visible, p.archived_at, p.created_at, p.updated_at,
+const PSELECT = `select p.id, p.client_id, p.name, p.description, p.status, p.owner_id, p.start_on, p.due_on, p.client_visible, p.archived_at, p.is_template, p.created_at, p.updated_at,
     (select count(*)::int from project_tasks t where t.project_id = p.id and t.archived_at is null) as tasks_total,
     (select count(*)::int from project_tasks t where t.project_id = p.id and t.archived_at is null and t.status = 'done') as tasks_done
   from projects p`;
@@ -21,10 +22,10 @@ const projectOps = [
   defineOperation({
     name: 'projects.list', class: 'read',
     // scope: 'client' = projects tied to a client, 'internal' = the organization's own projects (no client). Never mixed unless 'all' is asked for.
-    input: { client: { type: 'uuid' }, scope: { type: 'enum', values: ['all', 'client', 'internal'] }, status: { type: 'enum', values: PROJECT_STATUS }, archived: { type: 'bool' }, q: { type: 'text', max: 100 } },
-    run: (q, _c, i) => q(`${PSELECT} where ($1::uuid is null or p.client_id = $1) and ($2::text is null or p.status = $2) and ((p.archived_at is not null) = $3)
+    input: { client: { type: 'uuid' }, scope: { type: 'enum', values: ['all', 'client', 'internal'] }, status: { type: 'enum', values: PROJECT_STATUS }, archived: { type: 'bool' }, q: { type: 'text', max: 100 }, templates: { type: 'bool' } },
+    run: (q, _c, i) => q(`${PSELECT} where ($1::uuid is null or p.client_id = $1) and ($2::text is null or p.status = $2) and ((p.archived_at is not null) = $3) and p.is_template = $6
       and ($4::text is null or p.name ilike $4) and ($5::text is null or $5 = 'all' or ($5 = 'client' and p.client_id is not null) or ($5 = 'internal' and p.client_id is null)) order by p.name limit 200`,
-    [i.client ?? null, i.status ?? null, i.archived ?? false, i.q ? like(i.q) : null, i.scope ?? null]),
+    [i.client ?? null, i.status ?? null, i.archived ?? false, i.q ? like(i.q) : null, i.scope ?? null, i.templates ?? false]),
   }),
   defineOperation({ name: 'projects.get', class: 'read', single: true, input: id, run: (q, _c, i) => q(`${PSELECT} where p.id = $1`, [i.id]) }),
   defineOperation({
@@ -90,9 +91,18 @@ const peopleOps = [
 const TASK = {
   title: { type: 'text', required: true, max: 300 }, notes: T(20000), status: { type: 'enum', values: TASK_STATUS }, priority: { type: 'enum', values: ['low', 'normal', 'high', 'urgent'] },
   assignee: { type: 'uuid' }, due_on: { type: 'date' }, position: { type: 'int', min: 0, max: 100000 },
+  parent: { type: 'uuid' },                          // a subtask: the task it belongs to (same project, one level; the database checks)
+  section: { type: 'uuid' },                         // a section of the same project (the foreign key includes the project)
+  start_on: { type: 'date' }, repeat: { type: 'enum', values: ['daily', 'weekdays', 'weekly', 'biweekly', 'monthly', 'yearly'] },
+  estimate_minutes: { type: 'int', min: 0, max: 100000 },
 };
-const TCOL = { title: 'title', notes: 'notes', status: 'status', priority: 'priority', assignee: 'assignee_id', due_on: 'due_on', position: 'position' };
-const TSELECT = `select t.id, t.project_id, t.client_id, t.title, t.notes, t.status, t.priority, t.assignee_id, t.due_on, t.position, t.completed_at, t.client_visible, t.archived_at, t.created_at, t.updated_at,
+const TCOL = { title: 'title', notes: 'notes', status: 'status', priority: 'priority', assignee: 'assignee_id', due_on: 'due_on', position: 'position', parent: 'parent_task_id', section: 'section_id', start_on: 'start_on', repeat: 'repeat', estimate_minutes: 'estimate_minutes' };
+const TSELECT = `select t.id, t.project_id, t.client_id, t.parent_task_id, t.section_id, t.start_on, t.repeat, t.estimate_minutes, t.title, t.notes, t.status, t.priority, t.assignee_id, t.due_on, t.position, t.completed_at, t.client_visible, t.archived_at, t.created_at, t.updated_at,
+    (select count(*)::int from project_tasks s where s.parent_task_id = t.id and s.archived_at is null) as subtasks_total,
+    (select count(*)::int from project_tasks s where s.parent_task_id = t.id and s.archived_at is null and s.status = 'done') as subtasks_done,
+    coalesce((select json_agg(json_build_object('id', g.id, 'name', g.name, 'color', g.color) order by lower(g.name)) from task_tags tt join project_tags g on g.workspace_id = tt.workspace_id and g.id = tt.tag_id where tt.task_id = t.id), '[]') as tags,
+    (select count(*)::int from task_files tf where tf.task_id = t.id) as files_total,
+    (select count(*)::int from task_dependencies d join project_tasks b on b.id = d.depends_on_id where d.task_id = t.id and b.status <> 'done' and b.archived_at is null) as waiting_on,
     (select count(*)::int from task_checklist_items c where c.task_id = t.id) as checklist_total,
     (select count(*)::int from task_checklist_items c where c.task_id = t.id and c.done) as checklist_done
   from project_tasks t`;
@@ -100,10 +110,11 @@ const TSELECT = `select t.id, t.project_id, t.client_id, t.title, t.notes, t.sta
 const taskOps = [
   defineOperation({
     name: 'tasks.list', class: 'read',
-    input: { project: { type: 'uuid' }, assignee: { type: 'uuid' }, status: { type: 'enum', values: TASK_STATUS }, archived: { type: 'bool' }, open_only: { type: 'bool' } },
+    input: { project: { type: 'uuid' }, assignee: { type: 'uuid' }, status: { type: 'enum', values: TASK_STATUS }, archived: { type: 'bool' }, open_only: { type: 'bool' }, parent: { type: 'uuid' }, top_only: { type: 'bool' } },
     run: (q, _c, i) => q(`${TSELECT} where ($1::uuid is null or t.project_id = $1) and ($2::uuid is null or t.assignee_id = $2) and ($3::text is null or t.status = $3)
-      and ((t.archived_at is not null) = $4) and (not $5 or t.status <> 'done') order by t.position, t.due_on nulls last, t.created_at limit 500`,
-    [i.project ?? null, i.assignee ?? null, i.status ?? null, i.archived ?? false, i.open_only ?? false]),
+      and ((t.archived_at is not null) = $4) and (not $5 or t.status <> 'done') and ($6::uuid is null or t.parent_task_id = $6) and (not $7 or t.parent_task_id is null)
+      order by t.position, t.due_on nulls last, t.created_at limit 500`,
+    [i.project ?? null, i.assignee ?? null, i.status ?? null, i.archived ?? false, i.open_only ?? false, i.parent ?? null, i.top_only ?? false]),
   }),
   defineOperation({ name: 'tasks.get', class: 'read', single: true, input: id, run: (q, _c, i) => q(`${TSELECT} where t.id = $1`, [i.id]) }),
   defineOperation({
@@ -115,12 +126,15 @@ const taskOps = [
     },
   }),
   defineOperation({
-    name: 'tasks.update', class: 'write', single: true, input: { ...id, ...Object.fromEntries(Object.entries(TASK).map(([k, f]) => [k, { ...f, required: false }])), clear_assignee: { type: 'bool' }, clear_due: { type: 'bool' } },
+    name: 'tasks.update', class: 'write', single: true, input: { ...id, ...Object.fromEntries(Object.entries(TASK).map(([k, f]) => [k, { ...f, required: false }])), clear_assignee: { type: 'bool' }, clear_due: { type: 'bool' }, clear_section: { type: 'bool' }, clear_start: { type: 'bool' }, clear_repeat: { type: 'bool' } },
     run: async (q, _c, i) => {
       const used = Object.keys(TCOL).filter((k) => i[k] !== undefined);
       const sets = used.map((k, n) => `${TCOL[k]} = $${n + 2}`);
       if (i.clear_assignee) sets.push('assignee_id = null');
       if (i.clear_due) sets.push('due_on = null');
+      if (i.clear_section) sets.push('section_id = null');
+      if (i.clear_start) sets.push('start_on = null');
+      if (i.clear_repeat) sets.push('repeat = null');
       if (sets.length && !(await q(`update project_tasks set ${sets.join(', ')} where id = $1 returning id`, [i.id, ...used.map((k) => i[k])])).length) return [];
       return q(`${TSELECT} where t.id = $1`, [i.id]);
     },
@@ -219,4 +233,159 @@ const timeOps = [
   }),
 ];
 
-export const projectsOperations = [...projectOps, ...searchOps, ...peopleOps, ...taskOps, ...checklistOps, ...timeOps];
+
+// ------------------------------------------------------------------ R2: sections, tags, bulk changes, files on a task (migration 0035)
+const organizeOps = [
+  defineOperation({ name: 'sections.list', class: 'read', input: { project: { type: 'uuid', required: true } },
+    run: (q, _c, i) => q('select id, project_id, name, position from project_sections where project_id = $1 order by position, created_at', [i.project]) }),
+  defineOperation({ name: 'sections.create', class: 'write', single: true, input: { project: { type: 'uuid', required: true }, name: { type: 'text', required: true, max: 100 } },
+    run: (q, ctx, i) => q(`insert into project_sections (workspace_id, project_id, name, position)
+      values ($1, $2, $3, (select coalesce(max(position) + 1, 0) from project_sections where project_id = $2)) returning id, project_id, name, position`, [ctx.orgId, i.project, i.name]) }),
+  defineOperation({ name: 'sections.update', class: 'write', single: true, input: { ...id, name: { type: 'text', max: 100 }, position: { type: 'int', min: 0, max: 100000 } },
+    run: (q, _c, i) => q('update project_sections set name = coalesce($2, name), position = coalesce($3, position) where id = $1 returning id, project_id, name, position', [i.id, i.name ?? null, i.position ?? null]) }),
+  defineOperation({ name: 'sections.delete', class: 'write', single: true, input: id, run: (q, _c, i) => q('delete from project_sections where id = $1 returning id', [i.id]) }),
+  defineOperation({ name: 'tags.list', class: 'read', run: (q) => q('select id, name, color from project_tags order by lower(name) limit 500') }),
+  defineOperation({ name: 'tasks.tags.add', class: 'write', single: true, input: { task: { type: 'uuid', required: true }, name: { type: 'text', required: true, max: 40 } },
+    run: (q, _c, i) => q('select id, name, color from task_tag_add($1, $2)', [i.task, i.name]) }),
+  defineOperation({ name: 'tasks.tags.remove', class: 'write', single: true, input: { task: { type: 'uuid', required: true }, tag: { type: 'uuid', required: true } },
+    run: (q, _c, i) => q('delete from task_tags where task_id = $1 and tag_id = $2 returning tag_id', [i.task, i.tag]) }),
+  defineOperation({
+    // many tasks at once: row policies skip the ones the person may not edit; the answer is how many changed
+    name: 'tasks.bulk', class: 'write', single: true,
+    input: { ids: { type: 'list', items: 'uuid', max: 200, required: true }, status: { type: 'enum', values: TASK_STATUS }, priority: { type: 'enum', values: ['low', 'normal', 'high', 'urgent'] },
+      assignee: { type: 'uuid' }, clear_assignee: { type: 'bool' }, due_on: { type: 'date' }, clear_due: { type: 'bool' }, section: { type: 'uuid' }, clear_section: { type: 'bool' }, archive: { type: 'bool' } },
+    run: (q, _c, i) => {
+      const sets = []; const args = [i.ids];
+      const put = (col, v) => { args.push(v); sets.push(`${col} = $${args.length}`); };
+      if (i.status) put('status', i.status);
+      if (i.priority) put('priority', i.priority);
+      if (i.assignee) put('assignee_id', i.assignee); else if (i.clear_assignee) sets.push('assignee_id = null');
+      if (i.due_on) put('due_on', i.due_on); else if (i.clear_due) sets.push('due_on = null');
+      if (i.section) put('section_id', i.section); else if (i.clear_section) sets.push('section_id = null');
+      if (i.archive) sets.push('archived_at = now()');
+      if (!sets.length) return [{ n: 0 }];
+      return q(`with done as (update project_tasks set ${sets.join(', ')} where id = any ($1::uuid[])${i.archive ? ' and archived_at is null' : ''} returning 1) select count(*)::int as n from done`, args);
+    },
+  }),
+  // ---- the task panel in ONE request: every part a person sees when opening a task, under the same row rules as the separate operations.
+  // A request is one database connection and one unit of the person's rate limit; the panel used to cost eight.
+  defineOperation({
+    name: 'tasks.panel', class: 'read', single: true, input: id,
+    run: async (q, ctx, i) => {
+      const [task] = await q(`${TSELECT} where t.id = $1`, [i.id]);
+      if (!task) return [];
+      const [checklist, subtasks, tagsAll, files, deps, comments, [f], [tm]] = [
+        await q('select id, task_id, label, done, position from task_checklist_items where task_id = $1 order by position, created_at', [i.id]),
+        await q(`${TSELECT} where t.parent_task_id = $1 and t.archived_at is null order by t.position, t.due_on nulls last, t.created_at`, [i.id]),
+        await q('select id, name, color from project_tags order by lower(name) limit 500'),
+        await q(`select f.id, f.name, f.kind, f.mime_type, f.size_bytes, f.updated_at, tf.created_at as attached_at from task_files tf join files f on f.workspace_id = tf.workspace_id and f.id = tf.file_id
+          where tf.task_id = $1 and f.archived_at is null order by tf.created_at`, [i.id]),
+        await q(`select b.id, b.title, b.status, b.due_on, b.assignee_id from task_dependencies d join project_tasks b on b.workspace_id = d.workspace_id and b.id = d.depends_on_id where d.task_id = $1 order by b.due_on nulls last, b.title`, [i.id]),
+        await q(COMMENTS_SQL, ['project_task', i.id]),
+        await q(FOLLOWING_SQL, ['project_task', i.id, ctx.userId]),
+        await q("select coalesce(sum(extract(epoch from coalesce(ended_at, now()) - started_at)), 0)::int as s from time_entries where task_id = $1 and archived_at is null", [i.id]),
+      ];
+      return [{ task, checklist, subtasks, tags_all: tagsAll, files, deps, comments, following: f.following, time_seconds: tm.s }];
+    },
+  }),
+  // ---- R3 (migration 0036): what a task waits on, and copying a project (template or duplicate)
+  defineOperation({ name: 'tasks.deps.list', class: 'read', input: { task: { type: 'uuid', required: true } },
+    run: (q, _c, i) => q(`select b.id, b.title, b.status, b.due_on, b.assignee_id from task_dependencies d join project_tasks b on b.workspace_id = d.workspace_id and b.id = d.depends_on_id
+      where d.task_id = $1 order by b.due_on nulls last, b.title`, [i.task]) }),
+  defineOperation({ name: 'tasks.deps.add', class: 'write', single: true, input: { task: { type: 'uuid', required: true }, depends_on: { type: 'uuid', required: true } },
+    run: (q, ctx, i) => q('insert into task_dependencies (workspace_id, task_id, depends_on_id) values ($1, $2, $3) on conflict do nothing returning depends_on_id', [ctx.orgId, i.task, i.depends_on]) }),
+  defineOperation({ name: 'tasks.deps.remove', class: 'write', single: true, input: { task: { type: 'uuid', required: true }, depends_on: { type: 'uuid', required: true } },
+    run: (q, _c, i) => q('delete from task_dependencies where task_id = $1 and depends_on_id = $2 returning depends_on_id', [i.task, i.depends_on]) }),
+  defineOperation({
+    name: 'projects.duplicate', class: 'write', single: true,
+    input: { ...id, name: { type: 'text', required: true, max: 200 }, start_on: { type: 'date' }, client: { type: 'uuid' }, template: { type: 'bool' } },
+    run: async (q, _c, i) => { const [r] = await q('select project_duplicate($1, $2, $3, $4, $5) as id', [i.id, i.name, i.start_on ?? null, i.client ?? null, i.template ?? false]); return q(`${PSELECT} where p.id = $1`, [r.id]); },
+  }),
+  // ---- R4 (migration 0037): workload, the project report and the portfolio. Read-only; the row rules of each table decide what is counted.
+  defineOperation({
+    // open, assigned work per person per week of its due date (overdue work counts in the current week; undated work has no week)
+    name: 'projects.workload', class: 'read',
+    input: { from: { type: 'date', required: true }, weeks: { type: 'int', min: 1, max: 26 }, project: { type: 'uuid' } },
+    run: (q, _c, i) => q(`with w as (
+        select t.assignee_id, case when t.due_on is null then null when t.due_on < $1::date then date_trunc('week', $1::date)::date else date_trunc('week', t.due_on)::date end as week_start,
+          t.estimate_minutes, (t.due_on < $1::date) as late
+        from project_tasks t join projects p on p.id = t.project_id
+        where t.archived_at is null and t.status <> 'done' and t.assignee_id is not null and p.archived_at is null and not p.is_template
+          and ($3::uuid is null or t.project_id = $3) and (t.due_on is null or t.due_on < $1::date + ($2::int * 7)))
+      select w.assignee_id as user_id, coalesce(nullif(pr.display_name, ''), 'Member ' || left(w.assignee_id::text, 4)) as name, w.week_start::text as week_start,
+        count(*)::int as tasks, coalesce(sum(w.estimate_minutes), 0)::int as minutes, (count(*) filter (where w.late))::int as overdue
+      from w left join profiles pr on pr.id = w.assignee_id group by 1, 2, 3 order by 2, 3 nulls last`, [i.from, i.weeks ?? 6, i.project ?? null]),
+  }),
+  defineOperation({
+    name: 'projects.report', class: 'read', single: true, input: { project: { type: 'uuid', required: true } },
+    run: (q, _c, i) => q(`select (count(*) filter (where status <> 'done'))::int as open, (count(*) filter (where status = 'done'))::int as done,
+        (count(*) filter (where status <> 'done' and due_on < current_date))::int as overdue, (count(*) filter (where status = 'blocked'))::int as blocked,
+        (count(*) filter (where status = 'done' and completed_at > now() - interval '30 days'))::int as done_30,
+        (count(*) filter (where status = 'done' and completed_at > now() - interval '7 days'))::int as done_7,
+        coalesce(sum(estimate_minutes) filter (where status <> 'done'), 0)::int as estimate_open_minutes,
+        (select count(*)::int from projects p where p.id = $1) as visible
+      from project_tasks where project_id = $1 and archived_at is null having (select count(*) from projects p where p.id = $1) > 0`, [i.project]),
+  }),
+  defineOperation({
+    name: 'projects.report.people', class: 'read', input: { project: { type: 'uuid', required: true } },
+    run: (q, _c, i) => q(`with tk as (
+        select assignee_id as u, (count(*) filter (where status <> 'done'))::int as open, (count(*) filter (where status = 'done'))::int as done,
+          (count(*) filter (where status <> 'done' and due_on < current_date))::int as overdue, coalesce(sum(estimate_minutes) filter (where status <> 'done'), 0)::int as estimate_open_minutes
+        from project_tasks where project_id = $1 and archived_at is null and assignee_id is not null group by 1),
+      tm as (
+        select user_id as u, coalesce(sum(extract(epoch from ended_at - started_at)) filter (where billable), 0)::int as billable_seconds,
+          coalesce(sum(extract(epoch from ended_at - started_at)) filter (where not billable), 0)::int as other_seconds
+        from time_entries where project_id = $1 and archived_at is null and ended_at is not null group by 1)
+      select coalesce(tk.u, tm.u) as user_id, coalesce(nullif(pr.display_name, ''), 'Member ' || left(coalesce(tk.u, tm.u)::text, 4)) as name,
+        coalesce(tk.open, 0) as open, coalesce(tk.done, 0) as done, coalesce(tk.overdue, 0) as overdue, coalesce(tk.estimate_open_minutes, 0) as estimate_open_minutes,
+        coalesce(tm.billable_seconds, 0) as billable_seconds, coalesce(tm.other_seconds, 0) as other_seconds
+      from tk full join tm on tm.u = tk.u left join profiles pr on pr.id = coalesce(tk.u, tm.u) order by 2`, [i.project]),
+  }),
+  defineOperation({
+    name: 'projects.portfolio', class: 'read',
+    run: (q) => q(`select p.id, p.name, p.client_id, p.status, p.due_on, p.owner_id,
+        (count(t.id) filter (where t.status <> 'done'))::int as open, (count(t.id) filter (where t.status = 'done'))::int as done,
+        (count(t.id) filter (where t.status <> 'done' and t.due_on < current_date))::int as overdue, (count(t.id) filter (where t.status = 'blocked'))::int as blocked,
+        (min(t.due_on) filter (where t.status <> 'done' and t.due_on >= current_date))::text as next_due,
+        case when count(t.id) > 0 then round(100.0 * count(t.id) filter (where t.status = 'done') / count(t.id))::int else 0 end as progress
+      from projects p left join project_tasks t on t.project_id = p.id and t.archived_at is null
+      where p.archived_at is null and not p.is_template group by p.id order by p.name limit 300`),
+  }),
+  defineOperation({ name: 'tasks.files.list', class: 'read', input: { task: { type: 'uuid', required: true } },
+    run: (q, _c, i) => q(`select f.id, f.name, f.kind, f.mime_type, f.size_bytes, f.updated_at, tf.created_at as attached_at
+      from task_files tf join files f on f.workspace_id = tf.workspace_id and f.id = tf.file_id where tf.task_id = $1 and f.archived_at is null order by tf.created_at`, [i.task]) }),
+  defineOperation({ name: 'tasks.files.attach', class: 'write', single: true, input: { task: { type: 'uuid', required: true }, file: { type: 'uuid', required: true } },
+    run: (q, ctx, i) => q('insert into task_files (workspace_id, task_id, file_id) values ($1, $2, $3) on conflict do nothing returning file_id', [ctx.orgId, i.task, i.file]) }),
+  defineOperation({ name: 'tasks.files.detach', class: 'write', single: true, input: { task: { type: 'uuid', required: true }, file: { type: 'uuid', required: true } },
+    run: (q, _c, i) => q('delete from task_files where task_id = $1 and file_id = $2 returning file_id', [i.task, i.file]) }),
+];
+
+// ---- R5 (migration 0038): simple rules per project. The database runs them (triggers), so every way of changing a task follows them.
+const RULE_SELECT = `select r.id, r.project_id, r.trigger as "when", r.trigger_status as status, r.trigger_section as section, sc.name as section_name, r.action,
+    r.assignee_id as assignee, coalesce(nullif(pr.display_name, ''), case when r.assignee_id is null then null else 'Member ' || left(r.assignee_id::text, 4) end) as assignee_name,
+    r.priority, r.due_in_days, r.tag_id, g.name as tag_name, r.enabled, r.created_at
+  from project_rules r left join project_sections sc on sc.workspace_id = r.workspace_id and sc.id = r.trigger_section
+  left join profiles pr on pr.id = r.assignee_id left join project_tags g on g.workspace_id = r.workspace_id and g.id = r.tag_id`;
+const ruleOps = [
+  defineOperation({ name: 'rules.list', class: 'read', input: { project: { type: 'uuid', required: true } },
+    run: (q, _c, i) => q(`${RULE_SELECT} where r.project_id = $1 order by r.created_at, r.id`, [i.project]) }),
+  defineOperation({
+    name: 'rules.add', class: 'write', single: true,
+    input: { project: { type: 'uuid', required: true }, when: { type: 'enum', values: ['created', 'status', 'section'], required: true }, status: { type: 'enum', values: TASK_STATUS }, section: { type: 'uuid' },
+      action: { type: 'enum', values: ['assign', 'priority', 'due_in', 'tag'], required: true }, assignee: { type: 'uuid' }, priority: { type: 'enum', values: ['low', 'normal', 'high', 'urgent'] },
+      due_in_days: { type: 'int', min: 0, max: 365 }, tag: { type: 'text', max: 40 } },
+    run: async (q, ctx, i) => {
+      // incomplete rules are refused by the table's checks (422); the tag is found or created in the same statement, so a refused rule leaves no tag behind
+      const [r] = await q(`insert into project_rules (workspace_id, project_id, trigger, trigger_status, trigger_section, action, assignee_id, priority, due_in_days, tag_id)
+        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, case when $10::text is null or btrim($10) = '' then null else private.project_tag_ensure($1, $10) end) returning id`,
+      [ctx.orgId, i.project, i.when, i.when === 'status' ? i.status ?? null : null, i.when === 'section' ? i.section ?? null : null, i.action,
+        i.action === 'assign' ? i.assignee ?? null : null, i.action === 'priority' ? i.priority ?? null : null, i.action === 'due_in' ? i.due_in_days ?? null : null, i.action === 'tag' ? i.tag ?? null : null]);
+      return q(`${RULE_SELECT} where r.id = $1`, [r.id]);
+    },
+  }),
+  defineOperation({ name: 'rules.update', class: 'write', single: true, input: { ...id, enabled: { type: 'bool', required: true } },
+    run: (q, _c, i) => q('update project_rules set enabled = $2 where id = $1 returning id, enabled', [i.id, i.enabled]) }),
+  defineOperation({ name: 'rules.delete', class: 'write', single: true, input: id, run: (q, _c, i) => q('delete from project_rules where id = $1 returning id', [i.id]) }),
+];
+
+export const projectsOperations = [...projectOps, ...searchOps, ...peopleOps, ...taskOps, ...checklistOps, ...timeOps, ...organizeOps, ...ruleOps];

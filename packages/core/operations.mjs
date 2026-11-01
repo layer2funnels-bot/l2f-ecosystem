@@ -10,6 +10,7 @@ export { defineOperation };
 import { funnelOperations } from './funnel-operations.mjs';
 import { clientsOperations } from './client-operations.mjs';
 import { projectsOperations } from './project-operations.mjs';
+import { collabOperations } from './collab-operations.mjs';
 import { driveOperations } from './drive-operations.mjs';
 import { plannerOperations } from './planner-operations.mjs';
 import { plannerStrategyOperations } from './planner-strategy-operations.mjs';
@@ -23,6 +24,7 @@ export const operations = Object.freeze(Object.fromEntries([
   ...funnelOperations,
   ...clientsOperations,
   ...projectsOperations,
+  ...collabOperations,
   ...driveOperations,
   ...plannerOperations,
   ...plannerStrategyOperations,

@@ -60,6 +60,33 @@ function appSwitcher({ catalog = [], registry, launcherCurrent, suffix = '' }) {
   return h('div', { class: `appsw swwrap apps-wrap apps-wrap${suffix}` }, btn, menu);
 }
 
+/** The header bell (migration 0034): what needs you in this organization. notifications: { count() -> n|null, list() -> rows|null, read(ids|'all'), href(row) }. */
+const KIND = { assigned: 'assigned you', mentioned: 'mentioned you on', commented: 'commented on', completed: 'completed' };
+const noteText = (r) => (r.kind === 'unblocked' ? `“${r.title}” can start: ${r.actor_name} finished what it was waiting on` : `${r.actor_name} ${KIND[r.kind] ?? 'updated'} “${r.title}”`);
+function bell(notifications) {
+  const badge = h('span', { class: 'badge', hidden: true, 'aria-hidden': 'true' });
+  const b = h('button', { type: 'button', class: 'iconbtn', id: 'bell', 'aria-haspopup': 'true', 'aria-expanded': 'false', 'aria-controls': 'bell-menu', 'aria-label': 'Notifications' }, icon('bell'), badge);
+  const menu = h('div', { class: 'menu bell-menu', id: 'bell-menu', role: 'region', 'aria-label': 'Notifications', 'data-open': 'false' });
+  const paintCount = (n) => { badge.hidden = !n; badge.textContent = n > 99 ? '99+' : String(n ?? ''); b.setAttribute('aria-label', n ? `Notifications, ${n} unread` : 'Notifications'); };
+  const close = (refocus) => { menu.dataset.open = 'false'; b.setAttribute('aria-expanded', 'false'); if (refocus) b.focus(); };
+  notifications.count().then(paintCount);
+  b.addEventListener('click', async () => {
+    if (menu.dataset.open === 'true') return close(true);
+    menu.replaceChildren(h('div', { class: 'mh' }, 'Notifications'), h('p', { class: 'mfoot' }, 'Loading…'));
+    menu.dataset.open = 'true'; b.setAttribute('aria-expanded', 'true');
+    const rows = await notifications.list();
+    const unread = (rows ?? []).filter((r) => !r.read_at).map((r) => r.id);
+    const item = (r) => h('a', { class: `opt bell-item${r.read_at ? '' : ' unread'}`, href: notifications.href(r), tabindex: '0', onclick: () => { close(false); if (!r.read_at) notifications.read([r.id]).then(() => notifications.count(true).then(paintCount)); } },
+      h('span', { class: 'tx' }, h('strong', {}, noteText(r)), h('small', {}, `${r.project_name} · ${new Date(r.created_at).toLocaleString()}`)));
+    menu.replaceChildren(h('div', { class: 'mh bell-head' }, 'Notifications', unread.length ? h('button', { type: 'button', class: 'btn link', onclick: async () => { await notifications.read('all'); paintCount(0); menu.querySelectorAll('.unread').forEach((x) => x.classList.remove('unread')); } }, 'Mark all read') : null),
+      ...(rows == null ? [h('p', { class: 'mfoot' }, 'Notifications couldn’t be loaded.')] : rows.length ? rows.map(item) : [h('p', { class: 'mfoot' }, 'You’re all caught up.')]));
+    (menu.querySelector('a.opt') ?? menu).focus?.();
+  });
+  menu.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); close(true); } });
+  onDocClick((e) => { if (menu.dataset.open === 'true' && !e.target.closest('.bell-wrap')) close(false); });
+  return h('div', { class: 'swwrap bell-wrap' }, b, menu);
+}
+
 function profile({ email, name, onSignOut, theme, weather }) {
   const btn = h('button', { type: 'button', class: 'who avatar', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-controls': 'profile-menu', 'aria-label': `Your profile: ${name || email}` }, initials(name || email));
   const menu = h('div', { class: 'menu profile-menu', id: 'profile-menu', role: 'menu', 'aria-label': 'Your profile', 'data-open': 'false' });
@@ -80,7 +107,7 @@ function profile({ email, name, onSignOut, theme, weather }) {
 }
 
 const sideLink = (it, current) => {
-  const a = h('a', { href: it.href, ...(it.key === current && !it.kids ? { 'aria-current': 'page' } : {}), ...(it.kids && it.key === current ? { 'aria-expanded': 'true' } : {}) }, icon(it.icon), h('span', {}, it.label));
+  const a = h('a', { href: it.href, 'data-key': it.key, ...(it.key === current && !it.kids ? { 'aria-current': 'page' } : {}), ...(it.kids && it.key === current ? { 'aria-expanded': 'true' } : {}) }, icon(it.icon), h('span', {}, it.label));
   if (!it.kids) return a;
   // an item with pages of its own (Office > Funnels) opens its sub-menu while it is the current section
   return h('div', { class: 'grp' }, a, it.key === current ? h('div', { class: 'sub' }, ...it.kids.map((k) => h('a', { href: k.href, ...(k.key === it.kid ? { 'aria-current': 'page' } : {}) }, icon(k.icon), h('span', {}, k.label)))) : null);
@@ -90,14 +117,14 @@ const sideLink = (it, current) => {
 function bottomBar(items, current, appName = '') {
   const main = items.length > 5 ? items.slice(0, 4) : items; const more = items.length > 5 ? items.slice(4) : [];
   return h('nav', { class: 'bbar', 'aria-label': 'Sections' },
-    ...main.map((p) => h('a', { href: p.href, ...(p.key === current ? { 'aria-current': 'page' } : {}) }, h('span', { class: 'pillic' }, icon(p.icon)), p.short)),
+    ...main.map((p) => h('a', { href: p.href, 'data-key': p.key, ...(p.key === current ? { 'aria-current': 'page' } : {}) }, h('span', { class: 'pillic' }, icon(p.icon)), p.short)),
     more.length ? h('button', { type: 'button', 'aria-haspopup': 'dialog', ...(more.some((p) => p.key === current) ? { 'aria-current': 'page' } : {}),
       onclick: () => {
         const close = dialog({ title: `More in ${appName}`, body: h('div', { class: 'bsheet' }, ...more.map((p) => h('a', { class: 'btn', href: p.href, onclick: () => close(), ...(p.key === current ? { 'aria-current': 'page' } : {}) }, icon(p.icon), p.label))), actions: [{ label: 'Close', focus: true }] });
       } }, h('span', { class: 'pillic' }, icon('more')), 'More') : null);
 }
 
-export function shellView({ app, orgs, active, email, name, route, content, banner, isAdmin, inOffice, launcherCurrent, catalog, registry, currentApp, theme, weather }) {
+export function shellView({ app, orgs, active, email, name, route, content, banner, isAdmin, inOffice, launcherCurrent, catalog, registry, currentApp, theme, weather, notifications = null }) {
   offs.forEach((f) => f()); offs = [];
   document.body.classList.remove('hasb');
   const sw = switcher({ orgs, active, onPick: (id) => app.switchOrg(id) });
@@ -138,9 +165,14 @@ export function shellView({ app, orgs, active, email, name, route, content, bann
     h('span', { class: 'only-m' }, appSwitcher({ catalog, registry, launcherCurrent: false, suffix: '-m' })),
     crumb,
     search, h('span', { class: 'sr', id: 'search-why' }, 'Search is not available yet. It arrives with the apps it searches.'),
-    h('span', { class: 'iconbtn hide-s', role: 'img', 'aria-label': 'Notifications are not available yet', 'aria-disabled': 'true', title: 'Notifications are not available yet' }, icon('bell')),
+    notifications ? bell(notifications) : h('span', { class: 'iconbtn hide-s', role: 'img', 'aria-label': 'Notifications are not available yet', 'aria-disabled': 'true', title: 'Notifications are not available yet' }, icon('bell')),
     sw, who);
   return h('div', { class: 'app', 'data-org': active.slug ?? '' }, skip,
     h('div', { class: 'shell' }, side, h('div', { class: 'main' }, header, h('main', { class: 'content', id: 'main', 'aria-busy': 'false' }, banner ?? null, content))),
     items.length ? bottomBar(items, current, appName) : null);
+}
+
+/** Moves the current-page mark of the app menu on screen (Planner routes its own pages, so the shell does not re-render). */
+export function markAppNav(cur) {
+  for (const a of document.querySelectorAll('.side .nav a[data-key], .bbar a[data-key]')) { if (a.dataset.key === cur) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); }
 }

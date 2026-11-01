@@ -1,6 +1,6 @@
 // Projects screen logic (projectmodel.js): grouping, the client/internal split, calendar grid, timeline, due labels, My Work groups, search text, time formatting.
 import { recorder } from './lib.mjs';
-import { byStatus, sortTasks, progress, splitProjects, monthGrid, shiftMonth, timeline, dueLabel, myWorkGroups, parseSearch, searchInput, duration, clock, addDays, diffDays, label, TASK_STATUS } from '../apps/web/js/modules/projectmodel.js';
+import { workloadGrid, weekStart, viewTasks, groupTasks, byStatus, sortTasks, progress, splitProjects, monthGrid, shiftMonth, timeline, dueLabel, myWorkGroups, parseSearch, searchInput, duration, clock, addDays, diffDays, label, TASK_STATUS } from '../apps/web/js/modules/projectmodel.js';
 
 const { results, check } = recorder();
 const t = (id, o = {}) => ({ id, title: id, status: 'todo', position: 0, created_at: `2026-10-0${id.length}`, due_on: null, ...o });
@@ -23,6 +23,45 @@ check('PM11', 'Search text turns filters into options: is:archived, @me, overdue
 check('PM12', 'Search input sent to the server leaves out options that are off, and the text is cut at 100 characters', JSON.stringify(searchInput(parseSearch('plan'))) === '{"q":"plan","kind":"all"}' && searchInput(parseSearch('x is:archived @me')).archived === true && parseSearch('a'.repeat(300)).q.length === 100 && parseSearch(null).q === '');
 check('PM13', 'Durations: minutes, hours with padded minutes, never negative; the timer clock counts from the server start time', duration(0) === '0m' && duration(59) === '0m' && duration(3725) === '1h 02m' && duration(-5) === '0m' && duration('x') === '0m' && clock('2026-10-22T10:00:00Z', Date.parse('2026-10-22T11:02:05Z')) === '01:02:05' && clock('2026-10-22T10:00:00Z', Date.parse('2026-10-22T09:00:00Z')) === '00:00:00');
 check('PM14', 'Date helpers: adding and subtracting days across month ends, labels for unknown keys fall back to the key', addDays('2026-10-31', 1) === '2026-11-01' && diffDays('2026-11-01', '2026-10-31') === 1 && label(TASK_STATUS, 'blocked') === 'Blocked' && label(TASK_STATUS, 'mystery') === 'mystery');
+// ---- R2: what the List shows (filter, sort, group), computed in the browser from the tasks already loaded (no extra requests)
+const V = [
+  t('a', { title: 'Write copy', assignee_id: 'u1', priority: 'high', due_on: '2026-11-03', section_id: 's2', tags: [{ id: 'g1', name: 'SEO' }], position: 2 }),
+  t('b', { title: 'Design hero', assignee_id: 'u2', priority: 'urgent', due_on: '2026-11-01', section_id: 's1', tags: [], position: 1 }),
+  t('cc', { title: 'Check links', assignee_id: null, priority: 'low', due_on: null, section_id: null, tags: [{ id: 'g1', name: 'SEO' }], position: 3, status: 'done' }),
+  t('ddd', { title: 'Copy review', assignee_id: 'u1', priority: 'normal', due_on: '2026-10-20', section_id: 's2', tags: [], position: 0 }),
+];
+const ids = (xs) => xs.map((x) => x.id).join();
+check('PM15', 'Filters combine: words in the title, one person or "nobody", a tag, and hiding finished tasks',
+  ids(viewTasks(V, { q: 'copy' })) === 'ddd,a' && ids(viewTasks(V, { assignee: 'u1' })) === 'ddd,a' && ids(viewTasks(V, { assignee: 'none' })) === 'cc'
+  && ids(viewTasks(V, { tag: 'g1' })) === 'a,cc' && ids(viewTasks(V, { hideDone: true })) === 'ddd,b,a' && ids(viewTasks(V, { q: 'copy', assignee: 'u2' })) === '');
+check('PM16', 'Sorting: by due date (undated last), by priority (urgent first), by title, newest first, or the manual order',
+  ids(viewTasks(V, { sort: 'due' })) === 'ddd,b,a,cc' && ids(viewTasks(V, { sort: 'priority' })) === 'b,a,ddd,cc' && ids(viewTasks(V, { sort: 'title' })) === 'cc,ddd,b,a'
+  && ids(viewTasks(V, { sort: 'manual' })) === 'ddd,b,a,cc' && ids(viewTasks(V, { sort: 'newest' })) === 'ddd,cc,b,a');
+const VS = viewTasks(V);   // groups keep the order the List was sorted in
+const bySec = groupTasks(VS, 'section', { sections: [{ id: 's1', name: 'Design' }, { id: 's2', name: 'Build' }] });
+const byWho = groupTasks(V, 'assignee', { name: (u) => ({ u1: 'Ana', u2: 'Ben' }[u]) });
+const byDue = groupTasks(V, 'due', { today: '2026-11-01' });
+check('PM17', 'Grouping: by section in the project\'s order with "No section" last, by person with "Unassigned" last, by priority, and by when it is due',
+  bySec.map((g) => `${g.title}:${ids(g.tasks)}`).join('|') === 'Design:b|Build:ddd,a|No section:cc' && bySec[0].key === 's1' && bySec.at(-1).key === null
+  && byWho.map((g) => g.title).join() === 'Ana,Ben,Unassigned' && groupTasks(V, 'priority').map((g) => g.title).join() === 'Urgent,High,Normal,Low'
+  && byDue.map((g) => `${g.title}:${ids(g.tasks)}`).join('|') === 'Overdue:ddd|Today:b|Next 7 days:a|No date:cc' && groupTasks(V, 'status').map((g) => g.key).join() === 'todo,doing,blocked,done');
+// ---- R3: a task with a start date is a bar from start to due on the timeline; one with only a due date stays a mark
+const tl3 = timeline({ start_on: '2026-10-01', due_on: '2026-10-31' }, [t('a', { start_on: '2026-10-05', due_on: '2026-10-15' }), t('b', { due_on: '2026-10-20' }), t('c', { start_on: '2026-10-25' })], '2026-10-10');
+const ma = tl3.marks.find((m) => m.id === 'a'), mb = tl3.marks.find((m) => m.id === 'b'), mc = tl3.marks.find((m) => m.id === 'c');
+check('PM18', 'Timeline: a task with start and due dates is a bar with a width, a due-only task a point, a start-only task a point at its start',
+  ma && ma.width > 0 && Math.abs(ma.left + ma.width - (100 * (14 + 2 - 0)) / 34) < 0.01 && mb && !mb.width && mc && !mc.width && Math.abs(mc.left - (100 * 26) / 34) < 0.01);
+const long = timeline({}, [t('a', { start_on: '2030-06-10', due_on: '2030-06-15' })], '2026-10-29');
+check('PM19', 'A long timeline gets a fixed width per day (so it scrolls instead of squeezing bars to slivers) and a tick every week; a short one fits the screen',
+  long.px === long.days * 16 && long.ticks.length > 50 && long.ticks.every((k, n) => n === 0 || k.date > long.ticks[n - 1].date) && tl.px === 640);
+// ---- R4: the workload grid (people × weeks) from the server's rows
+const wg = workloadGrid([
+  { user_id: 'u2', name: 'Ben', week_start: '2026-11-02', tasks: 2, minutes: 600, overdue: 1 },
+  { user_id: 'u1', name: 'Ana', week_start: '2026-11-09', tasks: 1, minutes: 2700, overdue: 0 },
+  { user_id: 'u1', name: 'Ana', week_start: null, tasks: 3, minutes: 0, overdue: 0 },
+], '2026-11-04', 3);
+check('PM20', 'Workload grid: weeks start on Monday from the chosen date, one row per person by name, empty weeks are zero, undated work and over-40-hour weeks are flagged',
+  weekStart('2026-11-04') === '2026-11-02' && weekStart('2026-11-08') === '2026-11-02' && wg.weeks.join() === '2026-11-02,2026-11-09,2026-11-16' && wg.people.map((p) => p.name).join() === 'Ana,Ben'
+  && wg.people[0].cells.map((c) => c.minutes).join() === '0,2700,0' && wg.people[0].cells[1].over && !wg.people[1].cells[0].over && wg.people[1].cells[0].overdue === 1 && wg.people[0].undated === 3 && wg.max === 2700);
 for (const x of results) console.log(`${x.ok ? 'PASS' : 'FAIL'}  ${x.id.padEnd(5)} ${x.name}`);
 const pc = results.filter((x) => x.ok).length; console.log(`\n${pc}/${results.length} checks passed`);
 process.exit(pc === results.length ? 0 : 1);

@@ -19,14 +19,15 @@ import { ladderView } from './modules/ladder.js';
 import { boardsView } from './modules/boards.js';
 import { socialView } from './modules/social.js';
 import { sheetView } from './modules/sheets.js';
+import { plannerView, unmountPlanner, plannerMountedFor, plannerSection, PLANNER_PAGES } from './modules/planner.js';
 import { strategiesListView, strategyView } from './views/strategies.js';
 import { documentsView, teamView, appsView } from './views/office.js';
 import { loadWeather, weatherOff, setWeatherOff } from './sky.js';
 import { permissionSet, canWith, canAnywhereWith } from './perm.js';
 import { switchOrganization } from '/packages/core/org-switch.mjs';
-import { dialog, toast, btn, notice, skeleton, notFoundState, designBadge, icon } from './ui.js';
+import { dialog, toast, btn, notice, skeleton, notFoundState, designBadge, icon, emptyState } from './ui.js';
 import * as authViews from './views/auth.js';
-import { shellView } from './views/shell.js';
+import { shellView, markAppNav } from './views/shell.js';
 import { launcherView, appNotBuiltView } from './views/launcher.js';
 import { officeHomeView } from './views/home.js';
 import { adminView } from './views/admin.js';
@@ -38,7 +39,9 @@ const store = (() => { try { localStorage.setItem('l2f.t', '1'); localStorage.re
 const tabStore = (() => { try { sessionStorage.setItem('l2f.t', '1'); sessionStorage.removeItem('l2f.t'); return sessionStorage; } catch { return store; } })();
 const session = createSession({ storage: store });
 const auth = createAuthClient({ baseUrl: cfg.supabaseUrl, publishableKey: cfg.publishableKey, redirectTo: `${location.origin}/` });
-const api = createApiClient({ session, auth, onExpired: () => { if (session.get()) goExpired(); } });
+let slowDownShown = 0;
+const api = createApiClient({ session, auth, onExpired: () => { if (session.get()) goExpired(); },
+  onRateLimited: (secs) => { if (Date.now() - slowDownShown > 15000) { slowDownShown = Date.now(); toast(`${messageFor('rate_limited')}${secs ? ` (about ${secs} s)` : ''}`, false); } } });
 
 let ctx = null;           // { orgs, active, mine, clients, catalog }
 let renderId = 0;
@@ -194,6 +197,7 @@ async function doSwitch(target) {
   const route = parseRoute(location.hash); const from = ctx.active;
   const mine = pageKeyFor(route);
   renderId++;                                               // anything still in flight for the old organization is now stale
+  unmountPlanner();                                         // Planner holds the old organization's plans: gone before the switch is even confirmed
   const button = root.querySelector('#org-switcher');
   if (button) { button.dataset.pending = 'true'; button.disabled = true; }
   const main = root.querySelector('#main');
@@ -228,12 +232,14 @@ async function doSwitch(target) {
     const where = route.name === 'funnel-record' ? FUNNEL_TYPES.find((t) => t.key === route.params.type).full : 'the list';
     banner = { kind: 'info', icon: 'info', content: [h('b', {}, `That item belongs to ${from.name}, so it isn’t here.`), ` We’ve taken you to ${where} in ${res.orgName}.`], actions: [btn(`Switch back to ${from.name}`, () => switchFlow(from.org_id))] };
   } else if (res.outcome === 'page_unavailable') banner = { kind: 'warn', icon: 'lock', content: res.message };
+  else if (route.name === 'planner' && (route.query.plan || route.query.goal))   // a plan or objective is a record: it stays in the organization it belongs to
+    banner = { kind: 'info', icon: 'info', content: [h('b', {}, `That plan belongs to ${from.name}, so it isn’t here.`), ` We’ve taken you to Planner in ${res.orgName}.`], actions: [btn(`Switch back to ${from.name}`, () => switchFlow(from.org_id))] };
   else toastLater = `Now in ${res.orgName} · ${pageLabel(parseRoute(dest))}`;                  // outcome 1
   announce(`Switched to ${res.orgName}. ${pageLabel(parseRoute(dest))}.`);
   if (location.hash === dest) render(); else location.hash = dest;
 }
 let toastLater = null;
-const pageLabel = (r) => (r.name === 'launcher' ? 'Launcher' : OFFICE_PAGES.find((p) => p.key === ({ office: 'home', 'office-page': r.params.page, funnels: 'funnels', 'funnel-list': 'funnels', 'funnel-record': 'funnels', admin: 'admin' }[r.name]))?.label ?? 'Office');
+const pageLabel = (r) => (r.name === 'launcher' ? 'Launcher' : r.name === 'planner' ? 'Planner' : OFFICE_PAGES.find((p) => p.key === ({ office: 'home', 'office-page': r.params.page, funnels: 'funnels', 'funnel-list': 'funnels', 'funnel-record': 'funnels', admin: 'admin' }[r.name]))?.label ?? 'Office');
 
 // ---- rendering
 const bannerEl = () => {
@@ -242,10 +248,33 @@ const bannerEl = () => {
 };
 const centered = (...c) => h('div', { class: 'authwrap' }, h('main', { class: 'authnarrow', id: 'main' }, h('div', { class: 'card', style: 'padding:32px' }, ...c)));
 
+// Planner isn't open to this person here (not switched on, coming soon, or no grant): say so plainly, in the shell's words.
+function plannerOffView(org, entry) {
+  const soon = entry?.state === 'coming_soon';
+  return h('section', {}, h('div', { class: 'crumb' }, 'Apps'), h('h1', { 'data-page-title': true }, 'Planner'),
+    emptyState({ title: soon ? 'Planner is coming soon' : `Planner isn’t available to you in ${org.name}`,
+      body: soon ? 'It isn’t switched on yet. Nothing has been lost.' : `Ask an ${org.name} admin for access, or switch to another organization at the top of the page.`,
+      ic: 'lock', action: h('a', { class: 'btn pri', href: hrefFor.office() }, 'Go to Office Home') }));
+}
+
+// The header bell: the unread count is kept for a minute (it is shown on every page; one request per page change would slow every app down)
+const bell = { n: null, at: 0, org: null };
+const notifications = {
+  async count(fresh = false) {
+    const org = ctx?.active?.org_id;
+    if (!fresh && bell.org === org && Date.now() - bell.at < 60000) return bell.n;
+    const r = await api.call('notifications.unread', {}); bell.org = org; bell.at = Date.now(); bell.n = r.ok ? r.data[0].n : null; return bell.n;
+  },
+  async list() { const r = await api.call('notifications.list', { limit: 30 }); return r.ok ? r.data : null; },
+  async read(ids) { await api.call('notifications.read', ids === 'all' ? { all: true } : { ids }); bell.at = 0; },
+  href: (r) => `#/projects/p/${r.project_id}?task=${r.entity_id}`,
+};
+
 const theme = createTheme(); theme.apply();
 async function render(opts = {}) {
   const id = ++renderId; const live = () => id === renderId;
   const route = parseRoute(location.hash);
+  if (route.name !== 'planner' || !session.signedIn() || unavailable) unmountPlanner();
   document.body.classList.remove('hasb');
   theme.setOrg(null);
   if (!ready) { put(root, centered(skeleton(3))); return; }
@@ -286,7 +315,7 @@ async function render(opts = {}) {
     clientsWhere: (p) => [...ctx.clients].filter(([cid]) => canWith(ctx.mine, p, cid)),
   };
   const inOffice = ['office', 'office-page', 'funnels', 'strategies', 'strategy', 'funnel-list', 'funnel-record', 'admin'].includes(route.name);
-  let content;
+  let content; let nav = null;
   if (unavailable && route.name !== 'launcher') {
     const u = unavailable;
     content = h('div', { class: 'unavail' }, h('div', { class: 'ic' }, icon('warn')), h('h2', { 'data-page-title': true }, `${u.app} isn’t turned on for ${org.name}`),
@@ -323,13 +352,23 @@ async function render(opts = {}) {
       case 'clients': content = clientsView({ api, ctx: c, route: { view: route.params.view, id: route.params.id, query: route.query } }); break;
       case 'projects': content = projectsView({ api, ctx: c, route: { view: route.params.view, id: route.params.id, query: route.query } }); break;
       case 'board': content = boardView({ api, id: route.params.id, ctx: c }); break;
+      case 'planner': {
+        // the database refuses Planner without the app switched on here and the person's grant; this only explains it instead of mounting an app that can show nothing
+        const entry = ctx.catalog.find((a) => a.app_key === 'planner');
+        if (!ctx.catalogError && entry?.state !== 'available') { unmountPlanner(); content = plannerOffView(org, entry); break; }
+        const s = session.get();
+        content = plannerView({ api, org, orgs: ctx.orgs, me: { id: s?.userId, name: s?.name || s?.email || 'You' } });
+        /* the Planner menu comes from appnav.js */
+        break;
+      }
       case 'admin': content = adminView({ api, live, org, role, route, rerender: () => render(), go, clients: ctx.clients }); break;
       case 'app': content = appNotBuiltView(ctx.catalog.find((a) => a.app_key === route.params.app)?.name ?? appLabel(route.params.app)); break;
       default: content = notFoundState(hrefFor.office());
     }
   }
   const view = shellView({ app: appApi, orgs: ctx.orgs, active: org, email: session.get()?.email, name: session.get()?.name, route, content, banner: bannerEl(), isAdmin, inOffice, launcherCurrent: route.name === 'launcher' || route.name === 'home',
-    catalog: ctx.catalog, registry, currentApp: inOffice ? 'office' : route.name === 'doc' || route.name === 'sheet' || route.name === 'drive' ? 'drive' : route.name === 'board' ? 'whiteboard' : route.name === 'projects' ? 'projects' : route.name === 'clients' ? 'clients' : route.name === 'portal' ? 'portal' : route.name === 'forms' ? 'forms' : route.name === 'ladder' ? 'value_ladder' : route.name === 'boards' ? 'whiteboard' : route.name === 'social' ? 'social_planner' : route.name === 'app' ? route.params.app : null, theme,
+    notifications: org.member_kind === 'client' ? null : notifications,
+    catalog: ctx.catalog, registry, currentApp: inOffice ? 'office' : route.name === 'doc' || route.name === 'sheet' || route.name === 'drive' ? 'drive' : route.name === 'board' ? 'whiteboard' : route.name === 'projects' ? 'projects' : route.name === 'clients' ? 'clients' : route.name === 'portal' ? 'portal' : route.name === 'forms' ? 'forms' : route.name === 'ladder' ? 'value_ladder' : route.name === 'boards' ? 'whiteboard' : route.name === 'social' ? 'social_planner' : route.name === 'planner' ? 'planner' : route.name === 'app' ? route.params.app : null, theme,
     weather: { on: () => !weatherOff(localStorage), set: (on) => { setWeatherOff(localStorage, !on); try { sessionStorage.removeItem('l2f.wx'); } catch { /* none */ } render(); } } });
   put(root, view, designBadge('Built to design'));
   document.title = `${pageLabel(route)} · ${org.name}`;
@@ -342,7 +381,14 @@ window.addEventListener('hashchange', () => {
     const target = location.hash; history.replaceState(null, '', lastHash || '#/');
     return askUnsaved(() => go(target));
   }
-  lastHash = location.hash; window.scrollTo(0, 0); render();       // a new page starts at the top, as the design's navigation does
+  const from = parseRoute(lastHash), to = parseRoute(location.hash);
+  lastHash = location.hash;
+  // moving between Planner's own pages: Planner routes itself, so the shell only moves its menu mark (no remount, no reload of the plan)
+  if (from.name === 'planner' && to.name === 'planner' && ready && session.signedIn() && !unavailable && ctx?.active && plannerMountedFor(ctx.active.org_id)) {
+    document.querySelector('#main > .notice')?.remove();         // a shell message lasts one page, as in every other app
+    return markAppNav(plannerSection(to.params.page));
+  }
+  window.scrollTo(0, 0); render();       // a new page starts at the top, as the design's navigation does
 });
 window.addEventListener('beforeunload', (e) => { if (dirty.isDirty()) { e.preventDefault(); e.returnValue = ''; } });
 window.addEventListener('offline', () => announce('You are offline. Changes will not be saved.'));

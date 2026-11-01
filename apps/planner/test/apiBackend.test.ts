@@ -74,3 +74,40 @@ test('the organization list carries the active one, and switching goes through t
   assert.equal(seen[1]!.url, '/api/org.switch');
   assert.deepEqual(seen[1]!.body, { org: 'b', app: 'planner' });
 });
+
+// ---- hosted by the ecosystem shell (src/embed.tsx): the shell's API client, the shell's organization
+const OTHER = '22222222-2222-4222-8222-222222222222';
+const hosted = (answer: (op: string) => unknown, seen: { op: string; input: unknown; org: string }[] = [], timeoutMs?: number) => createApiBackend({
+  host: { org: ORG, me: { id: 'u1', name: 'Olive' }, call: async (op, input, org) => { seen.push({ op, input, org }); return answer(op) as never; } }, ...(timeoutMs ? { timeoutMs } : {}),
+});
+
+test('hosted: every call goes through the shell\'s client with the shell\'s organization, which a call cannot change', async () => {
+  const seen: { op: string; input: unknown; org: string }[] = [];
+  const b = hosted(() => ({ ok: true, data: [{ r: { ok: 1 } }] }), seen);
+  assert.deepEqual(b.me(), { id: 'u1', name: 'Olive' });
+  await b.rpc('planner_list_plans', { p_workspace: OTHER });   // the server refuses a mismatch (42501); the client never follows it
+  await b.rpc('planner_get_plan', { p_plan: 'x' });
+  assert.deepEqual(seen.map((s) => [s.op, s.org]), [['planner.strategy.list_plans', ORG], ['planner.strategy.get_plan', ORG]]);
+  assert.deepEqual(seen[1]!.input, { args: { p_plan: 'x' } });
+  await assert.rejects(b.setActiveWorkspace(OTHER), (e: { code: string }) => e.code === 'forbidden');   // only the shell's switcher switches
+});
+
+test('hosted: the organization list marks the shell\'s organization active, and client memberships are left out', async () => {
+  const b = hosted(() => ({ ok: true, data: [{ org_id: ORG, name: 'L', slug: 'layer2funnels', member_kind: 'staff', is_active: false }, { org_id: OTHER, name: 'A', slug: 'aurj', member_kind: 'staff', is_active: true }, { org_id: 'c', name: 'C', slug: 'c', member_kind: 'client' }] }));
+  const list = await b.listWorkspaces();
+  assert.deepEqual(list.map((w) => [w.id, w.isActive]), [[ORG, true], [OTHER, false]]);
+});
+test('hosted: the shell\'s organization list is used as it is, without asking the server again', async () => {
+  const seen: { op: string; input: unknown; org: string }[] = [];
+  const b = createApiBackend({ host: { org: ORG, me: { id: 'u1', name: 'O' }, orgs: [{ org_id: ORG, name: 'L', slug: 'layer2funnels', member_kind: 'staff' }], call: async (op, input, org) => { seen.push({ op, input, org }); return { ok: true, data: [] }; } } });
+  assert.deepEqual((await b.listWorkspaces()).map((w) => w.id), [ORG]);
+  assert.equal(seen.length, 0);
+});
+
+test('hosted: an expired session, a refusal, no connection and no answer each end as a clear error', async () => {
+  await assert.rejects(hosted(() => ({ ok: false, status: 401, error: { code: 'session_expired' } })).rpc('planner_get_plan', { p_plan: 'x' }), (e: { code: string }) => e.code === 'session_expired');
+  await assert.rejects(hosted(() => ({ ok: false, status: 403, error: { code: 'forbidden' } })).rpc('planner_get_plan', { p_plan: 'x' }), (e: { code: string }) => e.code === 'forbidden');
+  await assert.rejects(hosted(() => ({ ok: false, status: 0, error: { code: 'offline' } })).rpc('planner_get_plan', { p_plan: 'x' }), (e: { code: string }) => e.code === 'offline');
+  const never = createApiBackend({ host: { org: ORG, me: { id: 'u1', name: 'O' }, call: () => new Promise(() => {}) }, timeoutMs: 30 });
+  await assert.rejects(never.rpc('planner_get_plan', { p_plan: 'x' }), (e: { code: string }) => e.code === 'offline');
+});

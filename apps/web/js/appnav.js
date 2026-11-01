@@ -1,6 +1,7 @@
 // What each app shows in the side rail (Design v4 §5): the app plate and name, then its pages as links. The items are the app's real routes;
 // nothing here invents a page. Office reads its pages from routes.js (the same list the bottom bar uses).
 import { OFFICE_PAGES, officeSection, hrefFor } from './routes.js';
+import { PLANNER_PAGES, plannerSection } from './modules/planner.js';
 
 const ICON = { home: 'home', planner: 'planner', projects: 'projects', funnels: 'funnels', documents: 'doc', team: 'team', apps: 'apps', admin: 'shield' };
 const SHORT = { Documents: 'Docs', 'My Work': 'My Work' };
@@ -11,6 +12,7 @@ export function appIdFor(route, inOffice) {
   switch (route.name) {
     case 'doc': case 'sheet': case 'drive': return 'drive';
     case 'board': case 'boards': return 'whiteboard';
+    case 'planner': return 'planner';
     case 'projects': return 'projects'; case 'clients': return 'clients'; case 'portal': return 'portal'; case 'forms': return 'forms';
     case 'ladder': return 'value_ladder'; case 'social': return 'social_planner';
     case 'app': return route.params.app;
@@ -30,8 +32,8 @@ export function appNav(appId, route, { isAdmin = false } = {}) {
     }
     case 'projects':
       return { items: [it('home', '#/projects', 'Home', 'home'), it('mine', '#/projects/mine', 'My Work', 'mywork'), it('all', '#/projects/all', 'Projects', 'projects'), it('docs', '#/projects/docs', 'Docs', 'doc'),
-        it('whiteboards', '#/whiteboards', 'Whiteboards', 'whiteboard'), it('dashboards', '#/projects/dashboards', 'Dashboards', 'chart'), it('ai', '#/projects/ai', 'AI Assist', 'star2'), it('apps', '#/office/apps', 'App Center', 'plug')],
-        current: ['mine', 'all', 'docs', 'dashboards', 'ai'].includes(route.params?.view) ? route.params.view : 'home' };
+        it('whiteboards', '#/whiteboards', 'Whiteboards', 'whiteboard'), it('workload', '#/projects/workload', 'Workload', 'team'), it('portfolio', '#/projects/portfolio', 'Portfolio', 'dash'), it('dashboards', '#/projects/dashboards', 'Dashboards', 'chart'), it('ai', '#/projects/ai', 'AI Assist', 'star2'), it('apps', '#/office/apps', 'App Center', 'plug')],
+        current: ['mine', 'all', 'docs', 'workload', 'portfolio', 'dashboards', 'ai'].includes(route.params?.view) ? route.params.view : 'home' };
     case 'clients':
       return { items: [it('list', '#/clients', 'Clients', 'clients'), it('requests', '#/clients/requests', 'Requests & Approvals', 'inbox'), it('sops', '#/clients/sops', 'SOPs', 'sop'), it('tools', '#/clients/tools', 'Tools', 'tool'), ...(isAdmin ? [it('settings', '#/clients/settings', 'Settings', 'gear')] : [])],
         current: ['requests', 'sops', 'tools', 'settings'].includes(route.params?.view) ? route.params.view : 'list' };
@@ -51,6 +53,8 @@ export function appNav(appId, route, { isAdmin = false } = {}) {
         current: route.params?.view === 'c' ? 'campaigns' : (['posts', 'queue', 'approvals', 'campaigns', 'channels'].includes(route.query?.tab) ? route.query.tab : 'calendar') };
     case 'portal':
       return { items: [it('home', '#/portal', 'Preview', 'portal')], current: 'home' };
+    case 'planner':
+      return { items: PLANNER_PAGES.filter((p) => !p.manage || isAdmin).map((p) => it(p.key, p.href, p.label, p.icon)), current: plannerSection(route.params?.page) };
     default:
       return { items: [], current: null };
   }
