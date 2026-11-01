@@ -200,3 +200,5 @@ details.support{margin-top:12px;font-size:13px;color:var(--muted)}
 .bell-item.unread strong{font-weight:700}.bell-item.unread::before{content:"";flex:none;width:8px;height:8px;margin-top:7px;border-radius:50%;background:var(--action)}
 @media (max-width:600px){.bell-menu{width:auto}}
 .badge[hidden]{display:none}
+/* the bell's unread count sits on the bell (V4 header) */
+.bell-wrap{position:relative}.bell-wrap #bell{position:relative}.bell-wrap .badge{position:absolute;top:2px;right:2px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--danger,#d93a4a);color:#fff;font:700 11px/18px var(--font-b);text-align:center;pointer-events:none}

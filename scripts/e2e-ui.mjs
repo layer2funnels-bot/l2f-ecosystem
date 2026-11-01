@@ -366,7 +366,7 @@ await visit(page, base + '/#/office/funnels'); await wait('Recently changed');
 check('U17', 'Funnels home: four counts, the section pills, and the "Link design pending" note for funnel maps', (await page.locator('.tile2').count()) === 4 && await page.getByText('Link design pending').isVisible());
 await page.locator('.nav .sub a', { hasText: 'Avatars' }).click(); await wait('No avatars yet');
 check('U18', 'First-use empty list has the V4 stack illustration, a create action for owners', await page.getByRole('link', { name: 'New avatar' }).first().isVisible() && (await page.locator('.empty .stack').count()) > 0);
-await page.getByRole('link', { name: 'New avatar' }).first().click(); await wait('New avatar'); await page.waitForSelector('#r-client');
+await page.getByRole('link', { name: 'New avatar' }).first().click(); await page.locator('main h1', { hasText: 'New avatar' }).waitFor({ timeout: 9000 }); await page.waitForSelector('#r-client');
 const scope = await page.locator('#r-client option').allInnerTexts();
 check('U19', '"Belongs to" offers the organization and live clients only (never archived ones)', scope.includes('Organization-wide') && scope.some((o) => o.startsWith('Harry Kaye')) && !scope.some((o) => o.startsWith('Archived')));
 await page.click('button[type=submit]');
