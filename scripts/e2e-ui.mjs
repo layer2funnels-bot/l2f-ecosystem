@@ -350,7 +350,7 @@ await q("update public.apps set lifecycle = 'active' where key = 'planner'"); aw
 await page.reload(); await page.waitForSelector('nav.nav', { timeout: 9000 });
 await page.locator('nav.nav a', { hasText: 'Planner' }).click(); await page.waitForURL(/#\/planner/, { timeout: 9000 });
 await page.waitForFunction(() => !!document.querySelector('.planner-mount')?.shadowRoot?.querySelector('.stage'), null, { timeout: 9000 }).catch(() => {});
-const onPlanner = new URL(page.url()).pathname === '/' && (await page.locator('nav.nav .appname').innerText()) === 'Planner' && (await page.locator('header.hdr').count()) === 1
+const onPlanner = new URL(page.url()).pathname === '/' && (await page.locator('.side-top b').innerText()) === 'Planner' && (await page.locator('header.hdr').count()) === 1
   && await page.evaluate(() => !!document.querySelector('.planner-mount')?.shadowRoot?.querySelector('.stage') && !document.querySelector('.planner-mount').shadowRoot.querySelector('.rail'));
 await page.goBack(); await page.waitForSelector('nav.nav', { timeout: 9000 });
 check('U15', 'The Office Planner item opens the real Planner inside the shell (same header and organization switcher, Planner\'s menu in the shell\'s bar), no longer a placeholder', onPlanner);
