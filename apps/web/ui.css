@@ -109,7 +109,7 @@ ul.rows{list-style:none;margin:0;padding:0}ul.rows li{display:flex;gap:12px;alig
 .fld{display:grid;gap:7px;margin-bottom:16px}.fld label,.fld .lb{font-weight:600;font-size:13.5px}.fld .hint{font-size:13px;color:var(--muted)}
 .fld input,.fld select,.fld textarea{width:100%;min-height:48px;padding:0 14px;border-radius:12px;border:var(--bw) solid var(--control);background:var(--surface);font-size:15px;transition:border-color 160ms,box-shadow 160ms}
 .fld textarea{padding:12px 14px;min-height:110px;resize:vertical;line-height:1.5}
-.fld input:focus,.fld select:focus,.fld textarea:focus{outline:none;border-color:var(--action);box-shadow:0 0 0 4px var(--action-tint)}
+.fld input:focus,.fld select:focus,.fld textarea:focus{border-color:var(--action);box-shadow:0 0 0 4px var(--action-tint)}
 .fld input[aria-invalid=true]{border-color:var(--danger);box-shadow:0 0 0 4px var(--danger-tint)}
 .fld input[readonly],.fld textarea[readonly],.fld select:disabled{background:var(--sunk);color:var(--text2)}
 .fld .err{color:var(--danger);font-size:13px;display:flex;gap:6px;align-items:center}.fld .err[hidden]{display:none}
@@ -187,7 +187,7 @@ details.support{margin-top:12px;font-size:13px;color:var(--muted)}
 .inp input,.inp{min-height:44px}.office-docs .findwrap input,.office-team .findwrap input{min-height:44px}
 .toolbar>input[type=search],.toolbar>input[type=text]{flex:1 1 220px;min-width:0;min-height:44px;padding:0 14px;border-radius:12px;border:var(--bw) solid var(--control);background:var(--surface)}
 .toolbar>select,.toolbar select{min-height:44px;padding:0 12px;border-radius:12px;border:var(--bw) solid var(--control);background:var(--surface)}
-.toolbar>input:focus,.toolbar>select:focus{outline:none;border-color:var(--action);box-shadow:0 0 0 4px var(--action-tint)}
+.toolbar>input:focus,.toolbar>select:focus{border-color:var(--action);box-shadow:0 0 0 4px var(--action-tint)}
 .authwrap{min-height:100vh;display:grid;place-items:center;padding:24px 16px;background:var(--bg)}.authnarrow{width:100%;max-width:440px}
 /* Phone header (Design v4): the search is an icon, so the page name keeps its room */
 @media (max-width:620px){.hdr .search{flex:0 0 44px;width:44px;max-width:44px;padding:0;justify-content:center;background:none}.hdr .search input{display:none}}
