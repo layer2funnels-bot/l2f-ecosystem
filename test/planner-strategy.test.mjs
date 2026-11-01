@@ -1,6 +1,7 @@
 // Planner strategy app (migration 0033) through the shared API: the operations in packages/core/planner-strategy-operations.mjs
 // call the planner_* functions as the signed-in person. Allow and deny per role, organization isolation, a strategy drawn and
 // turned into a plan, and the browser roles kept out (the API is the only door).
+import { readFileSync } from 'node:fs';
 import { randomUUID as id } from 'node:crypto';
 import { openDb, migrate, session, recorder } from './lib.mjs';
 import { createApi } from '../packages/core/api.mjs';
@@ -81,6 +82,12 @@ check('PS17', 'An unknown argument is a 422 (invalid), not a 500', x.status === 
 const fkParent = await rows("select count(*)::int n from pg_constraint where conrelid = 'public.planner_strategy_items'::regclass and contype = 'f' and pg_get_constraintdef(oid) like 'FOREIGN KEY (workspace_id, parent_id)%'");
 const fkFocus = await rows("select count(*)::int n from pg_constraint where conrelid in ('public.planner_strategy_items'::regclass, 'public.planner_strategy_focus_kinds'::regclass) and contype = 'f' and pg_get_constraintdef(oid) like 'FOREIGN KEY (workspace_id, strategy_id, template_id)%'");
 check('PS18', 'Strategy items and focus kinds are tied to their workspace by composite keys', fkParent[0].n === 1 && fkFocus[0].n === 2);
+
+// every "How often to check" choice the Planner screen offers for a measure can be saved (the screen and the table must agree)
+const offered = [...readFileSync(new URL('../apps/planner/src/lib/status.ts', import.meta.url), 'utf8').match(/CADENCE_LABEL[^{]*\{([^}]*)\}/)[1].matchAll(/(\w+):/g)].map((m) => m[1]);
+const refused = [];
+for (const c of offered) { const m = await call('save_measure', { p_goal: g.id, p_id: null, p_data: { name: `Check ${c}`, unit: 'x', start_value: 0, target_value: 10, direction: 'increase', cadence: c } }, U.ADM); if (!m.ok) refused.push(`${c}: ${m.status}`); }
+check('PS19', 'Every check rhythm offered for a measure (including every two weeks) is accepted', offered.length >= 5 && refused.length === 0, refused.join(', '));
 
 // the API is the only door
 const grants = await rows("select count(*)::int n from information_schema.role_table_grants where grantee in ('anon','authenticated') and table_name like 'planner_%'");
