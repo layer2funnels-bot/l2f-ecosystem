@@ -368,9 +368,8 @@ async function render(opts = {}) {
     const p = token ? await api.call('invitation.preview', { token }, { org: NO_ORG }) : null;
     if (!live()) return;
     if (!token || !p?.ok || !p.data.length) {      // no link (or a link for another address): offer what the server finds for this verified e-mail
-      if (token) inviteStore.clear();
       if (!myInvites.length) await loadMine(); if (!live()) return;
-      if (myInvites.length) { put(root, authViews.invitesMineView({ app: appApi, invites: myInvites, email: session.get()?.email })); return focusTitle(root); }
+      if (myInvites.length) { if (token) inviteStore.clear(); put(root, authViews.invitesMineView({ app: appApi, invites: myInvites, email: session.get()?.email })); return focusTitle(root); }
     }
     put(root, authViews.inviteView({ app: appApi, token, preview: p?.ok ? p.data[0] : null, email: session.get()?.email })); return focusTitle(root);
   }
