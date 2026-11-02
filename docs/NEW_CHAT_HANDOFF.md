@@ -25,24 +25,23 @@ Root causes (full table in `docs/ONBOARDING.md` §1):
 - **Web app**: invitations page for the signed-in person (no link needed), invitation token kept in local storage and on the confirmation link, Admin › Members (e-mail status, Expired, Resend / Send a new invitation, Cancel, "emails switched on/not yet" note), Admin › Client access (e-mail status, results), Your profile (`#/profile`: photo, name, e-mail change, password change with e-mailed code when required, sign out of all devices), header avatar photo, Team drawer photo.
 - **Docs**: `docs/ONBOARDING.md` (root causes, design, settings, activation checklist, support steps).
 
-## 4. Database and migration status (verified with the Supabase connector on 2 Nov)
-- Live project `l2f-ecosystem`, ref `dfitnxilkezepkhdmzuh`. Live history ends at **`0040_planner_measure_cadence`** (0034–0040 were applied on 1 Nov by the other chat; the old `golive-0034-0041.sql` script was therefore removed: it would have refused to run anyway).
-- To apply: **`scripts/golive-0041-0042.sql`** (0041 + 0042 + history rows, one transaction, guard refuses a wrong or already-updated database). Tested from a database at 0040 with an existing invitation: result identical to the full migration chain (tables 102, functions 243, policies 417, triggers 212, columns 1000), data kept, second run refused.
-- Live data facts: 2 organizations (Layer2Funnels, Aurj), the owner is the only member of each; all apps active and enabled except the Client Portal (locked on purpose) and Layer 2 Agents (coming soon).
+## 4. Database and migration status (verified read-only on the live database, 2 Nov 2026, 17:10 UTC)
+- Live project `l2f-ecosystem`, ref `dfitnxilkezepkhdmzuh`. History ends at **`0040_planner_measure_cadence`** (40 rows). 0041 and 0042 are **not** applied. 4 accounts, 2 memberships, 3 open invitations.
+- **Live impact now:** PR #38 (profile page, team photos) is merged and deployed, but its database part (0041) is missing, so **the live Your profile page and the Team page fail** until the script runs.
+- To apply: **`scripts/golive-0041-0042.sql`**. Additive only, one transaction, guard refuses any other state or a second run. Safety, isolation and rollback: `docs/ONBOARDING.md` §7.
 
-## 5. Tests (all local, 2 Nov)
-- `DRIVERS=pglite npm test`: all suites, including new `test/invitations.test.mjs` (38) and `test/profiles.test.mjs` (14); `test/audit.test.mjs` 63 (RPC allow-list updated; INV8 now expects every switched-on app).
-- `scripts/e2e-onboarding.mjs` (new, real browser, real local Supabase Auth, fake Brevo): **21/21**. Added to CI (`npm run test:e2e:onboarding`).
-- `scripts/e2e-ui.mjs`: see the PR for the latest run. CI runs everything (`test`, `e2e`, `fmp-copy`).
-- Not testable locally: real Brevo delivery, Supabase's own confirmation e-mail (the local stack has no mail server and auto-confirms). These are the production checks in `docs/ONBOARDING.md` §4.
+## 5. PR and tests
+- PR [#39](https://github.com/layer2funnels-bot/l2f-ecosystem/pull/39) (onboarding, branch `claude/exciting-dirac-kjybj0`). First CI run failed one browser check (G5: an invitation for another address showed "not in an organization" instead of "can't be used"; cause: the invite page cleared the link before a second render). Fixed in `apps/web/js/app.js`; local `scripts/e2e-ui.mjs` 248/248; pushed; check the PR for the new CI result.
+- Local: `DRIVERS=pglite npm test` all 57 suites pass (invitations 38, profiles 14, audit 63); `scripts/e2e-onboarding.mjs` 21/21; tokens and secrets checks pass.
+- Not testable without the owner's accounts: real Brevo delivery, Supabase confirmation / reset / e-mail-change mails through Brevo SMTP. These are the live tests in `docs/ONBOARDING.md` §4 step 5. **The system is not "production-ready" until those pass.**
 
-## 6. What the owner must do (nothing else is blocking)
-1. Approve and run `scripts/golive-0041-0042.sql` (Supabase SQL Editor), or tell the assistant to run it.
-2. Approve merging the onboarding PR after step 1 (PR #38 with the profile screens is already merged, so step 1 is urgent: the live Team and profile pages need 0041).
-3. Brevo: verify a sender (best on your own domain with DKIM/DMARC; a Gmail sender will be rejected by Gmail), create an **API key** and an **SMTP key**.
-4. Cloudflare Pages (Production and Preview): `BREVO_API_KEY` (secret), `MAIL_FROM_EMAIL`, optional `MAIL_FROM_NAME`; then redeploy.
-5. Supabase: Authentication › SMTP = Brevo (`smtp-relay.brevo.com`, 587); URL configuration (Site URL and `https://l2f-ecosystem.pages.dev/**`); Confirm email **on**.
-6. Live test with a spare address (checklist in `docs/ONBOARDING.md` §4).
+## 6. What the owner must do (step-by-step in `docs/ONBOARDING.md` §3–4)
+1. Say "yes" to running `scripts/golive-0041-0042.sql` (urgent: fixes the live profile and Team pages).
+2. Brevo: authenticate the domain (DNS records), add the sender, create an API key and an SMTP key.
+3. Cloudflare (Production and Preview): `BREVO_API_KEY` (Secret), `MAIL_FROM_EMAIL`, `MAIL_FROM_NAME`; retry the deployment.
+4. Supabase: custom SMTP = Brevo; URL configuration; Confirm email and Secure email change on.
+5. Say "yes" to merging PR #39 once CI is green.
+6. Do the live tests in §4 step 5 with a spare mailbox; the assistant checks the database side.
 
 ## 7. How to work in this repository
 - Plain ES modules web app (`apps/web/js`), Planner React app (`apps/planner`, mounted in a shadow root), API as Cloudflare Pages Function (`functions/api/[[route]].js`), build `node scripts/build-web.mjs`.
