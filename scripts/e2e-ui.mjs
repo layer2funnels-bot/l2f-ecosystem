@@ -980,6 +980,28 @@ for (const [w, label] of [[1280, 'desktop'], [768, 'tablet'], [390, 'phone']]) {
   check('CX11', 'Client access is not in the staff Members list', !(await (async () => { await page.getByRole('tab', { name: 'Members' }).click(); await page.waitForSelector('#invite', { timeout: 9000 }); return (await page.locator('main').innerText()).includes(EMAIL); })()));
 }
 
+
+// =============================================================== PR. Your profile, and an invitation that survives the e-mail confirmation
+{
+  const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
+  await visit(page, base + '/#/office'); await page.waitForSelector('.profile-wrap .who', { timeout: 9000 });
+  await page.locator('.profile-wrap .who').click(); await page.getByRole('menuitem', { name: /Your profile/ }).click(); await page.locator('main h1', { hasText: 'Your profile' }).waitFor({ timeout: 9000 });
+  const txt = await page.locator('main').innerText();
+  check('PR1', 'The profile menu opens Your profile, with Photo, Name, Email and Password', ['Photo', 'Name', 'Email', 'Password'].every((t) => txt.includes(t)));
+  await page.waitForSelector('#pf-name', { timeout: 9000 }); await page.fill('#pf-name', 'Una Q. Owner'); await page.getByRole('button', { name: 'Save name' }).click(); await wait('Name saved.');
+  check('PR2', 'Changing the name saves it (and an empty name is refused)', (await q("select display_name from profiles where email = $1", [EMAIL]))[0]?.display_name === 'Una Q. Owner');
+  await page.fill('#pf-name', '   '); await page.getByRole('button', { name: 'Save name' }).click(); await page.waitForSelector('#pf-name-e:not([hidden])', { timeout: 5000 }); await page.fill('#pf-name', 'Una Q. Owner');
+  await page.setInputFiles('#pf-file', { name: 'me.png', mimeType: 'image/png', buffer: PNG }); await wait('Photo saved.');
+  check('PR3', 'Choosing a photo saves a small picture and the header shows it', ((await q("select length(avatar_data) n from profiles where email = $1", [EMAIL]))[0]?.n ?? 0) > 100 && (await page.locator('.profile-wrap .who img').count()) === 1);
+  await page.fill('#pf-pw', 'short'); await page.fill('#pf-pw2', 'short'); await page.getByRole('button', { name: 'Change password' }).click(); await page.waitForSelector('#pf-pw-e:not([hidden])', { timeout: 5000 });
+  check('PR4', 'A short password is refused with a plain message', (await page.locator('#pf-pw-e').innerText()).includes('at least 10'));
+  await page.getByRole('button', { name: 'Remove photo' }).click(); await wait('Photo removed.');
+  check('PR5', 'Removing the photo clears it', (await q("select avatar_data from profiles where email = $1", [EMAIL]))[0]?.avatar_data === null);
+  const inv = await newPage(1280, 800); await inv.goto(base + '/#/invite?token=abc123token'); await inv.waitForTimeout(600);
+  const kept = await inv.evaluate(() => localStorage.getItem('l2f.invite')); await inv.evaluate(() => sessionStorage.clear()); await inv.reload(); await inv.waitForTimeout(600);
+  check('PR6', 'An invitation link is remembered across tabs, so it still applies after the e-mail confirmation opens in a new tab', kept === 'abc123token' && (await inv.evaluate(() => localStorage.getItem('l2f.invite'))) === 'abc123token');
+  await inv.evaluate(() => localStorage.removeItem('l2f.invite'));
+}
 check('J1', 'No script errors, warnings or Content-Security-Policy violations during the whole run (deliberate 4xx answers excluded)', problems.length === 0, problems.slice(0, 4).join(' | '));
 await browser.close(); await s.close(); await admin.end();
 for (const x of results) console.log(`${x.ok ? 'PASS' : 'FAIL'}  ${x.id.padEnd(8)} ${x.n}${x.ok ? '' : `  [${x.d}]`}`);

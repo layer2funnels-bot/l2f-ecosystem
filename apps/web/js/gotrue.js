@@ -13,10 +13,12 @@ export function createAuthClient({ baseUrl, publishableKey, fetchImpl = (...a) =
   return {
     signIn: (email, password) => call('/token?grant_type=password', { body: { email, password } }),
     // with "confirm email" on, data.access_token is absent and the person must open the e-mail link first
-    signUp: (email, password, name) => call(`/signup${rt}`, { body: { email, password, ...(name ? { data: { full_name: name } } : {}) } }),
+    signUp: (email, password, name, redirectOverride) => call(`/signup${redirectOverride ? `?redirect_to=${encodeURIComponent(redirectOverride)}` : rt}`, { body: { email, password, ...(name ? { data: { full_name: name } } : {}) } }),
     resend: (email) => call(`/resend${rt}`, { body: { type: 'signup', email } }),
     refresh: (refresh_token) => call('/token?grant_type=refresh_token', { body: { refresh_token } }),
     recover: (email) => call(`/recover${rt}`, { body: { email } }),
+    // change the signed-in person's own e-mail (GoTrue sends a confirmation to the new address), name (user metadata) or password
+    updateUser: (token, body) => call('/user', { method: 'PUT', token, body }),
     setPassword: (token, password) => call('/user', { method: 'PUT', token, body: { password } }),
     signOut: (token) => call('/logout', { token }),
     googleUrl: () => `${url('/authorize')}?provider=google${redirectTo ? `&redirect_to=${encodeURIComponent(redirectTo)}` : ''}`,

@@ -27,7 +27,8 @@ import { permissionSet, canWith, canAnywhereWith } from './perm.js';
 import { switchOrganization } from '/packages/core/org-switch.mjs';
 import { dialog, toast, btn, notice, skeleton, notFoundState, designBadge, icon, emptyState } from './ui.js';
 import * as authViews from './views/auth.js';
-import { shellView, markAppNav } from './views/shell.js';
+import { shellView, markAppNav, setHeaderAvatar } from './views/shell.js';
+import { profileView } from './views/profile.js';
 import { launcherView, appNotBuiltView } from './views/launcher.js';
 import { officeHomeView } from './views/home.js';
 import { adminView } from './views/admin.js';
@@ -38,6 +39,13 @@ const root = document.getElementById('app');
 const store = (() => { try { localStorage.setItem('l2f.t', '1'); localStorage.removeItem('l2f.t'); return localStorage; } catch { const m = new Map(); return { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => m.set(k, v), removeItem: (k) => m.delete(k) }; } })();
 const tabStore = (() => { try { sessionStorage.setItem('l2f.t', '1'); sessionStorage.removeItem('l2f.t'); return sessionStorage; } catch { return store; } })();
 const session = createSession({ storage: store });
+// A pending invitation must survive the e-mail confirmation step: the confirmation link opens in a new tab (often another browser), so it is kept in
+// local storage as well as in the tab, and it also rides on the confirmation link itself (?invite=...).
+const inviteStore = {
+  get: () => tabStore.getItem('l2f.invite') || (() => { try { return store.getItem('l2f.invite'); } catch { return null; } })(),
+  set: (t) => { tabStore.setItem('l2f.invite', t); try { store.setItem('l2f.invite', t); } catch { /* private mode: the tab copy still works */ } },
+  clear: () => { tabStore.removeItem('l2f.invite'); try { store.removeItem('l2f.invite'); } catch { /* none */ } },
+};
 const auth = createAuthClient({ baseUrl: cfg.supabaseUrl, publishableKey: cfg.publishableKey, redirectTo: `${location.origin}/` });
 let slowDownShown = 0;
 const api = createApiClient({ session, auth, onExpired: () => { if (session.get()) goExpired(); },
@@ -74,7 +82,12 @@ async function loadOrgContext(org) {
 }
 
 // ---- boot: restore the session, load organizations, show a pending invitation
+let me = null;                       // { name, photo } of the signed-in person, for the header avatar
+const freshToken = async () => { if (session.needsRefresh()) await refreshNow(); return session.get()?.access; };
+async function loadMe() { const r = await api.call('profile.get', {}, { org: NO_ORG }); const row = r.ok ? r.data?.[0] : null; me = { name: row?.display_name ?? session.get()?.name ?? null, photo: row?.avatar_data ?? null }; return me; }
 async function boot() {
+  const viaLink = new URLSearchParams(location.search).get('invite');
+  if (viaLink) { inviteStore.set(viaLink); history.replaceState(null, '', location.pathname + location.hash); }
   const fromLink = parseAuthHash(location.hash);
   if (fromLink) {
     history.replaceState(null, '', location.pathname + location.search);        // tokens never stay in the URL
@@ -82,15 +95,15 @@ async function boot() {
     if (fromLink.type === 'recovery') { ready = true; go('#/reset'); return; }
   }
   const r0 = parseRoute(location.hash);
-  if (r0.name === 'invite' && r0.query.token) { tabStore.setItem('l2f.invite', r0.query.token); history.replaceState(null, '', `${location.pathname}#/invite`); }
+  if (r0.name === 'invite' && r0.query.token) { inviteStore.set(r0.query.token); history.replaceState(null, '', `${location.pathname}#/invite`); }
   if (!session.signedIn()) { ctx = null; ready = true; render(); return; }
   if (session.expired() && !(await refreshNow())) { ready = true; goExpired(); return; }
 
-  if (!tabStore.getItem('l2f.touched')) { tabStore.setItem('l2f.touched', '1'); api.call('profile.touch', { name: session.get()?.name ?? undefined }, { org: NO_ORG }); }          // name and email for the member list, once per tab; failure is harmless
+  if (!tabStore.getItem('l2f.touched')) { tabStore.setItem('l2f.touched', '1'); api.call('profile.touch', { name: session.get()?.name ?? undefined }, { org: NO_ORG }).then(() => loadMe().then(() => setHeaderAvatar(me))); }          // name and email for the member list, once per tab; failure is harmless
   const list = await loadOrgs();
   if (list === 'expired') return;
   if (list === null) { ready = true; return render({ bootError: true }); }
-  const pending = tabStore.getItem('l2f.invite');
+  const pending = inviteStore.get();
   if (!list.length && !pending) { ctx = null; ready = true; go('#/no-org'); return; }
   ctx = { orgs: list };
   if (list.length) await loadOrgContext(list.find((o) => o.is_active) ?? defaultOrg(list));
@@ -124,7 +137,8 @@ const appApi = {
     await boot(); return null;
   },
   async signUp(name, email, password) {
-    const r = await auth.signUp(email, password, name);
+    const inv = inviteStore.get();
+    const r = await auth.signUp(email, password, name, inv ? `${location.origin}/?invite=${encodeURIComponent(inv)}` : undefined);
     const soft = offlineOrBusy(r); if (soft) return soft;
     if (r.ok && r.data?.access_token) { session.set(r.data); await boot(); return null; }
     if (r.ok) { authViews.authState.email = email; authViews.authState.from = 'signup'; go('#/check-email'); return null; }
@@ -144,14 +158,36 @@ const appApi = {
     return r.ok ? null : 'This reset link has expired. Ask for a new one.';
   },
   async continueAfterReset() { await boot(); },
+  // ---- profile (everyone changes only their own)
+  async getProfile() {
+    const r = await api.call('profile.get', {}, { org: NO_ORG }); if (!r.ok) return { ok: false };
+    const row = r.data?.[0] ?? {}; const c = session.get();
+    return { ok: true, data: { name: row.display_name ?? c?.name ?? '', email: row.email ?? c?.email ?? '', photo: row.avatar_data ?? null } };
+  },
+  async saveProfile({ name, photo, clear_photo }) {
+    const r = await api.call('profile.update', { ...(name ? { name } : {}), ...(photo ? { photo } : {}), ...(clear_photo ? { clear_photo: true } : {}) }, { org: NO_ORG });
+    if (!r.ok) return { ok: false, message: r.status === 429 ? messageFor('rate_limited') : 'We couldn’t save that. Try again.' };
+    if (name) { const tok = await freshToken(); if (tok) auth.updateUser(tok, { data: { full_name: name } }); const c = session.get(); if (c) session.set({ access_token: c.access, refresh_token: c.refresh, expires_at: c.expiresAt / 1000, user: { email: c.email, id: c.userId, user_metadata: { full_name: name } } }); }
+    await loadMe(); setHeaderAvatar(me); return { ok: true };
+  },
+  async changeEmail(email) {
+    const tok = await freshToken(); if (!tok) return { ok: false, message: 'Your sign-in has expired. Sign in again.' };
+    const r = await auth.updateUser(tok, { email }); const soft = offlineOrBusy(r); if (soft) return { ok: false, message: soft };
+    return r.ok ? { ok: true } : { ok: false, message: r.status === 422 ? 'That email can’t be used. Try another one.' : 'We couldn’t change the email. Try again.' };
+  },
+  async changePassword(password) {
+    const tok = await freshToken(); if (!tok) return { ok: false, message: 'Your sign-in has expired. Sign in again.' };
+    const r = await auth.updateUser(tok, { password }); const soft = offlineOrBusy(r); if (soft) return { ok: false, message: soft };
+    return r.ok ? { ok: true } : { ok: false, message: r.status === 422 ? 'Choose a stronger password, with a few more characters, and not your old one.' : 'We couldn’t change the password. Try again.' };
+  },
   async signOut() { const c = session.get(); dirty.clear(); session.clear(); ctx = null; api.setOrg(null); tabStore.removeItem('l2f.return'); tabStore.removeItem('l2f.touched'); if (c?.access) auth.signOut(c.access); go('#/signin'); },
   useDifferentAccount() { session.clear(); ctx = null; go('#/signin'); },
   async recheck() { const list = await loadOrgs(); if (!Array.isArray(list) || !list.length) return false; ctx = { orgs: list }; await loadOrgContext(defaultOrg(list)); go(hrefFor.launcher()); return true; },
   async acceptInvitation(token) {
     const before = ctx?.orgs ?? [];
     const acc = await api.call('invitation.accept', { token }, { org: NO_ORG });
-    if (!acc.ok) { tabStore.removeItem('l2f.invite'); return 'That invitation can’t be used. Ask for a new one.'; }
-    tabStore.removeItem('l2f.invite');
+    if (!acc.ok) { inviteStore.clear(); return 'That invitation can’t be used. Ask for a new one.'; }
+    inviteStore.clear();
     const list = await loadOrgs(); if (!Array.isArray(list)) return messageFor('failed');
     const known = new Set(before.map((o) => o.org_id));
     const joined = list.find((o) => !known.has(o.org_id)) ?? list[0];
@@ -160,11 +196,11 @@ const appApi = {
     announce(`You joined ${joined.name}`); go(hrefFor.office()); toast(`You joined ${joined.name}.`); return null;
   },
   async declineInvitation(token) {
-    const r = await api.call('invitation.decline', { token }, { org: NO_ORG }); tabStore.removeItem('l2f.invite');
+    const r = await api.call('invitation.decline', { token }, { org: NO_ORG }); inviteStore.clear();
     if (!r.ok) return messageFor(r.error?.code);
     go(ctx?.orgs?.length ? hrefFor.launcher() : '#/no-org'); return null;
   },
-  dismissInvitation() { tabStore.removeItem('l2f.invite'); go(ctx?.orgs?.length ? hrefFor.launcher() : '#/no-org'); },
+  dismissInvitation() { inviteStore.clear(); go(ctx?.orgs?.length ? hrefFor.launcher() : '#/no-org'); },
   switchOrg: (targetId) => switchFlow(targetId),
 };
 
@@ -282,7 +318,7 @@ async function render(opts = {}) {
 
   // signed-out and account screens
   if (!session.signedIn()) {
-    const inv = tabStore.getItem('l2f.invite');
+    const inv = inviteStore.get();
     const views = { signup: () => authViews.signUpView({ app: appApi, invite: inv }), forgot: () => authViews.forgotView({ app: appApi }), 'check-email': () => authViews.checkEmailView({ app: appApi }),
       expired: () => authViews.expiredView({ app: appApi, returnTo: null, email: null }), invite: () => authViews.signInView({ app: appApi, invite: true }), reset: () => authViews.signInView({ app: appApi, invite: inv }) };
     const v = views[route.name] ?? (() => authViews.signInView({ app: appApi, invite: inv }));
@@ -296,12 +332,13 @@ async function render(opts = {}) {
   if (route.name === 'reset') { put(root, authViews.resetView({ app: appApi })); return focusTitle(root); }
   if (opts.inviteFailed) { put(root, authViews.inviteFailedView(appApi)); return focusTitle(root); }
   if (route.name === 'invite') {
-    const token = tabStore.getItem('l2f.invite');
+    const token = inviteStore.get();
     put(root, centered(skeleton(3)));
     const p = token ? await api.call('invitation.preview', { token }, { org: NO_ORG }) : null;
     if (!live()) return;
     put(root, authViews.inviteView({ app: appApi, token, preview: p?.ok ? p.data[0] : null, email: session.get()?.email })); return focusTitle(root);
   }
+  if (route.name === 'profile' && !ctx?.active) { put(root, centered(profileView({ app: appApi, me }))); document.title = 'Your profile'; return focusTitle(root); }
   if (route.name === 'no-org' || !ctx?.active) { put(root, authViews.noOrgView(appApi, session.get()?.email)); return focusTitle(root); }
 
   // inside the ecosystem
@@ -326,6 +363,7 @@ async function render(opts = {}) {
     switch (route.name) {
       case 'home': case 'launcher': case 'signin': case 'signup': case 'check-email': case 'forgot': case 'invite':
         content = launcherView({ catalog: ctx.catalog, error: ctx.catalogError, org, orgs: ctx.orgs, role, name: session.get()?.name, registry, loadWeather: () => loadWeather({ api, store: localStorage }), onSwitch: (i) => switchFlow(i), retry: async () => { await loadOrgContext(org); render(); } }); break;
+      case 'profile': content = profileView({ app: appApi, me }); break;
       case 'office': content = officeHomeView({ org, role, isAdmin, api, live, portalState: ctx.catalog.find((a) => a.app_key === 'portal')?.state }); break;
       case 'office-page': {
         const pg = route.params.page;
@@ -369,7 +407,7 @@ async function render(opts = {}) {
   const view = shellView({ app: appApi, orgs: ctx.orgs, active: org, email: session.get()?.email, name: session.get()?.name, route, content, banner: bannerEl(), isAdmin, inOffice, launcherCurrent: route.name === 'launcher' || route.name === 'home',
     notifications: org.member_kind === 'client' ? null : notifications,
     catalog: ctx.catalog, registry, currentApp: inOffice ? 'office' : route.name === 'doc' || route.name === 'sheet' || route.name === 'drive' ? 'drive' : route.name === 'board' ? 'whiteboard' : route.name === 'projects' ? 'projects' : route.name === 'clients' ? 'clients' : route.name === 'portal' ? 'portal' : route.name === 'forms' ? 'forms' : route.name === 'ladder' ? 'value_ladder' : route.name === 'boards' ? 'whiteboard' : route.name === 'social' ? 'social_planner' : route.name === 'planner' ? 'planner' : route.name === 'app' ? route.params.app : null, theme,
-    weather: { on: () => !weatherOff(localStorage), set: (on) => { setWeatherOff(localStorage, !on); try { sessionStorage.removeItem('l2f.wx'); } catch { /* none */ } render(); } } });
+    me, weather: { on: () => !weatherOff(localStorage), set: (on) => { setWeatherOff(localStorage, !on); try { sessionStorage.removeItem('l2f.wx'); } catch { /* none */ } render(); } } });
   put(root, view, designBadge('Built to design'));
   document.title = `${pageLabel(route)} · ${org.name}`;
   if (toastLater) { toast(toastLater); toastLater = null; }
