@@ -256,6 +256,14 @@ begin
      order by case a.status when 'requested' then 0 when 'invited' then 1 when 'active' then 2 when 'suspended' then 3 else 4 end, a.created_at desc;
 end $$;
 
+-- ------------------------------------------------------------------ invitations already waiting
+-- Open staff invitations made before this migration carry the old fixed list of five apps. Give them every app switched on for their
+-- organization (same rule as new invitations), so people already invited are not left without most apps. Nothing else in the row changes.
+update public.invitations i set apps = coalesce((
+    select array_agg(a.key order by a.sort_order) from public.apps a join public.workspace_apps wa on wa.app_key = a.key
+     where wa.workspace_id = i.workspace_id and wa.enabled and a.scope <> 'portal' and a.key <> 'platform' and a.lifecycle in ('active', 'deprecated')), i.apps)
+ where i.kind = 'staff' and i.accepted_at is null and i.revoked_at is null and i.apps = '{office,projects,planner,drive,clients}'::text[];
+
 -- ------------------------------------------------------------------ grants (API role only)
 revoke all on function private.email_verified(), private.invitation_last_delivery(uuid), private.invitation_join(uuid) from public;
 grant execute on function private.email_verified(), private.invitation_last_delivery(uuid), private.invitation_join(uuid) to app_user;
