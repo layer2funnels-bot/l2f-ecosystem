@@ -4,6 +4,7 @@
 // never name a different organization than the one the database is already narrowed to.
 const ROLES = ['owner', 'admin', 'editor', 'viewer'];
 
+import { deliverInvitation } from './invite-mail.mjs';
 import { defineOperation } from './define.mjs';
 export { defineOperation };
 
@@ -60,7 +61,13 @@ export const operations = Object.freeze(Object.fromEntries([
       email: { type: 'email', required: true }, kind: { type: 'enum', values: ['staff', 'client'], required: true },
       role: { type: 'enum', values: ROLES }, client: { type: 'uuid' }, apps: { type: 'list', items: 'text', max: 20, itemMax: 40 },
     },
-    run: (q, ctx, i) => q('select create_invitation($1,$2,$3,$4,$5,$6) as token', [ctx.orgId, i.email, i.kind, i.role ?? null, i.client ?? null, i.apps ?? null]),
+    // creates the invitation, then e-mails it (when a mailer is configured) and records the answer; the link comes back only if no e-mail went out
+    run: async (q, ctx, i) => {
+      const [{ token }] = await q('select create_invitation($1,$2,$3,$4,$5,$6) as token', [ctx.orgId, i.email, i.kind, i.role ?? null, i.client ?? null, i.apps ?? null]);
+      const [{ id }] = await q("select id from invitations where token_hash = encode(sha256(convert_to($1, 'UTF8')), 'hex')", [token]);
+      const mail = await deliverInvitation(q, ctx, id, token);
+      return [{ invitation_id: id, ...mail, token: mail.email_status === 'sent' ? null : token }];
+    },
   }),
   defineOperation({
     name: 'invitation.accept', class: 'sensitive', allowNoOrg: true,

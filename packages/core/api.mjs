@@ -17,7 +17,7 @@ const header = (headers, name) => {
   return Array.isArray(v) ? v[0] : v;
 };
 
-export function createApi({ executor, logger, limiter = createRateLimiter(), operations = defaultOperations, now = Date.now, storage = null, weather = null }) {
+export function createApi({ executor, logger, limiter = createRateLimiter(), operations = defaultOperations, now = Date.now, storage = null, weather = null, mailer = null }) {
   const done = (requestId, op, t0, status, cls, dbCode, rateLimited, body) => {
     logger.log({ ts: new Date(now()).toISOString(), requestId, op, status, class: cls, db_code: dbCode, ms: now() - t0, rateLimited });
     return { status, body: { requestId, ...body } };
@@ -50,13 +50,13 @@ export function createApi({ executor, logger, limiter = createRateLimiter(), ope
       if (!gate.allowed) return fail(requestId, logName, t0, { ...RATE_LIMITED, retryAfterSeconds: gate.retryAfterSeconds });
 
       try {
-        const rows = await executor.withRequest({ userId, email: request.auth.email ?? null, orgId }, async (q) => {
+        const rows = await executor.withRequest({ userId, email: request.auth.email ?? null, emailVerified: request.auth.emailVerified === true, orgId }, async (q) => {
           if (orgId !== NO_ORG && !op.allowNoOrg) {   // who is calling: client accounts reach only operations marked for clients, and the reverse
             const [{ a } = {}] = await q('select public.my_audience($1) as a', [orgId]);
             const want = op.audience ?? 'staff';
             if (want !== 'any' && a !== want) throw { code: 'PGRST116' };
           }
-          const out = await op.run(q, { orgId, userId, storage, weather }, v.value);
+          const out = await op.run(q, { orgId, userId, storage, weather, mailer, origin: request.origin ?? null }, v.value);
           if (op.single && out.length === 0) throw { code: 'PGRST116' };   // a mutation that touched nothing looks like a denied one
           return out;
         });

@@ -82,7 +82,13 @@ async function loadOrgContext(org) {
 }
 
 // ---- boot: restore the session, load organizations, show a pending invitation
-let me = null;                       // { name, photo } of the signed-in person, for the header avatar
+let me = null;
+let myInvites = [];                   // invitations waiting for this person's verified e-mail (found by the server, no link needed)
+async function loadMine() {
+  const r = await api.call('invitations.mine', {}, { org: NO_ORG }); const rows = r.ok ? r.data : [];
+  for (const x of rows.filter((x) => x.already_member)) api.call('invitation.accept_mine', { id: x.id }, { org: NO_ORG });   // already in: just close it, nothing changes
+  myInvites = rows.filter((x) => !x.already_member); return myInvites;
+}                       // { name, photo } of the signed-in person, for the header avatar
 const freshToken = async () => { if (session.needsRefresh()) await refreshNow(); return session.get()?.access; };
 async function loadMe() { const r = await api.call('profile.get', {}, { org: NO_ORG }); const row = r.ok ? r.data?.[0] : null; me = { name: row?.display_name ?? session.get()?.name ?? null, photo: row?.avatar_data ?? null }; return me; }
 async function boot() {
@@ -104,12 +110,14 @@ async function boot() {
   if (list === 'expired') return;
   if (list === null) { ready = true; return render({ bootError: true }); }
   const pending = inviteStore.get();
-  if (!list.length && !pending) { ctx = null; ready = true; go('#/no-org'); return; }
+  if (!pending) await loadMine();
+  if (!list.length && !pending && !myInvites.length) { ctx = null; ready = true; go('#/no-org'); return; }
   ctx = { orgs: list };
   if (list.length) await loadOrgContext(list.find((o) => o.is_active) ?? defaultOrg(list));
   ready = true;
   const r = parseRoute(location.hash);
   if (pending) return go('#/invite');
+  if (myInvites.length && !tabStore.getItem('l2f.inv.seen')) { tabStore.setItem('l2f.inv.seen', '1'); return go('#/invite'); }
   const back = tabStore.getItem('l2f.return'); tabStore.removeItem('l2f.return');
   if (back && AUTH_ROUTES.has(r.name)) { try { return go(JSON.parse(back).hash); } catch { /* fall through */ } }
   go(AUTH_ROUTES.has(r.name) || r.name === 'home' || r.name === 'no-org' ? hrefFor.launcher() : location.hash);
@@ -173,16 +181,39 @@ const appApi = {
   async changeEmail(email) {
     const tok = await freshToken(); if (!tok) return { ok: false, message: 'Your sign-in has expired. Sign in again.' };
     const r = await auth.updateUser(tok, { email }); const soft = offlineOrBusy(r); if (soft) return { ok: false, message: soft };
-    return r.ok ? { ok: true } : { ok: false, message: r.status === 422 ? 'That email can’t be used. Try another one.' : 'We couldn’t change the email. Try again.' };
+    return r.ok ? { ok: true } : { ok: false, message: r.status === 422 ? 'That email can’t be used (it may already belong to another account). Try another one.' : r.status >= 500 ? 'We couldn’t send the confirmation email, so nothing was changed. Try again later.' : 'We couldn’t change the email. Try again.' };
   },
-  async changePassword(password) {
+  async changePassword(password, nonce) {
     const tok = await freshToken(); if (!tok) return { ok: false, message: 'Your sign-in has expired. Sign in again.' };
-    const r = await auth.updateUser(tok, { password }); const soft = offlineOrBusy(r); if (soft) return { ok: false, message: soft };
-    return r.ok ? { ok: true } : { ok: false, message: r.status === 422 ? 'Choose a stronger password, with a few more characters, and not your old one.' : 'We couldn’t change the password. Try again.' };
+    const r = await auth.updateUser(tok, { password, ...(nonce ? { nonce } : {}) }); const soft = offlineOrBusy(r); if (soft) return { ok: false, message: soft };
+    if (r.ok) return { ok: true };
+    const code = String(r.data?.error_code ?? r.data?.code ?? r.data?.msg ?? '');
+    if (/reauthentication_needed/i.test(code) && !nonce) { await auth.reauthenticate(tok); return { ok: false, needCode: true, message: 'For your security, we emailed you a code. Enter it below to finish.' }; }
+    if (/reauthentication_not_valid|nonce/i.test(code)) return { ok: false, needCode: true, message: 'That code didn’t work. Check the latest email and try again.' };
+    return { ok: false, message: r.status === 422 ? 'Choose a stronger password, with a few more characters, and not your old one.' : 'We couldn’t change the password. Try again.' };
   },
+  async signOutEverywhere() { const tok = await freshToken(); if (tok) await auth.signOut(tok, 'global'); return appApi.signOut(); },
   async signOut() { const c = session.get(); dirty.clear(); session.clear(); ctx = null; api.setOrg(null); tabStore.removeItem('l2f.return'); tabStore.removeItem('l2f.touched'); if (c?.access) auth.signOut(c.access); go('#/signin'); },
   useDifferentAccount() { session.clear(); ctx = null; go('#/signin'); },
-  async recheck() { const list = await loadOrgs(); if (!Array.isArray(list) || !list.length) return false; ctx = { orgs: list }; await loadOrgContext(defaultOrg(list)); go(hrefFor.launcher()); return true; },
+  async recheck() { const list = await loadOrgs(); if (Array.isArray(list) && !list.length && (await loadMine()).length) { go('#/invite'); return true; } if (!Array.isArray(list) || !list.length) return false; ctx = { orgs: list }; await loadOrgContext(defaultOrg(list)); go(hrefFor.launcher()); return true; },
+  async acceptMine(id) {
+    const before = ctx?.orgs ?? [];
+    const acc = await api.call('invitation.accept_mine', { id }, { org: NO_ORG });
+    if (!acc.ok) { await loadMine(); return 'That invitation can’t be used any more. Ask for a new one.'; }
+    myInvites = myInvites.filter((x) => x.id !== id);
+    const list = await loadOrgs(); if (!Array.isArray(list)) return messageFor('failed');
+    const known = new Set(before.map((o) => o.org_id));
+    const joined = list.find((o) => !known.has(o.org_id)) ?? list[0];
+    ctx = { orgs: list.map((o) => ({ ...o, is_active: o.org_id === joined.org_id })) };
+    await loadOrgContext(ctx.orgs.find((o) => o.is_active));
+    announce(`You joined ${joined.name}`); go(myInvites.length ? '#/invite' : hrefFor.office()); toast(`You joined ${joined.name}.`); return null;
+  },
+  async declineMine(id) {
+    const r = await api.call('invitation.decline_mine', { id }, { org: NO_ORG }); myInvites = myInvites.filter((x) => x.id !== id);
+    if (!r.ok) return messageFor('failed');
+    go(myInvites.length ? '#/invite' : ctx?.orgs?.length ? hrefFor.launcher() : '#/no-org'); render(); return null;
+  },
+  laterMine() { go(ctx?.orgs?.length ? hrefFor.launcher() : '#/no-org'); },
   async acceptInvitation(token) {
     const before = ctx?.orgs ?? [];
     const acc = await api.call('invitation.accept', { token }, { org: NO_ORG });
@@ -336,6 +367,10 @@ async function render(opts = {}) {
     put(root, centered(skeleton(3)));
     const p = token ? await api.call('invitation.preview', { token }, { org: NO_ORG }) : null;
     if (!live()) return;
+    if (!token || !p?.ok || !p.data.length) {      // no link (or a link for another address): offer what the server finds for this verified e-mail
+      if (!myInvites.length) await loadMine(); if (!live()) return;
+      if (myInvites.length) { if (token) inviteStore.clear(); put(root, authViews.invitesMineView({ app: appApi, invites: myInvites, email: session.get()?.email })); return focusTitle(root); }
+    }
     put(root, authViews.inviteView({ app: appApi, token, preview: p?.ok ? p.data[0] : null, email: session.get()?.email })); return focusTitle(root);
   }
   if (route.name === 'profile' && !ctx?.active) { put(root, centered(profileView({ app: appApi, me }))); document.title = 'Your profile'; return focusTitle(root); }

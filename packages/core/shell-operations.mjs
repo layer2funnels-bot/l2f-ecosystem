@@ -1,6 +1,7 @@
 // API operations behind the approved shell, auth and Admin designs (migration 0012). Same conventions as the other operation files:
 // column names are constants, permissions are decided in the database, a refusal reads as "not found".
 import { defineOperation } from './define.mjs';
+import { deliverInvitation } from './invite-mail.mjs';
 
 const ROLES = ['owner', 'admin', 'editor', 'viewer'];
 const id = { id: { type: 'uuid', required: true } };
@@ -15,7 +16,13 @@ export const shellOperations = [
     run: (q, _c, i) => q('select profile_update($1, $2, $3)', [i.name ?? null, i.photo ?? null, i.clear_photo ?? false]) }),
   defineOperation({ name: 'profile.photo', class: 'read', audience: 'staff', input: { user: { type: 'uuid', required: true } }, run: (q, _c, i) => q('select profile_photo($1) as photo', [i.user]) }),
   defineOperation({ name: 'profile.touch', class: 'write', allowNoOrg: true, input: { name: { type: 'text', max: 120 } }, run: (q, _c, i) => q('select profile_touch($1)', [i.name ?? null]) }),
-  defineOperation({ name: 'invitation.preview', class: 'sensitive', allowNoOrg: true, single: true, input: { token: { type: 'text', required: true, max: 200 } }, run: (q, _c, i) => q('select org_name, org_slug, kind, role, inviter_name, email from invitation_preview($1)', [i.token]) }),
+  defineOperation({ name: 'invitation.preview', class: 'sensitive', allowNoOrg: true, single: true, input: { token: { type: 'text', required: true, max: 200 } }, run: async (q, _c, i) => { const rows = await q('select org_name, org_slug, kind, role, inviter_name, email from invitation_preview($1)', [i.token]); if (rows.length) await q('select invitation_mark_opened($1)', [i.token]); return rows; } }),
+  // invitations waiting for the signed-in person (their VERIFIED e-mail), so joining works without the link: another tab, another device, a later sign-in
+  defineOperation({ name: 'invitations.mine', class: 'read', allowNoOrg: true, run: (q) => q('select id, org_id, org_name, org_slug, kind, role, inviter_name, expires_at, already_member from my_invitations()') }),
+  defineOperation({ name: 'invitation.accept_mine', class: 'sensitive', allowNoOrg: true, single: true, input: { id: { type: 'uuid', required: true } }, run: (q, _c, i) => q('select invitation_accept_mine($1) as membership_id', [i.id]) }),
+  defineOperation({ name: 'invitation.decline_mine', class: 'sensitive', allowNoOrg: true, single: true, input: { id: { type: 'uuid', required: true } }, run: (q, _c, i) => q('select invitation_decline_mine($1) as done', [i.id]) }),
+  // whether invitation e-mails can go out (no secret is returned: only yes/no and the sender address)
+  defineOperation({ name: 'mail.status', class: 'read', run: async (_q, ctx) => [{ configured: Boolean(ctx.mailer?.configured), from: ctx.mailer?.configured ? ctx.mailer.from : null }] }),
   defineOperation({
     name: 'invitation.decline', class: 'sensitive', allowNoOrg: true, single: true, input: { token: { type: 'text', required: true, max: 200 } },
     run: async (q, _c, i) => ((await q('select invitation_decline($1) as ok', [i.token]))[0].ok ? [{ ok: true }] : []),
@@ -37,10 +44,16 @@ export const shellOperations = [
   }),
 
   // ---- Admin → Members
-  defineOperation({ name: 'members.list', class: 'read', run: (q) => q('select row_kind, user_id, invitation_id, display_name, email, role, status, since, is_you from members_list()') }),
+  defineOperation({ name: 'members.list', class: 'read', run: (q) => q('select row_kind, user_id, invitation_id, display_name, email, role, status, since, is_you, expires_at, opened_at, email_status, email_at, email_error from members_list()') }),
   defineOperation({ name: 'members.setRole', class: 'write', single: true, input: { user: { type: 'uuid', required: true }, role: { type: 'enum', values: ROLES, required: true } }, run: (q, _c, i) => q('select member_set_role($1, $2) as done', [i.user, i.role]) }),
   defineOperation({ name: 'members.setStatus', class: 'write', single: true, input: { user: { type: 'uuid', required: true }, status: { type: 'enum', values: ['active', 'deactivated'], required: true } }, run: (q, _c, i) => q('select member_set_status($1, $2) as done', [i.user, i.status]) }),
   defineOperation({ name: 'members.remove', class: 'write', single: true, input: { user: { type: 'uuid', required: true } }, run: (q, _c, i) => q('select member_remove($1) as done', [i.user]) }),
+  // a fresh link for a staff invitation (still open or expired); the old link stops working; e-mailed again when a mailer is configured
+  defineOperation({ name: 'invitations.resend', class: 'sensitive', input: id, run: async (q, ctx, i) => {
+    const [{ token }] = await q('select invitation_reissue($1) as token', [i.id]);
+    const mail = await deliverInvitation(q, ctx, i.id, token);
+    return [{ invitation_id: i.id, ...mail, token: mail.email_status === 'sent' ? null : token }];
+  } }),
   defineOperation({ name: 'invitations.cancel', class: 'write', single: true, input: id, run: (q, _c, i) => q('select invitation_cancel($1) as done', [i.id]) }),
 
   // ---- Admin → Access

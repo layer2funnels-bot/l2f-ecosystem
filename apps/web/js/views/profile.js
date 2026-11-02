@@ -62,14 +62,18 @@ export function profileView({ app, me }) {
 
     // password
     const pw1 = field({ id: 'pf-pw', label: 'New password', type: 'password', hint: `At least ${MIN_PASSWORD} characters.` }); const pw2 = field({ id: 'pf-pw2', label: 'Repeat the new password', type: 'password' });
-    const pwCard = h('div', { class: 'panel prof-card' }, h('h2', {}, 'Password'), pw1.el, pw2.el, btn('Change password', async () => {
+    const code = field({ id: 'pf-code', label: 'Code from your email', autocomplete: 'one-time-code', inputmode: 'numeric' }); code.el.hidden = true;
+    const pwCard = h('div', { class: 'panel prof-card' }, h('h2', {}, 'Password'), pw1.el, pw2.el, code.el, btn('Change password', async () => {
       if (pw1.input.value.length < MIN_PASSWORD) return pw1.error(`Use at least ${MIN_PASSWORD} characters.`);
       if (pw1.input.value !== pw2.input.value) return pw2.error('The two passwords don’t match.');
-      const x = await app.changePassword(pw1.input.value); if (!x.ok) return pw1.error(x.message);
-      pw1.input.value = pw2.input.value = ''; toast('Password changed.');
+      const x = await app.changePassword(pw1.input.value, code.el.hidden ? undefined : code.input.value.trim() || undefined);
+      if (!x.ok) { if (x.needCode) { code.el.hidden = false; return code.error(x.message); } return pw1.error(x.message); }
+      pw1.input.value = pw2.input.value = code.input.value = ''; code.el.hidden = true; toast('Password changed.');
     }, 'primary'));
+    const secCard = h('div', { class: 'panel prof-card' }, h('h2', {}, 'Security'), h('p', {}, 'Signed in somewhere you no longer use, or lost a device? Sign out everywhere: every browser and phone has to sign in again.'),
+      btn('Sign out of all devices', () => app.signOutEverywhere()));
 
-    put(root, head, h('div', { class: 'prof-grid' }, photoCard, nameCard, emailCard, pwCard), h('p', {}, btn('Sign out', () => app.signOut())));
+    put(root, head, h('div', { class: 'prof-grid' }, photoCard, nameCard, emailCard, pwCard, secCard), h('p', {}, btn('Sign out', () => app.signOut())));
   })();
   return root;
 }

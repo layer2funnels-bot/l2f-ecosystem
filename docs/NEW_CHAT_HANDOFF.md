@@ -1,76 +1,64 @@
-# Handoff for the next chat (written 2 Nov 2026)
+# Handoff for the next chat (updated 2 Nov 2026, after the onboarding work)
 
-Read this file first. It is written so a new chat can continue without the old conversation. Facts are marked **verified** (checked in this repository or on the live systems during the last sessions) or **check** (believed true, confirm before relying on it).
+Read this first, then `docs/ONBOARDING.md`. Facts marked **verified** were checked in the repository or on the live systems on 2 Nov 2026.
 
-## 1. Who you are working for and how they want to be talked to
-- The owner is a non-technical founder (email on the account: th272709@gmail.com). Pronouns are not stated: use "they".
-- Reports must be **short, plain English**: what is **Done**, what is **Blocked**, what **Needs approval**. One next action at the end. Evidence, never claims. Never invent results.
-- They said repeatedly: do things yourself, do not hand them steps. The only things they must do themselves are approvals and anything that needs their own login (dashboards, billing).
-- Budget: $0 extra spend. No paid services without asking. Never ask for passwords, keys or tokens in chat. The owner pasted their database password into chat once (treat it as exposed; resetting it is the owner's decision; never use or store it).
-- Do not create pull requests unless asked; do not merge or change live settings, data or schemas without a clear go-ahead from the owner (a plain "merge it" or "apply it" counts; silence does not).
+## 1. Who you work for and how
+- The owner is a non-technical founder. Pronouns not stated: use "they". Reports: short, plain English, Done / Blocked / Needs approval, evidence not claims, one next action.
+- They want things done for them. Ask only for approvals and for things that need their own logins (Brevo, Supabase, Cloudflare dashboards).
+- Budget **$0 a month**: free plans only (Supabase free, Cloudflare free, **Brevo free account**, GitHub). Never subscribe or buy without asking.
+- Never ask for passwords, keys or tokens in chat. The database password was pasted in chat once (treat as exposed; resetting is the owner's decision; if reset, `DATABASE_URL` in Cloudflare must be updated).
+- Do not merge, deploy, change live settings or run live database changes without the owner's explicit "yes" for that step. Wait for green CI before any merge.
 
-## 2. The product
-Two organizations on one platform: **Layer2Funnels** (team, `l2f`) and **Aurj** (`aurj`). One sign-in, many apps, each organization sees only its own data (enforced in the database, not in the screens).
-Apps: Launcher, Office (home, funnels, strategies, documents, team, admin), Projects, Clients, Drive, Client Portal (locked on purpose), Form Builder, Value Ladder, Whiteboard, Social Planner, Planner (strategy: plans, goals, KPIs), Funnel Mapper Pro (separate product, own folder `apps/funnel-mapper`, never touch its original repo), Layer 2 Agents (coming soon, no AI is switched on).
-Design: the approved **Design V4** ("Signal": side rail per app, light/dark, two organization themes, fonts self-hosted). Source of truth: `docs/design/v4/`. Audit with evidence: `docs/DESIGN_AUDIT_V4.md`.
+## 2. The original problem of this round and what we found (verified)
+The owner invited teammates and clients from Office. Nobody got an e-mail, and people who signed up through the link got no access.
+Root causes (full table in `docs/ONBOARDING.md` §1):
+1. The invitation was kept only in the browser tab (`sessionStorage`); the confirmation e-mail opens a new tab, so it was lost. Live database 2 Nov: 3 confirmed accounts, 2 open invitations never accepted.
+2. No e-mail sending existed at all.
+3. Invitations granted a fixed list of 5 apps; editors/viewers need a grant per app, so most apps were hidden from new teammates.
+4. A person already in the organization who opened an invitation got an error.
+5. No profile page.
+6. Supabase's built-in e-mail (confirm e-mail, reset password) is only for testing on the free plan; custom SMTP (Brevo) is needed.
 
-## 3. Where everything lives (verified)
-| Thing | Where |
-|---|---|
-| Code | GitHub `layer2funnels-bot/l2f-ecosystem` (private). Production branch: `main`. |
-| Live site | https://l2f-ecosystem.pages.dev (Cloudflare Pages project `l2f-ecosystem`; production = `main`; every other branch gets a preview URL like `https://<branch>.l2f-ecosystem.pages.dev`; previews use the **live database**) |
-| Database | Supabase project `l2f-ecosystem`, ref `dfitnxilkezepkhdmzuh`, region ap-south-1 (Mumbai) |
-| API | A Cloudflare Pages Function: `functions/api/[[route]].js` (new server per request). Runtime secrets: `DATABASE_URL` (Session pooler string, password URL-encoded), `SUPABASE_JWKS_URL`, `SUPABASE_JWT_ISSUER`, `RATE_LIMIT_STORE`, `S3_*`, `STORAGE_*`, `WEATHER_USER_AGENT`. Build variables: `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `STORAGE_CONNECT_ORIGIN`. Production and Preview have **separate** variable sets. Error `28P01` = wrong database password. |
-| Files | Supabase Storage now; Cloudflare R2 through the same adapter later (8 GB cap) |
-| Build | Cloudflare runs only `node scripts/build-web.mjs` (it also installs and builds Planner by itself; on Cloudflare a Planner build failure stops the deploy). Output `dist/web`. |
+## 3. What is built (profiles: PR #38, merged 2 Nov; onboarding: the follow-up PR from branch `claude/exciting-dirac-kjybj0`)
+- **Migration 0041 profiles** and **0042 invitation onboarding** (`migrations/`). 0042: `private.email_verified()` (auth.users.email_confirmed_at), `invitation_deliveries` table (status, provider, message id, short error; RLS, org_scope, admin-only read), `invitation_mail_facts`, `invitation_delivery_record`, `invitation_mark_opened`, `invitation_reissue` (resend with a fresh token), `my_invitations()` / `invitation_accept_mine(id)` / `invitation_decline_mine(id)` (verified e-mail only), one joining path `private.invitation_join` (already-members are let in without any role change; deactivated members are not reactivated by an invitation), `create_invitation` refuses duplicates and existing team members and grants every switched-on app by default, `members_list` and `client_access_list` show expiry and e-mail status.
+- **API** (`packages/core`): `mailer.mjs` (Brevo, server side, 8 s timeout, "sent" only on 201 + message id), `invite-mail.mjs`, ops `invitation.create` (now e-mails), `invitations.resend`, `invitations.mine`, `invitation.accept_mine`, `invitation.decline_mine`, `mail.status`, `clients.access.invite` (now e-mails), `profile.get/update/photo`. The verified-e-mail flag travels from the JWT (`jwt.mjs` → `http.mjs` → `api.mjs` → `pg-executor.mjs` claims); the database prefers `auth.users`.
+- **Web app**: invitations page for the signed-in person (no link needed), invitation token kept in local storage and on the confirmation link, Admin › Members (e-mail status, Expired, Resend / Send a new invitation, Cancel, "emails switched on/not yet" note), Admin › Client access (e-mail status, results), Your profile (`#/profile`: photo, name, e-mail change, password change with e-mailed code when required, sign out of all devices), header avatar photo, Team drawer photo.
+- **Docs**: `docs/ONBOARDING.md` (root causes, design, settings, activation checklist, support steps).
 
-## 4. Current state (verified on 2 Nov 2026)
-- **`main`** contains: Design V4 across the app (PR #29), Planner inside the shell (PR #36/#37), Projects "working together" features (comments, notifications bell, sections, tags, subtasks, recurring work, dependencies, workload, portfolio, rules; migrations 0034–0038), a speed batch API, the Planner build fix.
-- **Live database is at migration 0033 only.** The repository is at **0041**. So the live site's code is ahead of its database. Until 0034–0041 are applied on the live database, these will show errors: the header notifications bell, new Projects functions (sections, tags, rules, comments), Team (after PR #38), Your profile (after PR #38).
-- **Open pull request #38** (branch `claude/exciting-dirac-kjybj0`): Your profile for everyone, invitation fix, "Write the email" button, migration 0041. All local tests pass (unit and API suites, browser suite 248/248). GitHub CI result: **check** (it was started at the end of the last session).
-- **Ready-made live script:** `scripts/golive-0034-0041.sql` brings the live database from 0033 to 0041 in one all-or-nothing step. Tested from a 0033 database: result identical to the full migration, refuses a second run. The owner runs it in the Supabase SQL Editor (paste, Run), or approves the assistant running it through the Supabase connector (the connector's approval prompt timed out once at 60 s; the SQL Editor is the reliable route). After it runs, verify with `list_migrations` (should end `0041_profiles`) and a table count, then merge PR #38.
-- Planner: migration 0033 and its code are live and the owner confirmed it works. In the app database it is `active` and enabled in both organizations; the owner is the only member of either organization right now.
-- GitHub Actions **works again** (it was blocked by a billing restriction earlier). CI jobs: `test` (unit and API, PGlite and real Postgres, restore drill, mutation controls), `e2e` (API journey, browser suite, component gallery), `fmp-copy`. Always wait for CI before merging.
+## 4. Database and migration status (verified read-only on the live database, 2 Nov 2026, 17:10 UTC)
+- Live project `l2f-ecosystem`, ref `dfitnxilkezepkhdmzuh`. History ends at **`0040_planner_measure_cadence`** (40 rows). 0041 and 0042 are **not** applied. 4 accounts, 2 memberships, 3 open invitations.
+- **Live impact now:** PR #38 (profile page, team photos) is merged and deployed, but its database part (0041) is missing, so **the live Your profile page and the Team page fail** until the script runs.
+- To apply: **`scripts/golive-0041-0042.sql`**. Additive only, one transaction, guard refuses any other state or a second run. Safety, isolation and rollback: `docs/ONBOARDING.md` §7.
 
-## 5. What was fixed in the last session (2 Nov)
-1. **"They signed up through my link but got no access."** Cause: the invitation token was stored only in the browser tab (`sessionStorage`). The e-mail confirmation opens a new tab, so the token was lost. Fix (in PR #38): the token is also kept in local storage and rides on the confirmation link as `?invite=`.
-2. **"Nobody receives an invitation e-mail."** The app has **never sent e-mail** (no mail provider connected, by design until go-live). The dialog now says so and has a **Write the email** button that opens the owner's own mail program with the message ready. Real sending is a decision for the owner (see section 8).
-3. **Profiles.** New page `#/profile` (avatar menu > Your profile): photo, name, email, password, for everyone including clients. The photo is a small square JPEG (max 12,000 characters, the API body limit is 16 KB) kept in `profiles.avatar_data`. `team_list` says who has a photo; the Team profile drawer shows it. Supabase Auth sends the confirmation e-mail when someone changes their e-mail.
+## 5. PR and tests
+- PR [#39](https://github.com/layer2funnels-bot/l2f-ecosystem/pull/39), branch `claude/exciting-dirac-kjybj0`. CI (test, e2e, fmp-copy, Cloudflare preview) **all green on `803c29f`**. Later commit: stricter right-database guard and the waiting-invitation apps fix (see `docs/ONBOARDING.md` §7): check the PR for CI on the newest head before merging.
+- Earlier CI failure (fixed): browser check G5, the invite page cleared the link before a second render (`apps/web/js/app.js`).
+- Local: all 57 unit suites pass (invitations 38, profiles 14, audit 63); browser suite `scripts/e2e-ui.mjs` 248/248; `scripts/e2e-onboarding.mjs` 21/21; live-script rehearsal identical to a fresh build.
+- Live (read only, 2 Nov): at 0040; browser roles hold 0 function rights; Confirm email is on.
+- Not testable without the owner's accounts: real Brevo delivery and Supabase mails through Brevo SMTP (`docs/ONBOARDING.md` §4 step 5). **Not production-ready until those pass.**
 
-## 6. How to work in this repository (verified)
-- Read `AGENTS.md` (Next.js note is irrelevant: the web app is **plain ES modules** in `apps/web/js`, hash routes, `apps/web/*.css`; Planner is React + Vite in `apps/planner`, Whiteboard bundle in `apps/whiteboard`).
-- Branch rule: develop on `claude/exciting-dirac-kjybj0`. After a merge, restart it from main: `git fetch origin main && git checkout -B claude/exciting-dirac-kjybj0 origin/main`. A force push is blocked by the sandbox: if the remote branch holds only merged history, join it with `git merge -s ours origin/claude/exciting-dirac-kjybj0` and push normally.
-- **Never use a bare `git stash`** (the stash is shared between sessions).
-- Tests: `DRIVERS=pglite npm test` (all suites, about 3 minutes), `npm run check:tokens`, `npm run check:secrets`, `node test/design-v4.test.mjs` (no hard-coded hex colours in `ui.css`: use tokens such as `var(--danger)`, `var(--surface)`; there is no `--on-action` token).
-- Browser suites need the local stack: docker daemon (`pkill dockerd; nohup dockerd &` then wait for `docker info`), `npm run stack:start`, `npm run stack:migrate`, then `PLAYWRIGHT_MODULE=/opt/node22/lib/node_modules/playwright node scripts/e2e-ui.mjs` (about 8 minutes, prints results only at the end). **Run `supabase db reset` + `npm run stack:migrate` before every full e2e run** (it is not repeatable on a used database). `scripts/e2e-planner.mjs`, `scripts/e2e-projects.mjs`, `npm run test:e2e`, `npm run test:gallery` are the others CI runs.
-- Local debugging scripts named `scripts/_*.mjs` are git-ignored on purpose (`.git/info/exclude`): do not commit them.
-- Class-name collisions with the generated V4 stylesheet (`apps/web/v4.css`, built from the prototype) have caused real bugs: `.pri` (priority label) vs buttons (use `.btn.primary`), `.sw`, `.sp-bar` (progress bar), `.sp-prev` (post preview). Check `grep -n "\.yourclass" apps/web/*.css` before inventing a class. Never hand-edit `v4.css`.
-- Rate limits: reads 300 a minute per person, writes 30, sensitive 5 (tests lift them).
-- A view must not rely on being attached to the page when its data arrives (`root.isConnected` race): the registry loads before any view starts (`app.js`).
-- Supabase connector: `list_migrations`, `execute_sql` (read-only queries are fine), `get_advisors`, `query_logs` work. Writes through it need an approval prompt that can time out. The connector runs as `postgres` (bypasses row security), so security tests must run through the API as `app_user`.
+## 6. What the owner must do (step-by-step in `docs/ONBOARDING.md` §3–4)
+1. Say "yes" to running `scripts/golive-0041-0042.sql` (urgent: fixes the live profile and Team pages).
+2. Brevo: authenticate the domain (DNS records), add the sender, create an API key and an SMTP key.
+3. Cloudflare (Production and Preview): `BREVO_API_KEY` (Secret), `MAIL_FROM_EMAIL`, `MAIL_FROM_NAME`; retry the deployment.
+4. Supabase: custom SMTP = Brevo; URL configuration; Confirm email and Secure email change on.
+5. Say "yes" to merging PR #39 once CI is green.
+6. Do the live tests in §4 step 5 with a spare mailbox; the assistant checks the database side.
 
-## 7. Open work, in suggested order
-1. **Owner approval needed:** apply `scripts/golive-0034-0041.sql` to the live database, then merge PR #38 once CI is green, then check the live site (profile page, bell, Team, Projects) and tell the owner.
-2. Verify the invitation fix on the live site with a real test (invite a spare email, sign up, confirm in a different browser). In the Supabase dashboard (Authentication > URL Configuration) the **Site URL** must be `https://l2f-ecosystem.pages.dev` and **Redirect URLs** should include `https://l2f-ecosystem.pages.dev/**` so the `?invite=` part survives (**check**; if not allowed, Supabase falls back to the Site URL and only the local-storage copy of the token helps, which works on the same browser).
-3. Fallback for people who confirm on another device: add a database function that lists invitations waiting for the signed-in person's e-mail, so the "no organization yet" page can offer "Join Layer2Funnels" without the token (needs a migration and tests; not built).
-4. Real invitation e-mail: needs a mail sender (options: Supabase custom SMTP with a free-tier provider, or an e-mail API). Costs and a provider account are an owner decision.
-5. Design V4 leftovers (`docs/DESIGN_AUDIT_V4.md`): Value Ladder cards, hover/press timing pass, other apps at phone width, Office Funnels/Team/Admin and Whiteboard comparison, Drive extras (Starred, Shared with me, storage meter, People filter: no data behind them yet), Launcher weather chip.
-6. Planner follow-ups (`docs/PLANNER_INTEGRATION_STATUS.md`): search types, notifications for Planner, styling still Planner's own inside a shadow root.
-7. Go-live pack (`docs/GO_LIVE_RUNBOOK.md`, `docs/GO_LIVE_PACK.md`): R2 CORS rule, real latency measurement, Client Portal stays locked until the owner opens it.
-8. Housekeeping: close the stale PR #33 (`feature/planner-strategy`, already merged through other PRs) after confirming it has nothing unique.
+## 7. How to work in this repository
+- Plain ES modules web app (`apps/web/js`), Planner React app (`apps/planner`, mounted in a shadow root), API as Cloudflare Pages Function (`functions/api/[[route]].js`), build `node scripts/build-web.mjs`.
+- Branch `claude/exciting-dirac-kjybj0`; after a merge restart it from `origin/main`. Force pushes are blocked: if the remote branch only holds merged history, `git merge -s ours origin/claude/exciting-dirac-kjybj0` then push. Never use a bare `git stash`.
+- Local stack: docker (`pkill dockerd; nohup dockerd &`), `npm run stack:start`, `npm run stack:migrate`; reset with `supabase db reset` + migrate before a full `scripts/e2e-ui.mjs` run. `PLAYWRIGHT_MODULE=/opt/node22/lib/node_modules/playwright`.
+- `apps/web/ui.css` must not contain hex colours (design check DV20): use tokens. Check class names against `apps/web/v4.css` before inventing one (collisions caused bugs before).
+- API body limit 16 KB (profile photos are kept under 12,000 characters). Read rate limit 300/min per person.
+- Local debug scripts `scripts/_*.mjs` are ignored on purpose; do not commit them.
 
-## 8. Decisions waiting for the owner
-- Apply migrations 0034–0041 to the live database now? (recommended: yes, via the one script)
-- Reset the database password (it was pasted into chat once)? If yes, update `DATABASE_URL` in Cloudflare (Production and Preview) afterwards.
-- How should invitations be e-mailed (provider, cost)? Until then owners copy the link or use "Write the email".
-- Should comments be visible to clients ("shared with client" comments)? Currently internal only.
-- Client Portal opening date (locked on purpose; Gate G2 security tests must pass first).
+## 8. Never repeat or overwrite
+- Never weaken organization isolation (`org_scope` on every table, nothing granted to `anon`/`authenticated`, API runs as `app_user`). UI hiding is never security.
+- Never let an invitation be accepted without the database checking the e-mail (and, without the link, that it is verified). Never return tokens in lists, logs or delivery records.
+- Never claim an e-mail was sent unless the provider accepted it.
+- Never touch the original Funnel Mapper Pro repository or other Supabase projects. The Client Portal stays locked until the owner opens it.
+- Do not re-run `golive-0033`/`golive-0034-0041` (removed) or renumber migrations; live history is the record.
 
-## 9. Hard rules that must never be broken
-- Organization isolation is the security boundary: every table has the restrictive `org_scope` policy; the browser roles `anon` and `authenticated` get nothing; the API runs as `app_user`; UI hiding is never security. Cross-organization tests exist in `test/isolation.test.mjs` and per feature.
-- The original Funnel Mapper Pro repository and other Supabase projects are never touched. `docs/FMP_*.md` explains the copy in `apps/funnel-mapper`.
-- No fake success: disabled things say why; AI features stay off until the owner approves a provider, cost and data rules.
-- Permanent delete is owner-only; client data is never in the shared Drive; the Client Portal stays locked.
-
-## 10. Other documents worth opening (all in `docs/`)
-`DECISIONS.md` (every decision with a code), `ARCHITECTURE.md`, `DEVELOPER_HANDOVER.md`, `SESSION_HANDOFF.md` (older, batches 1–3), `DESIGN_STATUS.md`, `DESIGN_AUDIT_V4.md`, `PLANNER_INTEGRATION_STATUS.md`, `PERFORMANCE.md`, `GO_LIVE_RUNBOOK.md`, `INFRASTRUCTURE.md`, `RATE_LIMIT_DESIGN.md`, `INDEPENDENT_ACCOUNTS.md`.
+## 9. Other open work (unchanged by this round)
+Design V4 leftovers (`docs/DESIGN_AUDIT_V4.md`), Planner follow-ups (`docs/PLANNER_INTEGRATION_STATUS.md`), go-live pack (`docs/GO_LIVE_RUNBOOK.md`), stale PR #33 to close after a check.

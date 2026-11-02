@@ -8,10 +8,10 @@ const ROLES = new Set(['app_user']);   // fixed allowlist: `set role` cannot tak
 export function createPgExecutor({ acquire, role = 'app_user' }) {
   if (!ROLES.has(role)) throw new Error('unsupported database role');
   return {
-    async withRequest({ userId, email = null, orgId }, fn) {
+    async withRequest({ userId, email = null, emailVerified = false, orgId }, fn) {
       const c = await acquire();
       try {
-        const claims = JSON.stringify({ sub: userId, email, role: 'authenticated' }), headers = JSON.stringify({ 'x-org-id': orgId });
+        const claims = JSON.stringify({ sub: userId, email, role: 'authenticated', ...(emailVerified ? { email_verified: true } : {}) }), headers = JSON.stringify({ 'x-org-id': orgId });
         if (c.simple && c.escapeLiteral) {
           await c.simple(`begin; set local role ${role}; select set_config('request.jwt.claims', ${c.escapeLiteral(claims)}, true), set_config('request.headers', ${c.escapeLiteral(headers)}, true)`);
         } else {

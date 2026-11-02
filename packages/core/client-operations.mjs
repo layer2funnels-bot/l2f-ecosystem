@@ -1,6 +1,7 @@
 // Clients app API operations (migration 0008). Data and API only: screens wait for approved designs.
 // Same conventions as funnel-operations.mjs: column names are constants (never from the request), permissions are decided by
 // row policies and triggers in the database, and a refusal reads as "not found".
+import { deliverInvitation } from './invite-mail.mjs';
 import { defineOperation } from './define.mjs';
 import { duplicateLadder } from './ladder-social-operations.mjs';
 
@@ -167,7 +168,14 @@ const accessOps = [
   defineOperation({
     name: 'clients.access.invite', class: 'sensitive', single: true,
     input: { email: { type: 'text', required: true, max: 320 }, client: { type: 'uuid' }, client_name: { type: 'text', max: 200 }, person_name: { type: 'text', max: 200 } },
-    run: (q, _c, i) => q('select * from client_access_invite($1, $2, $3, $4)', [i.email, i.client ?? null, i.client_name ?? null, i.person_name ?? null]),
+    run: async (q, ctx, i) => {
+      const rows = await q('select * from client_access_invite($1, $2, $3, $4)', [i.email, i.client ?? null, i.client_name ?? null, i.person_name ?? null]);
+      const r = rows[0];
+      if (!r?.ok || !r.token) return rows;
+      const [{ invitation_id: inv } = {}] = await q('select invitation_id from client_access where id = $1', [r.access_id]);
+      const mail = inv ? await deliverInvitation(q, ctx, inv, r.token) : { email_status: 'failed', email_error: 'no_invitation' };
+      return [{ ...r, ...mail, token: mail.email_status === 'sent' ? null : r.token }];
+    },
   }),
   defineOperation({
     name: 'clients.access.set_status', class: 'sensitive', single: true,

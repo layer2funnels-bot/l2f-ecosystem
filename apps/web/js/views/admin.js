@@ -14,7 +14,10 @@ const areaName = (k) => AREA[k] ?? k.replace(/_/g, ' ').replace(/^./, (c) => c.t
 const EDIT_WORDS = new Set(['create', 'edit', 'manage', 'delete', 'write', 'update', 'share', 'archive', 'upload']);
 
 const levelPill = (r) => pill(LABEL[r] ?? r, r === 'owner' ? 'primary' : '');
-const statusPill = (s) => (s === 'active' ? pill('Active', 'ok', 'check') : s === 'invited' ? pill('Invited', 'warn', 'mail') : pill('Deactivated'));
+const statusPill = (s) => (s === 'active' ? pill('Active', 'ok', 'check') : s === 'invited' ? pill('Invited', 'warn', 'mail') : s === 'expired' ? pill('Expired', 'bad', 'clock') : pill('Deactivated'));
+const day = (iso) => (iso ? new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : '');
+/** One plain line about the invitation e-mail (never the link itself). */
+const emailLine = (m) => (m.email_status === 'sent' ? `Email sent ${day(m.email_at)}${m.opened_at ? ' · opened' : ''}` : m.email_status === 'failed' ? `Email not delivered (${m.email_error ?? 'error'}). Use Resend or pass the link on.` : m.email_status === 'not_configured' ? 'No email sent (email is not set up yet). Pass the link on.' : '');
 const failText = (res) => (res.error?.code === 'not_found' ? 'That didn’t go through. Nothing was changed.' : messageFor(res.error?.code));
 
 // ---- why chips (effective access): plain words for the database's reasons
@@ -75,18 +78,21 @@ export function adminView({ api, live, org, role, route, rerender, go, clients }
 
   // ------------------------------------------------------------ Members
   async function members() {
-    const res = await run('members.list', {});
+    const [res, ms] = await Promise.all([run('members.list', {}), run('mail.status', {})]);
     if (!live()) return;
+    const mailOn = ms.ok && ms.data?.[0]?.configured;
     if (!res.ok) return setPane(errorState(members));
     const list = res.data; const active = list.filter((m) => m.row_kind === 'member');
     const owners = active.filter((m) => m.role === 'owner' && m.status === 'active').length;
     const name = (m) => m.display_name || m.email || 'Someone';
     const rows = list.map((m) => h('tr', {},
-      h('td', {}, h('div', { class: 'who2' }, h('span', { class: 'av', 'aria-hidden': 'true' }, name(m)[0].toUpperCase()), h('div', {}, h('b', {}, name(m), m.is_you ? ' (you)' : ''), h('div', { class: 'fine' }, m.email ?? '')))),
+      h('td', {}, h('div', { class: 'who2' }, h('span', { class: 'av', 'aria-hidden': 'true' }, name(m)[0].toUpperCase()), h('div', {}, h('b', {}, name(m), m.is_you ? ' (you)' : ''), h('div', { class: 'fine' }, m.email ?? ''), m.row_kind === 'invitation' && emailLine(m) ? h('div', { class: 'fine', 'data-email-status': m.email_status ?? '' }, emailLine(m)) : null))),
       h('td', { 'data-l': 'Level' }, levelPill(m.role)), h('td', { 'data-l': 'Status' }, statusPill(m.status)),
       h('td', {}, btn(['Manage', h('span', { class: 'sr' }, ` ${name(m)}`)], () => manage(m, owners), '', { 'data-manage': m.user_id ?? m.invitation_id }))));
     setPane(h('div', { style: 'display:flex;justify-content:space-between;align-items:center;gap:var(--space-3);margin-bottom:var(--space-3);flex-wrap:wrap' },
       h('p', { class: 'fine' }, `${list.length} ${list.length === 1 ? 'person' : 'people'}. Joining is by invitation only.`), btn([icon('plus'), 'Invite someone'], invite, 'primary', { id: 'invite' })),
+    ms.ok ? (mailOn ? h('p', { class: 'fine', id: 'mail-on' }, `Invitation emails are switched on (sent from ${ms.data[0].from}).`)
+      : notice('warn', 'mail', [h('b', {}, 'Invitation emails are not switched on yet.'), ' Invitations still work: after inviting, copy the link or use “Write the email”. To send them automatically, add the Brevo settings (see docs/ONBOARDING.md).'])) : null,
     list.length ? h('div', { class: 'card tbl-wrap' }, h('table', { class: 'tbl stk' }, h('caption', { class: 'sr' }, `Members of ${org.name}`),
       h('thead', {}, h('tr', {}, h('th', {}, 'Person'), h('th', {}, 'Level'), h('th', {}, 'Status'), h('th', {}, h('span', { class: 'sr' }, 'Actions')))), h('tbody', {}, ...rows)))
       : emptyState({ title: 'No one yet', body: 'Invite someone to get started.', ic: 'user' }));
@@ -104,7 +110,7 @@ export function adminView({ api, live, org, role, route, rerender, go, clients }
         if (!/^\S+@\S+\.\S+$/.test(email)) { em.error('Enter an email, like name@example.com.'); return false; }
         const r = await run('invitation.create', { email, kind: 'staff', role: lv.input.value });
         if (!r.ok) { em.error(failText(r)); return false; }
-        close(); showInviteLink(email, r.data?.[0]?.token); members();
+        close(); inviteResult(email, r.data?.[0], 'staff'); members();
       } }, { label: 'Cancel' }] });
     em.input.focus();
   }
@@ -114,11 +120,19 @@ export function adminView({ api, live, org, role, route, rerender, go, clients }
     const body = `Hello,\n\nYou’ve been invited to ${org.name}${kind === 'client' ? ' as a client' : ''}.\n\n1. Open this link: ${url}\n2. Create your account with this email address: ${email}\n3. Confirm your email when asked. After that you’re taken straight in.\n\nThe link only works for ${email}.\n`;
     location.href = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`; return false; } });
   // Email delivery is set up at go-live, so the invitation link is shown once for the admin to pass on.
-  function showInviteLink(email, token) {
+  /** After inviting or resending: say exactly what happened with the e-mail; only when no e-mail went out is the link shown (to pass on). */
+  function inviteResult(email, x, kind) {
+    if (x?.email_status === 'sent') return dialog({ title: `Invitation sent to ${email}`, body: [h('p', {}, `${email} gets an email from Layer2Funnels with a button to join ${org.name}. They create an account (or sign in), confirm their email, and are taken straight in.`),
+      h('p', { class: 'fine' }, 'The link works for 7 days and only for that address. You can see its status and resend it from this list.')], actions: [{ label: 'Done', cls: 'primary', focus: true }] });
+    const why = x?.email_status === 'failed' ? `The email could not be sent (${x.email_error ?? 'error'}).` : 'Email sending is not set up yet, so no email was sent.';
+    if (x?.token) return kind === 'client' ? clientLinkDialog(email, x.token, false, why) : showInviteLink(email, x.token, why);
+    return toast(`Invitation saved for ${email}. ${why}`, false);
+  }
+  function showInviteLink(email, token, why = '') {
     if (!token) return toast(`Invitation saved for ${email}.`);
     const url = `${location.origin}/#/invite?token=${encodeURIComponent(token)}`;
-    const f = field({ id: 'il2', label: 'Invitation link', value: url, readonly: true, hint: 'This app does not send e-mail yet, so nobody receives this automatically. Copy the link, or choose “Write the email” to open a ready message in your mail program. It only works for that email address.' });
-    dialog({ title: `Invitation saved for ${email}`, wide: true, body: f.el, actions: [{ label: 'Copy link', cls: 'primary', keep: true, on: async () => { try { await navigator.clipboard.writeText(url); toast('Link copied.'); } catch { f.input.select(); toast('Select the link and copy it.', false); } return false; } }, mailAction(email, url, 'staff'), { label: 'Done', focus: true }] });
+    const f = field({ id: 'il2', label: 'Invitation link', value: url, readonly: true, hint: `${why} Copy the link, or choose “Write the email” to open a ready message in your mail program. It only works for that email address.`.trim() });
+    dialog({ title: `Invitation saved for ${email}: pass the link on`, wide: true, body: f.el, actions: [{ label: 'Copy link', cls: 'primary', keep: true, on: async () => { try { await navigator.clipboard.writeText(url); toast('Link copied.'); } catch { f.input.select(); toast('Select the link and copy it.', false); } return false; } }, mailAction(email, url, 'staff'), { label: 'Done', focus: true }] });
     f.input.addEventListener('focus', () => f.input.select());
   }
 
@@ -133,7 +147,7 @@ export function adminView({ api, live, org, role, route, rerender, go, clients }
     const body = [lv.el,
       ownerLock ? notice('warn', 'lock', [h('b', {}, 'Only an owner can change an owner.'), ' You can still see this person’s level.']) : null,
       last ? notice('warn', 'lock', [h('b', {}, `${nm} is the only owner.`), ' An organization always needs one. Make someone else an owner first, then you can change this.']) : null,
-      isInvite ? h('p', { class: 'fine' }, 'Invitation not accepted yet.') : null];
+      isInvite ? h('p', { class: 'fine' }, m.status === 'expired' ? 'This invitation expired before it was accepted. Send a new one to give them a fresh link.' : `Invitation not accepted yet. ${emailLine(m)}`) : null];
     const confirmThen = (verb) => dialog({ title: `${verb} ${nm}?`, body: h('p', {}, verb === 'Remove' ? `${nm} loses access to ${org.name} straight away. Their work stays here. You can invite them again later.`
       : verb === 'Reactivate' ? `${nm} can sign in to ${org.name} again.` : `${nm} can’t sign in to ${org.name} until you turn them back on. Nothing is deleted.`),
       actions: [{ label: verb, cls: verb === 'Reactivate' ? 'primary' : 'dng', on: async () => {
@@ -148,7 +162,7 @@ export function adminView({ api, live, org, role, route, rerender, go, clients }
         if (!r.ok) { toast(failText(r), false); return; }
         toast('Level updated.'); members();
       } }] : []),
-      ...(isInvite ? [{ label: 'Cancel invitation', cls: 'dng', on: async () => { const r = await run('invitations.cancel', { id: m.invitation_id }); toast(r.ok ? 'Invitation cancelled.' : failText(r), false); members(); } }]
+      ...(isInvite ? [{ label: m.status === 'expired' ? 'Send a new invitation' : 'Resend invitation', cls: 'primary', on: async () => { const r = await run('invitations.resend', { id: m.invitation_id }); if (!r.ok) { toast(failText(r), false); return; } inviteResult(m.email, r.data?.[0], 'staff'); members(); } }, { label: 'Cancel invitation', cls: 'dng', on: async () => { const r = await run('invitations.cancel', { id: m.invitation_id }); toast(r.ok ? 'Invitation cancelled.' : failText(r), false); members(); } }]
         : [{ label: m.status === 'deactivated' ? 'Reactivate' : 'Deactivate', keep: true, on: (close) => { if (last) { toast('The only owner can’t be deactivated.', false); return false; } close(); confirmThen(m.status === 'deactivated' ? 'Reactivate' : 'Deactivate'); } },
           { label: `Remove from ${org.name}`, cls: 'dng', keep: true, on: (close) => { if (last) { toast('The only owner can’t be removed.', false); return false; } close(); confirmThen('Remove'); } }]),
       { label: 'Close', focus: true }];
@@ -172,7 +186,7 @@ export function adminView({ api, live, org, role, route, rerender, go, clients }
     const list = res.data; const portalLive = list.some((x) => x.portal_live);
     const label = (x) => (x.status === 'invited' && x.invitation_expired ? ['Link expired', 'warn'] : CA_STATUS[x.status] ?? [x.status, '']);
     const rows = list.map((x) => { const [t, k] = label(x); return h('tr', {},
-      h('td', { 'data-l': 'Client' }, h('b', {}, x.client_name), h('div', { class: 'fine' }, `${x.person_name ? `${x.person_name} · ` : ''}${x.email}`)),
+      h('td', { 'data-l': 'Client' }, h('b', {}, x.client_name), h('div', { class: 'fine' }, `${x.person_name ? `${x.person_name} · ` : ''}${x.email}`), x.status === 'invited' && emailLine(x) ? h('div', { class: 'fine', 'data-email-status': x.email_status ?? '' }, emailLine(x)) : null),
       h('td', { 'data-l': 'Status' }, pill(t, k)), h('td', { 'data-l': 'Since' }, caWhen(x.decided_at ?? x.created_at)),
       h('td', {}, btn(['Manage', h('span', { class: 'sr' }, ` ${x.email}`)], () => manageClient(x), '', { 'data-manage-client': x.id }))); });
     setPane(
@@ -184,12 +198,15 @@ export function adminView({ api, live, org, role, route, rerender, go, clients }
         h('thead', {}, h('tr', {}, h('th', {}, 'Client'), h('th', {}, 'Status'), h('th', {}, 'Since'), h('th', {}, h('span', { class: 'sr' }, 'Actions')))), h('tbody', {}, ...rows)))
         : emptyState({ title: 'No client has access yet', body: 'Invite a client by email. The client record is created for you, in this organization only.', ic: 'user' }));
   }
-  const clientLinkDialog = (email, token, reused) => {
+  const clientLinkDialog = (email, token, reused, why = '') => {
     const url = `${location.origin}/#/invite?token=${encodeURIComponent(token)}`;
-    const f = field({ id: 'cl-link', label: 'Invitation link', value: url, readonly: true, hint: 'Shown once. This app does not send e-mail yet, so nobody receives this automatically: copy the link, or choose “Write the email”. It only works for that email address, and any older link for them no longer works.' });
+    const f = field({ id: 'cl-link', label: 'Invitation link', value: url, readonly: true, hint: `Shown once. ${why} Copy the link, or choose “Write the email”. It only works for that email address, and any older link for them no longer works.`.replace('  ', ' ') });
     dialog({ title: reused ? `New link for ${email}` : `Invitation ready for ${email}`, wide: true, body: f.el, actions: [{ label: 'Copy link', cls: 'primary', keep: true, on: async () => { try { await navigator.clipboard.writeText(url); toast('Link copied.'); } catch { f.input.select(); toast('Select the link and copy it.', false); } return false; } }, mailAction(email, url, 'client'), { label: 'Done' }] });
     f.input.addEventListener('focus', () => f.input.select());
   };
+  const clientResult = (email, x, reused) => (x?.email_status === 'sent'
+    ? dialog({ title: `Invitation sent to ${email}`, body: h('p', {}, `${email} gets an email with a button to join ${org.name} as a client.${reused ? ' Any older link for them no longer works.' : ''} The Client Portal is still locked, so after joining they can manage their profile but see no client screens until you open the Portal.`), actions: [{ label: 'Done', cls: 'primary', focus: true }] })
+    : x?.token ? clientLinkDialog(email, x.token, reused, x.email_status === 'failed' ? `The email could not be sent (${x.email_error ?? 'error'}).` : 'Email sending is not set up yet, so no email was sent.') : toast(`Invitation saved for ${email}.`));
   async function sendInvite(input, em) {
     const r = await run('clients.access.invite', input);
     if (!r.ok) { em?.error(failText(r)); return null; }
@@ -210,7 +227,7 @@ export function adminView({ api, live, org, role, route, rerender, go, clients }
         if (!/^\S+@\S+\.\S+$/.test(email)) { em.error('Enter an email, like name@example.com.'); return false; }
         const x = await sendInvite({ email, ...(pn.input.value.trim() ? { person_name: pn.input.value.trim() } : {}), ...(which.input.value ? { client: which.input.value } : (nn.input.value.trim() ? { client_name: nn.input.value.trim() } : {})) }, em);
         if (!x) return false;
-        close(); clientLinkDialog(email, x.token, x.reused); clientAccess();
+        close(); clientResult(email, x, x.reused); clientAccess();
       } }, { label: 'Cancel' }] });
     em.input.focus();
   }
@@ -221,11 +238,11 @@ export function adminView({ api, live, org, role, route, rerender, go, clients }
       : status === 'suspended' ? `${x.email} is signed out of the Portal straight away. Nothing is deleted, and you can restore the access.` : `${x.email} can use the Portal again, once it is open.`),
       actions: [{ label: verb, cls: status === 'active' ? 'primary' : 'dng', on: async () => { const r = await run('clients.access.set_status', { id: x.id, status }); if (!r.ok) { toast(failText(r), false); return false; } toast(done); clientAccess(); } }, { label: 'Cancel', focus: true }] });
     const acts = [];
-    if (x.status === 'invited') acts.push({ label: 'Send a new link', cls: 'primary', keep: true, on: async (close) => { const r = await sendInvite({ email: x.email }); if (!r) return false; close(); clientLinkDialog(x.email, r.token, true); clientAccess(); } },
+    if (x.status === 'invited') acts.push({ label: 'Send a new link', cls: 'primary', keep: true, on: async (close) => { const r = await sendInvite({ email: x.email }); if (!r) return false; close(); clientResult(x.email, r, true); clientAccess(); } },
       { label: 'Cancel invitation', cls: 'dng', keep: true, on: (close) => { close(); move('revoked', 'Cancel invitation', 'Invitation cancelled.'); } });
     if (x.status === 'active') acts.push({ label: 'Suspend access', keep: true, on: (close) => { close(); move('suspended', 'Suspend', 'Access suspended.'); } }, { label: 'Revoke access', cls: 'dng', keep: true, on: (close) => { close(); move('revoked', 'Revoke', 'Access revoked.'); } });
     if (x.status === 'suspended') acts.push({ label: 'Restore access', cls: 'primary', keep: true, on: (close) => { close(); move('active', 'Restore', 'Access restored.'); } }, { label: 'Revoke access', cls: 'dng', keep: true, on: (close) => { close(); move('revoked', 'Revoke', 'Access revoked.'); } });
-    if (x.status === 'revoked') acts.push({ label: 'Invite again', cls: 'primary', keep: true, on: async (close) => { const r = await sendInvite({ email: x.email, client: x.client_id }); if (!r) return false; close(); clientLinkDialog(x.email, r.token, false); clientAccess(); } });
+    if (x.status === 'revoked') acts.push({ label: 'Invite again', cls: 'primary', keep: true, on: async (close) => { const r = await sendInvite({ email: x.email, client: x.client_id }); if (!r) return false; close(); clientResult(x.email, r, false); clientAccess(); } });
     dialog({ title: x.client_name, wide: true, body: [h('p', {}, h('b', {}, x.email), ` · ${(CA_STATUS[x.status] ?? [x.status])[0]}`), h('h3', { style: 'margin:var(--space-3) 0 var(--space-2)' }, 'History'), hist], actions: [...acts, { label: 'Close', focus: true }] });
   }
 
