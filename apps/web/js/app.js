@@ -149,6 +149,11 @@ const appApi = {
     const r = await auth.signUp(email, password, name, inv ? `${location.origin}/?invite=${encodeURIComponent(inv)}` : undefined);
     const soft = offlineOrBusy(r); if (soft) return soft;
     if (r.ok && r.data?.access_token) { session.set(r.data); await boot(); return null; }
+    // Supabase answers a sign-up for an address that already has an account with a look-alike success (no identities) and sends no e-mail.
+    const existing = 'This email already has an account, so no confirmation email was sent. Sign in with it instead (use “Forgot password” if needed); your invitation will be waiting.';
+    const u = r.data?.user ?? r.data;
+    if (r.ok && Array.isArray(u?.identities) && u.identities.length === 0) return existing;
+    if (r.status === 422 && /already|exists|registered/i.test(JSON.stringify(r.data ?? ''))) return existing;
     if (r.ok) { authViews.authState.email = email; authViews.authState.from = 'signup'; go('#/check-email'); return null; }
     return r.status === 422 && /password/i.test(JSON.stringify(r.data ?? '')) ? 'Choose a stronger password, with a few more characters.' : 'We couldn’t create that account. If you already have one, sign in instead.';
   },

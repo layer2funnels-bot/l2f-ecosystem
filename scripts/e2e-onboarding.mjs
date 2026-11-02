@@ -147,6 +147,9 @@ await p1.fill('#pf-email', `tom.new.${stamp}@example.com`); await p1.getByRole('
 // the local stack has no mail server, so Supabase Auth cannot send the confirmation here; what matters is that nothing changes without it
 check('ON18', 'Changing the e-mail never changes the sign-in e-mail by itself: it waits for Supabase Auth’s confirmation (the page says so either way)', /confirmation link|couldn’t send the confirmation|couldn’t change the email/.test(await text(p1)) && (await q('select email from auth.users where id=$1', [tomId]))[0].email === T1);
 
+// ---- S. signing up again with an address that already has an account: say so (Supabase sends no e-mail in that case)
+const pd = await newPage(); await signUp(pd, 'Tom Again', T1); await pd.waitForTimeout(1500);
+check('ON21', 'Signing up with an address that already has an account says so and points to Sign in (no fake "check your email")', (await text(pd)).includes('already has an account') && !(await text(pd)).includes('Confirm your email'));
 // ---- R. organization isolation in the admin lists
 await switchOrg(op, A);
 await op.goto(`${base}/#/office/admin/members`); await op.reload(); await until(op, 'Joining is by invitation only.');
