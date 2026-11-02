@@ -31,9 +31,11 @@ Root causes (full table in `docs/ONBOARDING.md` §1):
 - To apply: **`scripts/golive-0041-0042.sql`**. Additive only, one transaction, guard refuses any other state or a second run. Safety, isolation and rollback: `docs/ONBOARDING.md` §7.
 
 ## 5. PR and tests
-- PR [#39](https://github.com/layer2funnels-bot/l2f-ecosystem/pull/39) (onboarding, branch `claude/exciting-dirac-kjybj0`). First CI run failed one browser check (G5: an invitation for another address showed "not in an organization" instead of "can't be used"; cause: the invite page cleared the link before a second render). Fixed in `apps/web/js/app.js`; local `scripts/e2e-ui.mjs` 248/248; pushed; check the PR for the new CI result.
-- Local: `DRIVERS=pglite npm test` all 57 suites pass (invitations 38, profiles 14, audit 63); `scripts/e2e-onboarding.mjs` 21/21; tokens and secrets checks pass.
-- Not testable without the owner's accounts: real Brevo delivery, Supabase confirmation / reset / e-mail-change mails through Brevo SMTP. These are the live tests in `docs/ONBOARDING.md` §4 step 5. **The system is not "production-ready" until those pass.**
+- PR [#39](https://github.com/layer2funnels-bot/l2f-ecosystem/pull/39), branch `claude/exciting-dirac-kjybj0`. CI (test, e2e, fmp-copy, Cloudflare preview) **all green on `803c29f`**. Later commit: stricter right-database guard and the waiting-invitation apps fix (see `docs/ONBOARDING.md` §7): check the PR for CI on the newest head before merging.
+- Earlier CI failure (fixed): browser check G5, the invite page cleared the link before a second render (`apps/web/js/app.js`).
+- Local: all 57 unit suites pass (invitations 38, profiles 14, audit 63); browser suite `scripts/e2e-ui.mjs` 248/248; `scripts/e2e-onboarding.mjs` 21/21; live-script rehearsal identical to a fresh build.
+- Live (read only, 2 Nov): at 0040; browser roles hold 0 function rights; Confirm email is on.
+- Not testable without the owner's accounts: real Brevo delivery and Supabase mails through Brevo SMTP (`docs/ONBOARDING.md` §4 step 5). **Not production-ready until those pass.**
 
 ## 6. What the owner must do (step-by-step in `docs/ONBOARDING.md` §3–4)
 1. Say "yes" to running `scripts/golive-0041-0042.sql` (urgent: fixes the live profile and Team pages).
