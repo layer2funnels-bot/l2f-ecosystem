@@ -50,7 +50,7 @@ export function createJwtVerifier({ keys, getKeys, issuer = null, audience = 'au
       if (issuer && c.iss !== issuer) return { ok: false };
       if (c.role !== 'authenticated') return { ok: false };                      // the public anon key is not a person
       if (typeof c.sub !== 'string' || !UUID.test(c.sub)) return { ok: false };
-      return { ok: true, userId: c.sub.toLowerCase(), email: typeof c.email === 'string' ? c.email : null };
+      return { ok: true, userId: c.sub.toLowerCase(), email: typeof c.email === 'string' ? c.email : null, emailVerified: c.user_metadata?.email_verified === true || c.email_verified === true };
     } catch { return { ok: false }; }
   };
 }

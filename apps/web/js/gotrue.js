@@ -20,7 +20,9 @@ export function createAuthClient({ baseUrl, publishableKey, fetchImpl = (...a) =
     // change the signed-in person's own e-mail (GoTrue sends a confirmation to the new address), name (user metadata) or password
     updateUser: (token, body) => call('/user', { method: 'PUT', token, body }),
     setPassword: (token, password) => call('/user', { method: 'PUT', token, body: { password } }),
-    signOut: (token) => call('/logout', { token }),
+    signOut: (token, scope) => call(`/logout${scope === 'global' ? '?scope=global' : ''}`, { token }),
+    // when the project asks for it, changing the password needs a one-time code sent to the person's e-mail first
+    reauthenticate: (token) => call('/reauthenticate', { method: 'GET', token }),
     googleUrl: () => `${url('/authorize')}?provider=google${redirectTo ? `&redirect_to=${encodeURIComponent(redirectTo)}` : ''}`,
   };
 }

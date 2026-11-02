@@ -67,6 +67,9 @@ jobs:
       - name: Browser end-to-end (real Chromium)
         run: npm run test:e2e:ui
         env: { PLAYWRIGHT_MODULE: '${{ github.workspace }}/node_modules/playwright' }
+      - name: 'Onboarding end-to-end (invitation e-mails to a fake Brevo, joining with and without the link, clients, profiles)'
+        run: npm run test:e2e:onboarding
+        env: { PLAYWRIGHT_MODULE: '${{ github.workspace }}/node_modules/playwright' }
       - name: 'Component gallery (Design v4, both organizations, light and dark, 390/768/1366)'
         run: npm run test:gallery
         env: { PLAYWRIGHT_MODULE: '${{ github.workspace }}/node_modules/playwright' }

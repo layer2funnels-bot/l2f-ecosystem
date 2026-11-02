@@ -135,6 +135,24 @@ export function inviteView({ app, token, preview, email }) {
     h('p', { class: 'fine', style: 'margin-top:var(--space-4)' }, 'Wrong account? ', link('Sign out', () => app.signOut())))));
 }
 // Same words whether the invitation is expired, used, wrong or addressed to someone else.
+/** Invitations the server found for this verified e-mail (no link needed: another tab, another device, a later sign-in). */
+export function invitesMineView({ app, invites, email }) {
+  const row = (x) => {
+    const org = { name: x.org_name, slug: x.org_slug };
+    const join = btn(`Join ${x.org_name}`, async (e) => { const b = e.currentTarget; busy(b, true); const bad = await app.acceptMine(x.id); if (bad) { busy(b, false, `Join ${x.org_name}`); toast(bad, false); } }, 'primary');
+    const decline = btn('Decline', () => dialog({ title: `Decline the invitation to ${x.org_name}?`, body: h('p', {}, `You won’t be added to ${x.org_name}. An owner can send a new invitation later.`),
+      actions: [{ label: 'Decline invitation', cls: 'dng', on: async () => { const bad = await app.declineMine(x.id); toast(bad ?? 'Invitation declined.', !bad); } }, { label: 'Keep it', focus: true }] }));
+    return h('div', { class: 'inv-row', style: 'display:flex;gap:var(--space-3);align-items:center;flex-wrap:wrap;padding:var(--space-3) 0;border-top:1px solid var(--line)' }, orgMarkEl(org, 40),
+      h('div', { style: 'flex:1;min-width:180px' }, h('b', {}, x.org_name), h('div', { class: 'fine' }, `${x.inviter_name} invited you ${x.kind === 'client' ? 'as a client' : `as ${/^[aeiou]/i.test(roleLabel(x.role)) ? 'an' : 'a'} ${roleLabel(x.role)}`}.`)),
+      h('div', { class: 'acts', style: 'margin:0' }, join, decline));
+  };
+  const first = invites[0] ?? {};
+  return h('div', { class: 'auth real', 'data-org': first.org_slug === 'aurj' ? 'aurj' : 'l2f' }, stage(), h('main', { class: 'auth-side', id: 'main' }, card(
+    title(invites.length === 1 ? `You’re invited to ${first.org_name}` : 'You have invitations'),
+    h('p', { class: 'sub' }, 'Signed in as ', h('b', {}, email ?? ''), '. These invitations were sent to this address.'),
+    ...invites.map(row),
+    h('p', { class: 'fine', style: 'margin-top:var(--space-4)' }, link('Not now', () => app.laterMine()), ' · Wrong account? ', link('Sign out', () => app.signOut())))));
+}
 export function inviteFailedView(app) {
   return wrap(card(h('div', { class: 'big w' }, icon('lock')), title('This invitation can’t be used'),
     h('p', { class: 'sub' }, 'It may have expired, been used already, or been sent to a different email address. Ask the person who invited you to send a new one.'),

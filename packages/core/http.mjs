@@ -52,15 +52,15 @@ export function createHttpHandler({ api, verifyToken, extraOrigins = [] }) {
         if (!Array.isArray(calls) || calls.length < 1 || calls.length > BATCH_MAX || !calls.every((c) => c && typeof c.op === 'string' && c.op !== 'batch')) return reply(BAD_REQUEST.status, errorBody(BAD_REQUEST));
         const results = [];
         for (const c of calls) {     // one after another: the connection is reused, and a later call never sees an earlier one's half-done work
-          const out = await api.handle({ operation: c.op, input: c.input ?? {}, auth: { userId: who.userId, email: who.email }, headers });
+          const out = await api.handle({ operation: c.op, input: c.input ?? {}, auth: { userId: who.userId, email: who.email, emailVerified: who.emailVerified }, headers, origin: url.origin });
           results.push({ status: out.status, ...out.body });
         }
         return reply(200, { ok: true, results });
       }
       const out = await api.handle({
         operation, input,
-        auth: { userId: who.userId, email: who.email },
-        headers,
+        auth: { userId: who.userId, email: who.email, emailVerified: who.emailVerified },
+        headers, origin: url.origin,
       });
       const e = out.body.error;
       return reply(out.status, out.body, { 'x-request-id': out.body.requestId, ...(e?.retryAfterSeconds ? { 'retry-after': String(e.retryAfterSeconds) } : {}) });
