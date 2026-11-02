@@ -9,6 +9,11 @@ const reasonText = { type: 'text', max: 200 };
 export const shellOperations = [
   // ---- launcher, profile, invitations (people who may not have an organization yet use the nil organization)
   defineOperation({ name: 'launcher.catalog', class: 'read', audience: 'any', run: (q) => q('select app_key, name, scope, lifecycle, sort_order, launch_url, state, other_org from launcher_catalog()') }),
+  defineOperation({ name: 'profile.get', class: 'read', allowNoOrg: true, run: (q) => q('select id, display_name, email, avatar_data from profile_get()') }),
+  // the caller's own name and photo only (the function has no person argument); the photo is a small JPEG data URL made by the browser
+  defineOperation({ name: 'profile.update', class: 'write', allowNoOrg: true, input: { name: { type: 'text', max: 120 }, photo: { type: 'text', max: 12000 }, clear_photo: { type: 'bool' } },
+    run: (q, _c, i) => q('select profile_update($1, $2, $3)', [i.name ?? null, i.photo ?? null, i.clear_photo ?? false]) }),
+  defineOperation({ name: 'profile.photo', class: 'read', audience: 'staff', input: { user: { type: 'uuid', required: true } }, run: (q, _c, i) => q('select profile_photo($1) as photo', [i.user]) }),
   defineOperation({ name: 'profile.touch', class: 'write', allowNoOrg: true, input: { name: { type: 'text', max: 120 } }, run: (q, _c, i) => q('select profile_touch($1)', [i.name ?? null]) }),
   defineOperation({ name: 'invitation.preview', class: 'sensitive', allowNoOrg: true, single: true, input: { token: { type: 'text', required: true, max: 200 } }, run: (q, _c, i) => q('select org_name, org_slug, kind, role, inviter_name, email from invitation_preview($1)', [i.token]) }),
   defineOperation({
@@ -24,7 +29,7 @@ export const shellOperations = [
   }),
 
   // ---- Office → Team (every active staff member; e-mail only for owners and admins) and Admin → Access history
-  defineOperation({ name: 'team.list', class: 'read', audience: 'staff', run: (q) => q('select user_id, display_name, email, role, is_you from team_list()') }),
+  defineOperation({ name: 'team.list', class: 'read', audience: 'staff', run: (q) => q('select user_id, display_name, email, role, is_you, has_photo from team_list()') }),
   defineOperation({
     // names and kinds only, never content; the table's own policy limits it to owners and admins of the organization in the header
     name: 'audit.recent', class: 'read', audience: 'staff', input: { limit: { type: 'int', min: 1, max: 200 } },

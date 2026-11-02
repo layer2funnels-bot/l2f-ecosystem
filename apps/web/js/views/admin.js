@@ -108,12 +108,17 @@ export function adminView({ api, live, org, role, route, rerender, go, clients }
       } }, { label: 'Cancel' }] });
     em.input.focus();
   }
+  // The app does not send e-mail yet, so the invitation link is passed on by the owner. This opens the owner's own mail program with the message ready to send.
+  const mailAction = (email, url, kind) => ({ label: 'Write the email', keep: true, on: async () => {
+    const subject = `You’re invited to ${org.name}`;
+    const body = `Hello,\n\nYou’ve been invited to ${org.name}${kind === 'client' ? ' as a client' : ''}.\n\n1. Open this link: ${url}\n2. Create your account with this email address: ${email}\n3. Confirm your email when asked. After that you’re taken straight in.\n\nThe link only works for ${email}.\n`;
+    location.href = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`; return false; } });
   // Email delivery is set up at go-live, so the invitation link is shown once for the admin to pass on.
   function showInviteLink(email, token) {
     if (!token) return toast(`Invitation saved for ${email}.`);
     const url = `${location.origin}/#/invite?token=${encodeURIComponent(token)}`;
-    const f = field({ id: 'il2', label: 'Invitation link', value: url, readonly: true, hint: 'Email sending is switched on at go-live. Until then, send this link yourself. It only works for that email address.' });
-    dialog({ title: `Invitation saved for ${email}`, wide: true, body: f.el, actions: [{ label: 'Copy link', cls: 'primary', keep: true, on: async () => { try { await navigator.clipboard.writeText(url); toast('Link copied.'); } catch { f.input.select(); toast('Select the link and copy it.', false); } return false; } }, { label: 'Done', focus: true }] });
+    const f = field({ id: 'il2', label: 'Invitation link', value: url, readonly: true, hint: 'This app does not send e-mail yet, so nobody receives this automatically. Copy the link, or choose “Write the email” to open a ready message in your mail program. It only works for that email address.' });
+    dialog({ title: `Invitation saved for ${email}`, wide: true, body: f.el, actions: [{ label: 'Copy link', cls: 'primary', keep: true, on: async () => { try { await navigator.clipboard.writeText(url); toast('Link copied.'); } catch { f.input.select(); toast('Select the link and copy it.', false); } return false; } }, mailAction(email, url, 'staff'), { label: 'Done', focus: true }] });
     f.input.addEventListener('focus', () => f.input.select());
   }
 
@@ -181,8 +186,8 @@ export function adminView({ api, live, org, role, route, rerender, go, clients }
   }
   const clientLinkDialog = (email, token, reused) => {
     const url = `${location.origin}/#/invite?token=${encodeURIComponent(token)}`;
-    const f = field({ id: 'cl-link', label: 'Invitation link', value: url, readonly: true, hint: 'Shown once. Email sending is switched on at go-live; until then send this link yourself. It only works for that email address, and any older link for them no longer works.' });
-    dialog({ title: reused ? `New link for ${email}` : `Invitation ready for ${email}`, wide: true, body: f.el, actions: [{ label: 'Copy link', cls: 'primary', keep: true, on: async () => { try { await navigator.clipboard.writeText(url); toast('Link copied.'); } catch { f.input.select(); toast('Select the link and copy it.', false); } return false; } }, { label: 'Done' }] });
+    const f = field({ id: 'cl-link', label: 'Invitation link', value: url, readonly: true, hint: 'Shown once. This app does not send e-mail yet, so nobody receives this automatically: copy the link, or choose “Write the email”. It only works for that email address, and any older link for them no longer works.' });
+    dialog({ title: reused ? `New link for ${email}` : `Invitation ready for ${email}`, wide: true, body: f.el, actions: [{ label: 'Copy link', cls: 'primary', keep: true, on: async () => { try { await navigator.clipboard.writeText(url); toast('Link copied.'); } catch { f.input.select(); toast('Select the link and copy it.', false); } return false; } }, mailAction(email, url, 'client'), { label: 'Done' }] });
     f.input.addEventListener('focus', () => f.input.select());
   };
   async function sendInvite(input, em) {
