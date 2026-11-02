@@ -62,3 +62,9 @@ Root causes (full table in `docs/ONBOARDING.md` §1):
 
 ## 9. Other open work (unchanged by this round)
 Design V4 leftovers (`docs/DESIGN_AUDIT_V4.md`), Planner follow-ups (`docs/PLANNER_INTEGRATION_STATUS.md`), go-live pack (`docs/GO_LIVE_RUNBOOK.md`), stale PR #33 to close after a check.
+
+## 10. After the go-live (2 Nov 2026, evening)
+- Live database at **0042**; PR #39 and #40 merged; live mail works (Brevo API for invitations, Brevo SMTP for Supabase e-mails). Production domain in use: `office.tabishriaz.com` (Supabase URL settings must list it).
+- Lesson: a sign-up with an address that already has an account gets no e-mail from Supabase (by design); the app now says "already has an account, sign in" (PR #40).
+- Owner decision: the Client Portal tile is shown to **every team member**, editors and viewers included (migration `0043_portal_tile_for_all_staff`, live script `scripts/golive-0043.sql`, needs the owner's yes). The Portal stays locked for clients; only an owner switches it on.
+- Fixed: the profile menu on the Launcher opened at the bottom of the page (`.swwrap` had `position:relative` only inside `.hdr`).

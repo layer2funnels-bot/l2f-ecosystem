@@ -28,7 +28,7 @@ svg.i{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-widt
 .side .nav a{display:flex;align-items:center;gap:12px;min-height:44px;padding:0 12px;border-radius:12px;color:var(--text2);font-weight:550;font-size:14.5px;position:relative;text-decoration:none;transition:background 200ms,color 200ms}
 .side-top .launch-btn{flex:none}
 .side-top .appsw{position:relative}
-.hdr .orgwrap,.hdr .swwrap{position:relative}
+.hdr .orgwrap,.swwrap{position:relative}
 .hdr .search{margin-left:auto;display:flex;align-items:center;gap:10px;min-height:44px;width:min(360px,34vw);padding:0 10px 0 14px;border-radius:12px;background:var(--sunk);color:var(--muted);font-size:14px}
 .hdr .search input{flex:1;min-width:0;border:0;outline:0;background:transparent;color:var(--text);font-size:14px}
 .hdr .search:focus-within{outline:3px solid var(--action);outline-offset:2px}

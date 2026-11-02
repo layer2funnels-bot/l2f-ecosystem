@@ -87,7 +87,8 @@ const mem = (await db.query("select kind, role, status, client_id from membershi
 check('IV18', 'They are a staff member of exactly that organization, with exactly the invited role', mem.length === 1 && mem[0].kind === 'staff' && mem[0].role === 'editor' && mem[0].status === 'active' && mem[0].client_id === null
   && (await db.query('select count(*)::int n from memberships where user_id = $1', [U.NEW])).rows[0].n === 1);
 const cat = (await J('launcher.catalog', {}, U.NEW, ORG.L, NEWMAIL)).rows.filter((a) => a.state === 'available').map((a) => a.app_key).sort();
-check('IV19', 'They can open every app they were given (and the Launcher shows them), but not the Client Portal', ['clients', 'drive', 'forms', 'office', 'planner', 'projects', 'social_planner', 'value_ladder', 'whiteboard'].every((k) => cat.includes(k)) && !cat.includes('portal'), cat.join(','));
+const grants = (await db.query('select app_key from app_grants where user_id = $1 and workspace_id = $2', [U.NEW, ORG.L])).rows.map((g) => g.app_key);
+check('IV19', 'They can open every app they were given (and the Launcher shows them); the invitation grants no Client Portal access (its tile is shown to every team member, 0043)', ['clients', 'drive', 'forms', 'office', 'planner', 'projects', 'social_planner', 'value_ladder', 'whiteboard'].every((k) => cat.includes(k)) && !grants.includes('portal'), cat.join(','));
 check('IV20', 'They did not get admin rights: Admin › Members stays empty for them', (await J('members.list', {}, U.NEW, ORG.L, NEWMAIL)).rows.length === 0);
 check('IV21', 'The invitation is used up: the link and the id no longer work', (await J('invitation.accept', { token: tok1 }, U.NEW, NO_ORG, NEWMAIL)).status === 404 && (await J('invitation.accept_mine', { id: inv1 }, U.NEW, NO_ORG, NEWMAIL, true)).status === 404);
 
