@@ -42,12 +42,12 @@ check('LC1', 'Owner in Layer2Funnels: core apps and Funnel Mapper Pro available,
 d = await tiles(U.OWN, A);
 check('LC2', 'The same owner in Aurj: Funnel Mapper Pro is "not set up here" and names the organization where it is on', st(d, 'funnel_mapper_pro') === 'not_set_up' && d.find((t) => t.app_key === 'funnel_mapper_pro').other_org === 'Layer2Funnels');
 d = await tiles(U.ED, L);
-check('LC3', 'Editor: only the apps granted to them (Office, Projects, Clients), plus coming-soon tiles; no Client Portal, no Drive, no Funnel Mapper Pro',
-  st(d, 'office') === 'available' && st(d, 'clients') === 'available' && !d.some((t) => ['portal', 'drive', 'funnel_mapper_pro', 'planner'].includes(t.app_key)) && st(d, 'layer2_agents') === 'coming_soon');
+check('LC3', 'Editor: the apps granted to them (Office, Projects, Clients), the locked Client Portal tile (every team member sees it, 0043) and coming-soon tiles; no Drive, no Funnel Mapper Pro',
+  st(d, 'office') === 'available' && st(d, 'clients') === 'available' && st(d, 'portal') === 'locked' && !d.some((t) => ['drive', 'funnel_mapper_pro', 'planner'].includes(t.app_key)) && st(d, 'layer2_agents') === 'coming_soon');
 d = await tiles(U.ADM, L);
-check('LC4', 'Admin sees the locked Client Portal tile; an editor does not', st(d, 'portal') === 'locked');
+check('LC4', 'Admin sees the locked Client Portal tile', st(d, 'portal') === 'locked');
 d = await tiles(U.ADM, A);
-check('LC5', 'An admin who is only an editor in Aurj does not get the Portal tile there', !d.some((t) => t.app_key === 'portal'));
+check('LC5', 'An admin who is only an editor in Aurj also gets the locked Portal tile there (all team members do)', st(d, 'portal') === 'locked');
 await db.query("update workspace_apps set enabled = true where workspace_id = $1 and app_key = 'portal'", [L]);
 check('LC6', 'A client contact sees only the Portal tile, and only when the owner has switched it on', (await tiles(U.CL, L)).map((t) => t.app_key).join() === 'portal');
 await db.query("update workspace_apps set enabled = false where workspace_id = $1 and app_key = 'portal'", [L]);
