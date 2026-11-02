@@ -986,6 +986,7 @@ for (const [w, label] of [[1280, 'desktop'], [768, 'tablet'], [390, 'phone']]) {
   const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
   await visit(page, base + '/#/office'); await page.waitForSelector('.profile-wrap .who', { timeout: 9000 });
   await page.locator('.profile-wrap .who').click(); await page.getByRole('menuitem', { name: /Your profile/ }).click(); await page.locator('main h1', { hasText: 'Your profile' }).waitFor({ timeout: 9000 });
+  await page.waitForSelector('#pf-name', { timeout: 9000 });   // the cards appear once the profile has loaded
   const txt = await page.locator('main').innerText();
   check('PR1', 'The profile menu opens Your profile, with Photo, Name, Email and Password', ['Photo', 'Name', 'Email', 'Password'].every((t) => txt.includes(t)));
   await page.waitForSelector('#pf-name', { timeout: 9000 }); await page.fill('#pf-name', 'Una Q. Owner'); await page.getByRole('button', { name: 'Save name' }).click(); await wait('Name saved.');
