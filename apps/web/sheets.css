@@ -104,3 +104,23 @@
 @media (max-width:600px){
   .sx-ref{width:76px}.sx-fxl{display:none}.sx-find input[type=search],.sx-find input[type=text]{width:100%}.sx-stats{margin-left:0}
 }
+/* charts, notes, links, validation, zoom */
+.sx-chartpane{position:absolute;overflow:hidden;pointer-events:none;z-index:5}
+.sx-chartlayer{position:absolute;left:0;top:0;will-change:transform}
+.sx-chart{position:absolute;pointer-events:auto;box-sizing:border-box;background:var(--surface);border:1px solid var(--line2);border-radius:var(--radius-md);box-shadow:var(--sh2);cursor:move;touch-action:none;user-select:none}
+.sx-chart.sel,.sx-chart:focus-visible{outline:2px solid var(--action);outline-offset:1px}
+.sx-chsvg{display:block;width:100%;height:100%}
+.sx-chbar{position:absolute;right:6px;top:6px;display:none;gap:4px}
+.sx-chart.sel .sx-chbar,.sx-chart:hover .sx-chbar{display:flex}
+.sx-chbar button{width:28px;height:28px;border:1px solid var(--line2);border-radius:6px;background:var(--surface);color:var(--text);font:inherit;cursor:pointer}
+.sx-grip{position:absolute;right:0;bottom:0;width:16px;height:16px;cursor:nwse-resize;background:linear-gradient(135deg,transparent 55%,var(--action) 55%,var(--action) 65%,transparent 65%,transparent 80%,var(--action) 80%,var(--action) 90%,transparent 90%)}
+.sx-note{position:absolute;right:0;top:0;width:0;height:0;border-style:solid;border-width:0 9px 9px 0;border-color:transparent var(--danger) transparent transparent;pointer-events:none}
+.sx-c.link .t{color:var(--action);text-decoration:underline;cursor:pointer}
+.sx-dvbtn{position:absolute;right:1px;top:50%;transform:translateY(-50%);z-index:3;width:20px;height:calc(100% - 4px);max-height:24px;padding:0;border:1px solid var(--line2);border-radius:4px;background:var(--surface);color:var(--text2);font-size:10px;cursor:pointer}
+.sx-zoom{display:inline-flex;align-items:center;gap:2px}
+.sx-zoom button{min-width:32px;height:32px;border:1px solid var(--line2);border-radius:6px;background:var(--surface);color:var(--text);font:inherit;cursor:pointer}
+.sx-zoom .sx-zlbl{min-width:52px;border-color:transparent;background:transparent;font-size:13px}
+.sx-rules{margin:0;padding:0;list-style:none;display:grid;gap:4px;max-height:160px;overflow:auto}
+.sx-rules li{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:2px 8px;border:1px solid var(--line2);border-radius:6px;font-size:13px}
+.sx-tabs [role=tab] .i{width:12px;height:12px;vertical-align:-1px;fill:none;stroke:currentColor;stroke-width:2}
+@media (pointer:coarse){.sx-zoom button{min-width:44px;height:44px}.sx-chbar button{width:36px;height:36px}}

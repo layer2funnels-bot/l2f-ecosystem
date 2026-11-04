@@ -5,7 +5,8 @@
 import { h, put, icon, btn, dialog, toast, field, notice, skeleton, errorState, noAccessState, readOnlyNotice } from '../ui.js';
 import { createSession } from './session.js';
 import { createGrid } from './sheetgrid.js';
-import { MIME, COLS, ROWS, MAX_CHARS, MAX_SHEETS, MAX_CELLS, DEFAULT_COL_W, DEFAULT_ROW_H, MIN_COL_W, MAX_COL_W, MIN_ROW_H, MAX_ROW_H, colName, ref, parseRef, parseRange, rangeLabel, parseBook, serializeBook, emptySheet, createCalc, cellText, formatValue, impliedFormat, parseLiteral, patchStyle, internStyle, styleOf, Tx, insertLines, deleteLines, renameSheet, removeSheet, duplicateSheet, uniqueName, mergeAt, mergeRange, unmergeRange, sortRange, fillRange, filteredRows, dataRegion, usedRange, countCells, parseCSV, toCSV, toTSV, parseTSV, csvCell, translateFormula, FUNCTION_NAMES, FUNCTION_DOCS, isError } from './sheetmodel.js';
+import { drawChart } from './sheetchart.js';
+import { MIME, COLS, ROWS, MAX_CHARS, MAX_SHEETS, MAX_CELLS, DEFAULT_COL_W, DEFAULT_ROW_H, MIN_COL_W, MAX_COL_W, MIN_ROW_H, MAX_ROW_H, colName, ref, parseRef, parseRange, rangeLabel, parseBook, serializeBook, emptySheet, createCalc, cellText, formatValue, impliedFormat, parseLiteral, patchStyle, internStyle, styleOf, Tx, insertLines, deleteLines, renameSheet, removeSheet, duplicateSheet, uniqueName, mergeAt, mergeRange, unmergeRange, sortRange, fillRange, filteredRows, dataRegion, usedRange, countCells, chartData, cfStyle, dvList, linkOf, safeLink, parseCSV, toCSV, toTSV, parseTSV, csvCell, translateFormula, FUNCTION_NAMES, FUNCTION_DOCS, isError } from './sheetmodel.js';
 
 export { MIME };
 const timeOf = (iso) => { try { return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); } catch { return ''; } };
@@ -39,6 +40,9 @@ export function sheetView({ api, id, ctx }) {
     let sel = { a: { c: 0, r: 0 }, f: { c: 0, r: 0 }, kind: 'cell' }; let editing = null; let hidden = { rows: new Set(), cols: new Set() }; let filtered = new Set(); let matches = new Set();
     let body = ''; let dirtyBody = true; const memo = new Map(); let painter = null; let fillSrc = null; let resizing = null;
     const sheet = () => book.sheets[si];
+    const denied = () => { if (readOnly) return true; if (sheet().lock) { toast('This sheet is protected. Choose “Unprotect sheet” in the sheet menu (⋯) to edit it.', false); return true; } return false; };
+    let zoomPct = 100; try { zoomPct = Math.max(50, Math.min(200, Number(localStorage.getItem(`sx.zoom.${id}`)) || 100)); } catch { /* storage unavailable */ }
+    const zoom = () => zoomPct / 100;
     const getBody = () => { if (dirtyBody) { body = serializeBook(book); dirtyBody = false; } return body; };
     const statusEl = h('span', { class: 'docstate', role: 'status', 'aria-live': 'polite' }); const counter = h('span', { class: 'docstat muted' });
     const saveBtn = btn('Save', () => sess.save({ manual: true }), 'primary');
@@ -54,10 +58,12 @@ export function sheetView({ api, id, ctx }) {
 
     // ------------------------------------------------------------ the editor object the grid talks to
     const ed = {
+      zoom, cfFor: (c, r, v, t) => cfStyle(sheet(), c, r, v, t), noteAt: (k) => sheet().notes[k] ?? null, linkAt: (k) => linkOf(sheet(), k), dvAt: (c, r) => Boolean(dvList(sheet(), c, r)), dvMenu: (a) => dvMenu(a), chartsMoved: () => drawCharts(),
       sheet: () => sheet(), book: () => book, si: () => si, calc: () => calc, range: () => range(), active: () => activeCell(), filtered: () => filtered, fillPoint: () => fillPoint(),
       filterOn: () => false, matchAt: (c, r) => matches.size > 0 && matches.has(ref(c, r)), focusGrid: () => { if (pointMode()) return; commitEditing(); focusGrid(); },
       filterBtnAt: (c, r) => { const f = sheet().filter; return f && r === f.r1 && c >= f.c1 && c <= f.c2 ? ((f.hide[c]?.length ?? 0) > 0 ? 'on' : 'off') : null; },
-      pointerCell(c, r, { shift }) {
+      pointerCell(c, r, { shift, ctrl }) {
+        selectChart(null); { const u = linkOf(sheet(), ref(c, r)); if (ctrl && u) { window.open(u, '_blank', 'noopener,noreferrer'); } }
         if (pointMode()) { const t = grid.editor; t.setRangeText(ref(c, r), t.selectionStart, t.selectionEnd, 'end'); t.dispatchEvent(new Event('input')); t.focus(); return; } commitEditing();
         if (painter) painter.active = true;
         if (shift) { sel = { ...sel, f: { c, r }, kind: 'cell' }; selectionChanged({ scroll: false }); } else setSel({ c, r }, { c, r }, 'cell', { scroll: false });
@@ -74,9 +80,9 @@ export function sheetView({ api, id, ctx }) {
       selectAll() { commitEditing(); sel = { a: { c: 0, r: 0 }, f: { c: COLS - 1, r: ROWS - 1 }, kind: 'all' }; selectionChanged({ scroll: false }); focusGrid(); },
       edit: () => startEdit(), context: (x, y, t) => contextMenu(x, y, t), filterMenu: (c, a) => filterMenu(c, a), autofit: (c) => autofit(c),
       fillStart() { const g = range(); fillSrc = { ...g }; }, fillTo: (c, r) => fillTo(c, r), fillEnd: () => fillEnd(),
-      resizeStart(axis, i) { if (readOnly) { resizing = null; return; } commitEditing(); resizing = { axis, i, before: serializeBook(book) }; const g = range(); resizing.group = (axis === 'c' && sel.kind === 'col' && i >= g.c1 && i <= g.c2) ? [g.c1, g.c2] : (axis === 'r' && sel.kind === 'row' && i >= g.r1 && i <= g.r2) ? [g.r1, g.r2] : [i, i]; },
-      resize(axis, i, size) { if (!resizing) return; const v = axis === 'c' ? Math.max(MIN_COL_W, Math.min(MAX_COL_W, Math.round(size))) : Math.max(MIN_ROW_H, Math.min(MAX_ROW_H, Math.round(size))); for (let k = resizing.group[0]; k <= resizing.group[1]; k++) (axis === 'c' ? sheet().cw : sheet().rh)[k] = v; grid.relayout(); },
-      resizeEnd() { if (!resizing) return; const before = resizing.before; resizing = null; const after = serializeBook(book); if (before !== after) { undo.push({ snap: { before, after } }); snapBytes += before.length + after.length; redo.length = 0; trim(); changed(); } grid.relayout(); },
+      resizeStart(axis, i) { if (denied()) { resizing = null; return; } commitEditing(); resizing = { axis, i, before: serializeBook(book) }; const g = range(); resizing.group = (axis === 'c' && sel.kind === 'col' && i >= g.c1 && i <= g.c2) ? [g.c1, g.c2] : (axis === 'r' && sel.kind === 'row' && i >= g.r1 && i <= g.r2) ? [g.r1, g.r2] : [i, i]; },
+      resize(axis, i, size0) { if (!resizing) return; const size = size0 / zoom(); const v = axis === 'c' ? Math.max(MIN_COL_W, Math.min(MAX_COL_W, Math.round(size))) : Math.max(MIN_ROW_H, Math.min(MAX_ROW_H, Math.round(size))); for (let k = resizing.group[0]; k <= resizing.group[1]; k++) (axis === 'c' ? sheet().cw : sheet().rh)[k] = v; grid.relayout(); },
+      resizeEnd() { if (!resizing) return; const before = resizing.before; resizing = null; pushSnap(before); grid.relayout(); },
       afterScroll() { if (editing) grid.placeEditor(editing.c, editing.r); },
     };
     const grid = createGrid(ed);
@@ -107,7 +113,7 @@ export function sheetView({ api, id, ctx }) {
     const undo = [], redo = []; let snapBytes = 0;
     const trim = () => { while (undo.length > 200 || snapBytes > 30e6) { const e = undo.shift(); if (!e) break; if (e.snap) snapBytes -= e.snap.before.length + e.snap.after.length; } };
     function changed() { dirtyBody = true; sess.markChanged(); paintCount(); }
-    function afterTx(cells) { for (const p of cells) { const q = parseRef(p.key); if (q) calc.invalidate(p.si, q.col, q.row); } recalcFilter(); grid.relayout(); changed(); syncBar(); syncTools(); paintStats(); }
+    function afterTx(cells) { for (const p of cells) { const q = parseRef(p.key); if (q) calc.invalidate(p.si, q.col, q.row); } recalcFilter(); grid.relayout(); drawCharts(); changed(); syncBar(); syncTools(); paintStats(); }
     function commitTx(tx) { if (tx.empty) return false; undo.push({ tx }); redo.length = 0; trim(); afterTx(tx.cells); return true; }
     function replaceBook(next, keepSel = false) {
       const keep = sel;
@@ -116,20 +122,23 @@ export function sheetView({ api, id, ctx }) {
       grid.relayout(); drawTabs(); syncBar(); syncTools(); dirtyBody = true; paintCount(); paintStats();
     }
     /** Runs a structural change (rows, sizes, merges, sheets…) and records a snapshot so it can be undone. */
-    function structural(fn) {
-      if (readOnly) return false; commitEditing(); const before = serializeBook(book); const res = fn(); const after = serializeBook(book);
+    function structural(fn, opts = {}) {
+      if (!opts.force && denied()) return false; if (readOnly) return false; commitEditing(); const before = serializeBook(book); const res = fn(); const after = serializeBook(book);
       if (res === false || before === after) return res !== false; undo.push({ snap: { before, after } }); snapBytes += before.length + after.length; redo.length = 0; trim();
-      calc.reset(); recalcFilter(); grid.relayout(); drawTabs(); syncBar(); syncTools(); changed(); paintStats(); return true;
+      calc.reset(); recalcFilter(); grid.relayout(); drawCharts(); drawTabs(); syncBar(); syncTools(); changed(); paintStats(); return true;
     }
     function doUndo() { commitEditing(); const e = undo.pop(); if (!e) return; if (e.tx) { afterTx(e.tx.apply('undo', book)); } else { snapBytes -= e.snap.before.length + e.snap.after.length; replaceBook(parseBook(e.snap.before), true); changed(); } redo.push(e); selectionChanged({ scroll: false }); }
     function doRedo() { commitEditing(); const e = redo.pop(); if (!e) return; if (e.tx) { afterTx(e.tx.apply('redo', book)); } else { replaceBook(parseBook(e.snap.after), true); changed(); } undo.push(e); if (e.snap) snapBytes += e.snap.before.length + e.snap.after.length; selectionChanged({ scroll: false }); }
+    function pushSnap(before) { const after = serializeBook(book); if (before === after) return false; undo.push({ snap: { before, after } }); snapBytes += before.length + after.length; redo.length = 0; trim(); changed(); return true; }
     function edit(fn) {                                          // cell-level change set
-      if (readOnly) return false; const tx = new Tx(book); const ok = fn(tx); commitTx(tx); if (ok === false) { toast('This sheet is full, so some cells were not changed. Delete some cells first.', false); return false; } return true;
+      if (denied()) return false; const tx = new Tx(book); const ok = fn(tx); commitTx(tx); if (ok === false) { toast('This sheet is full, so some cells were not changed. Delete some cells first.', false); return false; } return true;
     }
 
     // ------------------------------------------------------------ writing cells
     const rawOf = (v) => { if (v === null || v === undefined) return ''; if (typeof v === 'boolean') return v ? 'TRUE' : 'FALSE'; if (typeof v === 'number') return String(v); if (typeof v === 'string') { if (v === '') return ''; const p = parseLiteral(v); return typeof p.v !== 'string' || v[0] === '=' || v[0] === "'" ? `'${v}` : v; } return ''; };
-    function setCell(c, r, text) { edit((tx) => { if (mergeOf(c, r) && !(mergeOf(c, r).c1 === c && mergeOf(c, r).r1 === r)) return true; return tx.raw(si, ref(c, r), text); }); }
+    function setCell(c, r, text) {
+      const list = dvList(sheet(), c, r); if (list && text !== '' && !list.some((x) => x.toLowerCase() === String(text).toLowerCase())) { toast(`Choose one of the listed values: ${list.slice(0, 6).join(', ')}${list.length > 6 ? '…' : ''}`, false); return; }
+      edit((tx) => { if (mergeOf(c, r) && !(mergeOf(c, r).c1 === c && mergeOf(c, r).r1 === r)) return true; return tx.raw(si, ref(c, r), text); }); }
     function clearContents() { const g = range(); edit((tx) => { for (const k of Object.keys(sheet().cells)) { const p = parseRef(k); if (p.col >= g.c1 && p.col <= g.c2 && p.row >= g.r1 && p.row <= g.r2) tx.raw(si, k, ''); } return true; }); }
     function clearFormats() { const g = range(); edit((tx) => { for (const k of Object.keys(sheet().sty)) { const p = parseRef(k); if (p.col >= g.c1 && p.col <= g.c2 && p.row >= g.r1 && p.row <= g.r2) tx.style(si, k, -1); } return true; }); }
     /** Cells a format applies to: the selection, but a whole column/row/sheet only covers what is in use. */
@@ -175,7 +184,7 @@ export function sheetView({ api, id, ctx }) {
       if (!editing) fbar.value = rawAt(ac.c, ac.r); hideAc(); hint.textContent = '';
     }
     function startEdit(initial, opts = {}) {
-      if (readOnly) return; commitEditing(); const ac = activeCell(); const el = grid.editor;
+      if (denied()) return; commitEditing(); const ac = activeCell(); const el = grid.editor;
       editing = { c: ac.c, r: ac.r, typed: initial !== undefined, original: rawAt(ac.c, ac.r) }; el.value = initial ?? editing.original; el.hidden = false;
       const st = styleOf(book, sheet(), ref(ac.c, ac.r)); el.classList.toggle('wrap', Boolean(st?.wr)); grid.scrollTo(ac.c, ac.r); grid.placeEditor(ac.c, ac.r); el.focus({ preventScroll: true });
       const n = el.value.length; el.setSelectionRange(n, n); sizeEditor(); fbar.value = el.value; void opts;
@@ -279,7 +288,7 @@ export function sheetView({ api, id, ctx }) {
       toast(cut ? 'Cut. Choose where to paste.' : 'Copied.');
     }
     function pasteInto(text, mode) {
-      if (readOnly) return; const g = range(); const ac = { c: g.c1, r: g.r1 }; const mem = clipboardMemory && normNL(text) === clipboardMemory.text ? clipboardMemory : null;
+      if (denied()) return; const g = range(); const ac = { c: g.c1, r: g.r1 }; const mem = clipboardMemory && normNL(text) === clipboardMemory.text ? clipboardMemory : null;
       let grid2; // rows of { raw, sty }
       if (mem) {
         grid2 = mem.cells.map((row, i) => row.map((x, j) => {
@@ -463,7 +472,7 @@ export function sheetView({ api, id, ctx }) {
       dialog({ title: 'Format cells', body: h('div', { class: 'sx-fdlg' }, cat.el, dec.el, sym.el, dform.el, sample), actions: [{ label: 'Apply', cls: 'primary', on: () => { const nf2 = build(); applyStyle(() => ({ nf: nf2 })); } }, { label: 'Cancel' }] });
     }
     function contextMenu(x, y, t) {
-      const ro = readOnly; let items;
+      const ro = readOnly || sheet().lock; let items;
       if (t.kind === 'cell') { const g = range(); if (!(t.c >= g.c1 && t.c <= g.c2 && t.r >= g.r1 && t.r <= g.r2)) setSel({ c: t.c, r: t.r }, { c: t.c, r: t.r }, 'cell', { scroll: false }); }
       else if (t.kind === 'col') { const g = range(); if (!(sel.kind === 'col' && t.c >= g.c1 && t.c <= g.c2)) setSel({ c: t.c, r: 0 }, { c: t.c, r: ROWS - 1 }, 'col', { scroll: false }); }
       else if (t.kind === 'row') { const g = range(); if (!(sel.kind === 'row' && t.r >= g.r1 && t.r <= g.r2)) setSel({ c: 0, r: t.r }, { c: COLS - 1, r: t.r }, 'row', { scroll: false }); }
@@ -471,9 +480,124 @@ export function sheetView({ api, id, ctx }) {
       const [rs, rn] = lineSel('r'), [cs, cn] = lineSel('c');
       if (t.kind === 'col') items = [...base, { label: `Insert ${cn} column${cn > 1 ? 's' : ''} left`, disabled: ro, on: () => insertAt('c', false) }, { label: `Insert ${cn} column${cn > 1 ? 's' : ''} right`, disabled: ro, on: () => insertAt('c', true) }, { label: `Delete column${cn > 1 ? 's' : ''}`, disabled: ro, on: () => deleteSel('c') }, { label: 'Clear contents', disabled: ro, on: clearContents }, '-', { label: 'Sort A→Z', disabled: ro, on: () => sortSel('asc') }, { label: 'Sort Z→A', disabled: ro, on: () => sortSel('desc') }, '-', { label: `Hide column${cn > 1 ? 's' : ''}`, disabled: ro, on: () => hideLines('c', false) }, { label: 'Unhide hidden columns here', disabled: ro, on: () => hideLines('c', true) }, { label: 'Reset width', disabled: ro, on: () => structural(() => { for (let c = cs; c < cs + cn; c++) delete sheet().cw[c]; return true; }) }];
       else if (t.kind === 'row') items = [...base, { label: `Insert ${rn} row${rn > 1 ? 's' : ''} above`, disabled: ro, on: () => insertAt('r', false) }, { label: `Insert ${rn} row${rn > 1 ? 's' : ''} below`, disabled: ro, on: () => insertAt('r', true) }, { label: `Delete row${rn > 1 ? 's' : ''}`, disabled: ro, on: () => deleteSel('r') }, { label: 'Clear contents', disabled: ro, on: clearContents }, '-', { label: `Hide row${rn > 1 ? 's' : ''}`, disabled: ro, on: () => hideLines('r', false) }, { label: 'Unhide hidden rows here', disabled: ro, on: () => hideLines('r', true) }, { label: 'Reset height', disabled: ro, on: () => structural(() => { for (let r = rs; r < rs + rn; r++) delete sheet().rh[r]; return true; }) }];
-      else items = [...base, { label: 'Insert row above', disabled: ro, on: () => insertAt('r', false) }, { label: 'Insert row below', disabled: ro, on: () => insertAt('r', true) }, { label: 'Insert column left', disabled: ro, on: () => insertAt('c', false) }, { label: 'Insert column right', disabled: ro, on: () => insertAt('c', true) }, { label: 'Delete row', disabled: ro, on: () => deleteSel('r') }, { label: 'Delete column', disabled: ro, on: () => deleteSel('c') }, '-', { label: 'Clear contents', hint: 'Delete', disabled: ro, on: clearContents }, { label: 'Clear formatting', disabled: ro, on: clearFormats }, '-', { label: 'Sort A→Z by this column', disabled: ro, on: () => sortSel('asc') }, { label: 'Sort Z→A by this column', disabled: ro, on: () => sortSel('desc') }, '-', { label: 'Format cells…', disabled: ro, on: formatDialog }];
+      else items = [...base, { label: 'Insert row above', disabled: ro, on: () => insertAt('r', false) }, { label: 'Insert row below', disabled: ro, on: () => insertAt('r', true) }, { label: 'Insert column left', disabled: ro, on: () => insertAt('c', false) }, { label: 'Insert column right', disabled: ro, on: () => insertAt('c', true) }, { label: 'Delete row', disabled: ro, on: () => deleteSel('r') }, { label: 'Delete column', disabled: ro, on: () => deleteSel('c') }, '-', { label: 'Clear contents', hint: 'Delete', disabled: ro, on: clearContents }, { label: 'Clear formatting', disabled: ro, on: clearFormats }, '-', ...cellExtras(ro), '-', { label: 'Sort A→Z by this column', disabled: ro, on: () => sortSel('asc') }, { label: 'Sort Z→A by this column', disabled: ro, on: () => sortSel('desc') }, '-', { label: 'Format cells…', disabled: ro, on: formatDialog }];
       popup.show(null, menuList(items), { at: { x, y } });
     }
+
+    // ------------------------------------------------------------ charts
+    const chartEls = new Map(); let chartSi = -1; let selChart = null;
+    function selectChart(id) { if (selChart === id) return; selChart = id; for (const [k, f] of chartEls) f.el.classList.toggle('sel', k === id); if (id) chartEls.get(id)?.el.focus({ preventScroll: true }); }
+    function drawCharts() {
+      if (chartSi !== si) { for (const f of chartEls.values()) f.el.remove(); chartEls.clear(); chartSi = si; selChart = null; }
+      const z = zoom(); const ids = new Set(sheet().charts.map((c) => c.id));
+      for (const [k, f] of chartEls) if (!ids.has(k)) { f.el.remove(); chartEls.delete(k); }
+      for (const ch of sheet().charts) {
+        let f = chartEls.get(ch.id); if (!f) { f = makeFrame(ch.id); chartEls.set(ch.id, f); grid.chartLayer.append(f.el); }
+        const st = f.el.style; st.left = `${ch.x * z}px`; st.top = `${ch.y * z}px`; st.width = `${ch.w * z}px`; st.height = `${ch.h * z}px`; f.el.setAttribute('aria-label', `Chart: ${ch.title || ch.type}`);
+        f.el.classList.toggle('sel', selChart === ch.id); drawChart(f.svg, ch, chartData(book, si, calc, ch), ch.w * z, ch.h * z);
+      }
+    }
+    function makeFrame(cid) {
+      const svgEl = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); svgEl.setAttribute('class', 'sx-chsvg');
+      const chart = () => sheet().charts.find((x) => x.id === cid);
+      const bar = h('div', { class: 'sx-chbar' }, h('button', { type: 'button', 'aria-label': 'Edit chart', title: 'Edit chart', onclick: () => chartDialog(chart()) }, '✎'), h('button', { type: 'button', 'aria-label': 'Delete chart', title: 'Delete chart', onclick: () => deleteChart(cid) }, '✕'));
+      const grip = h('div', { class: 'sx-grip', 'aria-hidden': 'true' });
+      const el = h('div', { class: 'sx-chart', tabindex: '0', role: 'group' }, svgEl, bar, grip);
+      el.addEventListener('pointerdown', (e) => {
+        if (e.target.closest('.sx-chbar') || e.button > 0) return; selectChart(cid); e.preventDefault(); el.focus({ preventScroll: true }); const ch = chart(); if (!ch || denied2()) return;
+        const mode = e.target === grip ? 'resize' : 'move'; const before = serializeBook(book); const z = zoom(); const o = { x: ch.x, y: ch.y, w: ch.w, h: ch.h }; const x0 = e.clientX, y0 = e.clientY; el.setPointerCapture(e.pointerId);
+        const move = (ev) => { const dx = (ev.clientX - x0) / z, dy = (ev.clientY - y0) / z; if (mode === 'move') { ch.x = Math.max(0, Math.round(o.x + dx)); ch.y = Math.max(0, Math.round(o.y + dy)); } else { ch.w = Math.max(160, Math.min(1200, Math.round(o.w + dx))); ch.h = Math.max(120, Math.min(900, Math.round(o.h + dy))); } drawCharts(); };
+        const up = () => { el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up); pushSnap(before); }; el.addEventListener('pointermove', move); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+      });
+      el.addEventListener('keydown', (e) => {
+        const ch = chart(); if (!ch) return;
+        if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); deleteChart(cid); } else if (e.key === 'Enter') { e.preventDefault(); chartDialog(ch); } else if (e.key === 'Escape') { selectChart(null); focusGrid(); }
+        else if (e.key.startsWith('Arrow') && !denied2()) { e.preventDefault(); const before = serializeBook(book); const d = e.shiftKey ? 1 : 10; if (e.key === 'ArrowLeft') ch.x = Math.max(0, ch.x - d); if (e.key === 'ArrowRight') ch.x += d; if (e.key === 'ArrowUp') ch.y = Math.max(0, ch.y - d); if (e.key === 'ArrowDown') ch.y += d; drawCharts(); pushSnap(before); }
+      });
+      return { el, svg: svgEl };
+    }
+    const denied2 = () => readOnly || sheet().lock;
+    function deleteChart(cid) { structural(() => { sheet().charts = sheet().charts.filter((x) => x.id !== cid); selChart = null; return true; }); focusGrid(); }
+    function chartDialog(ch) {
+      if (denied()) return; const g = range(); const ac = activeCell();
+      const def = ch ? ch.range : isMulti() ? rangeLabel(g) : usedRange(sheet()) ? rangeLabel(dataRegion(sheet(), ac.c, ac.r)) : 'A1:B5';
+      const type = field({ id: 'sx-ct', label: 'Chart type', value: ch?.type ?? 'column', options: [['column', 'Column'], ['bar', 'Bar'], ['line', 'Line'], ['pie', 'Pie']] });
+      const title = field({ id: 'sx-ctt', label: 'Title', value: ch?.title ?? '', maxlength: 80 });
+      const rng = field({ id: 'sx-ctr', label: 'Data range', value: def, hint: 'For example A1:C6. The first column holds the labels and the first row the names.' });
+      const head = h('input', { type: 'checkbox', id: 'sx-cth', ...(ch?.head === false ? {} : { checked: true }) }), legend = h('input', { type: 'checkbox', id: 'sx-ctl', ...(ch?.legend === false ? {} : { checked: true }) });
+      dialog({ title: ch ? 'Edit chart' : 'Insert chart', body: h('div', { class: 'sx-fdlg' }, type.el, title.el, rng.el, h('label', { class: 'sx-chk', for: 'sx-cth' }, head, ' First row holds the series names'), h('label', { class: 'sx-chk', for: 'sx-ctl' }, legend, ' Show a legend')),
+        actions: [{ label: ch ? 'Save' : 'Insert', cls: 'primary', on: () => {
+          const gg = parseRange(rng.input.value.trim().toUpperCase()); if (!gg) return rng.error('Type a range such as A1:C6.');
+          const spec = { type: type.input.value, title: title.input.value.trim(), range: rangeLabel(gg), head: head.checked, legend: legend.checked };
+          structural(() => { if (ch) Object.assign(sheet().charts.find((x) => x.id === ch.id) ?? {}, spec); else { if (sheet().charts.length >= 20) { toast('A sheet holds up to 20 charts.', false); return false; } const z = zoom(); const id = `c${Date.now().toString(36)}`; sheet().charts.push({ id, ...spec, x: Math.round(grid.el.scrollLeft / z + 60), y: Math.round(grid.el.scrollTop / z + 40), w: 420, h: 280 }); selChart = id; } return true; });
+          if (selChart) chartEls.get(selChart)?.el.focus({ preventScroll: true }); } }, { label: 'Cancel' }] });
+    }
+
+    // ------------------------------------------------------------ rules: conditional formatting and dropdown lists
+    const PRESETS = { red: ['Red fill', { bg: '#f4c7c3', fc: '#7a1c14' }], green: ['Green fill', { bg: '#cdebd2', fc: '#14532d' }], yellow: ['Yellow fill', { bg: '#fdeeb0', fc: '#5c4400' }], blue: ['Blue fill', { bg: '#cfe0fc', fc: '#12306b' }], redtext: ['Red text', { fc: '#c5221f' }], greentext: ['Green text', { fc: '#188038' }] };
+    const COND = [['gt', 'Greater than'], ['lt', 'Less than'], ['between', 'Between'], ['eq', 'Equal to'], ['contains', 'Text contains'], ['empty', 'Is empty'], ['notempty', 'Is not empty']];
+    function ruleDialog(kind) {
+      if (readOnly) { toast('This spreadsheet is read only.', false); return; }
+      const isCf = kind === 'cf'; const g0 = range(); const def = rangeLabel(isMulti() || sel.kind !== 'cell' ? { c1: g0.c1, c2: g0.c2, r1: g0.r1, r2: Math.min(g0.r2, Math.max(g0.r1, usedRange(sheet())?.r2 ?? g0.r2)) } : { c1: g0.c1, c2: g0.c1, r1: 0, r2: Math.max(9, usedRange(sheet())?.r2 ?? 9) });
+      const rng = field({ id: 'sx-rr', label: 'Apply to range', value: def });
+      const list = h('ul', { class: 'sx-rules', 'aria-label': 'Existing rules' });
+      const draw = () => put(list, ...(isCf ? sheet().cf : sheet().dv).map((r, i) => h('li', {}, h('span', {}, `${rangeLabel(r.g)}: ${isCf ? `${COND.find((x) => x[0] === r.type)[1]}${r.a ? ` ${r.a}` : ''}${r.type === 'between' ? ` and ${r.b}` : ''}` : r.list.slice(0, 5).join(', ') + (r.list.length > 5 ? '…' : '')}`),
+        btn('Remove', () => { structural(() => { (isCf ? sheet().cf : sheet().dv).splice(i, 1); return true; }, { force: true }); draw(); }, 'link', { 'aria-label': `Remove rule ${i + 1}` }))), (isCf ? sheet().cf : sheet().dv).length ? null : h('li', { class: 'muted fine' }, 'No rules yet.'));
+      draw();
+      let body;
+      if (isCf) {
+        const cond = field({ id: 'sx-rc', label: 'When the cell is', value: 'gt', options: COND }); const a = field({ id: 'sx-ra', label: 'Value' }); const b = field({ id: 'sx-rb', label: 'and' }); const fmt = field({ id: 'sx-rf', label: 'Then show it as', value: 'red', options: Object.entries(PRESETS).map(([k, v]) => [k, v[0]]) });
+        const vis = () => { const t = cond.input.value; a.el.hidden = t === 'empty' || t === 'notempty'; b.el.hidden = t !== 'between'; }; cond.input.addEventListener('change', vis); vis();
+        body = h('div', { class: 'sx-fdlg' }, list, rng.el, cond.el, a.el, b.el, fmt.el); ruleDialog.add = () => { const gg = parseRange(rng.input.value.trim().toUpperCase()); if (!gg) return rng.error('Type a range such as B2:B20.'); const t = cond.input.value; if ((t === 'gt' || t === 'lt' || t === 'between') && Number.isNaN(Number(a.input.value))) return a.error('Type a number.'); if (t === 'between' && Number.isNaN(Number(b.input.value))) return b.error('Type a number.'); if ((t === 'contains' || t === 'eq') && !a.input.value) return a.error('Type a value.');
+          structural(() => { sheet().cf.push({ g: gg, type: t, a: a.input.value.slice(0, 100), b: b.input.value.slice(0, 100), ...PRESETS[fmt.input.value][1] }); return true; }, { force: true }); draw(); return false; };
+      } else {
+        const items = field({ id: 'sx-rl', label: 'Allowed values', rows: 4, value: '', hint: 'One per line, or separated by commas.' });
+        body = h('div', { class: 'sx-fdlg' }, list, rng.el, items.el); ruleDialog.add = () => { const gg = parseRange(rng.input.value.trim().toUpperCase()); if (!gg) return rng.error('Type a range such as C2:C20.'); const vals = [...new Set(items.input.value.split(/[\n,]/).map((x) => x.trim()).filter(Boolean))].slice(0, 100); if (!vals.length) return items.error('Type at least one value.');
+          structural(() => { sheet().dv.push({ g: gg, list: vals }); return true; }, { force: true }); items.input.value = ''; draw(); return false; };
+      }
+      dialog({ title: isCf ? 'Conditional formatting' : 'Dropdown list', body, wide: true, actions: [{ label: 'Add rule', cls: 'primary', keep: true, on: () => ruleDialog.add() }, { label: 'Close' }] });
+    }
+    const cfDialog = () => { if (denied()) return; ruleDialog('cf'); }, dvDialog = () => { if (denied()) return; ruleDialog('dv'); };
+    function dvMenu(anchor) {
+      const a = activeCell(); const list = dvList(sheet(), a.c, a.r); if (!list) return;
+      menuBtn(anchor, list.map((x) => ({ label: x, checked: rawAt(a.c, a.r) === x, on: () => { setCell(a.c, a.r, x); focusGrid(); } })));
+    }
+
+    // ------------------------------------------------------------ notes and links
+    const keyOfActive = () => ref(activeCell().c, activeCell().r);
+    function noteDialog() {
+      if (denied()) return; const k = keyOfActive(); const f = field({ id: 'sx-nt', label: `Note on ${k}`, rows: 4, value: sheet().notes[k] ?? '', maxlength: 1000 });
+      dialog({ title: 'Cell note', body: f.el, actions: [{ label: 'Save', cls: 'primary', on: () => { const t = f.input.value.trim(); structural(() => { if (t) sheet().notes[k] = t; else delete sheet().notes[k]; return true; }); } }, ...(sheet().notes[k] ? [{ label: 'Delete note', on: () => { structural(() => { delete sheet().notes[k]; return true; }); } }] : []), { label: 'Cancel' }] });
+    }
+    function linkDialog() {
+      if (denied()) return; const k = keyOfActive(); const f = field({ id: 'sx-lk', label: `Link for ${k}`, value: sheet().links[k] ?? '', hint: 'A web address (https://…) or an e-mail link (mailto:…). Leave empty to remove the link. Ctrl+click a linked cell to open it.' });
+      dialog({ title: 'Cell link', body: f.el, actions: [{ label: 'Save', cls: 'primary', on: () => { const t = f.input.value.trim(); if (t && !safeLink(t)) return f.error('Use a web address that starts with https:// or http://, or mailto:'); structural(() => { if (t) sheet().links[k] = safeLink(t); else delete sheet().links[k]; return true; }); } }, { label: 'Cancel' }] });
+    }
+    function cellExtras(ro) {
+      const k = keyOfActive(); const u = linkOf(sheet(), k);
+      return [{ label: 'Insert link…', disabled: ro, on: linkDialog }, ...(u ? [{ label: 'Open link', on: () => window.open(u, '_blank', 'noopener,noreferrer') }] : []), { label: sheet().notes[k] ? 'Edit note…' : 'Add note…', disabled: ro, on: noteDialog }, ...(sheet().notes[k] ? [{ label: 'Delete note', disabled: ro, on: () => structural(() => { delete sheet().notes[k]; return true; }) }] : [])];
+    }
+
+    // ------------------------------------------------------------ sheet options: tab colour, page setup, copy, zoom
+    function tabColor(anchor, i) {
+      popup.show(anchor, (close) => { const pick = (hex) => { close(); structural(() => { book.sheets[i].tab = hex; return true; }); };
+        return h('div', { class: 'sx-colors' }, h('button', { type: 'button', class: 'sx-none', onclick: () => pick(null) }, 'No colour'), h('div', { class: 'sx-sw' }, ...SWATCHES.slice(8, 26).map((hex) => { const b = h('button', { type: 'button', 'aria-label': hex, title: hex, onclick: () => pick(hex) }); b.style.background = hex; return b; }))); });
+    }
+    function pageSetup() {
+      const s = sheet(); const orient = field({ id: 'sx-po', label: 'Orientation', value: s.print.orient, options: [['portrait', 'Portrait'], ['landscape', 'Landscape']] }); const fit = h('input', { type: 'checkbox', id: 'sx-pf', ...(s.print.fit ? { checked: true } : {}) });
+      dialog({ title: `Page setup: ${s.name}`, body: h('div', { class: 'sx-fdlg' }, orient.el, h('label', { class: 'sx-chk', for: 'sx-pf' }, fit, ' Shrink to fit the page width')), actions: [{ label: 'Save', cls: 'primary', on: () => { structural(() => { sheet().print = { fit: fit.checked, orient: orient.input.value }; return true; }, { force: true }); } }, { label: 'Cancel' }] });
+    }
+    async function makeCopy() {
+      commitEditing(); const r = await api.call('drive.files.create', { space: meta.space, ...(meta.client_id ? { client: meta.client_id } : {}), ...(meta.project_id ? { project: meta.project_id } : {}), ...(meta.folder_id ? { folder: meta.folder_id } : {}), name: `Copy of ${meta.name}`.slice(0, 200), kind: 'document', mime_type: MIME, body: getBody() });
+      if (!r.ok) { toast(r.message ?? 'Couldn’t make a copy.', false); return; } toast('Copy created. Opening it…'); ctx.go?.(`#/sheet/${r.data[0].id}`);
+    }
+    const zoomLbl = h('button', { type: 'button', class: 'sx-zlbl', 'aria-label': 'Reset zoom to 100%', title: 'Reset zoom', onclick: () => setZoom(100) }, '100%');
+    const zoomBox = h('div', { class: 'sx-zoom', role: 'group', 'aria-label': 'Zoom' }, h('button', { type: 'button', 'aria-label': 'Zoom out', title: 'Zoom out', onclick: () => setZoom(zoomPct - 10) }, '−'), zoomLbl, h('button', { type: 'button', 'aria-label': 'Zoom in', title: 'Zoom in', onclick: () => setZoom(zoomPct + 10) }, '+'));
+    function setZoom(p) {
+      zoomPct = Math.max(50, Math.min(200, Math.round(p / 10) * 10)); zoomLbl.textContent = `${zoomPct}%`; try { localStorage.setItem(`sx.zoom.${id}`, String(zoomPct)); } catch { /* storage unavailable */ }
+      grid.relayout(); if (editing) grid.placeEditor(editing.c, editing.r); drawCharts();
+    }
+    zoomLbl.textContent = `${zoomPct}%`;
 
     // ------------------------------------------------------------ keyboard
     grid.el.addEventListener('keydown', (e) => {
@@ -521,11 +645,13 @@ export function sheetView({ api, id, ctx }) {
     const bSort = tb('Sort', svg(ICON.sort), (e) => menuBtn(e.currentTarget, [{ label: 'Sort A→Z by this column', on: () => sortSel('asc') }, { label: 'Sort Z→A by this column', on: () => sortSel('desc') }]));
     const bFilter = tb('Filter', icon('filter'), () => toggleFilter());
     const bFind = tb('Find and replace (Ctrl+F)', icon('search'), () => openFind(), { alwaysOn: true });
+    const bInsert = tb('Insert: chart, link, note', h('span', { class: 'sx-fmtlbl' }, 'Insert ▾'), (e) => menuBtn(e.currentTarget, [{ label: 'Chart…', on: () => chartDialog() }, { label: 'Link…', on: () => linkDialog() }, { label: sheet().notes[ref(activeCell().c, activeCell().r)] ? 'Edit note…' : 'Note…', on: () => noteDialog() }]));
+    const bRules = tb('Rules: conditional formatting and dropdown lists', h('span', { class: 'sx-fmtlbl' }, 'Rules ▾'), (e) => menuBtn(e.currentTarget, [{ label: 'Conditional formatting…', on: () => cfDialog() }, { label: 'Dropdown list (data validation)…', on: () => dvDialog() }]));
     const bClearFmt = tb('Clear formatting (Ctrl+\\)', svg(ICON.clear), () => clearFormats());
     const bPaint = tb('Paint format: copy the look of this cell, then click where to use it', svg(ICON.paint), () => { painter = painter ? null : { idx: sheet().sty[ref(activeCell().c, activeCell().r)] ?? -1 }; grid.el.classList.toggle('painting', Boolean(painter)); if (painter) toast('Now click the cells to format.'); });
     const bUndo = tb('Undo (Ctrl+Z)', icon('undo'), () => doUndo()), bRedo = tb('Redo (Ctrl+Y)', icon('redo'), () => doRedo());
     const sep = () => h('span', { class: 'sx-sep', role: 'separator' });
-    const tools = h('div', { class: 'sx-tools', role: 'toolbar', 'aria-label': 'Formatting' }, bUndo, bRedo, sep(), sizeSel, bBold, bItal, bUnder, bStrike, bFc, bBg, sep(), bBorder, bMerge, hBtns.l, hBtns.c, hBtns.r, vBtn, bWrap, sep(), bFmt, bCur, bPct, bDec1, bDec2, sep(), bFreeze, bSort, bFilter, bFind, bPaint, bClearFmt);
+    const tools = h('div', { class: 'sx-tools', role: 'toolbar', 'aria-label': 'Formatting' }, bUndo, bRedo, sep(), sizeSel, bBold, bItal, bUnder, bStrike, bFc, bBg, sep(), bBorder, bMerge, hBtns.l, hBtns.c, hBtns.r, vBtn, bWrap, sep(), bFmt, bCur, bPct, bDec1, bDec2, sep(), bFreeze, bSort, bFilter, bFind, bPaint, bClearFmt, sep(), bInsert, bRules);
     function syncTools() {
       const st = activeStyle(); const press = (b, on) => b.setAttribute('aria-pressed', String(Boolean(on)));
       press(bBold, st.b); press(bItal, st.i); press(bUnder, st.u); press(bStrike, st.st); press(bWrap, st.wr); press(bFilter, sheet().filter); for (const k of ['l', 'c', 'r']) press(hBtns[k], st.ha === k);
@@ -541,13 +667,13 @@ export function sheetView({ api, id, ctx }) {
       sel = m ? m.sel : { a: { c: 0, r: 0 }, f: { c: 0, r: 0 }, kind: 'cell' }; matches = new Set(); grid.relayout(); grid.el.scrollLeft = m?.sx ?? 0; grid.el.scrollTop = m?.sy ?? 0; drawTabs(); syncBar(); syncTools(); grid.refresh(); paintStats(); paintCount(); if (!findBar.hidden && fq.value) runFind(false);
     }
     function drawTabs() {
-      put(tabsEl, ...book.sheets.map((s, i) => h('button', { type: 'button', role: 'tab', 'aria-selected': String(i === si), tabindex: i === si ? 0 : -1, class: i === si ? 'on' : '', onclick: () => switchSheet(i), ondblclick: () => renameDialog(i), oncontextmenu: (e) => { e.preventDefault(); tabMenu(e.currentTarget, i, { x: e.clientX, y: e.clientY }); } }, s.name)),
+      put(tabsEl, ...book.sheets.map((s, i) => h('button', { type: 'button', role: 'tab', 'aria-selected': String(i === si), tabindex: i === si ? 0 : -1, class: i === si ? 'on' : '', onclick: () => switchSheet(i), ondblclick: () => renameDialog(i), oncontextmenu: (e) => { e.preventDefault(); tabMenu(e.currentTarget, i, { x: e.clientX, y: e.clientY }); } }, s.lock ? [svg('M7 11V8a5 5 0 0110 0v3M5 11h14v10H5z'), ' ', s.name] : s.name)),
         !readOnly && book.sheets.length < MAX_SHEETS ? btn('+', addSheet, '', { 'aria-label': 'Add a sheet', title: 'Add a sheet' }) : null,
         h('button', { type: 'button', class: 'sx-tabmore', 'aria-label': 'Sheet options', title: 'Sheet options', onclick: (e) => tabMenu(e.currentTarget, si) }, '⋯'));
     }
     function tabMenu(anchor, i, at) {
       const ro = readOnly; const n = book.sheets.length;
-      menuBtn(anchor, [{ label: 'Rename', disabled: ro, on: () => renameDialog(i) }, { label: 'Duplicate', disabled: ro || n >= MAX_SHEETS, on: () => structural(() => { si = duplicateSheet(book, i); return true; }) }, { label: 'Move left', disabled: ro || i === 0, on: () => moveSheet(i, -1) }, { label: 'Move right', disabled: ro || i === n - 1, on: () => moveSheet(i, 1) }, '-', { label: 'Delete', disabled: ro || n < 2, on: () => deleteSheet(i) }], at ? { at } : undefined);
+      menuBtn(anchor, [{ label: 'Rename', disabled: ro, on: () => renameDialog(i) }, { label: 'Duplicate', disabled: ro || n >= MAX_SHEETS, on: () => structural(() => { si = duplicateSheet(book, i); return true; }) }, { label: book.sheets[i].lock ? 'Unprotect sheet' : 'Protect sheet', disabled: readOnly, on: () => structural(() => { book.sheets[i].lock = !book.sheets[i].lock; return true; }, { force: true }) }, { label: 'Tab colour…', disabled: ro, on: () => tabColor(anchor, i) }, { label: 'Move left', disabled: ro || i === 0, on: () => moveSheet(i, -1) }, { label: 'Move right', disabled: ro || i === n - 1, on: () => moveSheet(i, 1) }, '-', { label: 'Delete', disabled: ro || n < 2, on: () => deleteSheet(i) }], at ? { at } : undefined);
     }
     function moveSheet(i, d) { structural(() => { const [s] = book.sheets.splice(i, 1); book.sheets.splice(i + d, 0, s); si = i + d; memoSel.clear(); return true; }); }
     function addSheet() { structural(() => { let n = book.sheets.length + 1; while (book.sheets.some((s) => s.name === `Sheet ${n}`)) n += 1; book.sheets.push(emptySheet(`Sheet ${n}`)); si = book.sheets.length - 1; sel = { a: { c: 0, r: 0 }, f: { c: 0, r: 0 }, kind: 'cell' }; return true; }); }
@@ -634,9 +760,11 @@ export function sheetView({ api, id, ctx }) {
         } table.append(tr);
       }
       const pr = h('div', { class: 'sx-print' }, h('h1', {}, `${meta.name} — ${s.name}`), table); document.body.append(pr); document.documentElement.classList.add('sx-printing');
-      const done = () => { pr.remove(); document.documentElement.classList.remove('sx-printing'); window.removeEventListener('afterprint', done); }; window.addEventListener('afterprint', done); setTimeout(() => window.print(), 50);
+      const land = s.print.orient === 'landscape'; let totalPt = 0; for (let c = 0; c <= u.c2; c++) if (!hiddenCols.has(c)) totalPt += (s.cw[c] ?? DEFAULT_COL_W) * 0.75; const avail = land ? 760 : 520; if (s.print.fit && totalPt > avail) table.style.zoom = String(avail / totalPt);
+      const css = new CSSStyleSheet(); css.replaceSync(`@page{size:${land ? 'landscape' : 'portrait'};margin:12mm}`); document.adoptedStyleSheets = [...document.adoptedStyleSheets, css];
+      const done = () => { pr.remove(); document.documentElement.classList.remove('sx-printing'); document.adoptedStyleSheets = document.adoptedStyleSheets.filter((x) => x !== css); window.removeEventListener('afterprint', done); }; window.addEventListener('afterprint', done); setTimeout(() => window.print(), 50);
     }
-    const fileMenu = (e) => menuBtn(e.currentTarget, [{ label: 'Import CSV or Excel…', disabled: readOnly, on: importFile }, { label: 'Download as CSV (this sheet)', on: exportCSV }, { label: 'Download as Excel (.xlsx)', on: exportXLSX }, '-', { label: 'Print or save as PDF…', on: printSheet }], { wide: true });
+    const fileMenu = (e) => menuBtn(e.currentTarget, [{ label: 'Import CSV or Excel…', disabled: readOnly, on: importFile }, { label: 'Download as CSV (this sheet)', on: exportCSV }, { label: 'Download as Excel (.xlsx)', on: exportXLSX }, '-', { label: 'Page setup (orientation, fit to width)…', on: pageSetup }, { label: 'Print or save as PDF…', on: printSheet }, '-', { label: 'Make a copy', on: makeCopy }], { wide: true });
 
     // ------------------------------------------------------------ footer pieces
     function paintCount() {
@@ -670,7 +798,7 @@ export function sheetView({ api, id, ctx }) {
     else if (readOnly) banners.push(readOnlyNotice('You can look at this spreadsheet but not change it'));
     const fileBtn = btn('File', fileMenu, '', { 'aria-haspopup': 'menu' });
     const bar = h('div', { class: 'sx-bar-row' }, nameBox, h('span', { class: 'sx-fxl', 'aria-hidden': 'true' }, 'fx'), h('div', { class: 'sx-fxwrap' }, fbar, acBox));
-    put(root, ...banners, h('div', { class: 'docbar' }, crumb, h('div', { class: 'docrow' }, titleIn, h('div', { class: 'docacts' }, statusEl, counter, fileBtn, btn('History', () => sess.openHistory(!readOnly)), saveBtn))), tools, bar, hint, findBar, grid.el, h('div', { class: 'sx-foot' }, tabsEl, stats), live);
+    put(root, ...banners, h('div', { class: 'docbar' }, crumb, h('div', { class: 'docrow' }, titleIn, h('div', { class: 'docacts' }, statusEl, counter, fileBtn, btn('History', () => sess.openHistory(!readOnly)), saveBtn))), tools, bar, hint, findBar, grid.el, h('div', { class: 'sx-foot' }, tabsEl, stats, zoomBox), live);
     root.removeAttribute('aria-busy'); document.title = `${meta.name} · Sheets`;
     root.classList.toggle('ro', readOnly);
     const fit = () => { const top = Math.max(0, root.getBoundingClientRect().top); root.style.height = `${Math.max(460, window.innerHeight - top - 12)}px`; };

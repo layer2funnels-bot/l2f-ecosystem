@@ -15,15 +15,16 @@ export function createGrid(ed) {
   const scroller = h('div', { class: 'sx-scroll', tabindex: '0', role: 'grid', 'aria-label': 'Spreadsheet. Arrow keys move, Enter or F2 edits, Delete clears.', 'aria-rowcount': String(ROWS), 'aria-colcount': String(COLS) }, sizer);
   const panes = {};
   for (const n of ['corner', 'top', 'left', 'main']) { const layer = h('div', { class: 'sx-layer' }); panes[n] = { el: h('div', { class: `sx-pane sx-${n}` }, layer), layer, pool: new Map(), left: 0, top: 0 }; stage.append(panes[n].el); }
-  stage.append(editor);
+  const chartLayer = h('div', { class: 'sx-chartlayer' }); const chartPane = h('div', { class: 'sx-chartpane' }, chartLayer);
+  stage.append(chartPane, editor);
   let colLeft = new Float64Array(COLS + 1), rowTop = new Float64Array(ROWS + 1);
   let fc = 0, fr = 0, fw = 0, fh = 0, W = 600, H = 400, anchors = new Map(), covered = new Set(), last = '';
   const stageSize = () => ({ W, H });
 
   function layout() {
-    const s = ed.sheet(); const hr = new Set(s.hr); for (const r of ed.filtered()) hr.add(r); const hc = new Set(s.hc);
-    for (let c = 0; c < COLS; c++) colLeft[c + 1] = colLeft[c] + (hc.has(c) ? 0 : (s.cw[c] ?? DEFAULT_COL_W));
-    for (let r = 0; r < ROWS; r++) rowTop[r + 1] = rowTop[r] + (hr.has(r) ? 0 : (s.rh[r] ?? DEFAULT_ROW_H));
+    const s = ed.sheet(); const z = ed.zoom(); const hr = new Set(s.hr); for (const r of ed.filtered()) hr.add(r); const hc = new Set(s.hc);
+    for (let c = 0; c < COLS; c++) colLeft[c + 1] = colLeft[c] + (hc.has(c) ? 0 : (s.cw[c] ?? DEFAULT_COL_W) * z);
+    for (let r = 0; r < ROWS; r++) rowTop[r + 1] = rowTop[r] + (hr.has(r) ? 0 : (s.rh[r] ?? DEFAULT_ROW_H) * z);
     fc = s.freeze.c; fr = s.freeze.r;
     while (fc > 0 && colLeft[fc] > W * 0.6 - HW) fc -= 1; while (fr > 0 && rowTop[fr] > H * 0.6 - HH) fr -= 1;     // never freeze more than fits
     fw = colLeft[fc]; fh = rowTop[fr];
@@ -32,6 +33,7 @@ export function createGrid(ed) {
     sizer.style.width = `${HW + colLeft[COLS] + 80}px`; sizer.style.height = `${HH + rowTop[ROWS] + 80}px`;
     const set = (n, l, t, w, hh) => { const p = panes[n]; p.left = l; p.top = t; const st = p.el.style; st.left = `${l}px`; st.top = `${t}px`; st.width = `${Math.max(0, w)}px`; st.height = `${Math.max(0, hh)}px`; };
     set('corner', 0, 0, HW + fw, HH + fh); set('top', HW + fw, 0, W - HW - fw, HH + fh); set('left', 0, HH + fh, HW + fw, H - HH - fh); set('main', HW + fw, HH + fh, W - HW - fw, H - HH - fh);
+    const cp = chartPane.style; cp.left = `${HW}px`; cp.top = `${HH}px`; cp.width = `${Math.max(0, W - HW)}px`; cp.height = `${Math.max(0, H - HH)}px`; ed.chartsMoved?.();
     last = '';
   }
   const colAt = (v) => { const c = bisect(colLeft, v, COLS); return Math.min(COLS - 1, c); };
@@ -59,6 +61,7 @@ export function createGrid(ed) {
     if (c >= fc) { const l = colLeft[c] - fw, rr = colLeft[c + 1] - fw; if (l < sx) scroller.scrollLeft = l; else if (rr > sx + viewW) scroller.scrollLeft = Math.min(rr - viewW, l); }
     if (r >= fr) { const t = rowTop[r] - fh, bb = rowTop[r + 1] - fh; if (t < sy) scroller.scrollTop = t; else if (bb > sy + viewH) scroller.scrollTop = Math.min(bb - viewH, t); }
   }
+  const zoomNow = () => ed.zoom();
   const visibleRows = () => Math.max(1, Math.floor((H - HH - fh) / DEFAULT_ROW_H) - 1);
 
   // ---- painting
@@ -74,19 +77,21 @@ export function createGrid(ed) {
     const touchesR = rng && !(mm.c2 < rng.c1 || mm.c1 > rng.c2 || mm.r2 < rng.r1 || mm.r1 > rng.r2);
     const eT = touchesR && mm.r1 <= rng.r1, eB = touchesR && mm.r2 >= rng.r2, eL = touchesR && mm.c1 <= rng.c1, eR = touchesR && mm.c2 >= rng.c2;
     const isAct = act && act.c >= mm.c1 && act.c <= mm.c2 && act.r >= mm.r1 && act.r <= mm.r2;
+    const z = ed.zoom(); const cf = ed.cfFor(c, r, v, text); const note = ed.noteAt(key); const link = ed.linkAt(key); const dv = isAct && ed.dvAt(c, r);
     const kind = v instanceof Object ? 'err' : typeof v === 'number' ? 'num' : typeof v === 'boolean' ? 'bool' : '';
     const fb = ed.filterBtnAt(c, r); const fill = ed.fillPoint?.(); const hasFill = fill && fill.c === c && fill.r === r;
-    const flags = (touchesR ? 'R' : '') + (eT ? 'T' : '') + (eB ? 'B' : '') + (eL ? 'L' : '') + (eR ? 'r' : '') + (isAct ? 'A' : '') + (fb ? 'F' : '') + (hasFill ? 'H' : '') + (ed.matchAt(c, r) ? 'M' : '');
+    const flags = (touchesR ? 'R' : '') + (eT ? 'T' : '') + (eB ? 'B' : '') + (eL ? 'L' : '') + (eR ? 'r' : '') + (isAct ? 'A' : '') + (fb ? 'F' : '') + (hasFill ? 'H' : '') + (ed.matchAt(c, r) ? 'M' : '') + (dv ? 'D' : '') + (note ? 'N' : '') + (link ? 'L' : '') + z + (cf ? `${cf.fc ?? ''}${cf.bg ?? ''}` : '');
     const w = colLeft[mm.c2 + 1] - colLeft[mm.c1], hh = rowTop[mm.r2 + 1] - rowTop[mm.r1];
     const sig = `${text}|${ed.sheet().sty[key] ?? ''}|${flags}|${w}|${hh}|${kind}|${fb ?? ''}`;
     if (el._sig === sig) return; el._sig = sig;
-    el.className = `sx-c${kind ? ` ${kind}` : ''}${inR || touchesR ? ' in' : ''}${eT ? ' eT' : ''}${eB ? ' eB' : ''}${eL ? ' eL' : ''}${eR ? ' eR' : ''}${isAct ? ' act' : ''}${ed.matchAt(c, r) ? ' match' : ''}${st?.wr ? ' wrap' : ''}`;
+    el.className = `sx-c${kind ? ` ${kind}` : ''}${inR || touchesR ? ' in' : ''}${eT ? ' eT' : ''}${eB ? ' eB' : ''}${eL ? ' eL' : ''}${eR ? ' eR' : ''}${isAct ? ' act' : ''}${ed.matchAt(c, r) ? ' match' : ''}${st?.wr ? ' wrap' : ''}${link ? ' link' : ''}`;
     el.setAttribute('aria-selected', isAct ? 'true' : 'false');
     const s = el.style; s.width = `${w}px`; s.height = `${hh}px`;
-    s.fontSize = st?.fs ? `${st.fs}px` : ''; s.fontWeight = st?.b ? '700' : ''; s.fontStyle = st?.i ? 'italic' : '';
+    s.fontSize = st?.fs || z !== 1 ? `${(st?.fs ?? 14) * z}px` : ''; s.fontWeight = st?.b ? '700' : ''; s.fontStyle = st?.i ? 'italic' : '';
     s.textDecoration = [st?.u ? 'underline' : '', st?.st ? 'line-through' : ''].filter(Boolean).join(' ');
-    s.color = st?.fc ?? (st?.bg ? (lum(st.bg) > 0.4 ? '#14161c' : '#ffffff') : '');
-    s.backgroundColor = st?.bg ?? '';
+    const fg = cf?.fc ?? st?.fc, bgc = cf?.bg ?? st?.bg;
+    s.color = fg ?? (bgc ? (lum(bgc) > 0.4 ? '#14161c' : '#ffffff') : '');
+    s.backgroundColor = bgc ?? '';
     const ha = st?.ha ?? (kind === 'num' ? 'r' : kind === 'bool' || kind === 'err' ? 'c' : 'l'); const va = st?.va ?? 'b';
     s.justifyContent = { l: 'flex-start', c: 'center', r: 'flex-end' }[ha]; s.alignItems = { t: 'flex-start', m: 'center', b: 'flex-end' }[va]; s.textAlign = { l: 'left', c: 'center', r: 'right' }[ha];
     const bd = st?.bd; const sh = []; if (bd) { const col = 'var(--text)'; if (bd.t) sh.push(`inset 0 1px 0 0 ${col}`); if (bd.b) sh.push(`inset 0 -1px 0 0 ${col}`); if (bd.l) sh.push(`inset 1px 0 0 0 ${col}`); if (bd.r) sh.push(`inset -1px 0 0 0 ${col}`); }
@@ -94,10 +99,13 @@ export function createGrid(ed) {
     const t = el.firstChild ?? el.appendChild(h('span', { class: 't' })); t.textContent = text;
     while (el.childNodes.length > 1) el.lastChild.remove();
     if (fb) el.append(h('button', { type: 'button', class: 'sx-fbtn', 'aria-label': `Filter column ${colName(c)}`, 'data-fc': String(c), title: 'Filter' }, '▾'));
+    if (note) { el.append(h('i', { class: 'sx-note', 'aria-hidden': 'true' })); el.title = note; } else el.removeAttribute('title');
+    if (dv) el.append(h('button', { type: 'button', class: 'sx-dvbtn', 'aria-label': 'Choose from the list', title: 'Choose from the list', 'data-dv': '1' }, '▾'));
     if (hasFill) el.append(h('i', { class: 'sx-fh', 'aria-hidden': 'true' }));
   }
   function render() {
     const sx = scroller.scrollLeft, sy = scroller.scrollTop; const s = ed.sheet(); const rng = ed.range(); const act = ed.active();
+    chartLayer.style.transform = `translate(${-sx}px,${-sy}px)`;
     panes.main.layer.style.transform = `translate(${-sx}px,${-sy}px)`; panes.top.layer.style.transform = `translate(${-sx}px,0)`; panes.left.layer.style.transform = `translate(0,${-sy}px)`;
     const viewW = W - HW - fw, viewH = H - HH - fh;
     const c0 = Math.max(fc, colAt(fw + sx) - OVER), c1 = Math.min(COLS - 1, colAt(fw + sx + viewW) + OVER), r0 = Math.max(fr, rowAt(fh + sy) - OVER), r1 = Math.min(ROWS - 1, rowAt(fh + sy + viewH) + OVER);
@@ -136,6 +144,7 @@ export function createGrid(ed) {
   let raf = 0; const schedule = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; render(); ed.afterScroll?.(); }); };
   scroller.addEventListener('scroll', () => {
     const sx = scroller.scrollLeft, sy = scroller.scrollTop;
+    chartLayer.style.transform = `translate(${-sx}px,${-sy}px)`;
     panes.main.layer.style.transform = `translate(${-sx}px,${-sy}px)`; panes.top.layer.style.transform = `translate(${-sx}px,0)`; panes.left.layer.style.transform = `translate(0,${-sy}px)`;
     ed.afterScroll?.(); schedule();
   }, { passive: true });
@@ -154,12 +163,14 @@ export function createGrid(ed) {
   };
   stage.addEventListener('pointerdown', (e) => {
     if (e.pointerType !== 'mouse' || e.button !== 0) return;
+    if (e.target.closest?.('.sx-chart')) return;
+    if (e.target.closest?.('.sx-dvbtn')) { e.preventDefault(); ed.dvMenu(e.target.closest('.sx-dvbtn')); return; }
     if (e.target.closest?.('.sx-fbtn')) { e.preventDefault(); ed.filterMenu(Number(e.target.closest('.sx-fbtn').dataset.fc), e.target.closest('.sx-fbtn')); return; }
     const t = hit(e.clientX, e.clientY); ed.focusGrid();
     if (t.kind === 'fill') { drag = { type: 'fill' }; ed.fillStart(); }
     else if (t.kind === 'colEdge') { drag = { type: 'resize', axis: 'c', idx: t.c, x0: e.clientX, w0: colLeft[t.c + 1] - colLeft[t.c] }; ed.resizeStart('c', t.c); }
     else if (t.kind === 'rowEdge') { drag = { type: 'resize', axis: 'r', idx: t.r, y0: e.clientY, w0: rowTop[t.r + 1] - rowTop[t.r] }; ed.resizeStart('r', t.r); }
-    else if (t.kind === 'cell') { ed.pointerCell(t.c, t.r, { shift: e.shiftKey }); drag = { type: 'select' }; }
+    else if (t.kind === 'cell') { ed.pointerCell(t.c, t.r, { shift: e.shiftKey, ctrl: e.ctrlKey || e.metaKey }); drag = { type: 'select' }; }
     else if (t.kind === 'col') { ed.pointerHead('c', t.c, { shift: e.shiftKey }); drag = { type: 'select', head: 'c' }; }
     else if (t.kind === 'row') { ed.pointerHead('r', t.r, { shift: e.shiftKey }); drag = { type: 'select', head: 'r' }; }
     else if (t.kind === 'corner') { ed.selectAll(); return; }
@@ -177,19 +188,21 @@ export function createGrid(ed) {
   });
   const end = (e) => { if (!drag) return; const d = drag; drag = null; lastPt = null; try { stage.releasePointerCapture(e.pointerId); } catch { /* released */ } if (d.type === 'resize') ed.resizeEnd(); else if (d.type === 'fill') ed.fillEnd(); else ed.pointerUp(); };
   stage.addEventListener('pointerup', end); stage.addEventListener('pointercancel', end);
-  stage.addEventListener('click', (e) => {                              // touch and pen: a tap selects; a second tap on the active cell edits
+  stage.addEventListener('click', (e) => {
+    if (e.target.closest?.('.sx-chart, .sx-dvbtn, .sx-fbtn')) return;                              // touch and pen: a tap selects; a second tap on the active cell edits
     if (e.pointerType === 'mouse' || !e.pointerType) return;
     const t = hit(e.clientX, e.clientY);
     if (t.kind === 'cell') { const a = ed.active(); if (a.c === t.c && a.r === t.r) ed.edit(); else ed.pointerCell(t.c, t.r, {}); ed.pointerUp(); }
     else if (t.kind === 'col') { ed.pointerHead('c', t.c, {}); ed.pointerUp(); } else if (t.kind === 'row') { ed.pointerHead('r', t.r, {}); ed.pointerUp(); } else if (t.kind === 'corner') ed.selectAll();
   });
-  stage.addEventListener('dblclick', (e) => { const t = hit(e.clientX, e.clientY); if (t.kind === 'cell') ed.edit(); else if (t.kind === 'colEdge') ed.autofit(t.c); });
-  stage.addEventListener('contextmenu', (e) => { e.preventDefault(); const t = hit(e.clientX, e.clientY); ed.context(e.clientX, e.clientY, t); });
+  stage.addEventListener('dblclick', (e) => {
+    if (e.target.closest?.('.sx-chart')) return; const t = hit(e.clientX, e.clientY); if (t.kind === 'cell') ed.edit(); else if (t.kind === 'colEdge') ed.autofit(t.c); });
+  stage.addEventListener('contextmenu', (e) => { if (e.target.closest?.('.sx-chart')) return; e.preventDefault(); const t = hit(e.clientX, e.clientY); ed.context(e.clientX, e.clientY, t); });
   // Mouse wheel: the scroller scrolls natively because the stage sits inside it (position: sticky); nothing to do.
 
   function placeEditor(c, r) {
     const b = box(c, r); if (!b) { editor.hidden = true; return false; }
-    const st = editor.style; st.left = `${b.x}px`; st.top = `${b.y}px`; st.minWidth = `${b.w}px`; st.height = `${Math.max(b.h, 24)}px`; return true;
+    const st = editor.style; st.left = `${b.x}px`; st.top = `${b.y}px`; st.minWidth = `${b.w}px`; st.minHeight = `${b.h}px`; st.height = `${Math.max(b.h, 24)}px`; st.fontSize = `${14 * ed.zoom()}px`; return true;
   }
-  return { el: scroller, stage, editor, layout, relayout, refresh, attach, hit, box, scrollTo, placeEditor, visibleRows, colAt, rowAt, stageSize, colLeft: () => colLeft, rowTop: () => rowTop, destroy() { ro.disconnect(); cancelAnimationFrame(raf); cancelAnimationFrame(scrollTimer); } };
+  return { el: scroller, stage, chartLayer, editor, layout, relayout, refresh, attach, hit, box, scrollTo, placeEditor, visibleRows, colAt, rowAt, stageSize, colLeft: () => colLeft, rowTop: () => rowTop, destroy() { ro.disconnect(); cancelAnimationFrame(raf); cancelAnimationFrame(scrollTimer); } };
 }

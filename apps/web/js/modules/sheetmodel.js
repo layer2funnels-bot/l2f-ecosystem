@@ -50,7 +50,7 @@ export function patchStyle(book, idx, patch) {
 export const styleOf = (book, sheet, key) => { const i = sheet.sty[key]; return i === undefined ? null : book.styles[i] ?? null; };
 
 // ---------------------------------------------------------------- the book
-export const emptySheet = (name = 'Sheet 1') => ({ name, cells: {}, sty: {}, cw: {}, rh: {}, merges: [], freeze: { r: 0, c: 0 }, hc: [], hr: [], filter: null });
+export const emptySheet = (name = 'Sheet 1') => ({ name, cells: {}, sty: {}, cw: {}, rh: {}, merges: [], freeze: { r: 0, c: 0 }, hc: [], hr: [], filter: null, charts: [], cf: [], dv: [], notes: {}, links: {}, tab: null, lock: false, zoom: 100, print: { fit: true, orient: 'portrait' } });
 export const emptyBook = () => ({ v: 2, styles: [], sheets: [emptySheet()], n: 0 });
 const cleanName = (n, i) => { const t = String(n ?? '').replace(/[\u0000-\u001f]/g, '').trim().slice(0, 40); return t || `Sheet ${i + 1}`; };
 export function uniqueName(sheets, want, except = -1) {
@@ -96,12 +96,73 @@ export function parseBook(text) {
         const hide = {}; for (const [k, list] of Object.entries(dict(f.hide))) { const c = Number(k); if (own(f.hide, k) && isInt(c, f.c1, f.c2) && Array.isArray(list)) hide[c] = list.filter((x) => typeof x === 'string').slice(0, 2000); }
         sh.filter = { c1: f.c1, c2: f.c2, r1: f.r1, r2: f.r2, hide };
       }
+      cleanExtras(s, sh);
     }
     book.sheets.push(sh);
   }
   return book.sheets.length ? book : emptyBook();
 }
 const rc = (k) => parseRef(k);
+const ruleOut = (r) => { const { g, ...rest } = r; return { ...rest, range: rangeLabel(g) }; };
+export const CHART_TYPES = ['column', 'bar', 'line', 'pie'], CF_TYPES = ['gt', 'lt', 'between', 'eq', 'contains', 'empty', 'notempty'];
+const str = (v, n) => (typeof v === 'string' ? v.replace(/[\u0000-\u001f]/g, ' ').slice(0, n) : '');
+/** charts, conditional formats, validation lists, notes, links, tab colour, protection, zoom and print settings of one stored sheet (everything is checked). */
+function cleanExtras(s, sh) {
+  for (const c of (Array.isArray(s?.charts) ? s.charts : []).slice(0, 20)) {
+    const g = typeof c?.range === 'string' ? parseRange(c.range) : null; if (!g || !CHART_TYPES.includes(c.type)) continue;
+    const n = (v, a, b, d) => (Number.isFinite(v) ? Math.max(a, Math.min(b, Math.round(v))) : d);
+    sh.charts.push({ id: str(c.id, 12) || `c${sh.charts.length + 1}`, type: c.type, range: rangeLabel(g), title: str(c.title, 80), legend: c.legend !== false, head: c.head !== false, x: n(c.x, 0, 20000, 40), y: n(c.y, 0, 40000, 40), w: n(c.w, 160, 1200, 420), h: n(c.h, 120, 900, 280) });
+  }
+  const ruleList = (list, max, ok) => { const out = []; for (const r of (Array.isArray(list) ? list : []).slice(0, max)) { const g = typeof r?.range === 'string' ? parseRange(r.range) : null; if (g) { const x = ok(r, g); if (x) out.push(x); } } return out; };
+  sh.cf = ruleList(s?.cf, 50, (r, g) => { if (!CF_TYPES.includes(r.type)) return null; const o = { g, type: r.type, a: str(String(r.a ?? ''), 100), b: str(String(r.b ?? ''), 100) }; if (typeof r.fc === 'string' && HEX.test(r.fc)) o.fc = r.fc.toLowerCase(); if (typeof r.bg === 'string' && HEX.test(r.bg)) o.bg = r.bg.toLowerCase(); return o.fc || o.bg ? o : null; });
+  sh.dv = ruleList(s?.dv, 50, (r, g) => { const list = (Array.isArray(r.list) ? r.list : []).filter((x) => typeof x === 'string' && x !== '').map((x) => str(x, 100)).slice(0, 100); return list.length ? { g, list } : null; });
+  for (const [k, v] of Object.entries(dict(s?.notes))) if (own(s.notes, k) && parseRef(k) && typeof v === 'string' && v.trim() && Object.keys(sh.notes).length < 500) sh.notes[k.toUpperCase()] = str(v, 1000);
+  for (const [k, v] of Object.entries(dict(s?.links))) if (own(s.links, k) && parseRef(k) && Object.keys(sh.links).length < 500) { const u = safeLink(v); if (u) sh.links[k.toUpperCase()] = u; }
+  if (typeof s?.tab === 'string' && HEX.test(s.tab)) sh.tab = s.tab.toLowerCase();
+  sh.lock = s?.lock === true; sh.zoom = isInt(s?.zoom, 50, 200) ? s.zoom : 100;
+  if (s?.print && typeof s.print === 'object') sh.print = { fit: s.print.fit !== false, orient: s.print.orient === 'landscape' ? 'landscape' : 'portrait' };
+}
+/** Only web and mail links are kept (the same rule as documents). */
+export function safeLink(h) {
+  const t = String(h ?? '').trim(); if (!t || t.length > 2000 || /[\u0000-\u001f\u007f\s]/.test(t)) return null;
+  try { const u = new URL(t); return ['http:', 'https:', 'mailto:'].includes(u.protocol) ? u.href : null; } catch { return null; }
+}
+/** The link a cell carries: an explicit one, or its own text when that is a web address. */
+export const linkOf = (s, key) => s.links[key] ?? (s.cells[key] && /^https?:\/\/\S+$/.test(s.cells[key]) ? safeLink(s.cells[key]) : null);
+const ruleFor = (list, c, r) => list.filter(({ g }) => c >= g.c1 && c <= g.c2 && r >= g.r1 && r <= g.r2);
+/** Does a conditional-format rule match this value (v) / shown text (t)? Numbers compare as numbers, text without regard to case. */
+export function cfMatch(rule, v, t) {
+  const num = (x) => { const p = parseLiteral(String(x)).v; return typeof p === 'number' ? p : NaN; };
+  const empty = v === null || v === undefined || t === '';
+  if (rule.type === 'empty') return empty; if (rule.type === 'notempty') return !empty;
+  if (empty) return false;
+  if (rule.type === 'contains') return String(t).toLowerCase().includes(rule.a.toLowerCase()) && rule.a !== '';
+  if (rule.type === 'eq') return typeof v === 'number' && !Number.isNaN(num(rule.a)) ? v === num(rule.a) : String(t).toLowerCase() === rule.a.toLowerCase();
+  if (typeof v !== 'number') return false; const a = num(rule.a), b = num(rule.b);
+  if (rule.type === 'gt') return v > a; if (rule.type === 'lt') return v < a; if (rule.type === 'between') return v >= Math.min(a, b) && v <= Math.max(a, b);
+  return false;
+}
+/** { fc, bg } from the conditional formats of a cell (a later rule wins), or null. */
+export function cfStyle(s, c, r, v, t) {
+  if (!s.cf.length) return null; let out = null;
+  for (const rule of ruleFor(s.cf, c, r)) if (cfMatch(rule, v, t)) out = { ...out, ...(rule.fc ? { fc: rule.fc } : {}), ...(rule.bg ? { bg: rule.bg } : {}) };
+  return out;
+}
+/** The list of allowed values for a cell, or null. */
+export const dvList = (s, c, r) => (s.dv.length ? (ruleFor(s.dv, c, r).at(-1)?.list ?? null) : null);
+/** Data behind a chart: { cats, series: [{ name, values }] } from the chart's range (first row = names when head, first column = categories when it is text). */
+export function chartData(book, si, calc, chart) {
+  const g = parseRange(chart.range); if (!g) return { cats: [], series: [] };
+  const val = (c, r) => calc.value(si, c, r); const shown = (c, r) => cellText(book, si, calc, c, r);
+  let r1 = g.r1, c1 = g.c1; const wide = g.c2 - g.c1;
+  const firstColText = (() => { let t = 0, n = 0; for (let r = g.r1 + (chart.head ? 1 : 0); r <= g.r2; r++) { const v = val(g.c1, r); if (v !== null && v !== '') { n++; if (typeof v !== 'number') t++; } } return wide >= 1 && n > 0 && t >= n / 2; })();
+  const names = []; for (let c = g.c1 + (firstColText ? 1 : 0); c <= g.c2; c++) names.push(chart.head ? shown(c, g.r1) || `Series ${names.length + 1}` : `Series ${names.length + 1}`);
+  if (chart.head) r1 += 1; if (firstColText) c1 += 1;
+  const cats = []; for (let r = r1; r <= g.r2; r++) cats.push(firstColText ? shown(g.c1, r) : String(r - r1 + 1));
+  const series = names.map((name, i) => ({ name, values: Array.from({ length: g.r2 - r1 + 1 }, (_, k) => { const v = val(c1 + i, r1 + k); return typeof v === 'number' ? v : 0; }) }));
+  return { cats, series: series.slice(0, 12), cap: cats.length > 200 ? 200 : null };
+}
+
 export function serializeBook(book) {
   const used = new Map(); const styles = [];
   const remap = (i) => { if (!used.has(i)) { used.set(i, styles.length); styles.push(book.styles[i]); } return used.get(i); };
@@ -118,6 +179,9 @@ export function serializeBook(book) {
     if (s.freeze.r || s.freeze.c) o.freeze = { r: s.freeze.r, c: s.freeze.c };
     if (s.hc.length) o.hc = s.hc; if (s.hr.length) o.hr = s.hr;
     if (s.filter) o.filter = s.filter;
+    if (s.charts.length) o.charts = s.charts; if (s.cf.length) o.cf = s.cf.map(ruleOut); if (s.dv.length) o.dv = s.dv.map(ruleOut);
+    if (Object.keys(s.notes).length) o.notes = s.notes; if (Object.keys(s.links).length) o.links = s.links;
+    if (s.tab) o.tab = s.tab; if (s.lock) o.lock = true; if (s.zoom !== 100) o.zoom = s.zoom; if (!s.print.fit || s.print.orient !== 'portrait') o.print = s.print;
     return o;
   });
   return JSON.stringify({ v: 2, styles, sheets });
@@ -196,6 +260,7 @@ function moveLines(book, si, axis, at, n) {
     const nk = isR ? ref(p.col, idx) : ref(idx, p.row); if (s.cells[k] !== undefined) cells[nk] = s.cells[k]; if (s.sty[k] !== undefined) sty[nk] = s.sty[k];
   }
   s.cells = cells; s.sty = sty;
+  for (const field of ['notes', 'links']) { const moved2 = {}; for (const [k, v] of Object.entries(s[field])) { const p = rc(k); const idx = p ? mv(isR ? p.row : p.col) : -1; if (idx >= 0 && idx < lim) moved2[isR ? ref(p.col, idx) : ref(idx, p.row)] = v; } s[field] = moved2; }
   const size = isR ? s.rh : s.cw; const moved = {}; for (const [k, v] of Object.entries(size)) { const i = mv(Number(k)); if (i >= 0 && i < lim) moved[i] = v; } if (isR) s.rh = moved; else s.cw = moved;
   const hid = (isR ? s.hr : s.hc).map(mv).filter((i) => i >= 0 && i < lim); if (isR) s.hr = hid; else s.hc = hid;
   const k1 = isR ? 'r1' : 'c1', k2 = isR ? 'r2' : 'c2';
@@ -206,6 +271,8 @@ function moveLines(book, si, axis, at, n) {
   };
   s.merges = s.merges.map(fixSpan).filter((g) => g && (g.c1 !== g.c2 || g.r1 !== g.r2));
   if (s.filter) { const f = fixSpan(s.filter); s.filter = f; if (f) { const hide = {}; for (const [c, list] of Object.entries(s.filter.hide)) { const nc = isR ? Number(c) : mv(Number(c)); if (nc >= f.c1 && nc <= f.c2) hide[nc] = list; } f.hide = hide; } }
+  for (const field of ['cf', 'dv']) s[field] = s[field].map((x) => { const g = fixSpan(x.g); return g ? { ...x, g } : null; }).filter(Boolean);
+  s.charts = s.charts.map((ch) => { const g = parseRange(ch.range); const ng = g && fixSpan(g); return ng ? { ...ch, range: rangeLabel(ng) } : null; }).filter(Boolean);
   const fk = isR ? 'r' : 'c'; if (s.freeze[fk] > at) s.freeze[fk] = Math.max(at, s.freeze[fk] + n);
   // formulas everywhere that point at this sheet
   for (const sh of book.sheets) for (const [k, raw] of Object.entries(sh.cells)) if (raw[0] === '=' && raw.length > 1) { const next = `=${shiftFormula(raw.slice(1), sh.name, s.name, axis, at, n)}`; if (next !== raw) sh.cells[k] = next; }
