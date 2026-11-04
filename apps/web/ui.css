@@ -208,3 +208,8 @@ details.support{margin-top:12px;font-size:13px;color:var(--muted)}
 .prof-card{padding:20px 22px;display:grid;gap:var(--space-3);align-content:start}.prof-card h2{margin:0;font:700 19px/1.2 var(--font-d);letter-spacing:-.02em}
 .prof-row{display:flex;gap:var(--space-4);align-items:center;flex-wrap:wrap}.prof-acts{display:flex;gap:var(--space-2);flex-wrap:wrap;align-items:center}
 .prof-photo{width:96px;height:96px;border-radius:50%;overflow:hidden;background:var(--sunk);display:grid;place-items:center;font:700 28px var(--font-d);color:var(--text2);flex:none}.prof-photo img{width:100%;height:100%;object-fit:cover}
+/* Header and phone bottom bar are opaque (content no longer shows through when scrolling), and bottom-bar labels are never underlined.
+   Kept here because v4.css is generated from the design prototype. */
+.hdr{background:var(--bg);-webkit-backdrop-filter:none;backdrop-filter:none}
+.bbar{background:var(--surface);-webkit-backdrop-filter:none;backdrop-filter:none}
+.bbar a{text-decoration:none}

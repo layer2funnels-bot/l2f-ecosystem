@@ -178,7 +178,7 @@ kbd{font:500 11.5px/1 var(--mono);padding:4px 6px;border-radius:6px;border:1px s
 .side-foot{margin-top:auto;display:flex;align-items:center;gap:10px;padding:10px 6px 2px;border-top:var(--bw) solid var(--line)}
 .side-foot b{font-size:14px;display:block}
 .side-foot small{color:var(--muted);font-size:12.5px}
-.hdr{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:8px;padding:10px clamp(16px,2.6vw,32px);min-height:68px;background:var(--bg);border-bottom:var(--bw) solid var(--line)}
+.hdr{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:8px;padding:10px clamp(16px,2.6vw,32px);min-height:68px;background:color-mix(in srgb,var(--bg) 84%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-bottom:var(--bw) solid var(--line)}
 .crumb{display:flex;align-items:center;gap:8px;font-weight:600;min-width:0}
 .crumb span{color:var(--muted);font-weight:500}
 .search{margin-left:auto;display:flex;align-items:center;gap:10px;min-height:44px;width:min(320px,34vw);padding:0 10px 0 14px;border-radius:12px;background:var(--sunk);color:var(--muted);font-size:14px}
@@ -442,9 +442,9 @@ kbd{font:500 11.5px/1 var(--mono);padding:4px 6px;border-radius:6px;border:1px s
 @media (max-width:760px){
  .shell{grid-template-columns:1fr}.side{display:none}.hdr{position:static}
  .search{width:auto;flex:0 0 44px;padding:0;justify-content:center;background:none}.search span,.search kbd{display:none}
- .bbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:50;justify-content:space-around;padding:4px 4px calc(4px + env(safe-area-inset-bottom,0px));background:var(--surface);border-top:var(--bw) solid var(--line)}
+ .bbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:50;justify-content:space-around;padding:4px 4px calc(4px + env(safe-area-inset-bottom,0px));background:color-mix(in srgb,var(--surface) 92%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-top:var(--bw) solid var(--line)}
  .bbar button{flex:1;display:grid;justify-items:center;gap:3px;min-height:52px;padding:6px 0 4px;font-size:12px;font-weight:550;color:var(--muted)}
- .bbar a{text-decoration:none;flex:1;display:grid;justify-items:center;gap:3px;min-height:52px;padding:6px 0 4px;font-size:12px;font-weight:550;color:var(--muted)}
+ .bbar a{flex:1;display:grid;justify-items:center;gap:3px;min-height:52px;padding:6px 0 4px;font-size:12px;font-weight:550;color:var(--muted)}
  .bbar button span.pillic{display:grid;place-items:center;width:52px;height:28px;border-radius:14px}
  .bbar a span.pillic{display:grid;place-items:center;width:52px;height:28px;border-radius:14px}
  .bbar button[aria-current="page"]{color:var(--text)}
