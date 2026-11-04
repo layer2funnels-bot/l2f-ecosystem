@@ -110,4 +110,8 @@ input[type=checkbox].px-fi,input[type=radio].px-fi{padding:0;accent-color:var(--
 @media (min-width:1500px){.px-view .px-tool span{display:inline}}
 @media (max-width:900px){.ed-full .px-side{position:fixed;z-index:var(--z-menu);left:0;top:150px;bottom:0;width:min(260px,82vw);border:0;box-shadow:var(--sh3)}}
 @media (max-width:700px){.px-search{width:120px}.edx-status .px-hint{display:none}}
+.px-view{flex-wrap:nowrap!important;box-shadow:none!important;border-radius:0!important;margin:0!important}
+.px-view>*{flex:none}
+.px-search{width:150px}
+.px-view .px-sp{display:none}
 

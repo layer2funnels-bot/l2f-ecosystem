@@ -289,7 +289,7 @@ export function imageView({ api, id, ctx }) {
       if (ro) kids.push(h('p', { class: 'fine muted' }, 'You can look at this picture, zoom, compare and download it. Editing needs permission to change files.'));
       else if (tool === 'select') {
         const a = sel != null ? S.anns[sel] : null;
-        kids.push(h('h3', {}, 'Select'), h('p', { class: 'fine muted' }, a ? 'Drag to move. Delete removes it. Double-click text to edit it.' : 'Click something you drew or typed to move or remove it. Pick a tool on the left to change the picture.'));
+        kids.push(h('h3', {}, 'Select'), h('p', { class: 'fine muted' }, a ? 'Drag to move. Delete removes it. Double-click text to edit it.' : 'Click something you drew or typed to move or remove it. Pick a tool above to change the picture.'));
         if (a) {
           const upd = (patch) => { S = { ...S, anns: S.anns.map((x, i) => (i === sel ? (x.t === 'text' ? measureText({ ...x, ...patch }) : { ...x, ...patch }) : x)) }; render(); };
           if (!isRegion(a)) kids.push(colorIn('Colour', a.color, (v) => upd({ color: v })));

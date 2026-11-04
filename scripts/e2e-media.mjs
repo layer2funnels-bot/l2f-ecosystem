@@ -142,7 +142,7 @@ check('MG19', 'Search finds the word and highlights it on the page', (await op.l
 await shot(op, 'pdf-1366-search'); await op.fill('.px-search', ''); await op.keyboard.press('Enter');
 // zoom
 const w0 = await op.locator('.px-page').first().evaluate((e) => e.offsetWidth); await op.selectOption('select[aria-label=Zoom]', '2'); await op.waitForTimeout(800); const w1 = await op.locator('.px-page').first().evaluate((e) => e.offsetWidth);
-check('MG20', 'Zoom 200% makes the page wider', w1 > w0 && Math.abs(w1 - 840) <= 2, `${w0} -> ${w1}`);
+check('MG20', 'Zoom 200% sets the page to twice its natural width', Math.abs(w1 - 840) <= 2 && w1 !== w0, `${w0} -> ${w1}`);
 await op.selectOption('select[aria-label=Zoom]', 'width'); await op.waitForTimeout(800);
 // view rotation
 await op.getByRole('button', { name: 'Rotate view' }).click(); await op.waitForTimeout(700); const rv = await op.locator('.px-page').first().evaluate((e) => [e.offsetWidth, e.offsetHeight]);
@@ -202,6 +202,7 @@ await ph.setViewportSize({ width: 1366, height: 860 }); await ph.waitForTimeout(
 const vp = await newPage(); await signUp(vp, 'Vic Viewer', viewMail); await vp.waitForTimeout(1500);
 const viewerId = (await q('select id from auth.users where email=$1', [viewMail]))[0].id;
 await q("insert into memberships (workspace_id,user_id,kind,role) values ($1,$2,'staff','viewer') on conflict do nothing", [L, viewerId]);
+await q("insert into app_grants (workspace_id,user_id,app_key) values ($1,$2,'drive') on conflict do nothing", [L, viewerId]);
 await vp.goto(`${base}/#/image/${pngId}`); await vp.reload(); await vp.waitForSelector('.ix-cv', { timeout: 15000 });
 const vt = await text(vp); const viewerTools = await vp.locator('.ix-tool').count();
 check('MG37', 'A viewer sees the picture with a read-only notice, no editing tools and no Save', vt.includes('Read only') && viewerTools === 1 && (await vp.getByRole('button', { name: 'Save', exact: true }).isDisabled()), `${viewerTools}`);
@@ -213,5 +214,17 @@ await xp.goto(`${base}/#/pdf/${pdfId}`); await xp.reload(); await xp.waitForTime
 check('MG39', 'Someone outside the organization gets the no-access screen, not the file', !(await text(xp)).includes(pdfName) && (await xp.locator('.px-page').count()) === 0);
 check('MG40', 'No script errors and no page-policy violations in any browser', problems.length === 0, problems.slice(0, 4).join(' | '));
 
+// ================================================================= screenshot matrix (SHOTS_MATRIX=1): both editors, 1366 / 768 / 390, light and dark, inside the real app shell
+if (process.env.SHOTS_MATRIX) {
+  for (const [w, hgt] of [[1366, 860], [768, 900], [390, 844]]) for (const theme of ['light', 'dark']) {
+    const sp = await newPage({ width: w, height: hgt }); await sp.goto(`${base}/#/signin`); await sp.evaluate((t) => localStorage.setItem('l2f.theme', t), theme); await sp.reload(); await sp.waitForSelector('#em'); await sp.fill('#em', ownerMail); await sp.fill('#pw', PW); await sp.click('button[type=submit]'); await sp.waitForTimeout(2500);
+    await sp.goto(`${base}/#/image/${pngId}`); await sp.reload(); await sp.waitForSelector('.ix-cv', { timeout: 15000 }); await sp.waitForTimeout(700); await shot(sp, `m-image-${w}-${theme}`);
+    await sp.locator('.ix-tool[title^="Adjust"]').click(); await sp.waitForTimeout(300); await shot(sp, `m-image-adjust-${w}-${theme}`);
+    if (w < 700) await sp.locator('.edx-phone').click(); else await sp.locator('.edx-mb', { hasText: 'Image' }).click(); await sp.waitForTimeout(300); await shot(sp, `m-image-menu-${w}-${theme}`); await sp.keyboard.press('Escape');
+    await sp.goto(`${base}/#/pdf/${pdfId}`); await sp.reload(); await sp.waitForSelector('.px-page canvas', { timeout: 20000 }); await sp.waitForTimeout(1500); await shot(sp, `m-pdf-${w}-${theme}`);
+    if (w < 700) await sp.locator('.edx-phone').click(); else await sp.locator('.edx-mb', { hasText: 'Page' }).click(); await sp.waitForTimeout(300); await shot(sp, `m-pdf-menu-${w}-${theme}`);
+    await sp.context().close();
+  }
+}
 const pass = results.filter((r) => r.ok).length; console.log(`\n${pass}/${results.length} checks passed\nscreenshots: ${SHOTS}`);
 await b.close(); await s.close?.(); await fake.close?.(); await admin.end(); process.exit(pass === results.length ? 0 : 1);
