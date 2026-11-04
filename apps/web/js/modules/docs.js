@@ -31,7 +31,7 @@ const recent = (k) => { try { const v = JSON.parse(store.get(`dx-recent-${k}`) ?
 const pushRecent = (k, v) => store.set(`dx-recent-${k}`, JSON.stringify([v, ...recent(k).filter((x) => x !== v)].slice(0, 8)));
 const SHORTCUTS = [['Bold, italic, underline', `${MOD}B · ${MOD}I · ${MOD}U`], ['Link', `${MOD}K`], ['Undo · redo', `${MOD}Z · ${MOD}Y or ${MOD}Shift+Z`], ['Find · find and replace', `${MOD}F · ${MOD}H`], ['Save', `${MOD}S`], ['Print', `${MOD}P`],
   ['Clear formatting', `${MOD}\\`], ['Normal text · heading 1, 2, 3', `${MOD}Alt+0 · ${MOD}Alt+1, 2, 3`], ['Numbered · bulleted · checklist', `${MOD}Shift+7 · 8 · 9`], ['Align left · centre · right · justify', `${MOD}Shift+L · E · R · J`],
-  ['Indent · outdent (lists and at the start of a line)', 'Tab · Shift+Tab'], ['Next · previous table cell (a new row at the end)', 'Tab · Shift+Tab'], ['Leave the page with the keyboard', 'Esc, then Tab'], ['Open a link in the text', `${MOD}Click`], ['Line break inside a paragraph', 'Shift+Enter'], ['Select all', `${MOD}A`]];
+  ['Indent · outdent (lists and at the start of a line)', 'Tab · Shift+Tab'], ['Next · previous table cell (a new row at the end)', 'Tab · Shift+Tab'], ['Leave the page with the keyboard', 'Esc, then Tab'], ['Open a link in the text', `${MOD}Click`], ['Line break inside a paragraph', 'Shift+Enter'], ['Select all', `${MOD}A`], ['Zoom in · out · 100%', `${MOD}+ · ${MOD}- · ${MOD}0`]];
 
 // ---- small floating panels: menus, colour pickers, the context menu
 let openPop = null;
@@ -494,9 +494,9 @@ export function docView({ api, id, ctx, opts = {} }) {
       }), ...(vs.speakers.length < MAX_SPEAKERS ? [h('button', { type: 'button', class: 'btn dx-addspk', onmousedown: (e) => e.preventDefault(), onclick: () => { vs.speakers.push({ name: `Person ${vs.speakers.length + 1}` }); paintVoice(); } }, '+ Speaker')] : []));
     }
     vTalk.append(vSpk,
-      h('div', { class: 'dx-vrow' }, h('label', { class: 'dx-check' }, h('input', { type: 'checkbox', onchange: (e) => { vs.auto = e.target.checked; } }), ' Switch speaker after a pause of'), h('input', { type: 'number', class: 'dx-num', min: '1', max: '30', value: String(vs.pause), 'aria-label': 'Pause in seconds', onchange: (e) => { vs.pause = Math.max(1, Math.min(30, Number(e.target.value) || 3)); } }), h('span', { class: 'fine' }, 'seconds'),
+      h('div', { class: 'dx-vrow' },
         h('label', { class: 'dx-check' }, h('input', { type: 'checkbox', onchange: (e) => { vs.record = e.target.checked; } }), ' Also record the audio and save it to Drive')),
-      h('p', { class: 'fine muted' }, 'The free browser mode cannot tell voices apart: choose the speaker with the buttons or Alt+1 to Alt+9. “Switch after a pause” only alternates speakers when talking stops.'));
+      h('p', { class: 'fine muted' }, 'The free browser mode cannot tell voices apart: choose the speaker with the buttons or Alt+1 to Alt+9.'));
     function renameSpeaker(i) {
       const f = field({ id: 'dx-sn', label: 'Speaker name', value: vs.speakers[i].name, maxlength: 40 });
       dialog({ title: 'Rename speaker', body: f.el, actions: [{ label: 'Save', cls: 'primary', on: () => { const v = f.input.value.trim(); if (!v) return f.error('Enter a name.'); vs.speakers[i].name = v; paintVoice(); } }, { label: 'Cancel' }] });
@@ -516,7 +516,6 @@ export function docView({ api, id, ctx, opts = {} }) {
     function onFinal(text) {
       if (readOnly) return; const now = Date.now(); const urdu = isUrdu(vs.lang);
       if (vs.mode === 'talk') {
-        if (vs.auto && turnChanged(vs.lastAt, now, vs.pause)) vs.cur = nextSpeaker(vs.cur, vs.speakers.length);
         vs.lastAt = now; paintVoice(); const runs = lineRuns(text, vs.speakers[vs.cur], vs.cur); const dir = urdu ? { dir: 'rtl' } : {};
         if (!vs.lastEl || !vs.lastEl.isConnected) {
           const head = [{ x: `Conversation transcript, ${new Date().toLocaleString()}`, b: 1 }, ...(vs.record ? [{ x: ' · audio is being recorded and will be saved in Drive next to this document', i: 1, c: '#737373' }] : [])];
@@ -717,7 +716,7 @@ export function docView({ api, id, ctx, opts = {} }) {
         Edit: [{ label: 'Undo', shortcut: `${MOD}Z`, disabled: E || at <= 0, run: () => { ed.focus(); undo(); } }, { label: 'Redo', shortcut: `${MOD}Y`, disabled: E || at >= stack.length - 1, run: () => { ed.focus(); redo(); } }, { sep: true },
           { label: 'Cut', shortcut: `${MOD}X`, disabled: E, run: () => clip('cut') }, { label: 'Copy', shortcut: `${MOD}C`, run: () => clip('copy') }, { label: 'Paste', shortcut: `${MOD}V`, disabled: E, run: () => pasteFromClipboard(false) }, { label: 'Paste as plain text', shortcut: `${MOD}Shift+V`, disabled: E, run: () => pasteFromClipboard(true) },
           { label: 'Select all', shortcut: `${MOD}A`, run: () => { ed.focus(); document.execCommand('selectAll'); } }, { sep: true }, { label: 'Find…', shortcut: `${MOD}F`, run: () => openFind(false) }, { label: 'Find and replace…', shortcut: `${MOD}H`, disabled: E, run: () => openFind(true) }],
-        View: [{ label: 'Document tabs', checked: tabsOpen, run: () => toggleTabs() }, { label: 'Outline of headings', checked: outlineOpen, run: () => toggleOutline() }, { label: 'Focus mode', run: () => setMode('focus') }, { label: 'Reading mode', run: () => setMode('read') }, { sep: true }, { label: 'Zoom in', run: () => setZoom(zoom + 10) }, { label: 'Zoom out', run: () => setZoom(zoom - 10) }, { label: 'Zoom 100%', run: () => setZoom(100) }, { sep: true }, { label: 'Page setup…', run: () => pageSetup() }],
+        View: [{ label: 'Document tabs', checked: tabsOpen, run: () => toggleTabs() }, { label: 'Outline of headings', checked: outlineOpen, run: () => toggleOutline() }, { label: 'Focus mode', run: () => setMode('focus') }, { label: 'Reading mode', run: () => setMode('read') }, { sep: true }, { label: 'Zoom in', shortcut: `${MOD}+`, run: () => setZoom(zoom + 10) }, { label: 'Zoom out', shortcut: `${MOD}-`, run: () => setZoom(zoom - 10) }, { label: 'Zoom 100%', shortcut: `${MOD}0`, run: () => setZoom(100) }, { sep: true }, { label: 'Page setup…', run: () => pageSetup() }],
         Insert: [{ label: 'Picture…', disabled: E, run: pickImage }, { label: 'Table…', disabled: E, run: insertTable }, { label: 'Convert selected text to table', disabled: E, run: convertToTable }, { label: 'Link…', shortcut: `${MOD}K`, disabled: E, run: link }, { label: 'Horizontal line', disabled: E, run: C(() => ed.insertBlocks([{ t: 'hr' }])) }, { label: 'Page break', disabled: E, run: C(() => ed.insertBlocks([{ t: 'pb' }])) }, { sep: true },
           { label: 'Table of contents', disabled: E, run: C(() => { ed.insertBlocks([{ t: 'toc' }]); paintOutline(); }) }, { label: 'Footnote…', disabled: E, run: addNote }, { label: 'Special characters…', disabled: E, run: specials }, { label: 'Today’s date', disabled: E, run: insertDate }, { sep: true }, { label: 'New tab', disabled: E, run: () => newTab(null) }, { label: 'New sub-tab', disabled: E || findTab(doc, activeTab).depth + 1 >= MAX_TAB_DEPTH, run: () => newTab(activeTab) }],
         Format: [{ heading: 'Text' }, { label: 'Bold', shortcut: `${MOD}B`, checked: Boolean(st.marks.b), disabled: E, run: C(() => ed.toggleMark('b')) }, { label: 'Italic', shortcut: `${MOD}I`, checked: Boolean(st.marks.i), disabled: E, run: C(() => ed.toggleMark('i')) }, { label: 'Underline', shortcut: `${MOD}U`, checked: Boolean(st.marks.u), disabled: E, run: C(() => ed.toggleMark('u')) },
@@ -785,6 +784,7 @@ export function docView({ api, id, ctx, opts = {} }) {
       const mod = e.ctrlKey || e.metaKey; if (!mod || e.target.closest?.('.dlg, .dx-pop')) return;
       const k = e.key.toLowerCase(); const inPage = page.contains(e.target);
       const go = (fn) => { e.preventDefault(); fn(); };
+      if (k === '=' || k === '+') return go(() => setZoom(zoom + 10)); if (k === '-') return go(() => setZoom(zoom - 10)); if (k === '0' && !e.altKey) return go(() => setZoom(100));
       if (k === 's' && !e.shiftKey) return go(() => save({ manual: true }));
       if (k === 'p' && !e.shiftKey) return go(() => exporters.print('tab'));
       if (k === 'f' && !e.shiftKey && !e.altKey) return go(() => openFind(false));
@@ -932,7 +932,7 @@ export function docView({ api, id, ctx, opts = {} }) {
     const chrome = h('div', { class: 'dx-chrome' }, h('div', { class: 'dx-menurow' }, menubar, tabsToggle), toolbar, imgBar, findBar);
     const workspace = h('div', { class: 'dx-work' }, h('div', { class: 'dx-canvas' }, paper));
     const body = h('div', { class: `docbody dx-body${opts.side ? ' has-side' : ''}${tabsOpen ? '' : ' no-tabs'}` }, tabsPanel, workspace, opts.side ? opts.side(meta) : null);
-    const statusbar = h('div', { class: 'dx-statusbar' }, counter, spaceEl, h('span', { class: 'dx-spacer' }), h('span', { class: 'docstat' }, pageInfo), h('label', { class: 'docstat' }, 'Zoom ', zoomSel));
+    const statusbar = h('div', { class: 'dx-statusbar' }, counter, spaceEl, h('span', { class: 'dx-spacer' }), h('span', { class: 'docstat' }, pageInfo), h('span', { class: 'dx-zoom', role: 'group', 'aria-label': 'Zoom' }, h('button', { type: 'button', class: 'dx-zb', 'aria-label': 'Zoom out', title: `Zoom out (${MOD}-)`, onclick: () => setZoom(zoom - 10) }, '−'), zoomSel, h('button', { type: 'button', class: 'dx-zb', 'aria-label': 'Zoom in', title: `Zoom in (${MOD}+)`, onclick: () => setZoom(zoom + 10) }, '+')));
     const banners = [];
     if (meta.archived_at) banners.push(notice('info', 'eye', [h('b', {}, 'Archived.'), ' This document is read only. ', btn('Restore', async () => { const r = await api.call('drive.files.restore', { id }); if (r.ok) { toast('Restored.'); load(); } else toast('You can’t restore this document.', false); }, 'link')]));
     else if (readOnly) banners.push(readOnlyNotice('You can read this document but not change it'));
