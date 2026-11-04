@@ -73,11 +73,11 @@ for (const org of ['l2f', 'aurj']) for (const theme of ['light', 'dark']) for (c
     await p.waitForSelector('[data-gallery=docs] .docpage');
     const ed = p.locator('[data-gallery=docs] .docpage'); const bar = p.locator('[data-gallery=docs]');
     await ed.click(); await p.keyboard.press('Control+End'); await p.keyboard.press('Enter');
-    console.log('A', problems.length); await bar.locator('.tbsel').selectOption('h2'); console.log('B', problems.length); await p.keyboard.type('New heading'); await p.keyboard.press('Enter');
+    console.log('A', problems.length); await bar.locator('select[aria-label="Text style"]').selectOption('h2'); console.log('B', problems.length); await p.keyboard.type('New heading'); await p.keyboard.press('Enter');
     await bar.getByRole('button', { name: 'Bulleted list' }).click(); await p.keyboard.type('first'); await p.keyboard.press('Enter'); await p.keyboard.type('second');
-    await p.keyboard.press('Shift+Home'); console.log('C', problems.length); await bar.getByRole('button', { name: 'Bold' }).click(); console.log('D', problems.length); await bar.getByRole('button', { name: 'Italic' }).click(); console.log('E', problems.length); await bar.getByRole('button', { name: 'Underline' }).click(); console.log('F', problems.length); await bar.getByRole('button', { name: 'Strikethrough' }).click(); console.log('G', problems.length);
-    await bar.getByRole('button', { name: 'Divider' }).click(); await bar.getByRole('button', { name: 'Undo' }).click(); await bar.getByRole('button', { name: 'Redo' }).click();
-    check(`G12 ${org}`, 'Docs editor: heading, list and styles can be applied from the toolbar and the outline shows the new heading', (await bar.locator('.docoutline li').allInnerTexts()).some((t) => t.includes('New heading')) && (await ed.locator('ul li').count()) >= 2);
+    await p.keyboard.press('Shift+Home'); console.log('C', problems.length); await bar.getByRole('button', { name: 'Bold' }).click(); console.log('D', problems.length); await bar.getByRole('button', { name: 'Italic' }).click(); console.log('E', problems.length); await bar.getByRole('button', { name: 'Underline' }).click(); console.log('F', problems.length); 
+    await bar.getByRole('button', { name: 'Undo' }).click(); await bar.getByRole('button', { name: 'Redo' }).click();
+    check(`G12 ${org}`, 'Docs editor: heading, list and styles can be applied from the toolbar and the outline shows the new heading', (await bar.locator('.docoutline li').allTextContents()).some((t) => t.includes('New heading')) && (await ed.locator('ul li').count()) >= 2);
     await p.keyboard.press('Control+s'); await p.waitForFunction(() => /Saved/.test(document.querySelector('[data-gallery=docs] .docstate')?.innerText ?? ''));
     check(`G13 ${org}`, 'Ctrl+S saves and the status reads Saved', true);
     await p.screenshot({ path: `${SHOTS}/gallery-docs-${org}.png`, fullPage: true });

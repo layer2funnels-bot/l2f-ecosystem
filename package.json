@@ -12,6 +12,7 @@
     "drill:restore": "node scripts/restore-drill.mjs",
     "check:secrets": "bash scripts/check-secrets.sh",
     "check:licences": "node scripts/check-licences.mjs",
+    "e2e:docs": "node scripts/e2e-docs.mjs",
     "tokens:build": "node scripts/build-tokens.mjs",
     "check:tokens": "node scripts/build-tokens.mjs --check",
     "stack:start": "supabase start -x studio,imgproxy,edge-runtime,logflare,vector,realtime,storage-api,mailpit,supavisor",
