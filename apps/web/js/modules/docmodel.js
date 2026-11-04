@@ -11,7 +11,7 @@
 //   { t: 'hr' }  { t: 'pb' } (page break)
 //   run: { x: text ('\n' is a line break), b?, i?, u?, s?, sup?, sub?, cd? (code): 1, a?: web or mail link, f?: font key, z?: size in points, c?: '#rrggbb', hl?: '#rrggbb' }
 // Everything read back from the editing surface, pasted or imported goes through normalize(): an allow-list that cuts, never throws.
-export const MAX_CHARS = 1000000, MAX_BLOCKS = 20000, MAX_RUNS = 5000, MAX_ITEMS = 10000, MAX_LINK = 2000, MAX_ROWS = 500, MAX_COLS = 20, MAX_LEVEL = 8, MAX_ALT = 500, MAX_TABS = 100, MAX_TAB_DEPTH = 3, MAX_TITLE = 120;
+export const MAX_CHARS = 1000000, MAX_BLOCKS = 20000, MAX_RUNS = 5000, MAX_ITEMS = 10000, MAX_LINK = 2000, MAX_ROWS = 500, MAX_COLS = 20, MAX_LEVEL = 8, MAX_ALT = 500, MAX_TABS = 100, MAX_TAB_DEPTH = 3, MAX_TITLE = 120, MAX_NOTE = 1000, MAX_HF = 300;
 export const TEXT_BLOCKS = ['p', 'title', 'subtitle', 'h1', 'h2', 'h3', 'quote', 'code'];
 const TEXT = new Set(TEXT_BLOCKS);
 // Fonts: the self-hosted families plus system stacks. The key is stored; the stack is only used by the editor and the exports.
@@ -47,7 +47,7 @@ export function safeColor(v) {
 }
 const clampNum = (v, lo, hi, dp = 0) => { const n = Number(v); if (!Number.isFinite(n)) return null; const k = 10 ** dp; return Math.round(Math.min(hi, Math.max(lo, n)) * k) / k; };
 const cleanText = (s) => s.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f​ ]/g, (c) => (c === ' ' ? ' ' : ''));
-const MARK_KEYS = ['b', 'i', 'u', 's', 'sup', 'sub', 'cd', 'a', 'f', 'z', 'c', 'hl'];
+const MARK_KEYS = ['b', 'i', 'u', 's', 'sup', 'sub', 'cd', 'a', 'f', 'z', 'c', 'hl', 'fn'];
 function runs(list) {
   const out = [];
   for (const r of Array.isArray(list) ? list.slice(0, MAX_RUNS) : []) {
@@ -57,13 +57,14 @@ function runs(list) {
     if (r.b) o.b = 1; if (r.i) o.i = 1; if (r.u) o.u = 1; if (r.s) o.s = 1;
     if (r.sup) o.sup = 1; else if (r.sub) o.sub = 1;
     if (r.cd) o.cd = 1;
+    const fn = typeof r.fn === 'string' ? cleanText(r.fn).slice(0, MAX_NOTE).trim() : ''; if (fn) o.fn = fn;
     const a = r.a ? safeHref(r.a) : null; if (a) o.a = a;
     if (typeof r.f === 'string' && Object.hasOwn(FONTS, r.f)) o.f = r.f;
     const z = r.z !== undefined ? clampNum(r.z, 6, 200, 1) : null; if (z && z !== DEFAULT_SIZE) o.z = z;
     const c = r.c ? safeColor(r.c) : null; if (c) o.c = c;
     const hl = r.hl ? safeColor(r.hl) : null; if (hl) o.hl = hl;
     const last = out[out.length - 1];
-    if (last && MARK_KEYS.every((k) => last[k] === o[k])) last.x += o.x; else out.push(o);       // neighbours with the same look merge
+    if (last && !o.fn && MARK_KEYS.every((k) => last[k] === o[k])) last.x += o.x; else out.push(o);       // neighbours with the same look merge
   }
   return out;
 }
@@ -99,7 +100,7 @@ const blocksOf = (list, limit) => {
   const blocks = [];
   for (const b of Array.isArray(list) ? list.slice(0, Math.max(0, limit)) : []) {
     const t = b?.t;
-    if (t === 'hr' || t === 'pb') blocks.push({ t });
+    if (t === 'hr' || t === 'pb' || t === 'toc') blocks.push({ t });
     else if (t === 'list' || t === 'ul' || t === 'ol') { const items = listItems(b.items, t === 'list' ? undefined : t); blocks.push({ t: 'list', items: items.length ? items : [{ k: 'ul', lv: 0, c: [] }] }); }
     else if (t === 'table') { const x = table(b); if (x) blocks.push(x); }
     else if (t === 'img') {
@@ -108,6 +109,7 @@ const blocksOf = (list, limit) => {
       const alt = typeof b.alt === 'string' ? cleanText(b.alt).slice(0, MAX_ALT) : ''; if (alt) o.alt = alt;
       const w = b.w !== undefined ? clampNum(b.w, 24, 2400) : null; if (w) o.w = w;
       if (b.al === 'c' || b.al === 'r') o.al = b.al;
+      if (b.wr === 'l' || b.wr === 'r' || b.wr === 'b') o.wr = b.wr;
       blocks.push(o);
     } else blocks.push({ t: TEXT.has(t) ? t : 'p', ...textAttrs(b ?? {}), c: runs(b?.c) });
   }
@@ -115,7 +117,19 @@ const blocksOf = (list, limit) => {
 };
 export const newTabId = () => `t${Math.random().toString(36).slice(2, 9)}`;
 const TAB_ID = /^[a-z0-9]{2,12}$/;
-const pageOf = (doc) => { const p = doc?.page ?? {}; return { size: Object.hasOwn(PAGES, p.size) ? p.size : 'a4', margin: Object.hasOwn(MARGINS, p.margin) ? p.margin : 'normal' }; };
+const hf = (v) => (typeof v === 'string' ? cleanText(v).replace(/\n/g, ' ').trim().slice(0, MAX_HF) : '');
+const pageOf = (doc) => {
+  const p = doc?.page ?? {}; const o = { size: Object.hasOwn(PAGES, p.size) ? p.size : 'a4', margin: Object.hasOwn(MARGINS, p.margin) ? p.margin : 'normal' };
+  if (p.orient === 'l') o.orient = 'l';
+  if (Array.isArray(p.mg) && p.mg.length === 4) { const mg = p.mg.map((n) => clampNum(n, 5, 80, 1)); if (mg.every((n) => n !== null)) o.mg = mg; }
+  const hd = hf(p.hdr), ft = hf(p.ftr); if (hd) o.hdr = hd; if (ft) o.ftr = ft;
+  if (p.pn === 'l' || p.pn === 'c' || p.pn === 'r') o.pn = p.pn;
+  if (p.first && (o.hdr || o.ftr || o.pn)) o.first = 1;
+  return o;
+};
+/** Page margins in mm: top, right, bottom, left. */
+export const marginsOf = (page) => page.mg ?? Array(4).fill(MARGINS[page.margin ?? 'normal'].mm);
+export const pageSize = (page) => { const p = PAGES[page.size]; return page.orient === 'l' ? { w: p.h, h: p.w } : { w: p.w, h: p.h }; };
 /** Anything in, a valid v2 document out (v1 and tab-less bodies become one tab). Unknown block types become paragraphs; limits are enforced by cutting, never by throwing. */
 export function normalize(doc) {
   let budget = MAX_BLOCKS, count = 0; const seen = new Set();
@@ -205,12 +219,28 @@ export function outdentTab(doc, id) {
   return moveTabTo(doc, id, all.find((x) => x.tab.children.includes(parent.tab))?.tab.id ?? null, parent.index + 1);
 }
 /** The blocks to work on: one tab's, or every tab's in order. With `headers`, an all-tabs view gets each tab's title as a Title block and a page break between tabs (exports and print). */
-export function contentOf(doc, tabId, { headers = false } = {}) {
+export function contentOf(doc, tabId, { headers = false, notes = false } = {}) {
   const d = normalize(doc);
-  if (tabId && tabId !== 'all') { const f = findTab(d, tabId); return { page: d.page, blocks: (f ?? { tab: d.tabs[0] }).tab.blocks }; }
-  const all = flatTabs(d); const blocks = [];
-  all.forEach(({ tab }, i) => { if (headers && all.length > 1) { if (i) blocks.push({ t: 'pb' }); blocks.push({ t: 'title', c: [{ x: tab.title }] }); } blocks.push(...tab.blocks); });
+  let blocks;
+  if (tabId && tabId !== 'all') { const f = findTab(d, tabId); blocks = (f ?? { tab: d.tabs[0] }).tab.blocks; }
+  else { const all = flatTabs(d); blocks = []; all.forEach(({ tab }, i) => { if (headers && all.length > 1) { if (i) blocks.push({ t: 'pb' }); blocks.push({ t: 'title', c: [{ x: tab.title }] }); } blocks.push(...tab.blocks); }); }
+  if (headers) blocks = expandToc(blocks);
+  if (notes) blocks = withPlainNotes(blocks);
   return { page: d.page, blocks };
+}
+/** A table of contents block becomes a plain list of the headings (exports and print have no live links). */
+export function expandToc(blocks) {
+  if (!blocks.some((b) => b.t === 'toc')) return blocks;
+  const heads = blocks.filter((b) => /^h[123]$/.test(b.t)).map((b) => ({ k: 'ul', lv: Number(b.t[1]) - 1, c: normRuns([{ x: runsText(b.c) }]) })).filter((it) => it.c.length);
+  return blocks.flatMap((b) => (b.t === 'toc' ? [{ t: 'p', c: [{ x: 'Contents', b: 1 }] }, heads.length ? { t: 'list', items: heads } : { t: 'p', c: [{ x: 'Add headings to build the contents.', i: 1 }] }] : [b]));
+}
+/** The footnotes of some blocks in reading order. */
+export function notesOf(blocks) { const out = []; for (const b of blocks) mapBlockRuns(b, (rs) => { for (const r of rs) if (r.fn) out.push(r.fn); return rs; }); return out; }
+/** Footnote markers become [1], [2]... and the notes are listed at the end (plain text, Markdown and HTML have no footnotes). */
+export function withPlainNotes(blocks) {
+  const notes = []; const out = blocks.map((b) => mapBlockRuns(b, (rs) => rs.map((r) => { if (!r.fn) return r; notes.push(r.fn); return { x: `[${notes.length}]` }; })));
+  if (!notes.length) return blocks;
+  return [...out, { t: 'p', c: [{ x: 'Notes', b: 1 }] }, { t: 'list', items: notes.map((n) => ({ k: 'ol', lv: 0, c: normRuns([{ x: n }]) })) }];
 }
 export const tabWords = (tab) => { let n = 0; for (const b of tab.blocks) { const m = lineText(b).match(/\S+/g); if (m) n += m.length; } return n; };
 
@@ -290,11 +320,11 @@ const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
 const LIST_PREFIX = (it, n) => (it.k === 'ol' ? `${n}. ` : it.k === 'cl' ? (it.ck ? '[x] ' : '[ ] ') : '• ');
 /** Plain text: bullets, numbers and [x] boxes are written out; tables use tabs. */
 export function toText(doc, tab) {
-  const d = contentOf(doc, tab, { headers: true }); const out = [];
+  const d = contentOf(doc, tab, { headers: true, notes: true }); const out = [];
   for (const b of d.blocks) {
     if (b.t === 'list') { const cnt = []; for (const it of b.items) { cnt.length = it.lv + 1; cnt[it.lv] = (cnt[it.lv] ?? 0) + 1; out.push(`${'  '.repeat(it.lv)}${LIST_PREFIX(it, cnt[it.lv])}${runsText(it.c)}`); } }
     else if (b.t === 'hr') out.push('------------------------------');
-    else if (b.t === 'pb') out.push('');
+    else if (b.t === 'pb' || b.t === 'toc') out.push('');
     else if (b.t === 'img') out.push(b.alt ? `[Image: ${b.alt}]` : '[Image]');
     else out.push(lineText(b));
   }
@@ -310,7 +340,7 @@ function mdRun(r) {
 }
 const mdRuns = (rs, plainBold) => rs.map((r) => mdRun(plainBold ? { ...r, b: undefined } : r)).join('');
 export function toMarkdown(doc, tab) {
-  const d = contentOf(doc, tab, { headers: true }); const out = [];
+  const d = contentOf(doc, tab, { headers: true, notes: true }); const out = [];
   for (const b of d.blocks) {
     if (b.t === 'h1' || b.t === 'title') out.push(`# ${mdRuns(b.c, 1)}`);
     else if (b.t === 'h2' || b.t === 'subtitle') out.push(`## ${mdRuns(b.c, 1)}`);
@@ -321,7 +351,7 @@ export function toMarkdown(doc, tab) {
     else if (b.t === 'table') { const row = (r) => `| ${r.map((c) => mdRuns(c.c).replace(/\n/g, ' ').replace(/\|/g, '\\|')).join(' | ')} |`; out.push([row(b.rows[0]), `| ${b.rows[0].map(() => '---').join(' | ')} |`, ...b.rows.slice(1).map(row)].join('\n')); }
     else if (b.t === 'img') out.push(`![${(b.alt ?? '').replace(/[[\]]/g, '')}](image)`);
     else if (b.t === 'hr') out.push('---');
-    else if (b.t === 'pb') out.push('<!-- page break -->');
+    else if (b.t === 'pb' || b.t === 'toc') out.push('<!-- page break -->');
     else out.push(mdRuns(b.c));
   }
   return `${out.join('\n\n')}\n`;
@@ -338,7 +368,7 @@ function htmlRun(r) {
 const htmlRuns = (rs) => rs.map(htmlRun).join('') || '<br>';
 /** A standalone HTML file generated from the model. `images` maps a file id to a data address (or leave it out and images become their alt text). */
 export function toHtml(doc, { tab, title = 'Document', images = {} } = {}) {
-  const d = contentOf(doc, tab, { headers: true }); const out = [];
+  const d = contentOf(doc, tab, { headers: true, notes: true }); const out = [];
   const pstyle = (b) => { const css = []; if (b.al) css.push(`text-align:${{ c: 'center', r: 'right', j: 'justify' }[b.al]}`); if (b.ls) css.push(`line-height:${b.ls}`); if (b.sb) css.push(`margin-top:${b.sb}pt`); if (b.sa) css.push(`margin-bottom:${b.sa}pt`); if (b.ind) css.push(`margin-left:${b.ind * 36}pt`); return css.length ? ` style="${css.join(';')}"` : ''; };
   for (let i = 0; i < d.blocks.length; i += 1) {
     const b = d.blocks[i];
@@ -356,9 +386,45 @@ export function toHtml(doc, { tab, title = 'Document', images = {} } = {}) {
     } else if (b.t === 'table') out.push(`<table style="border-collapse:collapse;width:100%">${b.rows.map((r, ri) => `<tr>${r.map((c) => { const tag = b.hdr && ri === 0 ? 'th' : 'td'; return `<${tag} style="border:1px solid #999;padding:4px 8px${c.al ? `;text-align:${c.al === 'c' ? 'center' : 'right'}` : ''}">${htmlRuns(c.c)}</${tag}>`; }).join('')}</tr>`).join('')}</table>`);
     else if (b.t === 'img') { const src = images[b.f]; out.push(src ? `<p style="text-align:${b.al === 'c' ? 'center' : b.al === 'r' ? 'right' : 'left'}"><img src="${esc(src)}" alt="${esc(b.alt ?? '')}"${b.w ? ` width="${b.w}"` : ''}></p>` : `<p><em>[Image${b.alt ? `: ${esc(b.alt)}` : ''}]</em></p>`); }
     else if (b.t === 'hr') out.push('<hr>');
-    else if (b.t === 'pb') out.push('<div style="page-break-after:always"></div>');
+    else if (b.t === 'pb' || b.t === 'toc') out.push('<div style="page-break-after:always"></div>');
     else { const tag = { title: 'h1', subtitle: 'h2', h1: 'h1', h2: 'h2', h3: 'h3', quote: 'blockquote', code: 'pre', p: 'p' }[b.t]; out.push(`<${tag}${pstyle(b)}>${b.t === 'code' ? esc(runsText(b.c)) : htmlRuns(b.c)}</${tag}>`); }
   }
-  const page = PAGES[d.page.size];
-  return `<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><title>${esc(title)}</title><style>body{font:11pt/1.5 Arial,Helvetica,sans-serif;max-width:${page.w}mm;margin:2rem auto;padding:0 ${MARGINS[d.page.margin].mm}mm;color:#1b1b1b}pre{background:#f3f3f3;padding:8px;font-family:Courier New,monospace;white-space:pre-wrap}blockquote{border-left:3px solid #aaa;margin-left:0;padding-left:1em;color:#555}img{max-width:100%}</style></head><body>\n${out.join('\n')}\n</body></html>\n`;
+  const page = pageSize(d.page);
+  return `<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><title>${esc(title)}</title><style>body{font:11pt/1.5 Arial,Helvetica,sans-serif;max-width:${page.w}mm;margin:2rem auto;padding:0 ${marginsOf(d.page)[1]}mm;color:#1b1b1b}pre{background:#f3f3f3;padding:8px;font-family:Courier New,monospace;white-space:pre-wrap}blockquote{border-left:3px solid #aaa;margin-left:0;padding-left:1em;color:#555}img{max-width:100%}</style></head><body>\n${out.join('\n')}\n</body></html>\n`;
+}
+
+// ---- find and replace on the model (the current tab or all tabs; the editor highlights matches in the page itself)
+export const normBlocks = (list) => blocksOf(list, MAX_BLOCKS);
+/** A regular expression for the search box text: plain characters only (never a pattern the user typed). */
+export function findRegex(q, { matchCase = false, whole = false } = {}) {
+  const s = String(q ?? ''); if (!s) return null;
+  const e = s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(whole ? `(?<![\\p{L}\\p{N}_])${e}(?![\\p{L}\\p{N}_])` : e, matchCase ? 'gu' : 'giu');
+}
+/** Applies f(runs) to every text container of a block (paragraph, list item, table cell). */
+export function mapBlockRuns(b, f) {
+  if (b.t === 'list') return { ...b, items: b.items.map((it) => ({ ...it, c: f(it.c) })) };
+  if (b.t === 'table') return { ...b, rows: b.rows.map((r) => r.map((c) => ({ ...c, c: f(c.c) }))) };
+  return b.c ? { ...b, c: f(b.c) } : b;
+}
+export function replaceInRuns(rs, re, repl) {
+  re.lastIndex = 0; const ms = [...runsText(rs).matchAll(re)].filter((m) => m[0].length);
+  if (!ms.length) return { runs: rs, count: 0 };
+  let out = rs;
+  for (const m of ms.reverse()) {
+    const [pre, rest] = splitRuns(out, m.index); const [mid, post] = splitRuns(rest, m[0].length);
+    const { x, ...marks } = mid[0] ?? {};
+    out = [...pre, ...(repl ? [{ ...marks, x: repl }] : []), ...post];
+  }
+  return { runs: runs(out), count: ms.length };
+}
+export function replaceInBlocks(blocks, re, repl) {
+  let count = 0;
+  const out = blocks.map((b) => mapBlockRuns(b, (rs) => { const r = replaceInRuns(rs, re, repl); count += r.count; return r.runs; }));
+  return { blocks: out, count };
+}
+export function countInBlocks(blocks, re) {
+  let n = 0; const f = (rs) => { re.lastIndex = 0; n += [...runsText(rs).matchAll(re)].filter((m) => m[0].length).length; return rs; };
+  for (const b of blocks) mapBlockRuns(b, f);
+  return n;
 }

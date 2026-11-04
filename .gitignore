@@ -10,3 +10,7 @@ dist/
 # built bundle of the whiteboard editor (scripts/build-whiteboard.mjs)
 apps/web/whiteboard/
 apps/whiteboard/node_modules/
+
+# built bundle of Word support for the Docs editor (scripts/build-docs-io.mjs)
+apps/web/docs-io/
+apps/docs-io/node_modules/

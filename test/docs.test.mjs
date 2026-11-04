@@ -91,6 +91,18 @@ const huge = performance.now(); const bigDoc = normalize({ blocks: Array.from({ 
 const s20 = serialize(bigDoc); const ms = performance.now() - huge;
 check('DC43', '20,000 words normalise, serialise and count in well under a second and fit the 1,000,000 limit', wordCount(bigDoc) >= 20000 && s20.length < MAX_CHARS && ms < 1500);
 
+const pg3 = normalize({ page: { orient: 'l', mg: [10, 20, '30', 40], hdr: 'Acme\nReport', ftr: 'x'.repeat(900), pn: 'c', first: 1 }, blocks: [] }).page;
+check('DC44', 'Page: orientation, custom margins (5 to 80 mm), header and footer text (one line, 300 characters), page-number position and "different first page" are kept; bad values are dropped', pg3.orient === 'l' && pg3.mg.join() === '10,20,30,40' && pg3.hdr === 'Acme Report' && pg3.ftr.length === 300 && pg3.pn === 'c' && pg3.first === 1
+  && !normalize({ page: { mg: [1, 2, 3], orient: 'x', pn: 'q', first: 1 } }).page.mg && !('orient' in normalize({ page: { orient: 'x' } }).page) && !('first' in normalize({ page: { first: 1 } }).page) && !('pn' in normalize({ page: { pn: 'q' } }).page)
+  && M.pageSize(pg3).w === 297 && M.marginsOf({ margin: 'narrow' })[0] === 12.7);
+const ft = one([{ t: 'p', c: [{ x: 'Claim' }, { x: '⁣', fn: 'See <b>source</b>' }, { x: '.' }, { x: '⁣', fn: '' }, { x: 'y', fn: 'x'.repeat(2000) }] }])[0].c;
+check('DC45', 'Footnotes: a marker run carries its note text (limited to 1000 characters, never markup); empty notes are plain text; two markers never merge', ft[1].fn === 'See <b>source</b>' && !ft.some((r) => r.x.includes('.') && r.fn) && ft.find((r) => r.x === 'y').fn.length === 1000 && one([{ t: 'p', c: [{ x: '⁣', fn: 'a' }, { x: '⁣', fn: 'a' }] }])[0].c.length === 2);
+const tocDoc = { tabs: [{ id: 'a', title: 'A', blocks: [{ t: 'toc' }, { t: 'h1', c: [{ x: 'One' }] }, { t: 'h2', c: [{ x: 'Two' }] }, p('body'), { t: 'p', c: [{ x: 'x' }, { x: '⁣', fn: 'First note' }] }] }] };
+const txt2 = M.toText(tocDoc);
+check('DC46', 'A table of contents block is kept in the model as just { t: "toc" }; exports list the headings; footnotes become [1] with a Notes list; the contents do not count as words', M.normalize(tocDoc).tabs[0].blocks[0].t === 'toc' && txt2.includes('Contents') && txt2.includes('• One') && txt2.includes('  • Two') && txt2.includes('x[1]') && txt2.includes('1. First note') && wordCount(tocDoc) === 4 && M.toHtml(tocDoc).includes('Notes') && M.toMarkdown(tocDoc).includes('1. First note'));
+check('DC47', 'Picture wrap: left, right or break-text are kept; anything else is inline', one([{ t: 'img', f: FID, wr: 'l' }])[0].wr === 'l' && one([{ t: 'img', f: FID, wr: 'b' }])[0].wr === 'b' && !('wr' in one([{ t: 'img', f: FID, wr: 'float:left' }])[0]));
+const re1 = M.findRegex('a.c', { matchCase: false }); const rp = M.replaceInBlocks([p('abc a.c A.C', { b: 1 })], re1, 'X');
+check('DC48', 'Find and replace works on plain characters (no pattern syntax), respects match case and whole word, keeps formatting, and counts across blocks', rp.count === 2 && rp.blocks[0].c[0].x === 'abc X X' && rp.blocks[0].c[0].b === 1 && M.countInBlocks([p('Cat cat concat')], M.findRegex('cat', { whole: true })) === 2 && M.countInBlocks([p('Cat cat concat')], M.findRegex('cat', { whole: true, matchCase: true })) === 1 && M.findRegex('') === null);
 for (const x of results) console.log(`${x.ok ? 'PASS' : 'FAIL'}  ${x.id.padEnd(5)} ${x.name}`);
 const pc = results.filter((x) => x.ok).length; console.log(`\n${pc}/${results.length} checks passed`);
 process.exit(pc === results.length ? 0 : 1);

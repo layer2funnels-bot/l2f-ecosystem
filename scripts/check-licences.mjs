@@ -29,6 +29,20 @@ try {
   console.log(`PASS licence check (whiteboard build tree): ${wn} packages, all on the allowlist or reviewed`);
 } catch (e) { if (e.code !== 'ENOENT') throw e; }
 
+// Docs Word support build tree (apps/docs-io: docx MIT, mammoth BSD-2-Clause, bundled only for the lazy-loaded Word download/open). Reviewed in docs/DECISIONS.md DOC-1:
+// `duck` is licensed "BSD" (a dependency of mammoth's parser, BSD text read in the package), `jszip` and `pako` are dual licences with MIT chosen.
+const DOCS_REVIEWED = new Map([['duck', 'BSD (license text read in the package)'], ['jszip', '(MIT OR GPL-3.0-or-later): MIT chosen'], ['pako', '(MIT AND Zlib): both permissive']]);
+try {
+  const dio = JSON.parse(readFileSync(new URL('../apps/docs-io/package-lock.json', import.meta.url), 'utf8')); const dbad = []; let dn = 0;
+  for (const [path, meta] of Object.entries(dio.packages || {})) {
+    if (!path) continue; dn++;
+    const name = path.replace(/^.*node_modules\//, ''); const lic = String(meta.license ?? 'UNKNOWN');
+    if (!(lic.replace(/[()]/g, '').split(/\s+OR\s+/).some((p) => ALLOW.has(p.trim())) || DOCS_REVIEWED.has(name))) dbad.push(`${name}: ${lic}`);
+  }
+  if (dbad.length) { console.log('FAIL licence check (docs-io build tree):\n  ' + dbad.join('\n  ')); process.exit(1); }
+  console.log(`PASS licence check (docs-io build tree): ${dn} packages, all on the allowlist or reviewed`);
+} catch (e) { if (e.code !== 'ENOENT') throw e; }
+
 // Funnel Mapper Pro code copy: its own dependency tree (not installed or shipped by the ecosystem). Reported, not failing:
 // anything listed here needs a review entry in docs/DECISIONS.md BEFORE the copy is reshaped into the ecosystem or deployed.
 try {
