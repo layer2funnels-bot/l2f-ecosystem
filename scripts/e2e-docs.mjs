@@ -186,7 +186,7 @@ check('W36', 'The status bar shows the space left', /Space left: \d[\d,]+ of 1,0
 await menu('Tools', 'Keyboard shortcuts…'); check('W37', 'Keyboard shortcuts dialog lists the shortcuts', (await page.locator('.dlg kbd').count()) >= 10); await page.getByRole('button', { name: 'Close' }).click();
 
 // ---- downloads
-const dl = async (item) => { const p = page.waitForEvent('download'); await page.getByRole('menuitem', { name: 'File', exact: true }).click(); await page.getByRole('menuitem', { name: item }).first().click(); const d = await p; const path = await d.path(); return { name: d.suggestedFilename(), data: readFileSync(path) }; };
+const dl = async (item) => { const p = page.waitForEvent('download'); await page.getByRole('menuitem', { name: 'File', exact: true }).click(); await page.getByRole('menuitem', { name: 'Download as' }).click(); await page.getByRole('menuitem', { name: item }).first().click(); const d = await p; const path = await d.path(); return { name: d.suggestedFilename(), data: readFileSync(path) }; };
 const txt = await dl(/Plain text \(\.txt\) · all tabs/);
 check('W38', 'Download as plain text (all tabs) has the tab titles, headings and the footnote', txt.name.endsWith('.txt') && /Budget/.test(txt.data.toString()) && /Quarterly plan/.test(txt.data.toString()) && /Q3 report/.test(txt.data.toString()), txt.data.toString().slice(-500));
 const docx = await dl(/Word \(\.docx\) · all tabs/);
@@ -198,7 +198,7 @@ check('W41', 'Print preview draws the page content (heading, picture, footnote l
 await shot('07-preview-1366'); await page.getByRole('button', { name: 'Close' }).click();
 
 // ---- open .docx (round trip of the file just made)
-const fc = page.waitForEvent('filechooser'); await menu('File', 'Open Word file (.docx)…'); await (await fc).setFiles({ name: 'back.docx', mimeType: 'application/octet-stream', buffer: docx.data });
+const fc = page.waitForEvent('filechooser'); await menu('File', 'Open file (.docx, .md, .txt, .html)…'); await (await fc).setFiles({ name: 'back.docx', mimeType: 'application/octet-stream', buffer: docx.data });
 await page.waitForTimeout(600); const rep = page.getByRole('button', { name: 'Replace', exact: true }); if (await rep.count()) await rep.click();
 await page.waitForTimeout(1500);
 check('W42', 'Open Word file reads the .docx back: headings and text arrive as blocks', (await ed.locator('h1, h2, p').count()) >= 3 && /Quarterly|Budget/.test(await ed.innerText()));

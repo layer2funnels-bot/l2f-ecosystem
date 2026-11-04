@@ -4,6 +4,12 @@
   "private": true,
   "description": "Build-time only: bundles the Word (.docx) export (docx, MIT) and import (mammoth, BSD-2-Clause) libraries into one lazy-loaded, self-hosted ES module for the Docs editor. Not a runtime dependency of the API.",
   "type": "module",
-  "dependencies": { "docx": "9.5.1", "mammoth": "1.9.1" },
-  "devDependencies": { "esbuild": "0.25.10" }
+  "dependencies": {
+    "docx": "9.5.1",
+    "fflate": "^0.8.2",
+    "mammoth": "1.9.1"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.10"
+  }
 }

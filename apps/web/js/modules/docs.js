@@ -10,6 +10,7 @@ import { parseBody, serialize, normalize, wordCount, charCount, outline, sizeOf,
   flatTabs, findTab, tabCount, addTab, updateTab, duplicateTab, deleteTab, moveTab, moveTabTo, indentTab, outdentTab, contentOf, tabWords, spaceLeft, toText, toMarkdown, toHtml,
   findRegex, replaceInBlocks, countInBlocks, normBlocks, isEmpty, pageSize, marginsOf, notesOf } from './docmodel.js';
 import { blocksFromHtml, fillToc, fillNotes, dataUrlToBlob } from './docdom.js';
+import { blocksFromMarkdown, blocksFromText } from './docmd.js';
 import { createEditor } from './docedit.js';
 import { download, safeName, loadIo, printBlocks } from './docexport.js';
 import { LANGS, SPEAKER_COLOURS, MAX_SPEAKERS, isUrdu, fmtClock, nextSpeaker, turnChanged, applyVoiceCommands, withSpacing, createRecognizer, voiceSupported, ERRORS } from './docvoice.js';
@@ -657,7 +658,9 @@ export function docView({ api, id, ctx, opts = {} }) {
       const out = {};
       for (const b of blocks) {
         if (b.t !== 'img' || out[b.f]) continue;
-        try { const src = await imageSrc(b.f); if (!src) continue; const blob = src.startsWith('data:') ? dataUrlToBlob(src) : await (await fetch(src)).blob(); const bmp = await createImageBitmap(blob); out[b.f] = { data: new Uint8Array(await blob.arrayBuffer()), type: IMG_TYPES[blob.type] === 'jpg' ? 'jpg' : IMG_TYPES[blob.type] ?? 'png', w: bmp.width, h: bmp.height }; bmp.close?.(); } catch { /* the picture is left out of the file */ }
+        try { const src = await imageSrc(b.f); if (!src) continue; const blob = src.startsWith('data:') ? dataUrlToBlob(src) : await (await fetch(src)).blob(); const bmp = await createImageBitmap(blob); let type = IMG_TYPES[blob.type] ?? 'png'; let bytes = new Uint8Array(await blob.arrayBuffer());
+          if (type === 'webp') { const cv = new OffscreenCanvas(bmp.width, bmp.height); cv.getContext('2d').drawImage(bmp, 0, 0); bytes = new Uint8Array(await (await cv.convertToBlob({ type: 'image/png' })).arrayBuffer()); type = 'png'; }
+          out[b.f] = { data: bytes, type, w: bmp.width, h: bmp.height }; bmp.close?.(); } catch { /* the picture is left out of the file */ }
       }
       return out;
     }
@@ -670,34 +673,47 @@ export function docView({ api, id, ctx, opts = {} }) {
         toast('Preparing the Word file…'); const c = contentFor(s);
         try { download(`${safeName(meta.name)}.docx`, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', await io.buildDocx(c, await imagesFor(c.blocks))); } catch { toast('Couldn’t make the Word file.', false); }
       },
+      pdf: async (s) => { toast('In the print window, choose “Save as PDF” as the destination.'); await exporters.print(s); },
+      odt: async (s) => { const io = await loadIo(); if (!io) return toast('OpenDocument files are not part of this build yet.', false); toast('Preparing the file…'); const c = contentFor(s); try { download(`${safeName(meta.name)}.odt`, 'application/vnd.oasis.opendocument.text', io.buildOdt(c, await imagesFor(c.blocks), meta.name)); } catch { toast('Couldn’t make the .odt file.', false); } },
+      rtf: async (s) => { const io = await loadIo(); if (!io) return toast('Rich Text files are not part of this build yet.', false); const c = contentFor(s); try { download(`${safeName(meta.name)}.rtf`, 'application/rtf', io.buildRtf(c, await imagesFor(c.blocks))); } catch { toast('Couldn’t make the .rtf file.', false); } },
+      epub: async (s) => { const io = await loadIo(); if (!io) return toast('EPUB files are not part of this build yet.', false); toast('Preparing the book…'); const c = contentFor(s); commit();
+        const chapters = s === 'all' ? flatTabs(doc).map((x) => ({ id: x.tab.id, title: x.tab.title })) : [{ id: activeTab, title: findTab(doc, activeTab).tab.title }];
+        try { download(`${safeName(meta.name)}.epub`, 'application/epub+zip', io.buildEpub(doc, chapters, await imagesFor(c.blocks), meta.name)); } catch { toast('Couldn’t make the .epub file.', false); } },
+      zip: async (s) => { const io = await loadIo(); if (!io) return toast('Zipped web pages are not part of this build yet.', false); const c = contentFor(s); try { download(`${safeName(meta.name)}-web-page.zip`, 'application/zip', io.buildHtmlZip(doc, scopeTab(s), await imagesFor(c.blocks), meta.name)); } catch { toast('Couldn’t make the zip file.', false); } },
       print: async (s) => { commit(); const c = contentFor(s); try { await printBlocks({ blocks: c.blocks, page: c.page, imageSrc, title: meta.name }); } catch { toast('Couldn’t open the print view.', false); } },
     };
-    async function openDocx() {
-      if (readOnly) return; const io = await loadIo(); if (!io) { toast('Word files are not part of this build yet.', false); return; }
-      const inp = h('input', { type: 'file', accept: '.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document', class: 'sr', tabindex: '-1', 'aria-hidden': 'true' });
+    async function openFile() {
+      if (readOnly) return;
+      const inp = h('input', { type: 'file', accept: '.docx,.md,.markdown,.txt,.html,.htm,text/plain,text/markdown,text/html,application/vnd.openxmlformats-officedocument.wordprocessingml.document', class: 'sr', tabindex: '-1', 'aria-hidden': 'true' });
       inp.addEventListener('change', async () => {
         const f = inp.files[0]; inp.remove(); if (!f) return;
-        if (f.size > 25 * 1024 * 1024) { toast('That Word file is over 25 MB.', false); return; }
-        toast('Opening the Word file…');
+        if (f.size > 25 * 1024 * 1024) { toast('That file is over 25 MB.', false); return; }
+        const ext = (/\.([a-z0-9]+)$/i.exec(f.name)?.[1] ?? '').toLowerCase(); toast(`Opening ${f.name}…`);
         try {
-          const html = await io.importDocx(await f.arrayBuffer()); const list = blocksFromHtml(html); const out = [];
-          for (const b of list) { if (b.t === 'img' && !b.f) { const blob = dataUrlToBlob(b.src); const fid = blob ? await uploadImage(blob, 'word-image') : null; if (fid) out.push({ t: 'img', f: fid, alt: b.alt }); } else out.push(b); }
+          let list;
+          if (ext === 'docx') { const io = await loadIo(); if (!io) return toast('Word files are not part of this build yet.', false); list = blocksFromHtml(await io.importDocx(await f.arrayBuffer())); }
+          else if (ext === 'md' || ext === 'markdown') list = blocksFromMarkdown(await f.text());
+          else if (ext === 'html' || ext === 'htm') list = blocksFromHtml(await f.text());
+          else if (ext === 'txt' || f.type.startsWith('text/')) list = blocksFromText(await f.text());
+          else return toast('Open a .docx, .md, .txt or .html file.', false);
+          const out = [];
+          for (const b of list) { if (b.t === 'img' && !b.f) { const blob = dataUrlToBlob(b.src); const fid = blob ? await uploadImage(blob, 'imported-image') : null; if (fid) out.push({ t: 'img', f: fid, alt: b.alt }); } else out.push(b); }
           if (!out.length) { toast('That file has no text to import.', false); return; }
           const apply = () => { checkpoint(); ed.load(normBlocks(out)); onChange('edit'); toast('Imported. Check the layout, then save.'); };
-          if (isEmpty({ blocks: ed.blocks() })) apply(); else dialog({ title: 'Replace this tab with the Word file?', body: h('p', {}, `The text of “${f.name}” will replace what is in this tab. You can undo it, and the earlier version stays in History.`), actions: [{ label: 'Replace', cls: 'primary', on: apply }, { label: 'Cancel' }] });
-        } catch { toast('Couldn’t read that Word file.', false); }
+          if (isEmpty({ blocks: ed.blocks() })) apply(); else dialog({ title: 'Replace this tab with the file?', body: h('p', {}, `The content of “${f.name}” will replace what is in this tab. You can undo it, and the earlier version stays in History.`), actions: [{ label: 'Replace', cls: 'primary', on: apply }, { label: 'Cancel' }] });
+        } catch { toast('Couldn’t read that file.', false); }
       });
       document.body.append(inp); inp.click();
     }
     const multi = () => tabCount(doc) > 1;
-    const dl = (k) => (multi() ? [{ label: `${{ docx: 'Word (.docx)', txt: 'Plain text (.txt)', md: 'Markdown (.md)', html: 'Web page (.html)' }[k]} · this tab`, run: () => exporters[k]('tab') }, { label: `${{ docx: 'Word (.docx)', txt: 'Plain text (.txt)', md: 'Markdown (.md)', html: 'Web page (.html)' }[k]} · all tabs`, run: () => exporters[k]('all') }]
-      : [{ label: { docx: 'Word (.docx)', txt: 'Plain text (.txt)', md: 'Markdown (.md)', html: 'Web page (.html)' }[k], run: () => exporters[k]('tab') }]);
+    const FORMATS = [['docx', 'Word (.docx)'], ['pdf', 'PDF (.pdf, via Save as PDF)'], ['odt', 'OpenDocument text (.odt)'], ['rtf', 'Rich Text (.rtf)'], ['txt', 'Plain text (.txt)'], ['html', 'Web page (.html)'], ['zip', 'Web page with pictures (.zip)'], ['epub', 'EPUB book (.epub)'], ['md', 'Markdown (.md)']];
+    const dl = ([k, label]) => (multi() ? [{ label: `${label} · this tab`, run: () => exporters[k]('tab') }, { label: `${label} · all tabs`, run: () => exporters[k]('all') }] : [{ label, run: () => exporters[k]('tab') }]);
     const E = readOnly;
     const menus = () => {
       const st = ed.state();
       return {
         File: [{ label: 'Save', shortcut: `${MOD}S`, disabled: E, run: () => save({ manual: true }) }, { label: 'Version history', run: openHistory }, { label: 'Rename', disabled: E, run: () => { titleIn.focus(); titleIn.select(); } }, { sep: true },
-          { label: 'Make a copy', disabled: !ctx.can('drive.file.upload', meta.client_id), run: makeCopy }, { label: 'Move to folder…', disabled: E, run: moveToFolder }, { label: 'Save named version…', disabled: E, run: saveNamed }, { sep: true }, { label: 'Open Word file (.docx)…', disabled: E, run: openDocx }, { heading: 'Download as' }, ...['docx', 'txt', 'md', 'html'].flatMap(dl), { label: multi() ? 'PDF · this tab (via print)' : 'PDF (via print)', run: () => exporters.print('tab') }, multi() ? { label: 'PDF · all tabs (via print)', run: () => exporters.print('all') } : null, { sep: true },
+          { label: 'Make a copy', disabled: !ctx.can('drive.file.upload', meta.client_id), run: makeCopy }, { label: 'Move to folder…', disabled: E, run: moveToFolder }, { label: 'Save named version…', disabled: E, run: saveNamed }, { sep: true }, { label: 'Open file (.docx, .md, .txt, .html)…', disabled: E, run: openFile }, { group: 'Download as', items: FORMATS.flatMap(dl) }, { sep: true },
           { label: 'Print preview…', run: () => preview(multi() ? 'tab' : 'tab') }, { label: multi() ? 'Print this tab…' : 'Print…', shortcut: `${MOD}P`, run: () => exporters.print('tab') }, multi() ? { label: 'Print all tabs…', run: () => exporters.print('all') } : null, { label: 'Page setup…', run: () => pageSetup() }],
         Edit: [{ label: 'Undo', shortcut: `${MOD}Z`, disabled: E || at <= 0, run: () => { ed.focus(); undo(); } }, { label: 'Redo', shortcut: `${MOD}Y`, disabled: E || at >= stack.length - 1, run: () => { ed.focus(); redo(); } }, { sep: true },
           { label: 'Cut', shortcut: `${MOD}X`, disabled: E, run: () => clip('cut') }, { label: 'Copy', shortcut: `${MOD}C`, run: () => clip('copy') }, { label: 'Paste', shortcut: `${MOD}V`, disabled: E, run: () => pasteFromClipboard(false) }, { label: 'Paste as plain text', shortcut: `${MOD}Shift+V`, disabled: E, run: () => pasteFromClipboard(true) },
