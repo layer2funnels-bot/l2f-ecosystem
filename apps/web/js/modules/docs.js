@@ -9,7 +9,7 @@ import { dirty } from '../dirty.js';
 import { parseBody, serialize, normalize, wordCount, charCount, outline, sizeOf, safeHref, MAX_CHARS, FONTS, SIZES, PAGES, MARGINS, DEFAULT_SIZE, MAX_TAB_DEPTH, MAX_TABS,
   flatTabs, findTab, tabCount, addTab, updateTab, duplicateTab, deleteTab, moveTab, moveTabTo, indentTab, outdentTab, contentOf, tabWords, spaceLeft, toText, toMarkdown, toHtml,
   findRegex, replaceInBlocks, countInBlocks, normBlocks, isEmpty, pageSize, marginsOf, notesOf } from './docmodel.js';
-import { blocksFromHtml, fillToc, fillNotes } from './docdom.js';
+import { blocksFromHtml, fillToc, fillNotes, dataUrlToBlob } from './docdom.js';
 import { createEditor } from './docedit.js';
 import { download, safeName, loadIo, printBlocks } from './docexport.js';
 
@@ -39,27 +39,35 @@ function pop(anchor, content, { role = 'menu', label, at, onClose } = {}) {
   const el = h('div', { class: `dx-pop${role === 'menu' ? ' dx-menu' : ''}`, role, 'aria-label': label ?? false }, content);
   el.addEventListener('mousedown', (e) => { if (!e.target.closest('input,select,textarea')) e.preventDefault(); });
   document.body.append(el);
-  const r = at ? { left: at.x, bottom: at.y, right: at.x } : anchor.getBoundingClientRect();
-  const w = el.offsetWidth, hh = el.offsetHeight;
-  el.style.left = `${Math.max(8, Math.min(r.left, innerWidth - w - 8))}px`;
-  el.style.top = `${Math.max(8, Math.min(r.bottom + (at ? 0 : 2), innerHeight - hh - 8))}px`;
+  const place = () => {
+    const r = at ? { left: at.x, bottom: at.y, top: at.y } : anchor.getBoundingClientRect(); const w = el.offsetWidth, hh = el.offsetHeight;
+    el.style.left = `${Math.max(8, Math.min(r.left, innerWidth - w - 8))}px`;
+    const below = r.bottom + (at ? 0 : 2); el.style.top = `${Math.max(8, below + hh > innerHeight - 8 && r.top - hh - 2 > 8 ? r.top - hh - 2 : Math.min(below, innerHeight - hh - 8))}px`;
+  };
+  place();
   const outside = (e) => { if (!el.contains(e.target) && !(anchor?.contains?.(e.target))) close(); };
   const key = (e) => { if (e.key === 'Escape') { e.stopPropagation(); close(true); } };
   const nav = (e) => {
     if (role !== 'menu' || !['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return;
-    const items = [...el.querySelectorAll('[role^=menuitem]:not(:disabled)')]; if (!items.length) return; e.preventDefault();
+    const items = [...el.querySelectorAll('[role^=menuitem]:not(:disabled)')].filter((x) => !x.closest('[hidden]')); if (!items.length) return; e.preventDefault();
     const i = items.indexOf(document.activeElement);
     items[e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1 : (i + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length].focus();
   };
   document.addEventListener('pointerdown', outside, true); document.addEventListener('keydown', key, true); el.addEventListener('keydown', nav); addEventListener('resize', close);
   function close(refocus) { if (openPop !== self) return; el.remove(); document.removeEventListener('pointerdown', outside, true); document.removeEventListener('keydown', key, true); removeEventListener('resize', close); openPop = null; if (refocus === true) anchor?.focus?.(); onClose?.(); }
-  const self = { close, el }; openPop = self;
+  const self = { close, el, place }; openPop = self;
   (el.querySelector('[role^=menuitem]:not(:disabled), button, input, select') ?? el).focus?.({ preventScroll: true });
   return self;
 }
-function menuItems(items, close) {
-  return items.filter(Boolean).map((it) => {
+function menuItems(items, close, place) {
+  return items.filter(Boolean).flatMap((it) => {
     if (it.sep) return h('div', { class: 'dx-sep', role: 'separator' });
+    if (it.group) {
+      const sub = h('div', { class: 'dx-subgroup', role: 'group', 'aria-label': it.group, hidden: !it.open }, ...menuItems(it.items, close, place));
+      const b = h('button', { type: 'button', class: 'dx-mi dx-mg', role: 'menuitem', 'aria-haspopup': 'true', 'aria-expanded': String(Boolean(it.open)), onclick: () => { const open = sub.hidden; sub.hidden = !open; b.setAttribute('aria-expanded', String(open)); b.lastChild.textContent = open ? '▾' : '▸'; place?.(); } },
+        h('span', { class: 'dx-mc', 'aria-hidden': 'true' }), h('span', { class: 'dx-ml' }, it.group), h('span', { class: 'dx-mk', 'aria-hidden': 'true' }, it.open ? '▾' : '▸'));
+      return [b, sub];
+    }
     if (it.heading) return h('div', { class: 'dx-mh', role: 'presentation' }, it.heading);
     const role = it.checked === undefined ? 'menuitem' : 'menuitemcheckbox';
     return h('button', { type: 'button', class: 'dx-mi', role, 'aria-checked': it.checked === undefined ? false : String(Boolean(it.checked)), disabled: Boolean(it.disabled), onclick: () => { close(); it.run?.(); } },
@@ -479,13 +487,13 @@ export function docView({ api, id, ctx, opts = {} }) {
       const out = {};
       for (const b of blocks) {
         if (b.t !== 'img' || out[b.f]) continue;
-        try { const src = await imageSrc(b.f); if (!src) continue; const blob = await (await fetch(src)).blob(); const bmp = await createImageBitmap(blob); out[b.f] = { data: new Uint8Array(await blob.arrayBuffer()), type: IMG_TYPES[blob.type] === 'jpg' ? 'jpg' : IMG_TYPES[blob.type] ?? 'png', w: bmp.width, h: bmp.height }; bmp.close?.(); } catch { /* the picture is left out of the file */ }
+        try { const src = await imageSrc(b.f); if (!src) continue; const blob = src.startsWith('data:') ? dataUrlToBlob(src) : await (await fetch(src)).blob(); const bmp = await createImageBitmap(blob); out[b.f] = { data: new Uint8Array(await blob.arrayBuffer()), type: IMG_TYPES[blob.type] === 'jpg' ? 'jpg' : IMG_TYPES[blob.type] ?? 'png', w: bmp.width, h: bmp.height }; bmp.close?.(); } catch { /* the picture is left out of the file */ }
       }
       return out;
     }
     const exporters = {
-      txt: (s) => download(`${safeName(meta.name)}.txt`, 'text/plain;charset=utf-8', toText(doc, scopeTab(s))),
-      md: (s) => download(`${safeName(meta.name)}.md`, 'text/markdown;charset=utf-8', toMarkdown(doc, scopeTab(s))),
+      txt: (s) => { commit(); download(`${safeName(meta.name)}.txt`, 'text/plain;charset=utf-8', toText(doc, scopeTab(s))); },
+      md: (s) => { commit(); download(`${safeName(meta.name)}.md`, 'text/markdown;charset=utf-8', toMarkdown(doc, scopeTab(s))); },
       html: async (s) => { commit(); const c = contentOf(doc, scopeTab(s)); const imgs = {}; for (const [k, v] of Object.entries(await imagesFor(c.blocks))) imgs[k] = `data:image/${v.type === 'jpg' ? 'jpeg' : v.type};base64,${btoa(String.fromCharCode(...v.data))}`; download(`${safeName(meta.name)}.html`, 'text/html;charset=utf-8', toHtml(doc, { tab: scopeTab(s), title: meta.name, images: imgs })); },
       docx: async (s) => {
         const io = await loadIo(); if (!io) { toast('Word files are not part of this build yet.', false); return; }
@@ -503,7 +511,7 @@ export function docView({ api, id, ctx, opts = {} }) {
         toast('Opening the Word file…');
         try {
           const html = await io.importDocx(await f.arrayBuffer()); const list = blocksFromHtml(html); const out = [];
-          for (const b of list) { if (b.t === 'img' && !b.f) { const blob = await fetch(b.src).then((r) => r.blob()).catch(() => null); const fid = blob ? await uploadImage(blob, 'word-image') : null; if (fid) out.push({ t: 'img', f: fid, alt: b.alt }); } else out.push(b); }
+          for (const b of list) { if (b.t === 'img' && !b.f) { const blob = dataUrlToBlob(b.src); const fid = blob ? await uploadImage(blob, 'word-image') : null; if (fid) out.push({ t: 'img', f: fid, alt: b.alt }); } else out.push(b); }
           if (!out.length) { toast('That file has no text to import.', false); return; }
           const apply = () => { checkpoint(); ed.load(normBlocks(out)); onChange('edit'); toast('Imported. Check the layout, then save.'); };
           if (isEmpty({ blocks: ed.blocks() })) apply(); else dialog({ title: 'Replace this tab with the Word file?', body: h('p', {}, `The text of “${f.name}” will replace what is in this tab. You can undo it, and the earlier version stays in History.`), actions: [{ label: 'Replace', cls: 'primary', on: apply }, { label: 'Cancel' }] });
@@ -528,12 +536,12 @@ export function docView({ api, id, ctx, opts = {} }) {
         Insert: [{ label: 'Picture…', disabled: E, run: pickImage }, { label: 'Table…', disabled: E, run: insertTable }, { label: 'Link…', shortcut: `${MOD}K`, disabled: E, run: link }, { label: 'Horizontal line', disabled: E, run: C(() => ed.insertBlocks([{ t: 'hr' }])) }, { label: 'Page break', disabled: E, run: C(() => ed.insertBlocks([{ t: 'pb' }])) }, { sep: true },
           { label: 'Table of contents', disabled: E, run: C(() => { ed.insertBlocks([{ t: 'toc' }]); paintOutline(); }) }, { label: 'Footnote…', disabled: E, run: addNote }, { label: 'Special characters…', disabled: E, run: specials }, { label: 'Today’s date', disabled: E, run: insertDate }, { sep: true }, { label: 'New tab', disabled: E, run: () => newTab(null) }, { label: 'New sub-tab', disabled: E || findTab(doc, activeTab).depth + 1 >= MAX_TAB_DEPTH, run: () => newTab(activeTab) }],
         Format: [{ heading: 'Text' }, { label: 'Bold', shortcut: `${MOD}B`, checked: Boolean(st.marks.b), disabled: E, run: C(() => ed.toggleMark('b')) }, { label: 'Italic', shortcut: `${MOD}I`, checked: Boolean(st.marks.i), disabled: E, run: C(() => ed.toggleMark('i')) }, { label: 'Underline', shortcut: `${MOD}U`, checked: Boolean(st.marks.u), disabled: E, run: C(() => ed.toggleMark('u')) },
-          { label: 'Strikethrough', checked: Boolean(st.marks.s), disabled: E, run: C(() => ed.toggleMark('s')) }, { label: 'Superscript', checked: Boolean(st.marks.sup), disabled: E, run: C(() => ed.toggleMark('sup')) }, { label: 'Subscript', checked: Boolean(st.marks.sub), disabled: E, run: C(() => ed.toggleMark('sub')) }, { label: 'Code', checked: Boolean(st.marks.cd), disabled: E, run: C(() => ed.toggleMark('cd')) },
+          { label: 'Strikethrough', checked: Boolean(st.marks.s), disabled: E, run: C(() => ed.toggleMark('s')) }, { label: 'Superscript', checked: Boolean(st.marks.sup), disabled: E, run: C(() => ed.toggleMark('sup')) }, { label: 'Subscript', checked: Boolean(st.marks.sub), disabled: E, run: C(() => ed.toggleMark('sub')) }, { label: 'Code', checked: Boolean(st.marks.cd), disabled: E, run: C(() => ed.toggleMark('cd')) }, { sep: true },
+          { group: 'Paragraph style', items: [['p', 'Normal text', '0'], ['title', 'Title'], ['subtitle', 'Subtitle'], ['h1', 'Heading 1', '1'], ['h2', 'Heading 2', '2'], ['h3', 'Heading 3', '3'], ['quote', 'Quote'], ['code', 'Code block']].map(([t, l, k]) => ({ label: l, shortcut: k ? `${MOD}Alt+${k}` : undefined, checked: st.type === t, disabled: E, run: C(() => ed.setBlockType(t)) })) },
+          { group: 'Align and indent', items: [...[['l', 'Left'], ['c', 'Centre'], ['r', 'Right'], ['j', 'Justify']].map(([a, l]) => ({ label: l, shortcut: `${MOD}Shift+${{ l: 'L', c: 'E', r: 'R', j: 'J' }[a]}`, checked: st.al === a, disabled: E, run: C(() => ed.setAlign(a)) })), { label: 'Increase indent', disabled: E, run: C(() => ed.indent(1)) }, { label: 'Decrease indent', disabled: E, run: C(() => ed.indent(-1)) }] },
+          { group: 'Lists', items: [{ label: 'Bulleted list', shortcut: `${MOD}Shift+8`, checked: st.list === 'ul', disabled: E, run: C(() => ed.toggleList('ul')) }, { label: 'Numbered list', shortcut: `${MOD}Shift+7`, checked: st.list === 'ol', disabled: E, run: C(() => ed.toggleList('ol')) }, { label: 'Checklist', shortcut: `${MOD}Shift+9`, checked: st.list === 'cl', disabled: E, run: C(() => ed.toggleList('cl')) }] },
+          { group: 'Change case', items: [['upper', 'UPPERCASE'], ['lower', 'lowercase'], ['title', 'Title Case'], ['sentence', 'Sentence case']].map(([k, l]) => ({ label: l, disabled: E, run: C(() => ed.changeCase(k)) })) },
           { label: 'Bigger text', disabled: E, run: C(() => ed.setMark('z', Math.min(200, (st.marks.z ?? DEFAULT_SIZE) + 1))) }, { label: 'Smaller text', disabled: E, run: C(() => ed.setMark('z', Math.max(6, (st.marks.z ?? DEFAULT_SIZE) - 1))) }, { sep: true },
-          { heading: 'Paragraph style' }, ...[['p', 'Normal text', '0'], ['title', 'Title'], ['subtitle', 'Subtitle'], ['h1', 'Heading 1', '1'], ['h2', 'Heading 2', '2'], ['h3', 'Heading 3', '3'], ['quote', 'Quote'], ['code', 'Code block']].map(([t, l, k]) => ({ label: l, shortcut: k ? `${MOD}Alt+${k}` : undefined, checked: st.type === t, disabled: E, run: C(() => ed.setBlockType(t)) })), { sep: true },
-          { heading: 'Align and indent' }, ...[['l', 'Left'], ['c', 'Centre'], ['r', 'Right'], ['j', 'Justify']].map(([a, l]) => ({ label: l, checked: st.al === a, disabled: E, run: C(() => ed.setAlign(a)) })), { label: 'Increase indent', disabled: E, run: C(() => ed.indent(1)) }, { label: 'Decrease indent', disabled: E, run: C(() => ed.indent(-1)) }, { sep: true },
-          { heading: 'Lists' }, { label: 'Bulleted list', checked: st.list === 'ul', disabled: E, run: C(() => ed.toggleList('ul')) }, { label: 'Numbered list', checked: st.list === 'ol', disabled: E, run: C(() => ed.toggleList('ol')) }, { label: 'Checklist', checked: st.list === 'cl', disabled: E, run: C(() => ed.toggleList('cl')) }, { sep: true },
-          { heading: 'Change case' }, ...[['upper', 'UPPERCASE'], ['lower', 'lowercase'], ['title', 'Title Case'], ['sentence', 'Sentence case']].map(([k, l]) => ({ label: l, disabled: E, run: C(() => ed.changeCase(k)) })), { sep: true },
           { label: 'Clear formatting', shortcut: `${MOD}\\`, disabled: E, run: C(() => ed.clearFormat()) }, { label: 'Page setup…', run: () => pageSetup() }],
         Tools: [{ label: 'Word count…', run: countDialog }, { label: 'Check spelling as I type', checked: spell, run: () => { spell = !spell; page.spellcheck = spell; store.set('dx-spell', spell ? '1' : '0'); } }, { label: 'Find and replace…', shortcut: `${MOD}H`, disabled: E, run: () => openFind(true) }, { sep: true }, { label: 'Keyboard shortcuts…', run: shortcuts }],
       };
@@ -541,7 +549,7 @@ export function docView({ api, id, ctx, opts = {} }) {
     const menubar = h('div', { class: 'dx-menubar', role: 'menubar', 'aria-label': 'Document menu' });
     const menuBtns = Object.keys(menus()).map((name) => {
       const b = h('button', { type: 'button', class: 'dx-mb', role: 'menuitem', 'aria-haspopup': 'menu', 'aria-expanded': 'false' }, name);
-      const open = () => { const self = pop(b, [], { role: 'menu', label: name, onClose: () => b.setAttribute('aria-expanded', 'false') }); const items = menus()[name]; self.el.replaceChildren(...menuItems(items, self.close)); b.setAttribute('aria-expanded', 'true'); self.el.querySelector('[role^=menuitem]:not(:disabled)')?.focus(); };
+      const open = () => { const self = pop(b, [], { role: 'menu', label: name, onClose: () => b.setAttribute('aria-expanded', 'false') }); const items = menus()[name]; self.el.replaceChildren(...menuItems(items, self.close, self.place)); self.place(); b.setAttribute('aria-expanded', 'true'); self.el.querySelector('[role^=menuitem]:not(:disabled)')?.focus(); };
       b.addEventListener('click', () => (b.getAttribute('aria-expanded') === 'true' ? closePop() : open()));
       b.addEventListener('mouseenter', () => { if (openPop && menuBtns.some((x) => x.getAttribute('aria-expanded') === 'true') && b.getAttribute('aria-expanded') !== 'true') open(); });
       b.addEventListener('keydown', (e) => { const i = menuBtns.indexOf(b); if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } else if (e.key === 'ArrowRight') { e.preventDefault(); menuBtns[(i + 1) % menuBtns.length].focus(); } else if (e.key === 'ArrowLeft') { e.preventDefault(); menuBtns[(i + menuBtns.length - 1) % menuBtns.length].focus(); } });
@@ -568,7 +576,7 @@ export function docView({ api, id, ctx, opts = {} }) {
           { label: 'Delete row', disabled: readOnly, run: () => ed.tableOp('delRow') }, { label: 'Delete column', disabled: readOnly, run: () => ed.tableOp('delCol') }, { label: 'Delete table', disabled: readOnly, run: () => ed.tableOp('delTable') }] : []),
         ...(st.fig ? [{ sep: true }, { heading: 'Picture' }, { label: 'Picture details…', disabled: readOnly, run: imageDetails }, { label: 'Align left', disabled: readOnly, run: () => ed.setImage({ al: 'l' }) }, { label: 'Centre', disabled: readOnly, run: () => ed.setImage({ al: 'c' }) }, { label: 'Align right', disabled: readOnly, run: () => ed.setImage({ al: 'r' }) }, { label: 'Remove picture', disabled: readOnly, run: () => ed.removeFig() }] : []),
       ];
-      const self = pop(null, [], { role: 'menu', label: 'Edit menu', at }); self.el.replaceChildren(...menuItems(items, self.close));
+      const self = pop(null, [], { role: 'menu', label: 'Edit menu', at }); self.el.replaceChildren(...menuItems(items, self.close, self.place)); self.place();
       self.el.querySelector('[role^=menuitem]:not(:disabled)')?.focus();
     });
 
@@ -614,7 +622,7 @@ export function docView({ api, id, ctx, opts = {} }) {
     }
     function renameTab(tid, isNew) {
       const t = findTab(doc, tid)?.tab; if (!t) return; const f = field({ id: 'dx-tn', label: 'Tab name', value: t.title, maxlength: 120 });
-      dialog({ title: isNew ? 'Name the new tab' : 'Rename tab', body: f.el, actions: [{ label: 'Save', cls: 'primary', on: () => { const v = f.input.value.trim(); if (!v) return f.error('Enter a name.'); commit(); doc = updateTab(doc, tid, { title: v }); onChange('edit'); } }, { label: isNew ? 'Keep the default' : 'Cancel' }] });
+      dialog({ title: isNew ? 'Name the new tab' : 'Rename tab', onClose: () => { if (isNew) setTimeout(() => ed.focus(), 0); }, body: f.el, actions: [{ label: 'Save', cls: 'primary', on: () => { const v = f.input.value.trim(); if (!v) return f.error('Enter a name.'); commit(); doc = updateTab(doc, tid, { title: v }); onChange('edit'); } }, { label: isNew ? 'Keep the default' : 'Cancel' }] });
       f.input.select();
     }
     function tabIcon(tid) {
@@ -636,7 +644,7 @@ export function docView({ api, id, ctx, opts = {} }) {
         { label: 'Move up', disabled: readOnly || f.index === 0, run: () => { commit(); structural(moveTab(doc, tid, 'up')); } }, { label: 'Move down', disabled: readOnly || f.index === f.parent.length - 1, run: () => { commit(); structural(moveTab(doc, tid, 'down')); } },
         { label: 'Make sub-tab of the one above', disabled: readOnly || f.index === 0 || indentTab(doc, tid) === doc, run: () => { commit(); structural(indentTab(doc, tid)); } }, { label: 'Move out one level', disabled: readOnly || f.depth === 0, run: () => { commit(); structural(outdentTab(doc, tid)); } }, { sep: true },
         { label: 'Delete…', disabled: readOnly || (doc.tabs.length === 1 && f.depth === 0), run: () => removeTab(tid) }];
-      const self = pop(anchor, [], { role: 'menu', label: 'Tab actions' }); self.el.replaceChildren(...menuItems(items, self.close)); self.el.querySelector('[role^=menuitem]:not(:disabled)')?.focus();
+      const self = pop(anchor, [], { role: 'menu', label: 'Tab actions' }); self.el.replaceChildren(...menuItems(items, self.close, self.place)); self.place(); self.el.querySelector('[role^=menuitem]:not(:disabled)')?.focus();
     };
     let dragId = null;
     function paintTabs() {

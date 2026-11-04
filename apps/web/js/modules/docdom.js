@@ -212,10 +212,11 @@ export function containerLength(c) { return counter(c, null, c.tagName === 'LI')
 /** Where a DOM point is, as a character offset in its top-level block. */
 export function offsetIn(blk, node, offset) {
   if (isLeaf(blk)) return 0;
-  let acc = 0;
-  for (const c of containersOf(blk)) {
-    if (c === node || c.contains(node)) { const r = counter(c, { node, offset }, c.tagName === 'LI'); return acc + (r.found ?? r.len); }
-    acc += containerLength(c);
+  let acc = 0; const cs = containersOf(blk);
+  let mine = -1; cs.forEach((c, i) => { if (c === node || c.contains(node)) mine = i; });       // the innermost container (a nested list item sits inside its parent item)
+  for (let i = 0; i < cs.length; i += 1) {
+    if (i === mine) { const r = counter(cs[i], { node, offset }, cs[i].tagName === 'LI'); return acc + (r.found ?? r.len); }
+    acc += containerLength(cs[i]);
   }
   // the point is on the block element itself (or between containers): everything before the child at `offset`
   if (node === blk) { let a = 0; const kids = [...blk.childNodes]; const cs = containersOf(blk); for (const c of cs) { const idx = kids.findIndex((k) => k === c || k.contains(c)); if (idx >= offset) break; a += containerLength(c); } return a; }
@@ -291,6 +292,12 @@ export function blocksFromHtml(html) {
 }
 
 export { runNode };
+/** A data: address of a picture to a Blob (decoded here: the page policy does not let fetch() read data: addresses). */
+export function dataUrlToBlob(u) {
+  const m = /^data:([^;,]+);base64,([\s\S]*)$/.exec(String(u ?? '')); if (!m) return null;
+  const bin = atob(m[2]); const a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i += 1) a[i] = bin.charCodeAt(i);
+  return new Blob([a], { type: m[1] });
+}
 /** The text marks in force at a DOM point (what typing there would produce). */
 export function marksAt(root, node) {
   const chain = []; for (let n = node?.nodeType === 3 ? node.parentNode : node; n && n !== root; n = n.parentNode) chain.unshift(n);

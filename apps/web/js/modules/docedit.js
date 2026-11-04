@@ -2,7 +2,7 @@
 // MODEL of the blocks the selection touches (read the blocks, change them, render them again, put the caret back), so results are the same in every
 // browser, never depend on execCommand's inline styles (the page policy forbids them), and undo is a snapshot stack kept by the caller.
 import { splitRuns, mapRange, allRuns, runsText, pasteBlocks, normBlocks, safeHref, TEXT_BLOCKS } from './docmodel.js';
-import { renderBlock, renderBlocks, readBlock, readBlocks, fixRoot, getPos, setPos, offsetIn, blockOfNode, marksAt, runNode, blocksFromHtml, containersOf, blockLength } from './docdom.js';
+import { renderBlock, renderBlocks, readBlock, readBlocks, fixRoot, getPos, setPos, offsetIn, blockOfNode, marksAt, runNode, blocksFromHtml, containersOf, blockLength, dataUrlToBlob } from './docdom.js';
 
 const MARKS = ['b', 'i', 'u', 's', 'sup', 'sub', 'cd', 'a', 'f', 'z', 'c', 'hl'];
 const TEXTY = new Set(TEXT_BLOCKS);
@@ -146,28 +146,25 @@ export function createEditor(o) {
   }
   function toggleList(kind) {
     return mutate((models, ranges, pos) => {
-      const items = []; let all = true;
-      models.forEach((b, i) => { if (b.t === 'list') { const { i0 = 0, i1 = b.items.length - 1 } = ranges[i]; b.items.slice(i0, i1 + 1).forEach((it) => { if (it.k !== kind) all = false; }); } else if (TEXTY.has(b.t)) all = false; else if (b.t === 'table') all = false; });
-      const out = []; let cur = null; let lastTouched = -1;
-      const flush = () => { if (cur) { out.push(cur); cur = null; } };
-      const push = (it) => { cur ??= { t: 'list', items: [] }; cur.items.push(it); };
+      let all = true;
+      models.forEach((b, i) => { if (b.t === 'list') { const { i0 = 0, i1 = b.items.length - 1 } = ranges[i]; b.items.slice(i0, i1 + 1).forEach((it) => { if (it.k !== kind) all = false; }); } else all = false; });
+      const merged = []; const loc = []; let lastPara = -1;
+      const addItem = (it) => { let last = merged[merged.length - 1]; if (last?.t !== 'list') { last = { t: 'list', items: [] }; merged.push(last); } const base = last.items.reduce((n, x) => n + rlen(x.c), 0); last.items.push(it); return { idx: merged.length - 1, base }; };
       models.forEach((b, i) => {
         if (b.t === 'list') {
           const { i0 = 0, i1 = b.items.length - 1 } = ranges[i];
           b.items.forEach((it, k) => {
             const hit = k >= i0 && k <= i1;
-            if (hit && all) { flush(); out.push({ t: 'p', ...(it.lv ? { ind: it.lv } : {}), c: it.c }); lastTouched = out.length - 1; }
-            else { push(hit ? { ...it, k: kind, ...(kind !== 'cl' ? { ck: undefined } : {}) } : it); if (hit) lastTouched = -2 - out.length; }
+            if (hit && all) { merged.push({ t: 'p', ...(it.lv ? { ind: it.lv } : {}), c: it.c }); lastPara = merged.length - 1; }
+            else { const l = addItem(hit ? { ...it, k: kind, ...(kind !== 'cl' ? { ck: undefined } : {}) } : it); if (k === 0) loc[i] = l; }
           });
-          if (cur && i < models.length - 1) { /* keep merging into the next block's list */ }
-        } else if (TEXTY.has(b.t)) { push({ k: kind, lv: 0, c: b.c }); lastTouched = -2 - out.length; }
-        else { flush(); out.push(b); }
+        } else if (TEXTY.has(b.t)) loc[i] = addItem({ k: kind, lv: 0, c: b.c });
+        else { merged.push(b); loc[i] = { idx: merged.length - 1, base: 0 }; }
       });
-      flush();
-      // merge neighbouring lists that the change brought together
-      const merged = []; for (const b of out) { const prev = merged[merged.length - 1]; if (b.t === 'list' && prev?.t === 'list') prev.items = [...prev.items, ...b.items]; else merged.push(b); }
-      const bi = pos.b0 + Math.max(0, Math.min(merged.length - 1, lastTouched >= 0 ? lastTouched : merged.findLastIndex((b) => b.t === 'list')));
-      return { blocks: merged, sel: { s: { b: bi, o: 0 }, e: { b: bi, o: 0 } } };
+      let sel;
+      if (all || !loc[0] || !loc[models.length - 1]) { const bi = pos.b0 + Math.max(0, lastPara); sel = { s: { b: bi, o: 0 }, e: { b: bi, o: 0 } }; }
+      else sel = { s: { b: pos.b0 + loc[0].idx, o: loc[0].base + pos.s.o }, e: { b: pos.b0 + loc[models.length - 1].idx, o: loc[models.length - 1].base + pos.e.o } };
+      return { blocks: merged, sel };
     });
   }
   function toggleCheck(li) { if (!edit()) return; if (li.dataset.ck) delete li.dataset.ck; else li.dataset.ck = '1'; o.onChange('edit'); }
@@ -210,7 +207,8 @@ export function createEditor(o) {
       const inline = ins.every((x) => x.t === 'p');
       if (TEXTY.has(b.t)) {
         const res = pasteBlocks(b, pos.s.o, ins); const last = res[res.length - 1]; const right = Math.max(0, rlen(b.c) - pos.s.o);
-        const at = TEXTY.has(last.t) ? Math.max(0, rlen(last.c) - right) : 0; const bi = pos.b0 + res.length - 1;
+        const at = TEXTY.has(last.t) ? Math.max(0, rlen(last.c) - right) : 0; let bi = pos.b0 + res.length - 1;
+        if (ins.length === 1 && ins[0].t === 'table') { bi = pos.b0 + res.findIndex((x) => x.t === 'table'); return { blocks: res, sel: { s: { b: bi, o: 0 }, e: { b: bi, o: 0 } } }; }     // a new table: the caret goes into its first cell
         return { blocks: res, sel: { s: { b: bi, o: at }, e: { b: bi, o: at } } };
       }
       if ((b.t === 'list' || b.t === 'table') && inline) {
@@ -223,7 +221,8 @@ export function createEditor(o) {
     }, { start: true });
   }
   const insertRuns = (rs) => insertBlocks([{ t: 'p', c: rs }]);
-  function insertText(text) { if (!edit()) return; page.focus(); if (pending) { insertBlocks([{ t: 'p', c: [{ x: text, ...pending.marks }] }]); return; } d.execCommand('insertText', false, text); }
+  function insertText(text) { if (!edit()) return; page.focus(); if (pending) { insertBlocks([{ t: 'p', c: [{ x: text, ...pending.marks }] }]); return; } deleteSel(); const r = inside(); if (!r) return;
+    const t = d.createTextNode(text); r.insertNode(t); const rr = d.createRange(); rr.setStart(t, t.data.length); rr.collapse(true); const sl = win.getSelection(); sl.removeAllRanges(); sl.addRange(rr); o.onChange('type'); }
   const linesOf = (text) => String(text ?? '').replace(/\r\n?/g, '\n').split('\n').map((l) => ({ t: 'p', c: l ? [{ x: l }] : [] }));
   /** Paste or drop: images are uploaded first and become image blocks; HTML goes through the allow-list in docdom. */
   async function pasteContent({ html, text, files = [], plain = false }) {
@@ -236,7 +235,7 @@ export function createEditor(o) {
     if (!list.length) return;
     const out = [];
     for (const b of list) {
-      if (b.t === 'img' && !b.f) { const blob = await fetch(b.src).then((r) => r.blob()).catch(() => null); const f = blob ? await o.uploadImage(blob, 'pasted-image') : null; if (f) out.push({ t: 'img', f, alt: b.alt }); }
+      if (b.t === 'img' && !b.f) { const blob = dataUrlToBlob(b.src); const f = blob ? await o.uploadImage(blob, 'pasted-image') : null; if (f) out.push({ t: 'img', f, alt: b.alt }); }
       else out.push(b);
     }
     if (out.length) insertBlocks(out);
@@ -313,10 +312,7 @@ export function createEditor(o) {
     if (/^(insertOrderedList|insertUnorderedList|formatJustify|formatIndent|formatOutdent|formatSetBlockTextDirection)/.test(t) || t.startsWith('formatJustify')) { e.preventDefault(); return; }
     const r = inside();
     if (t === 'insertText' && pending && r && r.collapsed && !e.isComposing && e.data) {
-      e.preventDefault(); const marks = pending.marks; pending = null;
-      const node = runNode(d, { x: e.data, ...marks }); let last = node; while (last.lastChild) last = last.lastChild;
-      r.insertNode(node); const rr = d.createRange(); if (last.nodeType === 3) rr.setStart(last, last.data.length); else rr.setStartAfter(last); rr.collapse(true); const s = win.getSelection(); s.removeAllRanges(); s.addRange(rr);
-      o.onChange('type'); return;
+      e.preventDefault(); const marks = pending.marks; pending = null; insertRuns([{ x: e.data, ...marks }]); return;
     }
     if (t === 'insertParagraph' && r) {
       const el = r.startContainer.nodeType === 1 ? r.startContainer : r.startContainer.parentElement;
@@ -361,8 +357,11 @@ export function createEditor(o) {
   page.addEventListener('click', (e) => {
     const fig = e.target.closest?.('figure.dx-img'); if (fig) { selectFig(fig); return; }
     const note = e.target.closest?.('sup.dx-fn'); if (note && o.editNote) { o.editNote(note); return; }
-    const li = e.target.closest?.('li[data-k=cl]');
-    if (li && e.clientX - li.getBoundingClientRect().left < 26 && e.target === li) { toggleCheck(li); return; }
+    const ul = e.target.closest?.('ul.dx-list');
+    if (ul) for (const li of ul.querySelectorAll('li[data-k=cl]')) {        // the box is drawn in the margin to the left of the item's first line
+      const r = li.getBoundingClientRect(); const lh = parseFloat(win.getComputedStyle(li).lineHeight) || 24;
+      if (e.clientX < r.left && e.clientX > r.left - 34 && e.clientY >= r.top && e.clientY <= r.top + lh + 2) { toggleCheck(li); return; }
+    }
     const a = e.target.closest?.('a'); if (a && (e.ctrlKey || e.metaKey || !edit())) { const h = safeHref(a.getAttribute('href')); if (h) win.open(h, '_blank', 'noopener,noreferrer'); }
   });
   // drag the corner of the selected image to resize it
