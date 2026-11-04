@@ -1,0 +1,13 @@
+{
+  "name": "l2f-sheetjs-bundle",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Build-time only: bundles SheetJS Community Edition (Apache-2.0, official tarball from cdn.sheetjs.com, NOT the outdated npm xlsx 0.18.x) into one self-hosted ES module for the Sheets editor's .xlsx import/export.",
+  "type": "module",
+  "dependencies": {
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.10"
+  }
+}

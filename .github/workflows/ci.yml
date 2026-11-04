@@ -54,6 +54,10 @@ jobs:
         run: |
           npm ci --prefix apps/whiteboard
           node scripts/build-whiteboard.mjs
+      - name: 'Sheets .xlsx bridge (SheetJS CE official tarball, apps/sheetjs)'
+        run: |
+          npm ci --prefix apps/sheetjs
+          node scripts/build-sheetjs.mjs
       - name: 'Planner bundle (apps/planner; the shell mounts /planner/embed.js at #/planner)'
         run: |
           npm ci --prefix apps/planner

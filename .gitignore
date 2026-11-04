@@ -10,3 +10,7 @@ dist/
 # built bundle of the whiteboard editor (scripts/build-whiteboard.mjs)
 apps/web/whiteboard/
 apps/whiteboard/node_modules/
+
+# built .xlsx bridge of the Sheets editor (scripts/build-sheetjs.mjs)
+apps/web/sheetjs/
+apps/sheetjs/node_modules/
