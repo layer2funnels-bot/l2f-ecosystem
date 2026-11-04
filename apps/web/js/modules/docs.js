@@ -439,16 +439,15 @@ export function docView({ api, id, ctx, opts = {} }) {
     const ovf = h('div', { class: 'dx-ovf' });
     const moreBtn = h('button', { type: 'button', class: 'dx-tb dx-more', 'aria-label': 'More formatting tools', 'aria-haspopup': 'dialog', title: 'More tools', hidden: true, onclick: () => pop(moreBtn, ovf, { role: 'dialog', label: 'More formatting tools' }) }, icon('more'));
     const toolbar = h('div', { class: 'dx-toolbar doctools', role: 'toolbar', 'aria-label': 'Formatting' },
-      undoBtn, redoBtn, sep(), styleSel, fontSel, sizeSel, sep(2),
-      markBtn('Bold', icon('bold'), 'b'), markBtn('Italic', icon('italic'), 'i'), markBtn('Underline', icon('under'), 'u'), markBtn('Strikethrough', h('s', {}, 'S'), 's', '', 2),
-      markBtn('Superscript', h('span', {}, 'x', h('sup', {}, '2')), 'sup', '', 2), markBtn('Subscript', h('span', {}, 'x', h('sub', {}, '2')), 'sub', '', 2), markBtn('Code', '</>', 'cd', 'dx-mono', 2),
-      colourBtn('Text colour', 'A', 'c', TEXT_COLOURS), colourBtn('Highlight colour', '▮', 'hl', HIGHLIGHTS),
-      tbtn('Clear formatting', 'T×', C(() => ed.clearFormat()), { pri: 2 }), sep(2),
-      alignBtn('l', 'Align left', '≡'), alignBtn('c', 'Centre', '☰'), alignBtn('r', 'Align right', '≣'), alignBtn('j', 'Justify', '▤'),
-      tbtn('Line and paragraph spacing', '↕', (b) => spacingPop(b), { pri: 2 }),
-      tbtn('Outdent', '⇤', C(() => ed.indent(-1)), { pri: 2 }), tbtn('Indent', '⇥', C(() => ed.indent(1)), { pri: 2 }), sep(2),
+      undoBtn, redoBtn, sep(), styleSel, fontSel, sizeSel, sep(),
+      markBtn('Bold', icon('bold'), 'b'), markBtn('Italic', icon('italic'), 'i'), markBtn('Underline', icon('under'), 'u'),
+      colourBtn('Text colour', 'A', 'c', TEXT_COLOURS), colourBtn('Highlight colour', '▮', 'hl', HIGHLIGHTS), sep(),
       tbtn('Bulleted list', icon('ul'), C(() => ed.toggleList('ul')), { key: 'list-ul' }), tbtn('Numbered list', '1.', C(() => ed.toggleList('ol')), { key: 'list-ol' }), tbtn('Checklist', '☑', C(() => ed.toggleList('cl')), { key: 'list-cl' }), sep(),
-      tbtn('Link', icon('link'), link, { key: 'link' }), tbtn('Picture', icon('imgI'), pickImage), tbtn('Table', icon('table'), (b) => tablePicker(b)), tbtn('Voice typing', '🎤', () => openVoice(), { key: 'voice' }), tbtn('Horizontal line', '—', C(() => ed.insertBlocks([{ t: 'hr' }])), { pri: 2 }),
+      tbtn('Link', icon('link'), link, { key: 'link' }), tbtn('Picture', icon('imgI'), pickImage), tbtn('Table', icon('table'), (b) => tablePicker(b)), tbtn('Voice typing', '🎤', () => openVoice(), { key: 'voice' }), sep(),
+      alignBtn('l', 'Align left', '≡'), alignBtn('c', 'Centre', '☰'), alignBtn('r', 'Align right', '≣'), alignBtn('j', 'Justify', '▤'),
+      tbtn('Line and paragraph spacing', '↕', (b) => spacingPop(b)), tbtn('Outdent', '⇤', C(() => ed.indent(-1))), tbtn('Indent', '⇥', C(() => ed.indent(1))), sep(),
+      markBtn('Strikethrough', h('s', {}, 'S'), 's'), markBtn('Superscript', h('span', {}, 'x', h('sup', {}, '2')), 'sup'), markBtn('Subscript', h('span', {}, 'x', h('sub', {}, '2')), 'sub'), markBtn('Code', '</>', 'cd', 'dx-mono'),
+      tbtn('Clear formatting', 'T×', C(() => ed.clearFormat())), tbtn('Horizontal line', '—', C(() => ed.insertBlocks([{ t: 'hr' }]))),
       moreBtn);
     const tbItems = [...toolbar.children].filter((x) => x !== moreBtn);
     function fitToolbar() {
@@ -574,7 +573,7 @@ export function docView({ api, id, ctx, opts = {} }) {
     function slashUpdate() {
       if (readOnly || mode === 'read') return closeSlash();
       const p = ed.getPos(); if (!p || p.s.b !== p.e.b || p.s.o !== p.e.o) return closeSlash();
-      const blk = page.children[p.s.b]; const m = blk && blk.tagName === 'P' ? /^\/([a-z0-9 ]{0,20})$/i.exec(blk.textContent) : null; if (!m || p.s.o !== blk.textContent.length) return closeSlash();
+      const blk = page.children[p.s.b]; const m = blk && (blk.tagName === 'P' || (blk.tagName === 'DIV' && !blk.className)) && !blk.dataset.t ? /^\/([a-z0-9 ]{0,20})$/i.exec(blk.textContent) : null; if (!m || p.s.o !== blk.textContent.length) return closeSlash();
       const q = m[1].toLowerCase(); const items = SLASH.filter((i) => i[0].toLowerCase().includes(q) || i[1].includes(q)); if (!items.length) return closeSlash();
       const idx = slash ? Math.min(slash.idx, items.length - 1) : 0; const rr = getSelection().getRangeAt(0).getBoundingClientRect(); const box = rr.width || rr.height ? rr : blk.getBoundingClientRect();
       const el = slash?.el ?? h('div', { class: 'dx-slash', role: 'listbox', 'aria-label': 'Insert a block' }); if (!slash) document.body.append(el);

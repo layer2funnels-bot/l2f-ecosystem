@@ -223,12 +223,12 @@ export function offsetIn(blk, node, offset) {
   return acc;
 }
 /** The DOM point for a character offset in a block. */
-export function pointIn(blk, offset) {
+export function pointIn(blk, offset, next = false) {
   if (isLeaf(blk)) return { node: blk.parentNode, offset: [...blk.parentNode.childNodes].indexOf(blk) };
   let acc = 0; const cs = containersOf(blk);
   for (let ci = 0; ci < cs.length; ci += 1) {
     const c = cs[ci]; const len = containerLength(c);
-    if (offset > acc + len && ci < cs.length - 1) { acc += len; continue; }
+    if ((offset > acc + len || (next && offset === acc + len && len > 0)) && ci < cs.length - 1) { acc += len; continue; }
     let need = Math.max(0, offset - acc); let at = null; let lastNl = false; let pos = 0;
     const cx = { root: c, skipLists: c.tagName === 'LI', paste: false, has: false, pending: false, count: 0, lastNewline: () => lastNl, found() {},
       text(n, s) { if (!at && need <= pos + s.length) at = { node: n, offset: need - pos }; pos += s.length; lastNl = s.endsWith('\n'); },
@@ -255,7 +255,7 @@ export function getPos(root) {
 export function setPos(root, pos) {
   if (!pos) return;
   const kids = [...root.children]; if (!kids.length) return;
-  const pt = (p) => pointIn(kids[Math.min(p.b, kids.length - 1)], p.o);
+  const pt = (p) => pointIn(kids[Math.min(p.b, kids.length - 1)], p.o, p.n);
   const a = pt(pos.s), b = pos.e === pos.s ? a : pt(pos.e);
   const r = root.ownerDocument.createRange();
   try { r.setStart(a.node, a.offset); r.setEnd(b.node, b.offset); } catch { return; }

@@ -187,7 +187,7 @@ export function createEditor(o) {
       else return null;
       const nb = { t: 'table', ...(hdr ? { hdr: 1 } : {}), ...(noBorders ? { nb: 1 } : {}), rows };
       const at = cellOffset(rows, row, col);
-      return { blocks: [nb], sel: { s: { b: pos.b0, o: at }, e: { b: pos.b0, o: at } } };
+      return { blocks: [nb], sel: { s: { b: pos.b0, o: at, n: true }, e: { b: pos.b0, o: at, n: true } } };
     }, { start: true });
   }
   function moveCell(dir) {
@@ -219,7 +219,7 @@ export function createEditor(o) {
   const MD_SPACE = { '#': { t: 'h1' }, '##': { t: 'h2' }, '###': { t: 'h3' }, '-': { list: 'ul' }, '*': { list: 'ul' }, '1.': { list: 'ol' }, '[]': { list: 'cl' }, '[ ]': { list: 'cl' }, '>': { t: 'quote' }, '```': { t: 'code' } };
   function markdown(trigger) {
     const p = getPos(page); if (!p || !same(p.s, p.e)) return false;
-    const blk = kids()[p.s.b]; if (!blk || blk.tagName !== 'P' || blk.dataset?.t) return false;
+    const blk = kids()[p.s.b]; if (!blk || !(blk.tagName === 'P' || (blk.tagName === 'DIV' && !blk.className)) || blk.dataset?.t) return false;
     const text = blk.textContent.replace(/\u200b/g, ''); if (p.s.o !== text.length || !text) return false;
     let make = null;
     if (trigger === ' ') { const r = MD_SPACE[text]; if (r) make = () => (r.list ? [{ t: 'list', items: [{ k: r.list, lv: 0, c: [] }] }] : [{ t: r.t, c: [] }]); }
@@ -232,7 +232,7 @@ export function createEditor(o) {
     if (!make) return false;
     const isTable = /^\|/.test(text.trim()) && trigger !== ' ';
     return mutate((models, _r, pos) => { const blocks = make(); const at = blocks.findIndex((x) => x.t === 'hp'); void at; const last = blocks.length - 1; const cellOff = isTable ? blocks[0].rows[0].reduce((n, c) => n + rlen(c.c), 0) : 0;
-      const bi = pos.b0 + (blocks[0].t === 'hr' ? 1 : 0); return { blocks, sel: { s: { b: bi, o: cellOff }, e: { b: bi, o: cellOff } } }; void last; }, { start: true });
+      const bi = pos.b0 + (blocks[0].t === 'hr' ? 1 : 0); return { blocks, sel: { s: { b: bi, o: cellOff, n: true }, e: { b: bi, o: cellOff, n: true } } }; void last; }, { start: true });
   }
 
   // ---- inserting content
@@ -353,6 +353,15 @@ export function createEditor(o) {
     if ((t === 'insertText' && e.data === ' ' && markdown(' ')) || (t === 'insertParagraph' && markdown('\n'))) { e.preventDefault(); return; }
     if (t === 'insertText' && pending && r && r.collapsed && !e.isComposing && e.data) {
       e.preventDefault(); const marks = pending.marks; pending = null; insertRuns([{ x: e.data, ...marks }]); return;
+    }
+    // leaving a list: Enter on an empty item, or Backspace at the start of an item (the browser would leave styled <font>/<span> debris that the page policy blocks)
+    if ((t === 'insertParagraph' || t === 'deleteContentBackward') && r && r.collapsed) {
+      const el0 = r.startContainer.nodeType === 1 ? r.startContainer : r.startContainer.parentElement; const li = el0?.closest('li');
+      if (li && page.contains(li)) {
+        const own = d.createRange(); own.selectNodeContents(li); own.setEnd(r.startContainer, r.startOffset);
+        const atStart = own.toString() === '' && !own.cloneContents().querySelector('br, ul'); const empty = !li.textContent.replace(/\u200b/g, '').trim() && !li.querySelector('ul');
+        if ((t === 'insertParagraph' && empty) || (t === 'deleteContentBackward' && atStart)) { e.preventDefault(); if (li.parentElement.closest('li')) indent(-1); else toggleList(li.dataset.k ?? 'ul'); return; }
+      }
     }
     if (t === 'insertParagraph' && r) {
       const el = r.startContainer.nodeType === 1 ? r.startContainer : r.startContainer.parentElement;

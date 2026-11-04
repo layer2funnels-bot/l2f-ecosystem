@@ -9,13 +9,13 @@ import { startFakeSupabaseStorage } from '../test/fakes/fake-supabase-storage.mj
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE ?? 'playwright');
 const SHOTS = process.env.SHOTS ?? '/tmp/claude-0/-home-user/ab44cf5d-5e81-5a14-b767-4c6a8e5c0226/scratchpad/docs'; mkdirSync(SHOTS, { recursive: true });
-const admin = new pg.Client({ connectionString: 'postgresql://supabase_admin:postgres@127.0.0.1:54322/postgres' }); await admin.connect();
+const admin = new pg.Client({ connectionString: 'postgresql://supabase_admin:postgres@127.0.0.1:54332/postgres' }); await admin.connect();
 const q = async (s, a = []) => (await admin.query(s, a)).rows;
 const stamp = Date.now(), PW = 'correct-horse-battery-staple';
-let seenP = 0; const results = []; const check = (id, name, ok, detail = '') => { if (problems.length > seenP) { console.log('  (console problem logged before', id, ')'); seenP = problems.length; } results.push({ id, name, ok: !!ok, detail }); console.log(`${ok ? 'PASS' : 'FAIL'}  ${id.padEnd(5)} ${name}${ok ? '' : `  [${detail}]`}`); };
+let seenP = 0, lastCsp = 0; const results = []; const check = (id, name, ok, detail = '') => { if (typeof page !== 'undefined') page.evaluate(() => window.__csp?.length ?? 0).then((n) => { if (n > lastCsp) { console.log('  (csp violation count', n, 'after', id, ')'); lastCsp = n; } }, () => {}); if (problems.length > seenP) { console.log('  (console problem logged before', id, ')'); seenP = problems.length; } results.push({ id, name, ok: !!ok, detail }); console.log(`${ok ? 'PASS' : 'FAIL'}  ${id.padEnd(5)} ${name}${ok ? '' : `  [${detail}]`}`); };
 
 const fake = await startFakeSupabaseStorage({ serviceKey: 'k' });
-const s = await startDevServer({ port: 0, sink: () => {}, extraConnect: fake.url, env: { ...LOCAL_ENV, ...process.env, STORAGE_DRIVER: 'supabase', STORAGE_URL: fake.url, STORAGE_SERVER_KEY: 'k', RATE_LIMIT_STORE: 'memory' },
+const s = await startDevServer({ port: 0, sink: () => {}, extraConnect: fake.url, env: { ...LOCAL_ENV, DATABASE_URL: 'postgresql://postgres:postgres@127.0.0.1:54332/postgres', ...process.env, STORAGE_DRIVER: 'supabase', STORAGE_URL: fake.url, STORAGE_SERVER_KEY: 'k', RATE_LIMIT_STORE: 'memory' },
   limits: { read: { max: 5000, windowMs: 60000 }, write: { max: 5000, windowMs: 60000 }, sensitive: { max: 500, windowMs: 60000 } } });
 const base = `http://127.0.0.1:${s.port}`;
 const b = await chromium.launch();
@@ -40,6 +40,7 @@ const v1 = JSON.stringify({ v: 1, blocks: [{ t: 'h1', c: [{ x: 'Quarterly plan' 
 const mkDoc = async (name, body) => { const id = (await q("insert into files (workspace_id, space, uploaded_by, name, kind, mime_type, size_bytes) values ($1,'shared',$2,$3,'document','application/vnd.l2f.doc+json',100) returning id", [L, uid, name]))[0].id; await q('insert into file_versions (workspace_id, file_id, body, note) values ($1,$2,$3,$4)', [L, id, body, 'first']); return id; };
 const docId = await mkDoc('Quarterly plan', v1);
 page.setDefaultTimeout(9000);
+await page.addInitScript(() => { window.SpeechRecognition = window.webkitSpeechRecognition = class { constructor() { window.__sr = this; } start() { this.onstart?.(); } stop() { this.onend?.(); } abort() {} emit(text, final = true) { const r = [{ transcript: text, confidence: 1 }]; const res = [Object.assign(r, { isFinal: final })]; this.onresult?.({ resultIndex: 0, results: res }); } }; });
 await page.addInitScript(() => { window.__csp = []; document.addEventListener('securitypolicyviolation', (e) => window.__csp.push(`${e.violatedDirective} ${e.sourceFile?.split('/').pop()}:${e.lineNumber}:${e.columnNumber} sample=${e.sample}`)); });
 process.on('uncaughtException', async (e) => { console.log('FATAL', String(e.message).split('\n')[0], problems.slice(0, 2), await page.evaluate(() => window.__csp?.slice(0, 5)).catch(() => 'n/a')); try { await page.screenshot({ path: `${SHOTS}/fail.png` }); } catch {} process.exit(1); });
 const ed = page.locator('.docpage'); const wait = (t, ms = 12000) => page.waitForSelector(`text=${t}`, { timeout: ms }).catch(async (e) => { console.log('WAIT FAILED', t, problems.slice(0, 5)); await page.screenshot({ path: `${SHOTS}/fail.png` }); throw e; });
@@ -231,6 +232,90 @@ const bigSaved = await stored(bigDoc);
 check('W51', 'A document of about 400,000 characters saves (the old 200,000 limit is gone) and the status bar shows the space left', bigSaved.v === 2 && JSON.stringify(bigSaved.doc).length > 300000 && /Space left/.test(await page.locator('.dx-space').innerText()), String(JSON.stringify(bigSaved.doc).length));
 await page.goto(`${base}/#/doc/${docId}`); await wait('Budget');
 
+// ---- easy blocks: slash menu, markdown shortcuts, table grid, table toolbar, convert text to table
+const play = await mkDoc('Playground', JSON.stringify({ v: 2, tabs: [{ id: 'p1', title: 'Main', blocks: [{ t: 'p', c: [] }], children: [] }] }));
+await page.goto(`${base}/#/doc/${play}`); await page.waitForFunction(() => document.querySelector('.docpage')); await page.waitForTimeout(500);
+await ed.click(); await page.keyboard.type('/head');
+check('W56', 'Typing / at the start of a line opens the block menu and filters it as you type', (await page.locator('.dx-slash [role=option]').allInnerTexts()).join().includes('Heading 1') && (await page.locator('.dx-slash [role=option]').count()) === 3);
+await shot('13-slash-1366');
+await page.keyboard.press('Enter'); await page.keyboard.type('Plan');
+check('W57', 'Enter chooses the first match: the line becomes Heading 1 and the slash text is gone', (await ed.locator('h1').innerText()) === 'Plan');
+await page.keyboard.press('Enter');
+await page.keyboard.type('## '); await page.keyboard.type('Second'); await page.keyboard.press('Enter');
+await page.keyboard.type('- '); await page.keyboard.type('bullet'); await page.keyboard.press('Enter'); await page.keyboard.press('Enter');
+await page.keyboard.type('[] '); await page.keyboard.type('todo'); await page.keyboard.press('Enter'); await page.keyboard.press('Enter');
+await page.keyboard.type('--- '.trim()); await page.keyboard.press('Enter');
+check('W58', 'Markdown shortcuts: "## " heading, "- " bullet, "[] " checklist, "---" + Enter divider', (await ed.locator('h2').innerText()) === 'Second' && (await ed.locator('li[data-k=ul]').count()) >= 1 && (await ed.locator('li[data-k=cl]').count()) === 1 && (await ed.locator('hr').count()) === 1);
+await page.keyboard.type('| Name | Role |'); await page.keyboard.press('Enter'); await page.keyboard.type('Ann'); await page.keyboard.press('Tab'); await page.keyboard.type('Lead');
+check('W59', 'Typing | Name | Role | and Enter makes a table with that header row; the caret moves to the first cell below and Tab moves along', (await ed.locator('table th').allInnerTexts()).join() === 'Name,Role' && (await ed.locator('table tr').nth(1).innerText()).replace(/\s+/g, ' ').includes('Ann') && (await ed.locator('table tr').nth(1).innerText()).includes('Lead'), await ed.innerHTML().then((x) => x.slice(-600)));
+
+check('W60', 'A floating table toolbar shows while the caret is in the table', await page.locator('.dx-tbar').isVisible());
+await shot('14-table-bar-1366');
+await page.getByRole('button', { name: 'Insert row below' }).click();
+check('W61', 'Row ↓ on the floating toolbar adds a row', (await ed.locator('table tr').count()) === 3);
+await page.getByRole('button', { name: 'Cell colour' }).click(); await page.locator('.dx-pop .dx-sw').nth(0).click();
+check('W62', 'Cell colour sets a background on the cell and it is stored in the model', (await ed.locator('table td, table th').evaluateAll((c) => c.some((x) => x.style.backgroundColor !== ''))) === true);
+await page.getByRole('button', { name: 'Borders on or off' }).click(); check('W63', 'Borders can be switched off', (await ed.locator('table[data-nb]').count()) === 1);
+await page.keyboard.press('Control+End'); await page.keyboard.press('Enter'); await page.keyboard.type('x,y');
+await page.keyboard.press('Enter'); await page.keyboard.type('1,2'); await page.keyboard.press('Shift+ArrowUp');
+await menu('Insert', 'Convert selected text to table');
+check('W64', 'Convert text to table turns comma-separated lines into a table', (await ed.locator('table').count()) >= 2, await ed.innerHTML().then((x) => x.slice(-500)));
+await page.keyboard.press('Control+End'); await ed.click(); await page.keyboard.press('Control+End'); await page.keyboard.press('Enter');
+const chooser2 = null; void chooser2;
+await page.locator('button[aria-label="Table"]').click(); await page.locator('.dx-gc').nth(23).hover();
+check('W65', 'The Table button opens a size grid; hovering shows the size', (await page.locator('.dx-gridinfo').innerText()).includes('3 × 4'));
+await page.locator('.dx-gc').nth(23).click();
+check('W66', 'Clicking a grid square inserts a 3 × 4 table', (await ed.locator('table').last().locator('tr').count()) === 3 && (await ed.locator('table').last().locator('tr').first().locator('th,td').count()) === 4);
+
+// ---- fonts
+await page.keyboard.press('Control+Home'); await page.keyboard.press('Shift+End');
+const fontOpts = await page.locator('select[aria-label="Font"] option').allInnerTexts();
+check('W67', 'The font list has the new families (Inter, Roboto, Lora, Playfair Display, Courier Prime, Naskh…) in groups', ['Inter', 'Roboto', 'Open Sans', 'Lato', 'Montserrat', 'Poppins', 'Nunito', 'Raleway', 'Oswald', 'Merriweather', 'Lora', 'Playfair Display', 'Source Serif 4', 'Libre Baskerville', 'Courier Prime'].every((f) => fontOpts.includes(f)) && fontOpts.some((f) => /Naskh/.test(f)));
+await page.locator('select[aria-label="Font"]').selectOption('playfair');
+await page.waitForFunction(() => [...document.fonts].some((f) => f.family.includes('Playfair') && f.status === 'loaded'), null, { timeout: 8000 }).catch(() => {});
+check('W68', 'Choosing a font applies it and the self-hosted font file loads on use', (await ed.locator('[data-f=playfair]').count()) >= 1 && (await page.evaluate(() => [...document.fonts].some((f) => f.family.includes('Playfair') && f.status === 'loaded'))), `${await ed.locator('[data-f=playfair]').count()} spans; ${await page.evaluate(() => [...document.fonts].filter((f) => f.family.includes('Playfair')).map((f) => f.status).join())}`);
+
+// ---- voice typing (a fake speech recogniser stands in for the browser's)
+await menu('Tools', 'Voice typing and transcripts…'); await page.waitForSelector('.dx-voice:not([hidden])');
+await ed.click(); await page.keyboard.press('Control+End'); await page.keyboard.press('Enter'); await page.keyboard.press('Enter');
+await page.getByRole('button', { name: /Start/ }).click(); await page.waitForFunction(() => window.__sr);
+await page.evaluate(() => window.__sr.emit('hello comma this is a test full stop new paragraph second part', true));
+await page.waitForTimeout(250);
+const body1 = await ed.innerText();
+check('W69', 'Voice typing inserts the spoken text at the cursor with spoken punctuation and a new paragraph', /Hello, this is a test\./.test(body1) && /Second part/.test(body1));
+await page.evaluate(() => window.__sr.emit('this is interim', false)); await page.waitForTimeout(100);
+check('W70', 'Interim text is shown greyed in the panel, not in the document', (await page.locator('.dx-vint').innerText()).includes('this is interim') && !(await ed.innerText()).includes('this is interim'));
+await page.evaluate(() => window.__sr.emit('', false));
+await page.locator('.dx-voice select[aria-label="Speech language"]').selectOption('ur-PK'); await page.keyboard.press('Escape');
+await ed.click(); await page.keyboard.press('Control+End'); await page.keyboard.press('Enter');
+await page.evaluate(() => window.__sr.emit('یہ ایک آزمائش ہے', true)); await page.waitForTimeout(250);
+check('W71', 'Urdu is inserted as a right-to-left paragraph in the Nastaliq font', (await ed.locator('[dir=rtl] [data-f=nastaliq]').count()) >= 1);
+await page.locator('.dx-voice button[data-m=talk]').click(); await page.locator('.dx-voice select[aria-label="Speech language"]').selectOption('en-US');
+await page.keyboard.press('Control+End'); await ed.click(); await page.keyboard.press('Control+End'); await page.keyboard.press('Enter'); await page.keyboard.press('Enter');
+await page.getByRole('button', { name: /Rename Person 1/ }).click(); await page.fill('#dx-sn', 'Ann'); await page.getByRole('button', { name: 'Save', exact: true }).last().click();
+await page.getByRole('button', { name: /Stop/ }).click().catch(() => {}); await page.getByRole('button', { name: /Start/ }).click();
+await page.evaluate(() => window.__sr.emit('good morning everyone', true)); await page.waitForTimeout(200);
+await page.keyboard.press('Alt+2'); await page.evaluate(() => window.__sr.emit('thanks for joining', true)); await page.waitForTimeout(200);
+const tr = await ed.innerText();
+check('W72', 'Conversation mode: each utterance becomes a line "Name (hh:mm:ss): text" with the chosen speaker; speakers are renamable and Alt+2 switches', /Ann \(00:00:\d\d\): Good morning everyone/.test(tr) && /Person 2 \(00:00:\d\d\): Thanks for joining/.test(tr) && /Conversation transcript/.test(tr), tr.slice(-260));
+check('W73', 'The panel is honest that voices cannot be recognised automatically and warns about the browser vendor’s speech service', /cannot tell voices apart/.test(await page.locator('.dx-voice').innerText()) && /may be sent to the browser maker/.test(await page.locator('.dx-voice').innerText()));
+await shot('15-voice-transcript-1366');
+await page.getByRole('button', { name: /Stop/ }).click(); await page.getByRole('button', { name: 'Close voice panel' }).click();
+
+// ---- more download formats
+const dl2 = async (item) => { const p = page.waitForEvent('download'); await page.getByRole('menuitem', { name: 'File', exact: true }).click(); await page.getByRole('menuitem', { name: 'Download as' }).click(); await page.getByRole('menuitem', { name: item }).first().click(); const d = await p; return { name: d.suggestedFilename(), data: readFileSync(await d.path()) }; };
+const odt = await dl2(/OpenDocument text/); const rtf = await dl2(/Rich Text/); const epub = await dl2(/EPUB/); const zipf = await dl2(/Web page with pictures/);
+check('W74', 'ODT is a zip whose first entry is the uncompressed mimetype and has content.xml and styles.xml', odt.name.endsWith('.odt') && odt.data.slice(0, 2).toString() === 'PK' && odt.data.slice(30, 38).toString() === 'mimetype' && odt.data.includes('content.xml') && odt.data.includes('application/vnd.oasis.opendocument.text'));
+check('W75', 'RTF starts with {\\rtf1 and carries the text, the table and the heading size', rtf.data.slice(0, 6).toString() === '{\\rtf1' && /Playground|Plan/.test(rtf.data.toString('latin1')) && rtf.data.toString('latin1').includes('\\trowd'));
+check('W76', 'EPUB is a zip with the mimetype first, a package file and a chapter per tab', epub.name.endsWith('.epub') && epub.data.slice(30, 38).toString() === 'mimetype' && epub.data.includes('content.opf') && epub.data.includes('ch1.xhtml'));
+check('W77', 'Web page zip contains index.html', zipf.name.endsWith('.zip') && zipf.data.includes('index.html'));
+const mdFile = { name: 'notes.md', mimeType: 'text/markdown', buffer: Buffer.from('# Imported\n\nHello **world** and [link](https://example.com).\n\n- a\n- b\n') };
+const fc2 = page.waitForEvent('filechooser'); await menu('File', 'Open file (.docx, .md, .txt, .html)…'); await (await fc2).setFiles(mdFile);
+await page.waitForTimeout(500); const rep2 = page.getByRole('button', { name: 'Replace', exact: true }); if (await rep2.count()) await rep2.click(); await page.waitForTimeout(400);
+check('W78', 'Open a Markdown file: heading, bold text, link and list arrive', (await ed.locator('h1').innerText()) === 'Imported' && (await ed.locator('strong').innerText()) === 'world' && (await ed.locator('a[href="https://example.com/"]').count()) === 1 && (await ed.locator('li').count()) === 2);
+await page.keyboard.press('Control+s'); await saved();
+
+await page.goto(`${base}/#/doc/${docId}`); await wait('Budget');
 // ---- responsive + themes screenshots
 for (const [w2, h2, n] of [[1366, 900, '1366'], [768, 1000, '768'], [390, 844, '390']]) {
   await page.setViewportSize({ width: w2, height: h2 }); await page.waitForTimeout(400); await page.locator('.dx-tabbtn', { hasText: 'Tab 1' }).click(); await page.waitForTimeout(300);
