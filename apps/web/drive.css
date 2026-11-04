@@ -169,3 +169,4 @@
 .drv-newlink{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;padding:12px;border-radius:12px;background:var(--action-tint)}.drv-newlink input{min-height:44px;min-width:0;padding:0 10px;border:var(--bw) solid var(--line2);border-radius:10px;background:var(--surface);color:var(--text);font:13px var(--mono)}.drv-newlink p{grid-column:1/-1;margin:0}
 .drv-lockbox{margin-top:var(--space-5);padding-top:var(--space-4);border-top:var(--bw) solid var(--line)}
 .drv-share{margin-top:var(--space-3)}
+.drv-tbl td a[href]{min-height:44px;box-sizing:border-box}
