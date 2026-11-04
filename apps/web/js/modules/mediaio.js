@@ -53,6 +53,15 @@ export async function versionsDrawer({ api, file, current, readOnly, canRestore,
     x.version === current() || readOnly || !canRestore ? null : btn('Restore as new', () => restore(x.version), ''))));
   close = drawer({ title: 'History', body: [h('p', { class: 'fine muted' }, 'Restoring never deletes anything: it saves the old version as a new one.'), list] });
 }
+/** "Autosave" choice, remembered in this browser (on unless switched off). */
+export const autosavePref = { get() { try { return localStorage.getItem('l2f.media.autosave') !== '0'; } catch { return true; } }, set(on) { try { localStorage.setItem('l2f.media.autosave', on ? '1' : '0'); } catch { /* private mode: lasts for this page only */ } } };
+/** Saves a new version after a short idle time once the person has edited. Each autosave is a stored version, so it is slow on purpose (idle, and not more often than minMs). */
+export function createAutosave({ ok, busy, run }) {
+  let t = 0, last = 0;
+  const idle = () => (typeof window !== 'undefined' && Number(window.__AUTOSAVE_MS)) || 8000;
+  const kick = () => { clearTimeout(t); if (!ok()) return; const wait = Math.max(idle(), last + idle() * 2.5 - Date.now()); t = setTimeout(async () => { if (!ok()) return; if (busy()) { kick(); return; } last = Date.now(); await run(); }, wait); };
+  return { kick, cancel: () => clearTimeout(t) };
+}
 /** Hand a blob to the browser as a download. */
 export function downloadBlob(blob, name) {
   const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = name; a.rel = 'noopener'; document.body.append(a); a.click(); a.remove();

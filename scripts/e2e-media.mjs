@@ -36,13 +36,13 @@ const s = await startDevServer({ port: 0, sink: process.env.DEBUG_MEDIA ? (e) =>
   limits: { read: { max: 5000, windowMs: 60000 }, write: { max: 5000, windowMs: 60000 }, sensitive: { max: 500, windowMs: 60000 } } });
 const base = `http://127.0.0.1:${s.port}`;
 const b = await chromium.launch(); const problems = [];
-process.on('uncaughtException', (e) => { console.log('FATAL', e.message.split('\n')[0]); console.log('PROBLEMS', problems.slice(0, 6).join(' | ')); process.exit(1); });
+process.on('uncaughtException', (e) => { console.log('FATAL', e.message.split('\n').slice(0, 4).join(' | '), (e.stack || '').split('\n').find((l) => l.includes('e2e-media'))); console.log('PROBLEMS', problems.slice(0, 6).join(' | ')); process.exit(1); });
 const newPage = async (viewport = { width: 1366, height: 860 }) => { const c = await b.newContext({ viewport }); const p = await c.newPage(); if (process.env.DEBUG_MEDIA) { p.on('requestfailed', (r) => console.log('REQFAIL', r.method(), r.url().slice(0, 140), r.failure()?.errorText)); p.on('response', async (r) => { if (r.status() >= 400) console.log('HTTP', r.status(), r.url().slice(0, 140), (await r.text().catch(() => '')).slice(0, 200), r.request().postData()?.slice(0, 300)); }); }
   p.on('console', (m) => { if (process.env.DEBUG_MEDIA && /pdf build/.test(m.text())) console.log('BUILDERR', m.text(), m.args().length); }); p.on('pageerror', (e) => problems.push(`page: ${e.message.slice(0, 160)}`)); p.on('console', (m) => { const t = m.text(); if (/Content Security Policy|violates|Refused to/i.test(t)) problems.push(`csp: ${t.slice(0, 200)}`); }); return p; };
 const text = (p) => p.locator('body').innerText();
 const until = (p, t, ms = 15000) => p.waitForSelector(`text=${t}`, { timeout: ms });
 async function signUp(p, name, email) { await p.goto(`${base}/#/signup`); await p.reload(); await p.waitForSelector('#nm', { timeout: 9000 }); await p.fill('#nm', name); await p.fill('#em', email); await p.fill('#pw', PW); await p.click('button[type=submit]'); }
-const menu = async (p, top, item) => { await p.locator('.edx-mb', { hasText: top }).first().click(); await p.getByRole('menuitem', { name: item }).first().click(); };
+const menu = async (p, top, item) => { await p.locator('.edx-mb', { hasText: top }).first().click(); await p.locator('.edx-menu button', { hasText: item }).first().click(); };
 const shot = async (p, name) => { await p.screenshot({ path: `${SHOTS}/${name}.png` }); };
 
 // ---- setup: an owner and a viewer of Layer2Funnels with Drive on
@@ -213,6 +213,39 @@ const outsiderMail = `out.${stamp}@example.com`; const xp = await newPage(); awa
 await xp.goto(`${base}/#/pdf/${pdfId}`); await xp.reload(); await xp.waitForTimeout(3000);
 check('MG39', 'Someone outside the organization gets the no-access screen, not the file', !(await text(xp)).includes(pdfName) && (await xp.locator('.px-page').count()) === 0);
 check('MG40', 'No script errors and no page-policy violations in any browser', problems.length === 0, problems.slice(0, 4).join(' | '));
+
+// ================================================================= autosave (ADDENDUM 4): a new version after a short idle period once edited
+{
+  const aPng = await upload(op, `auto-${stamp}.png`, 'image/png', png(60, 40)), aGif = await upload(op, `auto-${stamp}.gif`, 'image/gif', Buffer.from('R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==', 'base64')), aPdf = await upload(op, `auto-${stamp}.pdf`, 'application/pdf', await pdf(['Autosave page']));
+  const ver = async (id) => (await q('select current_version v from files where id=$1', [id]))[0].v;
+  const notes = async (id) => (await q('select note from file_versions where file_id=$1 order by version', [id])).map((r) => r.note);
+  const loginAuto = async () => { const x = await newPage(); await x.addInitScript(() => { window.__AUTOSAVE_MS = 1500; }); await x.goto(`${base}/#/signin`); await x.reload(); await x.waitForSelector('#em'); await x.fill('#em', ownerMail); await x.fill('#pw', PW); await x.click('button[type=submit]'); await x.waitForTimeout(2500); return x; };
+  let ap = await loginAuto();
+  const stroke = async () => { await ap.locator('.ix-tool[title^="Draw"]').click(); const bx = await ap.locator('.ix-cv').boundingBox(); await ap.mouse.move(bx.x + bx.width * 0.2, bx.y + bx.height * 0.3); await ap.mouse.down(); await ap.mouse.move(bx.x + bx.width * 0.7, bx.y + bx.height * 0.6, { steps: 5 }); await ap.mouse.up(); };
+  await ap.goto(`${base}/#/image/${aPng}`); await ap.reload(); await ap.waitForSelector('.ix-cv', { timeout: 15000 }); await ap.waitForTimeout(500);
+  await stroke(); await ap.waitForFunction(() => /Unsaved/.test(document.body.innerText), null, { timeout: 4000 });
+  await ap.waitForFunction(() => /Saved \d/.test(document.querySelector('.docstate')?.textContent ?? ''), null, { timeout: 12000 }).catch(() => {});
+  check('MG41', 'Image: after an edit and a short pause a new version is saved by itself, marked "Autosave", and the status shows Saved', (await ver(aPng)) === 2 && (await notes(aPng))[1] === 'Autosave' && /Saved/.test(await ap.locator('.docstate').innerText()), JSON.stringify(await notes(aPng)));
+  await menu(ap, 'File', 'Autosave'); const flag = await ap.evaluate(() => localStorage.getItem('l2f.media.autosave'));
+  await stroke(); await ap.waitForTimeout(4500);
+  check('MG42', 'Image: with Autosave switched off nothing is saved by itself, the choice is remembered in this browser, and the page still says "Unsaved changes"', flag === '0' && (await ver(aPng)) === 2 && /Unsaved/.test(await ap.locator('.docstate').innerText()));
+  await ap.reload(); await ap.waitForSelector('.ix-cv', { timeout: 15000 });
+  await ap.locator('.edx-mb', { hasText: 'File' }).click(); const checked = await ap.getByRole('menuitemcheckbox', { name: 'Autosave' }).getAttribute('aria-checked'); await ap.keyboard.press('Escape');
+  check('MG43', 'Image: the Autosave choice survives a reload (still off)', checked === 'false');
+  await menu(ap, 'File', 'Autosave'); await stroke(); await ap.waitForFunction(() => /Saved \d/.test(document.querySelector('.docstate')?.textContent ?? ''), null, { timeout: 12000 }).catch(() => {});
+  check('MG44', 'Image: switching Autosave back on saves the next edit by itself (version 3)', (await ver(aPng)) === 3);
+  await ap.goto(`${base}/#/image/${aGif}`); await ap.reload(); await ap.waitForSelector('.ix-cv', { timeout: 15000 }); await ap.waitForTimeout(500); await stroke(); await ap.waitForTimeout(4500);
+  await ap.locator('.edx-mb', { hasText: 'File' }).click(); const gifDisabled = await ap.getByRole('menuitemcheckbox', { name: 'Autosave' }).isDisabled(); await ap.keyboard.press('Escape');
+  check('MG45', 'Image: a GIF is never autosaved over itself (still version 1, menu item disabled)', (await ver(aGif)) === 1 && gifDisabled);
+  await ap.evaluate(() => localStorage.removeItem('l2f.media.autosave')); await ap.context().close(); ap = await loginAuto();
+  await ap.goto(`${base}/#/pdf/${aPdf}`); await ap.reload(); await ap.waitForSelector('.px-page canvas', { timeout: 20000 }); await ap.waitForTimeout(800);
+  const pb2 = await ap.locator('.px-page').first().boundingBox(); await ap.locator('.px-tool[title^="Text"]').click(); await ap.mouse.click(pb2.x + 120, pb2.y + 200); await ap.waitForSelector('.px-entry'); await ap.fill('.px-entry', 'Auto note'); await ap.keyboard.press('Control+Enter');
+  await ap.waitForFunction(() => /Saved \d/.test(document.querySelector('.docstate')?.textContent ?? ''), null, { timeout: 15000 }).catch(() => {});
+  check('MG46', 'PDF: after an edit and a short pause a new version is saved by itself, marked "Autosave"; the page and the edit stay on screen', (await ver(aPdf)) === 2 && (await notes(aPdf))[1] === 'Autosave' && (await ap.locator('.px-page').first().locator('.px-a').count()) === 1, JSON.stringify(await notes(aPdf)));
+  await menu(ap, 'File', 'Autosave'); await ap.locator('.px-tool[title^="Select"]').click(); await ap.locator('.px-page').first().locator('.px-a').first().click(); await ap.keyboard.press('Delete'); await ap.waitForTimeout(4500);
+  check('MG47', 'PDF: with Autosave off the next edit is not saved by itself', (await ver(aPdf)) === 2 && /Unsaved/.test(await ap.locator('.docstate').innerText()));
+  await ap.evaluate(() => localStorage.removeItem('l2f.media.autosave'));
+}
 
 // ================================================================= screenshot matrix (SHOTS_MATRIX=1): both editors, 1366 / 768 / 390, light and dark, inside the real app shell
 if (process.env.SHOTS_MATRIX) {
