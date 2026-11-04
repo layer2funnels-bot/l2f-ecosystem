@@ -155,6 +155,8 @@ await p.reload(); await p.waitForSelector('.dgrid', { timeout: 12000 });
 check('DR19', 'The chosen view is remembered after a reload', (await p.locator('.dgrid').count()) === 1 && (await p.getByRole('button', { name: 'Grid view' }).getAttribute('aria-pressed')) === 'true');
 await p.getByRole('button', { name: 'List view' }).click(); await p.waitForSelector('.drv-tbl');
 check('DR20', 'The list view comes back with the switch', (await p.locator('.dgrid').count()) === 0);
+check('DR20b', 'Folders are listed once (no separate chip section), have a checkbox like files, and can be selected for Move / Move to Trash', (await p.locator('.dfolders').count()) === 0 && (await p.locator('tr[data-item] .drv-pick').count()) === (await p.locator('tr[data-item]').count()) && await (async () => { await p.locator(`tr[data-item]:has(a[href*="/f/"]) .drv-pick`).first().check(); return (await p.locator('.drv-sel').getByRole('button', { name: 'Move to Trash' }).count()) === 1; })());
+await p.locator('.drv-sel').getByRole('button', { name: 'Clear' }).click();
 
 // ---- menu, details, phone layout
 await p.getByRole('button', { name: `Actions for ${PDF}` }).click(); await p.getByRole('button', { name: 'Details' }).click(); await p.waitForSelector('.drv-dl');
