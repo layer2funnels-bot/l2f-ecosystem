@@ -389,7 +389,7 @@ async function render(opts = {}) {
   theme.setOrg(org);
   const role = org.role; const isAdmin = role === 'owner' || role === 'admin';
   const c = {
-    api, orgName: org.name, userName: session.get()?.name, clients: ctx.clients, catalog: ctx.catalog, live, announce, go, guard, rerender: () => render(),
+    api, orgName: org.name, isOwner: role === 'owner', userId: session.get()?.userId, userName: session.get()?.name, clients: ctx.clients, catalog: ctx.catalog, live, announce, go, guard, rerender: () => render(),
     can: (p, clientId) => canWith(ctx.mine, p, clientId), canAnywhere: (p) => canAnywhereWith(ctx.mine, p),
     clientsWhere: (p) => [...ctx.clients].filter(([cid]) => canWith(ctx.mine, p, cid)),
   };
@@ -427,7 +427,7 @@ async function render(opts = {}) {
       case 'ladder': content = ladderView({ api, ctx: c, route: { view: route.params.view, id: route.params.id, query: route.query } }); break;
       case 'forms': content = formsView({ api, ctx: c, route: { view: route.params.view, id: route.params.id } }); break;
       case 'portal': content = portalView({ api, ctx: c, route: { client: route.params.client, page: route.params.page } }); break;
-      case 'drive': content = driveView({ api, ctx: c, route: { view: route.params.view, space: route.params.space, folder: route.params.folder } }); break;
+      case 'drive': content = driveView({ api, ctx: c, route: { view: route.params.view, space: route.params.space, folder: route.params.folder, token: route.params.token } }); break;
       case 'sheet': content = sheetView({ api, id: route.params.id, ctx: c }); break;
       case 'image': content = imageView({ api, id: route.params.id, ctx: c }); break;
       case 'pdf': content = pdfView({ api, id: route.params.id, ctx: c }); break;

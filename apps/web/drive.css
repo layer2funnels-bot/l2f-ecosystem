@@ -156,3 +156,16 @@
 .lb-img{min-width:min(240px,60vw);min-height:min(240px,60vw);image-rendering:auto}
 @media (max-width:620px){.drv-starbtn .lbl{display:none}.drv-starbtn{width:44px;padding:0;flex:none}.drv-tools .drv-modes{margin-left:0}}
 @media (max-width:760px){.drv-main{padding-bottom:96px}}
+
+/* ---- sharing, lock, password */
+.drv-lock{display:inline-grid;flex:none;color:var(--warn)}.drv-lock svg{width:15px;height:15px}.drv-lock.pw{color:var(--text2)}
+.drv-gate{max-width:440px;margin:var(--space-6) auto;padding:var(--space-6) var(--space-4)}.drv-gate .ftile.lg{width:56px;height:56px;border-radius:16px}.drv-gate .ftile.lg svg{width:26px;height:26px}
+.drv-gate-f{display:grid;gap:var(--space-3);width:100%;text-align:left}.drv-gate-f .fld,.drv-gate-f .field{width:100%}.drv-gate #dp-msg{min-height:22px;color:var(--danger);margin:0}
+.drv-gate-wrap{display:grid;place-items:center}
+.drv-share{display:grid;gap:var(--space-5)}.drv-share h3{margin:0 0 var(--space-2);font:700 16px var(--font-d)}
+.drv-share-add{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;margin:var(--space-2) 0}.drv-share-add select{flex:1 1 180px;min-height:44px;max-width:100%;padding:0 10px;border:var(--bw) solid var(--line2);border-radius:12px;background:var(--surface);color:var(--text)}
+.drv-share-list{list-style:none;margin:var(--space-2) 0 0;padding:0}.drv-share-list li{display:flex;align-items:center;gap:10px;min-height:52px;border-bottom:var(--bw) solid var(--line)}.drv-share-list li:last-child{border-bottom:0}
+.drv-share-list .sh-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.drv-share-list select{min-height:44px;padding:0 8px;border:var(--bw) solid var(--line2);border-radius:10px;background:var(--surface);color:var(--text)}
+.drv-newlink{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;padding:12px;border-radius:12px;background:var(--action-tint)}.drv-newlink input{min-height:44px;min-width:0;padding:0 10px;border:var(--bw) solid var(--line2);border-radius:10px;background:var(--surface);color:var(--text);font:13px var(--mono)}.drv-newlink p{grid-column:1/-1;margin:0}
+.drv-lockbox{margin-top:var(--space-5);padding-top:var(--space-4);border-top:var(--bw) solid var(--line)}
+.drv-share{margin-top:var(--space-3)}
