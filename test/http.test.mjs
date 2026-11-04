@@ -66,7 +66,7 @@ let res = await call('/api/launcher.list');
 let b = await res.json();
 check('H1', 'A signed-in POST reaches the API with identity from the token and org from the header', res.status === 200 && seen[0].auth.userId === U && seen[0].headers['x-org-id'] === ORG && seen[0].operation === 'launcher.list' && b.ok);
 check('H2', 'Security headers: no-store, nosniff, no CORS, request id', res.headers.get('cache-control') === 'no-store' && res.headers.get('x-content-type-options') === 'nosniff' && !res.headers.get('access-control-allow-origin') && res.headers.get('x-request-id') === 'req_1');
-const n0 = seen.length;
+let n0 = seen.length;
 res = await call('/api/launcher.list', { headers: { authorization: 'Bearer abc.def.ghi' } }); b = await res.json();
 check('H3', 'A bad token is 401 session_expired and never reaches the API', res.status === 401 && b.error.code === 'session_expired' && seen.length === n0);
 res = await call('/api/launcher.list', { headers: { authorization: '' } });
@@ -77,6 +77,10 @@ res = await call('/api/launcher.list', { body: '{not json' });
 check('H6', 'Broken JSON is refused with a plain message', res.status === 400 && (await res.json()).error.code === 'bad_request' && seen.length === n0);
 res = await call('/api/launcher.list', { body: JSON.stringify({ x: 'a'.repeat(20000) }) });
 check('H7', 'Bodies over 16 KB are refused', res.status === 400 && seen.length === n0);
+{ const before = seen.length; res = await call('/api/drive.files.versions.add', { body: JSON.stringify({ id: '00000000-0000-0000-0000-000000000000', body: 'a'.repeat(300000) }) });
+  check('H7b', 'Saving a long document (300,000 characters) passes the size check and reaches the operation; other operations keep the 16 KB limit', res.status !== 400 && seen.length === before + 1); }
+{ const before = seen.length; res = await call('/api/drive.files.versions.add', { body: JSON.stringify({ body: 'a'.repeat(4300000) }) });
+  check('H7c', 'Even a document save is refused above 4 MB', res.status === 400 && seen.length === before); n0 = seen.length; }
 res = await call('/api/launcher.list', { method: 'GET' });
 check('H8', 'Only POST is allowed on operations', res.status === 405 && res.headers.get('allow') === 'POST');
 res = await call('/api/launcher.list', { headers: { origin: 'https://evil.example' } });

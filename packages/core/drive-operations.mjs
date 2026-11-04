@@ -97,7 +97,7 @@ const fileOps = [
     // a file (bytes already uploaded to the signed address, path given) or a first-party document (text given); version 1 is created with it
     name: 'drive.files.create', class: 'write', single: true,
     input: { space: SPACE, client: { type: 'uuid' }, folder: { type: 'uuid' }, project: { type: 'uuid' }, name: NAME, kind: { type: 'enum', values: ['file', 'document'], required: true }, mime_type: T(120), size_bytes: { type: 'int', min: 0 },
-      storage_path: T(600), body: T(200000), note: T(300), app: { type: 'enum', values: APPS } },
+      storage_path: T(600), body: T(1000000), note: T(300), app: { type: 'enum', values: APPS } },
     run: async (q, ctx, i) => {
       if (i.kind === 'file' && (!i.storage_path || i.body !== undefined)) throw bad('a file needs the path of its stored copy');
       if (i.kind === 'document' && (i.body === undefined || i.storage_path)) throw bad('a document needs its text');
@@ -109,7 +109,7 @@ const fileOps = [
     },
   }),
   defineOperation({
-    name: 'drive.files.versions.add', class: 'write', single: true, input: { ...id, storage_path: T(600), body: T(200000), size_bytes: { type: 'int', min: 0 }, note: T(300), expected: { type: 'int', min: 1 } },
+    name: 'drive.files.versions.add', class: 'write', single: true, input: { ...id, storage_path: T(600), body: T(1000000), size_bytes: { type: 'int', min: 0 }, note: T(300), expected: { type: 'int', min: 1 } },
     run: async (q, ctx, i) => {
       const [f] = await q('select kind, current_version from files where id = $1', [i.id]);
       if (!f) return [];
