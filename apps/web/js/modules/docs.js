@@ -385,7 +385,7 @@ export function docView({ api, id, ctx, opts = {} }) {
     const fontSel = h('select', { class: 'dx-sel dx-w-font', 'aria-label': 'Font', title: 'Font', 'data-pri': 2, onchange: () => { const v = fontSel.value; if (v) pushRecent('f', v); C(() => ed.setMark('f', v || null))(); fillFonts(); fontSel.value = v; } });
     function fillFonts() {
       const rec = recent('f').filter((k) => FONTS[k]); const opt = (k) => h('option', { value: k }, FONTS[k].label);
-      fontSel.replaceChildren(h('option', { value: '' }, 'Default'), ...(rec.length ? [h('optgroup', { label: 'Recent' }, ...rec.map(opt))] : []), h('optgroup', { label: 'All fonts' }, ...Object.keys(FONTS).map(opt)));
+      fontSel.replaceChildren(h('option', { value: '' }, 'Default'), ...(rec.length ? [h('optgroup', { label: 'Recent' }, ...rec.map(opt))] : []), ...['Sans-serif', 'Serif', 'Monospace', 'Urdu and Arabic'].map((g) => h('optgroup', { label: g }, ...Object.keys(FONTS).filter((k) => FONTS[k].g === g).map(opt))));
     }
     fillFonts(); tools.push(fontSel);
     const sizeSel = sel('Font size', SIZES.map((n) => [String(n), String(n)]), C((v) => ed.setMark('z', Number(v) === DEFAULT_SIZE ? null : Number(v))), 'dx-w-size', 2);

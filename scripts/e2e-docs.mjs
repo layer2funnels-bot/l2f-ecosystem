@@ -109,7 +109,7 @@ check('W14', 'After a reload the formatted text is back', (await ed.locator('spa
 
 // ---- table, right-click menu
 await page.keyboard.press('Control+End'); await ed.click(); await page.keyboard.press('Control+End'); await page.keyboard.press('Enter');
-await page.getByRole('button', { name: 'Table', exact: true }).click(); await page.getByRole('button', { name: 'Insert', exact: true }).click();
+await menu('Insert', 'Table…'); await page.getByRole('button', { name: 'Insert', exact: true }).click();
 check('W15', 'Insert table makes a 3 × 3 table with a header row and the caret in it', (await ed.locator('table.dx-table').count()) === 1 && (await ed.locator('table th').count()) === 3 && (await ed.locator('table td').count()) === 6);
 await page.keyboard.type('H1'); await page.keyboard.press('Tab'); await page.keyboard.type('H2'); await page.keyboard.press('Tab'); await page.keyboard.type('H3'); await page.keyboard.press('Tab'); await page.keyboard.type('cell');
 await ed.locator('table td').first().click({ button: 'right' });
@@ -153,7 +153,7 @@ await page.keyboard.press('Escape');
 // ---- pictures (fake storage)
 await page.locator('.dx-tabbtn', { hasText: 'Tab 1' }).click(); await ed.click(); await page.keyboard.press('Control+End');
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFElEQVR42mP8z8Dwn4EIwDiqkL4KAHaiDvKLUe5CAAAAAElFTkSuQmCC', 'base64');
-const chooser = page.waitForEvent('filechooser'); await page.getByRole('button', { name: 'Picture', exact: true }).click(); await (await chooser).setFiles({ name: 'dot.png', mimeType: 'image/png', buffer: png });
+const chooser = page.waitForEvent('filechooser'); await menu('Insert', 'Picture…'); await (await chooser).setFiles({ name: 'dot.png', mimeType: 'image/png', buffer: png });
 await page.waitForSelector('figure.dx-img', { timeout: 15000 });
 const fid = await ed.locator('figure.dx-img').first().getAttribute('data-f');
 check('W27', 'Insert picture uploads it to Drive and stores only the file id in the document', /^[0-9a-f-]{36}$/.test(fid) && (await q('select count(*)::int n from files where id = $1 and kind = $2', [fid, 'file']))[0].n === 1);

@@ -70,9 +70,7 @@ const fontKey = (css) => {
   if (['georgia', 'times new roman', 'times', 'cambria', 'garamond', 'serif', 'palatino', 'book antiqua', 'noto serif'].includes(first)) return 'serif';
   if (['courier new', 'courier'].includes(first)) return 'courier';
   if (['consolas', 'menlo', 'monaco', 'monospace', 'ui-monospace', 'lucida console', 'geist mono'].includes(first)) return 'mono';
-  if (first === 'geist') return 'geist';
-  if (first === 'bricolage grotesque') return 'bricolage';
-  return null;
+  const hit = Object.entries(FONTS).find(([, v]) => v.label.toLowerCase() === first || v.css.split(',')[0].replace(/"/g, '').toLowerCase() === first); return hit ? hit[0] : null;
 };
 const sizePt = (v) => { const m = /^([\d.]+)(pt|px)$/.exec(String(v ?? '').trim()); if (!m) return null; const n = m[2] === 'px' ? Number(m[1]) * 0.75 : Number(m[1]); return Math.round(n * 2) / 2; };
 function enter(el, st, paste) {

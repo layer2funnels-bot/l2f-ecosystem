@@ -26,7 +26,7 @@
 .dx-sel{min-height:36px;border:1px solid var(--control);border-radius:var(--radius-md);background:var(--surface);color:var(--text);padding:0 var(--space-2);font:500 13px var(--font);max-width:100%}
 .dx-w-style{width:128px}.dx-w-font{width:150px}.dx-w-size{width:64px}
 .dx-tsep{width:1px;height:22px;background:var(--line2);margin:0 4px}
-.dx-more{display:none}
+
 .dx-imgtools{display:contents}.dx-imgtools[hidden]{display:none}
 .dx-find{display:flex;flex-wrap:wrap;gap:var(--space-2);align-items:center;padding:var(--space-2);border-top:1px solid var(--line2);background:var(--surface2)}.dx-find[hidden]{display:none}
 .dx-fi{min-height:36px;border:1px solid var(--control);border-radius:var(--radius-md);background:var(--surface);color:var(--text);padding:0 var(--space-2);width:min(200px,100%)}
@@ -88,8 +88,8 @@
 .dx-doc code{font:400 .92em var(--font-m);background:#f1f1ee;border-radius:3px;padding:0 .25em}
 .dx-doc a{color:#1d4ed8;text-decoration:underline}.dx-doc hr{border:0;border-top:1px solid #cfcfca;margin:1.2em 0}
 .dx-doc [data-al=c]{text-align:center}.dx-doc [data-al=r]{text-align:right}.dx-doc [data-al=j]{text-align:justify}
-.dx-doc [data-f=geist]{font-family:"Geist",system-ui,sans-serif}.dx-doc [data-f=bricolage]{font-family:"Bricolage Grotesque","Geist",system-ui,sans-serif}.dx-doc [data-f=mono]{font-family:"Geist Mono",ui-monospace,Menlo,Consolas,monospace}
-.dx-doc [data-f=serif]{font-family:Georgia,"Times New Roman",Times,serif}.dx-doc [data-f=sans]{font-family:Arial,Helvetica,sans-serif}.dx-doc [data-f=courier]{font-family:"Courier New",Courier,monospace}.dx-doc [data-f=nastaliq]{font-family:"Noto Nastaliq Urdu",serif}
+
+
 /* lists */
 .dx-list{margin:0 0 .6em;padding-left:1.7em}.dx-list .dx-list{margin:0}.dx-doc li{margin:.1em 0}
 .dx-list>li[data-k=ul]{list-style:disc}.dx-list .dx-list>li[data-k=ul]{list-style:circle}.dx-list .dx-list .dx-list>li[data-k=ul]{list-style:square}
@@ -143,8 +143,7 @@
   .dx-canvas{padding:var(--space-2)}
 }
 @media (max-width:700px){
-  .dx-more{display:inline-grid}
-  .dx-toolbar [data-pri="2"],.dx-toolbar .dx-tsep[data-pri="2"]{display:none}.dx-toolbar.dx-open [data-pri="2"]{display:inline-grid}.dx-toolbar.dx-open .dx-tsep[data-pri="2"]{display:block}
+
   .dx-w-style{width:104px}
   .dx-paper{width:100%!important;min-height:0;--dx-ml:16px;--dx-mr:16px;--dx-mt:20px;--dx-mb:20px;zoom:1!important}
   .dx-hdr,.dx-ftr{position:static;padding-top:6px}
@@ -153,3 +152,54 @@
 }
 @media (pointer:coarse){.dx-tb,.dx-sel,.dx-mb,.dx-mi,.dx-tabbtn,.dx-twist,.dx-tabmore,.dx-find .btn,.dx-fi{min-height:44px}.dx-tb{min-width:44px}.dx-sw{width:28px;height:28px}.dx-pal{grid-template-columns:repeat(6,1fr)}.dx-palwrap{width:230px}}
 @media (prefers-reduced-motion:no-preference){.dx-tabrow{transition:background-color .12s}}
+
+/* ---- full-window editor layout (class ed-full on the root: the app sidebar steps aside, see ui.css) ---- */
+.docs.ed-full{display:flex;flex-direction:column;gap:0;min-height:420px;overflow:hidden;background:var(--surface)}
+.docs.ed-full>.notice,.docs.ed-full>.ro{margin:0;border-radius:0}
+.dx-top{display:flex;align-items:center;gap:var(--space-2);min-height:48px;padding:0 var(--space-3);border-bottom:1px solid var(--line2);background:var(--surface);flex:none;min-width:0}
+.dx-top .doctitle{flex:0 1 460px;min-width:120px;min-height:36px;font:600 16px/1.2 var(--font);letter-spacing:0}
+.dx-top .btn{min-height:34px;padding:0 var(--space-3)}.dx-top .dx-spacer{flex:1}
+.dx-back{display:inline-grid;place-items:center;width:36px;height:36px;border-radius:var(--radius-md);color:var(--text2);flex:none}.dx-back:hover{background:var(--action-tint);color:var(--text)}.dx-back svg.i{width:18px;height:18px;transform:scaleX(-1)}
+.dx-docico{display:inline-grid;place-items:center;color:var(--action);flex:none}.dx-docico svg.i{width:20px;height:20px}
+.docs.ed-full .dx-chrome{position:static;border:0;border-bottom:1px solid var(--line2);border-radius:0;box-shadow:none;flex:none}
+.docs.ed-full .dx-toolbar{flex-wrap:nowrap;overflow:hidden;min-height:44px}.dx-toolbar>*{flex:none}
+.dx-more[hidden]{display:none}.dx-ovf{display:flex;flex-wrap:wrap;gap:2px;align-items:center;padding:var(--space-2);max-width:min(340px,calc(100vw - 24px))}
+.dx-imgtools{display:flex;flex-wrap:wrap;gap:2px;align-items:center;padding:2px var(--space-2) var(--space-1);border-top:1px solid var(--line2);background:var(--surface2)}.dx-imgtools[hidden]{display:none}
+.docs.ed-full .dx-body,.docs.ed-full .dx-body.has-side{flex:1;min-height:0;gap:0;align-items:stretch;grid-template-rows:minmax(0,1fr)}
+.docs.ed-full .dx-tabs{position:static;max-height:none;height:100%;border:0;border-right:1px solid var(--line2);border-radius:0;overflow:auto;background:var(--surface)}
+.docs.ed-full .dx-work{min-height:0;height:100%;display:flex}.docs.ed-full .dx-canvas{flex:1;min-height:0;height:100%;border:0;border-radius:0;padding:var(--space-4) var(--space-4) var(--space-6);overflow:auto}
+.docs.ed-full .strat-side{overflow:auto;padding:var(--space-3);border-left:1px solid var(--line2)}
+.docs.ed-full .dx-statusbar{flex:none;border:0;border-top:1px solid var(--line2);border-radius:0;background:var(--surface)}
+.docpage:focus-visible{outline:none}
+.dx-paper:focus-within{box-shadow:var(--sh2),0 0 0 1px var(--line2)}
+@media (max-width:900px){.docs.ed-full .dx-body,.docs.ed-full .dx-body.has-side{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}.docs.ed-full .dx-tabs{height:auto;max-height:200px;border-right:0;border-bottom:1px solid var(--line2)}}
+@media (max-width:700px){
+  .dx-top{padding:0 var(--space-2);gap:4px}.dx-top .doctitle{min-width:80px;flex:1 1 auto}.dx-top .docstate{display:none}
+  .docs.ed-full .dx-canvas{padding:var(--space-2)}
+  .dx-menurow{padding:2px var(--space-1)}
+}
+
+/* font families chosen in the editor (the keys are stored in the document) */
+.dx-doc [data-f=geist]{font-family:"Geist", system-ui, sans-serif}
+.dx-doc [data-f=inter]{font-family:"Inter", system-ui, sans-serif}
+.dx-doc [data-f=roboto]{font-family:"Roboto", system-ui, sans-serif}
+.dx-doc [data-f=opensans]{font-family:"Open Sans", system-ui, sans-serif}
+.dx-doc [data-f=lato]{font-family:"Lato", system-ui, sans-serif}
+.dx-doc [data-f=montserrat]{font-family:"Montserrat", system-ui, sans-serif}
+.dx-doc [data-f=poppins]{font-family:"Poppins", system-ui, sans-serif}
+.dx-doc [data-f=nunito]{font-family:"Nunito", system-ui, sans-serif}
+.dx-doc [data-f=raleway]{font-family:"Raleway", system-ui, sans-serif}
+.dx-doc [data-f=oswald]{font-family:"Oswald", Impact, sans-serif}
+.dx-doc [data-f=bricolage]{font-family:"Bricolage Grotesque", "Geist", system-ui, sans-serif}
+.dx-doc [data-f=sans]{font-family:Arial, Helvetica, sans-serif}
+.dx-doc [data-f=merriweather]{font-family:"Merriweather", Georgia, serif}
+.dx-doc [data-f=lora]{font-family:"Lora", Georgia, serif}
+.dx-doc [data-f=playfair]{font-family:"Playfair Display", Georgia, serif}
+.dx-doc [data-f=sourceserif]{font-family:"Source Serif 4", Georgia, serif}
+.dx-doc [data-f=baskerville]{font-family:"Libre Baskerville", Baskerville, Georgia, serif}
+.dx-doc [data-f=serif]{font-family:Georgia, "Times New Roman", Times, serif}
+.dx-doc [data-f=mono]{font-family:"Geist Mono", ui-monospace, Menlo, Consolas, monospace}
+.dx-doc [data-f=courierprime]{font-family:"Courier Prime", "Courier New", monospace}
+.dx-doc [data-f=courier]{font-family:"Courier New", Courier, monospace}
+.dx-doc [data-f=nastaliq]{font-family:"Noto Nastaliq Urdu", serif}
+.dx-doc [data-f=naskh]{font-family:"Noto Naskh Arabic", "Noto Nastaliq Urdu", serif}
