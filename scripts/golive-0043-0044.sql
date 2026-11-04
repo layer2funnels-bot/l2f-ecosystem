@@ -1,9 +1,11 @@
--- LIVE database: apply 0043 (Client Portal tile for every team member) in one step. Refuses any database that is not at exactly 0042.
+-- LIVE database: apply 0043 (Client Portal tile for every team member) and 0044 (documents up to 1,000,000 characters) in ONE step.
+-- Refuses any database that is not at exactly 0042. All or nothing. Nothing is deleted; no row changes.
 begin;
 do $guard$ begin
   if (select count(*) from public.workspaces where slug in ('layer2funnels', 'aurj')) <> 2 then raise exception 'unexpected database: Layer2Funnels and Aurj organizations not found'; end if;
   if (select max(version) from supabase_migrations.schema_migrations) <> '20261102120042' then raise exception 'unexpected database: last migration is not 0042_invitation_onboarding'; end if;
 end $guard$;
+-- ====================================================================== 0043_portal_tile_for_all_staff.sql
 -- 0043: the Client Portal tile is shown to every team member (owner decision, 2 Nov 2026), not only owners and admins.
 -- Only the Launcher list changes. The Portal itself is unchanged: while it is switched off the tile reads "locked" and opens the preview,
 -- which reads client data through each person's own permissions (an editor sees only the clients they may see). Clients still cannot
@@ -51,5 +53,10 @@ begin
     if exists (select 1 from pg_roles where rolname = r) then execute format('revoke all on function public.launcher_catalog() from %I', r); end if;
   end loop;
 end $$;
-insert into supabase_migrations.schema_migrations (version, name) values ('20261102120043', '0043_portal_tile_for_all_staff');
+-- ====================================================================== 0044_larger_documents.sql
+-- 0044: first-party documents (Docs, Sheets, boards) may be up to 1,000,000 characters (was 200,000), so long formatted documents and
+-- larger spreadsheets can be saved. Additive: the check only widens; no row changes.
+alter table public.file_versions drop constraint file_versions_body_check;
+alter table public.file_versions add constraint file_versions_body_check check (length(body) <= 1000000);
+insert into supabase_migrations.schema_migrations (version, name) values ('20261102120043', '0043_portal_tile_for_all_staff'), ('20261103120044', '0044_larger_documents');
 commit;
