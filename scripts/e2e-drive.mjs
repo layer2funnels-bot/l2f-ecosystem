@@ -171,7 +171,8 @@ check('DR25', 'Right-click on a file opens its menu at the pointer: Preview, Dow
 await p.getByRole('button', { name: 'Preview', exact: true }).click(); await p.waitForSelector('.drv-lb .lb-text', { timeout: 9000 });
 check('DR26', 'Preview shows a text file in a viewer with Download and Close, and Esc closes it', (await p.locator('.lb-text').innerText()).includes('hello') && (await p.locator('.drv-lb').getByRole('button', { name: 'Download' }).count()) === 1);
 await p.keyboard.press('Escape'); check('DR26b', 'Esc closes the preview', (await p.locator('.drv-lb').count()) === 0);
-await p.getByRole('button', { name: IMG, exact: true }).click(); await p.waitForFunction(() => { const i = document.querySelector('.drv-lb .lb-img'); return i && i.complete && i.naturalWidth > 0; }, null, { timeout: 12000 });
+check('DR26c', 'Clicking an image name opens it in the image editor (images and PDFs open in their editors)', (await p.locator(`a:text-is("${IMG}")`).first().getAttribute('href') ?? '').startsWith('#/image/'));
+await rowOf(IMG).click({ button: 'right' }); await p.getByRole('button', { name: 'Preview', exact: true }).click(); await p.waitForFunction(() => { const i = document.querySelector('.drv-lb .lb-img'); return i && i.complete && i.naturalWidth > 0; }, null, { timeout: 12000 });
 check('DR27', 'An image opens in the preview with previous/next arrows between previewable files', (await p.locator('.lb-next').count()) === 1 && /\d+ of \d+/.test(await p.locator('.lb-count').innerText()));
 await shot('preview-image');
 await p.keyboard.press('ArrowRight'); await p.waitForTimeout(300); await p.keyboard.press('Escape');

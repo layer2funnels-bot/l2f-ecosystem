@@ -172,6 +172,7 @@ export function driveView({ api, ctx, route }) {
     const mutable = canWrite && !item.protected_sop; const href = isFolder ? null : openHref(item); const pv = !isFolder && !href && previewKind(item);
     popMenu(anchor, [
       isFolder ? { label: 'Open', ic: 'folder', on: () => ctx.go(driveHref(space, item.id)) } : { label: href ? 'Open' : pv ? 'Preview' : 'Download', ic: href || pv ? 'eye' : 'download', on: () => openFile(item) },
+      ...(!isFolder && href && previewKind(item) ? [{ label: 'Preview', ic: 'eye', on: () => preview(item) }] : []),
       !isFolder && !href ? { label: 'Download', ic: 'download', on: () => download(item) } : null,
       isFolder ? null : { label: stars.has(item.id) ? 'Remove star' : 'Star', ic: 'star', on: () => toggleStar([item.id]) },
       isFolder ? null : { label: 'Details', ic: 'info', on: () => details(item) },
@@ -205,7 +206,7 @@ export function driveView({ api, ctx, route }) {
 
   // ---------------------------------------------------------------- preview (image, PDF, video, audio, text) with next/previous
   async function preview(start) {
-    let files = visibleRows().map((r) => r.file).filter((x) => x && previewKind(x) && !openHref(x)); let idx = files.findIndex((x) => x.id === start.id); if (idx < 0) { files = [start]; idx = 0; }
+    let files = visibleRows().map((r) => r.file).filter((x) => x && previewKind(x)); let idx = files.findIndex((x) => x.id === start.id); if (idx < 0) { files = [start]; idx = 0; }
     const prevFocus = document.activeElement; const title = h('b', { class: 'lb-title' }); const stage = h('div', { class: 'lb-stage' }); const count = h('span', { class: 'lb-count fine' });
     const mk = (label, ic, fn, extra = {}) => h('button', { type: 'button', class: 'btn quiet lb-btn', 'aria-label': label, title: label, onclick: fn, ...extra }, icon(ic));
     const prev = mk('Previous (Left arrow)', 'arrow', () => go(-1), { class: 'btn quiet lb-btn lb-prev' }); const next = mk('Next (Right arrow)', 'arrow', () => go(1), { class: 'btn quiet lb-btn lb-next' });
