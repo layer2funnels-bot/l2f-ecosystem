@@ -245,3 +245,7 @@
 .dx-voice .dx-vmodes .btn[aria-pressed=true]:disabled,.dx-voice .dx-vmodes .btn[aria-pressed=true][aria-disabled=true]{opacity:1;background:var(--action);color:var(--action-ink);border-color:var(--action)}
 
 .dx-zoom{display:inline-flex;align-items:center;gap:2px}.dx-zb{width:28px;height:28px;border:1px solid var(--line2);border-radius:6px;background:var(--surface);color:var(--text);font:600 16px/1 var(--font);cursor:pointer}.dx-zb:hover,.dx-zb:focus-visible{background:var(--action-tint)}
+.dx-top .dx-back,.dx-top .doctitle,.dx-top .btn,.dx-top button{min-height:44px;min-width:44px;box-sizing:border-box}
+/* Editor density (decision DOC-2): with a mouse, editor menus/toolbars stay compact (36px) like any office editor; on touch screens every
+   editor control is at least 44px. Applies to all editors (Docs dx-, Sheets sx-, Image/PDF edx-). */
+@media (pointer:coarse){.dx-tabs button,.dx-toolbar button,.dx-toolbar select,.dx-imgtools button,.dx-menurow button,.dx-tbar button,.dx-tbar select,.dx-statusbar button,.dx-statusbar select,.sx-mb,.sx-tools button,.sx-tools select,.edx-mb,.edx-tools button,.edx-tools select,.dx-cbar button{min-height:44px;min-width:44px}}
