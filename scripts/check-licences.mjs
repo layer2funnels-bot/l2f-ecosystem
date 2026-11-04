@@ -43,6 +43,19 @@ try {
   console.log(`PASS licence check (docs-io build tree): ${dn} packages, all on the allowlist or reviewed`);
 } catch (e) { if (e.code !== 'ENOENT') throw e; }
 
+// Sheets .xlsx bridge build tree (apps/sheetjs): SheetJS CE official tarball (Apache-2.0) + esbuild.
+try {
+  const sj = JSON.parse(readFileSync(new URL('../apps/sheetjs/package-lock.json', import.meta.url), 'utf8')); const sbad = []; let sn = 0;
+  for (const [path, meta] of Object.entries(sj.packages || {})) {
+    if (!path) continue; sn++;
+    const lic = String(meta.license ?? 'UNKNOWN');
+    if (!lic.replace(/[()]/g, '').split(/\s+OR\s+/).some((p) => ALLOW.has(p.trim()))) sbad.push(`${path.replace(/^.*node_modules\//, '')}: ${lic}`);
+    if (/node_modules\/xlsx$/.test(path) && !/^https:\/\/cdn\.sheetjs\.com\/xlsx-0\.(2\d|[3-9]\d)\./.test(meta.resolved ?? '')) sbad.push('xlsx must come from the official cdn.sheetjs.com tarball, version 0.20 or newer');
+  }
+  if (sbad.length) { console.log('FAIL licence check (sheetjs build tree):\n  ' + sbad.join('\n  ')); process.exit(1); }
+  console.log(`PASS licence check (sheetjs build tree): ${sn} packages, all on the allowlist`);
+} catch (e) { if (e.code !== 'ENOENT') throw e; }
+
 // Funnel Mapper Pro code copy: its own dependency tree (not installed or shipped by the ecosystem). Reported, not failing:
 // anything listed here needs a review entry in docs/DECISIONS.md BEFORE the copy is reshaped into the ecosystem or deployed.
 try {

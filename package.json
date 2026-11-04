@@ -24,12 +24,14 @@
     "test:e2e:ui": "node scripts/e2e-ui.mjs",
     "test:gallery": "node scripts/e2e-gallery.mjs",
     "build:web": "node scripts/build-web.mjs",
+    "e2e:sheets": "node scripts/e2e-sheets.mjs",
     "check:fmp-copy": "node scripts/fmp-copy.mjs verify",
     "dryrun:fmp": "node scripts/fmp-dryrun/run.mjs",
     "rehearsal:local": "node scripts/rehearsal.mjs",
     "check:pg17": "node scripts/check-pg17.mjs",
     "test:e2e:planner": "node scripts/e2e-planner.mjs",
-    "test:e2e:onboarding": "node scripts/e2e-onboarding.mjs"
+    "test:e2e:onboarding": "node scripts/e2e-onboarding.mjs",
+    "test:e2e:drive": "node scripts/e2e-drive.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "0.3.10",
