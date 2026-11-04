@@ -6,7 +6,7 @@ import { startDevServer } from './dev-server.mjs';
 const AUTH = process.env.STACK_AUTH_URL || 'http://127.0.0.1:54321/auth/v1';
 const KEY = process.env.STACK_PUBLISHABLE_KEY || 'sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH';   // local demo key
 const results = []; const check = (id, n, ok, d = '') => results.push({ id, n, ok: !!ok, d });
-const admin = new pg.Client({ connectionString: 'postgresql://supabase_admin:postgres@127.0.0.1:54322/postgres' }); await admin.connect();
+const admin = new pg.Client({ connectionString: 'postgresql://supabase_admin:postgres@127.0.0.1:54332/postgres' }); await admin.connect();
 
 const stamp = Date.now();
 const signUp = async (email) => {

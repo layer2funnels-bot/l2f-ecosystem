@@ -15,7 +15,7 @@ import { startFakeS3 } from '../test/fakes/fake-s3.mjs';
 import { createS3Storage } from '../packages/core/storage-adapter.mjs';
 const runAsync = (cmd, args, opts = {}) => new Promise((done) => { execFile(cmd, args, { encoding: 'utf8', ...opts }, (err, stdout, stderr) => done({ status: err ? (err.code ?? 1) : 0, stdout, stderr })); });   // not spawnSync: the in-process fake server must keep answering
 
-const ADMIN = 'postgresql://supabase_admin:postgres@127.0.0.1:54322';
+const ADMIN = 'postgresql://supabase_admin:postgres@127.0.0.1:54332';
 const KEY = process.env.STACK_PUBLISHABLE_KEY || 'sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH';
 const DBC = 'supabase_db_l2f-ecosystem';
 const out = []; const note = (k, id, name, d = '') => { out.push({ k, id, name, d }); console.log(`${k.padEnd(4)} ${id.padEnd(5)} ${name}${d ? `  [${d}]` : ''}`); };
@@ -143,7 +143,7 @@ docker exec -i ${DBC} pg_dump "\${args[@]}" > "$file"\n`);
 if (!native17) chmodSync(join(bin, 'pg_dump'), 0o755);
 const kg = sh('age-keygen', []); const privKey = kg.stdout; const pub = (kg.stderr.match(/Public key: (age1\S+)/) || privKey.match(/public key: (age1\S+)/) || [])[1];
 writeFileSync(join(work, 'key.txt'), privKey);
-const bk = sh('bash', [join(root, 'scripts/backup-supabase.sh')], { cwd: work, env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, SUPABASE_DB_URL: 'postgresql://postgres:postgres@127.0.0.1:54322/postgres', AGE_RECIPIENT: pub } });
+const bk = sh('bash', [join(root, 'scripts/backup-supabase.sh')], { cwd: work, env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, SUPABASE_DB_URL: 'postgresql://postgres:postgres@127.0.0.1:54332/postgres', AGE_RECIPIENT: pub } });
 const enc = readdirSync(work).find((f) => f.startsWith('l2f-backup-') && f.endsWith('.tar.age'));
 ok('R10a', 'The backup script writes one encrypted file', bk.status === 0 && !!enc, (bk.stderr || bk.stdout).slice(0, 300));
 if (enc) {

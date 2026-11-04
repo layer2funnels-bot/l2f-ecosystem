@@ -15,7 +15,7 @@ const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; ch
 // The same headers Cloudflare Pages will send (apps/web/_headers), so CSP problems show up in development.
 const pageHeaders = (() => { try { return Object.fromEntries(readFileSync(new URL('../apps/web/_headers', import.meta.url), 'utf8').split('\n').filter((l) => /^\s+\S+: /.test(l)).map((l) => l.trim().split(/: (.*)/s).slice(0, 2))); } catch { return {}; } })();
 export const LOCAL_ENV = {
-  DATABASE_URL: 'postgresql://postgres:postgres@127.0.0.1:54322/postgres',
+  DATABASE_URL: 'postgresql://postgres:postgres@127.0.0.1:54332/postgres',
   SUPABASE_JWKS_URL: 'http://127.0.0.1:54321/auth/v1/.well-known/jwks.json',          // the local stack signs with ES256
   SUPABASE_JWT_ISSUER: 'http://127.0.0.1:54321/auth/v1',
 };
