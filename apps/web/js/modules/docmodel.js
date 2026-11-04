@@ -87,6 +87,7 @@ function runs(list) {
 const textAttrs = (b) => {
   const o = {};
   if (b.al === 'c' || b.al === 'r' || b.al === 'j') o.al = b.al;
+  if (b.dir === 'rtl') o.dir = 'rtl';
   const ls = b.ls !== undefined ? clampNum(b.ls, 0.8, 4, 2) : null; if (ls && ls !== 1.15) o.ls = ls;
   const sb = b.sb !== undefined ? clampNum(b.sb, 0, 200) : null; if (sb) o.sb = sb;
   const sa = b.sa !== undefined ? clampNum(b.sa, 0, 200) : null; if (sa) o.sa = sa;
@@ -106,11 +107,11 @@ function listItems(items, kind) {
   return out;
 }
 function table(b) {
-  const rows = (Array.isArray(b.rows) ? b.rows.slice(0, MAX_ROWS) : []).map((r) => (Array.isArray(r) ? r.slice(0, MAX_COLS) : []).map((c) => { const o = { c: runs(c?.c) }; if (c?.al === 'c' || c?.al === 'r') o.al = c.al; return o; })).filter((r) => r.length);
+  const rows = (Array.isArray(b.rows) ? b.rows.slice(0, MAX_ROWS) : []).map((r) => (Array.isArray(r) ? r.slice(0, MAX_COLS) : []).map((c) => { const o = { c: runs(c?.c) }; if (c?.al === 'c' || c?.al === 'r') o.al = c.al; const bg = c?.bg ? safeColor(c.bg) : null; if (bg) o.bg = bg; return o; })).filter((r) => r.length);
   if (!rows.length) return null;
   const cols = Math.max(...rows.map((r) => r.length));
   for (const r of rows) while (r.length < cols) r.push({ c: [] });
-  return b.hdr ? { t: 'table', hdr: 1, rows } : { t: 'table', rows };
+  const t = { t: 'table' }; if (b.hdr) t.hdr = 1; if (b.nb) t.nb = 1; t.rows = rows; return t;
 }
 const blocksOf = (list, limit) => {
   const blocks = [];

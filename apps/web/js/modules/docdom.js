@@ -22,6 +22,7 @@ function runNode(d, r) {
 const fillRuns = (el, rs) => { const d = el.ownerDocument; if (!rs.length) el.append(d.createElement('br')); for (const r of rs) el.append(runNode(d, r)); return el; };
 function attrs(el, b) {
   if (b.al) el.dataset.al = b.al;
+  if (b.dir === 'rtl') el.dir = 'rtl';
   if (b.ls) el.style.lineHeight = String(b.ls);
   if (b.sb) el.style.marginTop = `${b.sb}pt`;
   if (b.sa) el.style.marginBottom = `${b.sa}pt`;
@@ -46,8 +47,8 @@ export function renderBlock(d, b) {
     case 'list': return renderList(d, b);
     case 'toc': { const e = d.createElement('div'); e.className = 'dx-toc'; e.dataset.t = 'toc'; e.contentEditable = 'false'; return e; }
     case 'table': {
-      const t = d.createElement('table'); t.className = 'dx-table'; const body = d.createElement('tbody'); t.append(body);
-      b.rows.forEach((r, ri) => { const tr = d.createElement('tr'); for (const c of r) { const td = d.createElement(b.hdr && ri === 0 ? 'th' : 'td'); if (c.al) td.dataset.al = c.al; fillRuns(td, c.c); tr.append(td); } body.append(tr); });
+      const t = d.createElement('table'); t.className = 'dx-table'; if (b.nb) t.dataset.nb = '1'; const body = d.createElement('tbody'); t.append(body);
+      b.rows.forEach((r, ri) => { const tr = d.createElement('tr'); for (const c of r) { const td = d.createElement(b.hdr && ri === 0 ? 'th' : 'td'); if (c.al) td.dataset.al = c.al; if (c.bg) td.style.backgroundColor = c.bg; fillRuns(td, c.c); tr.append(td); } body.append(tr); });
       return t;
     }
     case 'img': {
@@ -131,6 +132,7 @@ const alignOf = (el) => { const a = el.dataset?.al ?? ({ center: 'c', right: 'r'
 const num = (v) => { const n = parseFloat(v); return Number.isFinite(n) ? n : undefined; };
 function textAttrs(el, paste) {
   const o = {}; const al = alignOf(el); if (al) o.al = al;
+  if (el.getAttribute?.('dir') === 'rtl') o.dir = 'rtl';
   if (!paste) {
     const ls = num(el.style.lineHeight); if (ls) o.ls = ls;
     const pt = (v) => (String(v).endsWith('pt') ? num(v) : String(v).endsWith('px') ? num(v) * 0.75 : undefined);
@@ -160,9 +162,9 @@ export function readBlock(el, paste = false) {
   if (tag === 'FIGURE' && el.dataset?.f) return { t: 'img', f: el.dataset.f, alt: el.dataset.alt, w: num(el.dataset.w), al: el.dataset.al, wr: el.dataset.wr };
   if (tag === 'UL' || tag === 'OL') return { t: 'list', items: readList(el, 0, [], paste) };
   if (tag === 'TABLE') {
-    const rows = [...el.rows].map((tr) => [...tr.cells].map((c) => { const o = { c: runsOf(c, { paste }) }; const al = alignOf(c); if (al === 'c' || al === 'r') o.al = al; return o; }));
+    const rows = [...el.rows].map((tr) => [...tr.cells].map((c) => { const o = { c: runsOf(c, { paste }) }; const al = alignOf(c); if (al === 'c' || al === 'r') o.al = al; const bg = safeColor(c.style?.backgroundColor); if (bg && !(paste && bg === '#ffffff')) o.bg = bg; return o; }));
     const hdr = el.rows[0] && [...el.rows[0].cells].every((c) => c.tagName === 'TH');
-    return { t: 'table', ...(hdr ? { hdr: 1 } : {}), rows };
+    return { t: 'table', ...(hdr ? { hdr: 1 } : {}), ...(el.dataset?.nb ? { nb: 1 } : {}), rows };
   }
   const c = runsOf(el, { paste });
   if (/^H[1-6]$/.test(tag)) return { t: `h${Math.min(3, Number(tag[1]))}`, ...textAttrs(el, paste), c };

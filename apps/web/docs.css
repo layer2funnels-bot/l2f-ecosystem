@@ -203,3 +203,15 @@
 .dx-doc [data-f=courier]{font-family:"Courier New", Courier, monospace}
 .dx-doc [data-f=nastaliq]{font-family:"Noto Nastaliq Urdu", serif}
 .dx-doc [data-f=naskh]{font-family:"Noto Naskh Arabic", "Noto Nastaliq Urdu", serif}
+
+/* ---- slash menu, table size grid, floating table toolbar, right-to-left text ---- */
+.dx-slash{position:fixed;z-index:var(--z-popover,60);width:232px;max-height:300px;overflow:auto;background:var(--surface);color:var(--text);border:1px solid var(--line2);border-radius:var(--radius-md);box-shadow:var(--sh3,0 12px 32px rgba(0,0,0,.22));padding:4px}
+.dx-slashi{padding:7px 10px;border-radius:6px;font:400 14px var(--font);cursor:pointer}.dx-slashi.on,.dx-slashi:hover{background:var(--action-tint)}
+.dx-gridwrap{display:grid;gap:var(--space-2);padding:var(--space-2);width:236px}.dx-gridinfo{font:600 13px var(--font);color:var(--text2);min-height:18px}
+.dx-grid{display:grid;grid-template-columns:repeat(10,1fr);gap:2px}.dx-gc{aspect-ratio:1;min-width:0;padding:0;border:1px solid var(--line2);border-radius:2px;background:var(--surface);cursor:pointer}.dx-gc.on{background:var(--action-tint);border-color:var(--action)}.dx-gc:focus-visible{outline:2px solid var(--action);outline-offset:1px}
+.dx-gridmore{min-height:32px}
+.dx-tbar{position:absolute;z-index:4;display:flex;flex-wrap:wrap;gap:2px;max-width:calc(100% - 8px);background:var(--surface);color:var(--text);border:1px solid var(--line2);border-radius:8px;box-shadow:var(--sh2);padding:2px;zoom:1}.dx-tbar[hidden]{display:none}
+.dx-tbb{min-height:28px;padding:0 8px;border:0;border-radius:6px;background:none;color:var(--text);font:500 12px var(--font);cursor:pointer;white-space:nowrap}.dx-tbb:hover,.dx-tbb:focus-visible{background:var(--action-tint);outline:none}
+.dx-table[data-nb] td,.dx-table[data-nb] th{border-color:transparent}
+.dx-doc [dir=rtl]{direction:rtl;text-align:right;line-height:1.9}.dx-doc [dir=rtl][data-al=c]{text-align:center}.dx-doc [dir=rtl][data-al=l]{text-align:left}
+.dx-doc ul[dir=rtl]{padding-left:0;padding-right:1.7em}

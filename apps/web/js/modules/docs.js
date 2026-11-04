@@ -260,6 +260,23 @@ export function docView({ api, id, ctx, opts = {} }) {
       const w = field({ id: 'dx-w', label: 'Width in pixels', type: 'number', value: String(fig.dataset.w ?? Math.round(fig.querySelector('img').getBoundingClientRect().width)) });
       dialog({ title: 'Picture details', body: [alt.el, w.el], actions: [{ label: 'Apply', cls: 'primary', on: () => { const n = Math.round(Number(w.input.value)); if (!(n >= 24 && n <= 2400)) return w.error('Use a width between 24 and 2400.'); ed.setImage({ alt: alt.input.value.trim(), w: n }); } }, { label: 'Cancel' }] });
     };
+    // a hover grid (up to 10 x 10) for new tables
+    function gridPicker(onPick, onMore) {
+      const info = h('div', { class: 'dx-gridinfo', 'aria-live': 'polite' }, 'Pick a size'); const cells = [];
+      const hi = (r, c) => { info.textContent = `${r} × ${c} table`; for (const x of cells) x.el.classList.toggle('on', x.r <= r && x.c <= c); };
+      const grid = h('div', { class: 'dx-grid', role: 'group', 'aria-label': 'Table size, rows by columns' });
+      for (let r = 1; r <= 10; r += 1) for (let c = 1; c <= 10; c += 1) {
+        const el = h('button', { type: 'button', class: 'dx-gc', 'aria-label': `${r} rows by ${c} columns`, tabindex: r === 1 && c === 1 ? '0' : '-1', onmouseenter: () => hi(r, c), onfocus: () => hi(r, c), onclick: () => onPick(r, c) });
+        el.addEventListener('keydown', (e) => { const d = { ArrowRight: [0, 1], ArrowLeft: [0, -1], ArrowDown: [1, 0], ArrowUp: [-1, 0] }[e.key]; if (!d) return; e.preventDefault(); const nr = Math.min(10, Math.max(1, r + d[0])), nc = Math.min(10, Math.max(1, c + d[1])); const t = cells.find((x) => x.r === nr && x.c === nc).el; for (const x of cells) x.el.tabIndex = -1; t.tabIndex = 0; t.focus(); });
+        cells.push({ r, c, el }); grid.append(el);
+      }
+      return h('div', { class: 'dx-gridwrap' }, info, grid, h('button', { type: 'button', class: 'btn dx-gridmore', onclick: onMore }, 'More options…'));
+    }
+    function tablePicker(anchor, at) {
+      if (readOnly) return; keepSel();
+      pop(at ? null : anch(anchor), gridPicker((r, c) => { closePop(); back(); ed.insertTable(r, c, true); }, () => { closePop(); insertTable(); }), { role: 'dialog', label: 'Insert table', at });
+    }
+    const convertToTable = () => { if (readOnly) return; ed.focus(); if (!ed.textToTable()) toast('Select the lines first. Cells are separated by tabs, commas or | signs.', false); };
     const specials = () => {
       if (readOnly) return; keepSel();
       let close; const body = SPECIALS.map(([name, chars]) => h('div', { class: 'dx-sp' }, h('h3', {}, name), h('div', { class: 'dx-spg' }, ...chars.split(' ').map((ch) => h('button', { type: 'button', class: 'dx-spb', 'aria-label': `Insert ${ch}`, onclick: () => { back(); ed.insertText(ch); } }, ch)))));
@@ -425,7 +442,7 @@ export function docView({ api, id, ctx, opts = {} }) {
       tbtn('Line and paragraph spacing', '↕', (b) => spacingPop(b), { pri: 2 }),
       tbtn('Outdent', '⇤', C(() => ed.indent(-1)), { pri: 2 }), tbtn('Indent', '⇥', C(() => ed.indent(1)), { pri: 2 }), sep(2),
       tbtn('Bulleted list', icon('ul'), C(() => ed.toggleList('ul')), { key: 'list-ul' }), tbtn('Numbered list', '1.', C(() => ed.toggleList('ol')), { key: 'list-ol' }), tbtn('Checklist', '☑', C(() => ed.toggleList('cl')), { key: 'list-cl' }), sep(),
-      tbtn('Link', icon('link'), link, { key: 'link' }), tbtn('Picture', icon('imgI'), pickImage), tbtn('Table', icon('table'), insertTable), tbtn('Horizontal line', '—', C(() => ed.insertBlocks([{ t: 'hr' }])), { pri: 2 }),
+      tbtn('Link', icon('link'), link, { key: 'link' }), tbtn('Picture', icon('imgI'), pickImage), tbtn('Table', icon('table'), (b) => tablePicker(b)), tbtn('Horizontal line', '—', C(() => ed.insertBlocks([{ t: 'hr' }])), { pri: 2 }),
       moreBtn);
     const tbItems = [...toolbar.children].filter((x) => x !== moreBtn);
     function fitToolbar() {
@@ -446,7 +463,52 @@ export function docView({ api, id, ctx, opts = {} }) {
       for (const b of [...toolbar.querySelectorAll('[data-k]'), ...ovf.querySelectorAll('[data-k]')]) { const k = b.dataset.k; if (['b', 'i', 'u', 's', 'sup', 'sub', 'cd'].includes(k)) btnOn(b, m[k]); else if (k.startsWith('list-')) btnOn(b, st.list === k.slice(5)); else if (k.startsWith('al-')) btnOn(b, st.al === k.slice(3) || (k === 'al-l' && st.al === 'l')); else if (k === 'link') btnOn(b, st.link); }
       styleSel.value = st.type === 'list' ? 'p' : st.type; fontSel.value = m.f ?? ''; const z = String(m.z ?? DEFAULT_SIZE);
       if (![...sizeSel.options].some((o) => o.value === z)) sizeSel.append(h('option', { value: z }, z)); sizeSel.value = z;
-      imgBar.hidden = !st.fig; fitHeight(); undoBtn.disabled = readOnly || at <= 0; redoBtn.disabled = readOnly || at >= stack.length - 1;
+      imgBar.hidden = !st.fig; fitHeight(); paintTableBar(); undoBtn.disabled = readOnly || at <= 0; redoBtn.disabled = readOnly || at >= stack.length - 1;
+    }
+    // ---- the "/" menu: type / at the start of an empty line to insert a block
+    const SLASH = [
+      ['Heading 1', 'h1 title', () => ed.setBlockType('h1')], ['Heading 2', 'h2 subheading', () => ed.setBlockType('h2')], ['Heading 3', 'h3', () => ed.setBlockType('h3')],
+      ['Bulleted list', 'bullet ul', () => ed.toggleList('ul')], ['Numbered list', 'number ol', () => ed.toggleList('ol')], ['Checklist', 'todo task check', () => ed.toggleList('cl')],
+      ['Table', 'grid', () => { const r = (getSelection().rangeCount ? getSelection().getRangeAt(0).getBoundingClientRect() : page.getBoundingClientRect()); tablePicker(null, { x: r.left, y: r.bottom + 4 }); }],
+      ['Picture', 'image photo', () => pickImage()], ['Quote', 'blockquote', () => ed.setBlockType('quote')], ['Code block', 'code', () => ed.setBlockType('code')],
+      ['Divider', 'line rule hr', () => ed.insertBlocks([{ t: 'hr' }])], ['Page break', 'break', () => ed.insertBlocks([{ t: 'pb' }])], ['Table of contents', 'toc contents', () => { ed.insertBlocks([{ t: 'toc' }]); paintOutline(); }],
+      ['Footnote', 'note', () => addNote()], ['Today’s date', 'date', () => insertDate()], ['Voice typing', 'voice mic dictate speech', () => openVoice()]];
+    let slash = null;
+    function closeSlash() { if (!slash) return; slash.el.remove(); slash = null; page.removeAttribute('aria-activedescendant'); }
+    function slashChoose(item) { closeSlash(); ed.mutate((models, _r, pos) => ({ blocks: [{ ...models[0], c: [] }], sel: { s: { b: pos.b0, o: 0 }, e: { b: pos.b0, o: 0 } } }), { start: true }); item[2](); paintTools(); }
+    function slashUpdate() {
+      if (readOnly || mode === 'read') return closeSlash();
+      const p = ed.getPos(); if (!p || p.s.b !== p.e.b || p.s.o !== p.e.o) return closeSlash();
+      const blk = page.children[p.s.b]; const m = blk && blk.tagName === 'P' ? /^\/([a-z0-9 ]{0,20})$/i.exec(blk.textContent) : null; if (!m || p.s.o !== blk.textContent.length) return closeSlash();
+      const q = m[1].toLowerCase(); const items = SLASH.filter((i) => i[0].toLowerCase().includes(q) || i[1].includes(q)); if (!items.length) return closeSlash();
+      const idx = slash ? Math.min(slash.idx, items.length - 1) : 0; const rr = getSelection().getRangeAt(0).getBoundingClientRect(); const box = rr.width || rr.height ? rr : blk.getBoundingClientRect();
+      const el = slash?.el ?? h('div', { class: 'dx-slash', role: 'listbox', 'aria-label': 'Insert a block' }); if (!slash) document.body.append(el);
+      el.replaceChildren(...items.map((it, i) => h('div', { class: `dx-slashi${i === idx ? ' on' : ''}`, role: 'option', id: `dx-sl-${i}`, 'aria-selected': String(i === idx), onmousedown: (e) => { e.preventDefault(); slashChoose(it); } }, it[0])));
+      el.style.left = `${Math.max(8, Math.min(box.left, innerWidth - 240))}px`; const below = box.bottom + 6; el.style.top = `${below + el.offsetHeight > innerHeight - 8 ? Math.max(8, box.top - el.offsetHeight - 6) : below}px`;
+      slash = { el, items, idx }; page.setAttribute('aria-activedescendant', `dx-sl-${idx}`);
+    }
+    page.addEventListener('input', () => slashUpdate());
+    page.addEventListener('blur', () => setTimeout(closeSlash, 120));
+    page.addEventListener('keydown', (e) => {
+      if (!slash) return; const n = slash.items.length;
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); e.stopPropagation(); slash.idx = (slash.idx + (e.key === 'ArrowDown' ? 1 : n - 1)) % n; slashUpdate(); }
+      else if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); e.stopPropagation(); slashChoose(slash.items[slash.idx]); }
+      else if (e.key === 'Escape') { e.stopPropagation(); closeSlash(); }
+    }, true);
+
+    // ---- floating toolbar while the caret is in a table
+    const tbarBtn = (label, text, run) => h('button', { type: 'button', class: 'dx-tbb', title: label, 'aria-label': label, onmousedown: (e) => e.preventDefault(), onclick: (e) => run(e.currentTarget) }, text);
+    const cellColours = ['#fef9c3', '#dcfce7', '#cffafe', '#dbeafe', '#ede9fe', '#fce7f3', '#ffedd5', '#fee2e2', '#e5e5e5', '#ffffff'];
+    const tbar = h('div', { class: 'dx-tbar', role: 'toolbar', 'aria-label': 'Table tools', contenteditable: 'false', hidden: true },
+      tbarBtn('Insert row above', 'Row ↑', () => ed.tableOp('rowAbove')), tbarBtn('Insert row below', 'Row ↓', () => ed.tableOp('rowBelow')), tbarBtn('Insert column left', 'Col ←', () => ed.tableOp('colLeft')), tbarBtn('Insert column right', 'Col →', () => ed.tableOp('colRight')),
+      tbarBtn('Delete row', 'Del row', () => ed.tableOp('delRow')), tbarBtn('Delete column', 'Del col', () => ed.tableOp('delCol')), h('span', { class: 'dx-tsep', 'aria-hidden': 'true' }),
+      tbarBtn('Header row on or off', 'Header', () => ed.tableOp('header')), tbarBtn('Align cell left', '⇤', () => ed.setCellAlign('l')), tbarBtn('Centre cell', '↔', () => ed.setCellAlign('c')), tbarBtn('Align cell right', '⇥', () => ed.setCellAlign('r')),
+      tbarBtn('Cell colour', 'Colour', (b) => { keepSel(); const sw = (c) => { const s = h('button', { type: 'button', class: 'dx-sw', 'aria-label': c, title: c, onclick: () => { closePop(); back(); ed.tableOp('bg', c === '#ffffff' ? null : c); } }); s.style.background = c; return s; }; pop(b, h('div', { class: 'dx-palwrap' }, h('div', { class: 'dx-pal' }, ...cellColours.map(sw))), { role: 'dialog', label: 'Cell colour' }); }),
+      tbarBtn('Borders on or off', 'Borders', () => ed.tableOp('nb')), tbarBtn('Delete table', 'Delete', () => ed.tableOp('delTable')));
+    paper.append(tbar);
+    function paintTableBar() {
+      const c = readOnly || mode === 'read' ? null : ed.tableCell(); if (!c) { tbar.hidden = true; return; }
+      tbar.hidden = false; tbar.style.top = `${Math.max(2, c.table.offsetTop - 34)}px`; tbar.style.left = `${Math.max(2, c.table.offsetLeft)}px`;
     }
     let toolRaf = 0; document.addEventListener('selectionchange', function f() { if (gone()) { document.removeEventListener('selectionchange', f); return; } if (toolRaf) return; toolRaf = requestAnimationFrame(() => { toolRaf = 0; if (page.contains(getSelection()?.anchorNode)) paintTools(); }); });
     if (readOnly) lockTools();
@@ -547,13 +609,14 @@ export function docView({ api, id, ctx, opts = {} }) {
           { label: 'Cut', shortcut: `${MOD}X`, disabled: E, run: () => clip('cut') }, { label: 'Copy', shortcut: `${MOD}C`, run: () => clip('copy') }, { label: 'Paste', shortcut: `${MOD}V`, disabled: E, run: () => pasteFromClipboard(false) }, { label: 'Paste as plain text', shortcut: `${MOD}Shift+V`, disabled: E, run: () => pasteFromClipboard(true) },
           { label: 'Select all', shortcut: `${MOD}A`, run: () => { ed.focus(); document.execCommand('selectAll'); } }, { sep: true }, { label: 'Find…', shortcut: `${MOD}F`, run: () => openFind(false) }, { label: 'Find and replace…', shortcut: `${MOD}H`, disabled: E, run: () => openFind(true) }],
         View: [{ label: 'Document tabs', checked: tabsOpen, run: () => toggleTabs() }, { label: 'Outline of headings', checked: outlineOpen, run: () => toggleOutline() }, { label: 'Focus mode', run: () => setMode('focus') }, { label: 'Reading mode', run: () => setMode('read') }, { sep: true }, { label: 'Zoom in', run: () => setZoom(zoom + 10) }, { label: 'Zoom out', run: () => setZoom(zoom - 10) }, { label: 'Zoom 100%', run: () => setZoom(100) }, { sep: true }, { label: 'Page setup…', run: () => pageSetup() }],
-        Insert: [{ label: 'Picture…', disabled: E, run: pickImage }, { label: 'Table…', disabled: E, run: insertTable }, { label: 'Link…', shortcut: `${MOD}K`, disabled: E, run: link }, { label: 'Horizontal line', disabled: E, run: C(() => ed.insertBlocks([{ t: 'hr' }])) }, { label: 'Page break', disabled: E, run: C(() => ed.insertBlocks([{ t: 'pb' }])) }, { sep: true },
+        Insert: [{ label: 'Picture…', disabled: E, run: pickImage }, { label: 'Table…', disabled: E, run: insertTable }, { label: 'Convert selected text to table', disabled: E, run: convertToTable }, { label: 'Link…', shortcut: `${MOD}K`, disabled: E, run: link }, { label: 'Horizontal line', disabled: E, run: C(() => ed.insertBlocks([{ t: 'hr' }])) }, { label: 'Page break', disabled: E, run: C(() => ed.insertBlocks([{ t: 'pb' }])) }, { sep: true },
           { label: 'Table of contents', disabled: E, run: C(() => { ed.insertBlocks([{ t: 'toc' }]); paintOutline(); }) }, { label: 'Footnote…', disabled: E, run: addNote }, { label: 'Special characters…', disabled: E, run: specials }, { label: 'Today’s date', disabled: E, run: insertDate }, { sep: true }, { label: 'New tab', disabled: E, run: () => newTab(null) }, { label: 'New sub-tab', disabled: E || findTab(doc, activeTab).depth + 1 >= MAX_TAB_DEPTH, run: () => newTab(activeTab) }],
         Format: [{ heading: 'Text' }, { label: 'Bold', shortcut: `${MOD}B`, checked: Boolean(st.marks.b), disabled: E, run: C(() => ed.toggleMark('b')) }, { label: 'Italic', shortcut: `${MOD}I`, checked: Boolean(st.marks.i), disabled: E, run: C(() => ed.toggleMark('i')) }, { label: 'Underline', shortcut: `${MOD}U`, checked: Boolean(st.marks.u), disabled: E, run: C(() => ed.toggleMark('u')) },
           { label: 'Strikethrough', checked: Boolean(st.marks.s), disabled: E, run: C(() => ed.toggleMark('s')) }, { label: 'Superscript', checked: Boolean(st.marks.sup), disabled: E, run: C(() => ed.toggleMark('sup')) }, { label: 'Subscript', checked: Boolean(st.marks.sub), disabled: E, run: C(() => ed.toggleMark('sub')) }, { label: 'Code', checked: Boolean(st.marks.cd), disabled: E, run: C(() => ed.toggleMark('cd')) }, { sep: true },
           { group: 'Paragraph style', items: [['p', 'Normal text', '0'], ['title', 'Title'], ['subtitle', 'Subtitle'], ['h1', 'Heading 1', '1'], ['h2', 'Heading 2', '2'], ['h3', 'Heading 3', '3'], ['quote', 'Quote'], ['code', 'Code block']].map(([t, l, k]) => ({ label: l, shortcut: k ? `${MOD}Alt+${k}` : undefined, checked: st.type === t, disabled: E, run: C(() => ed.setBlockType(t)) })) },
           { group: 'Align and indent', items: [...[['l', 'Left'], ['c', 'Centre'], ['r', 'Right'], ['j', 'Justify']].map(([a, l]) => ({ label: l, shortcut: `${MOD}Shift+${{ l: 'L', c: 'E', r: 'R', j: 'J' }[a]}`, checked: st.al === a, disabled: E, run: C(() => ed.setAlign(a)) })), { label: 'Increase indent', disabled: E, run: C(() => ed.indent(1)) }, { label: 'Decrease indent', disabled: E, run: C(() => ed.indent(-1)) }] },
           { group: 'Lists', items: [{ label: 'Bulleted list', shortcut: `${MOD}Shift+8`, checked: st.list === 'ul', disabled: E, run: C(() => ed.toggleList('ul')) }, { label: 'Numbered list', shortcut: `${MOD}Shift+7`, checked: st.list === 'ol', disabled: E, run: C(() => ed.toggleList('ol')) }, { label: 'Checklist', shortcut: `${MOD}Shift+9`, checked: st.list === 'cl', disabled: E, run: C(() => ed.toggleList('cl')) }] },
+          { group: 'Text direction', items: [{ label: 'Left to right', disabled: E, run: C(() => ed.setDirection('ltr')) }, { label: 'Right to left (Urdu, Arabic)', disabled: E, run: C(() => ed.setDirection('rtl')) }] },
           { group: 'Change case', items: [['upper', 'UPPERCASE'], ['lower', 'lowercase'], ['title', 'Title Case'], ['sentence', 'Sentence case']].map(([k, l]) => ({ label: l, disabled: E, run: C(() => ed.changeCase(k)) })) },
           { label: 'Bigger text', disabled: E, run: C(() => ed.setMark('z', Math.min(200, (st.marks.z ?? DEFAULT_SIZE) + 1))) }, { label: 'Smaller text', disabled: E, run: C(() => ed.setMark('z', Math.max(6, (st.marks.z ?? DEFAULT_SIZE) - 1))) }, { sep: true },
           { label: 'Clear formatting', shortcut: `${MOD}\\`, disabled: E, run: C(() => ed.clearFormat()) }, { label: 'Page setup…', run: () => pageSetup() }],

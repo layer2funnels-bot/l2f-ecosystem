@@ -175,15 +175,17 @@ export function createEditor(o) {
     const cell = tableCell(); if (!cell) return false;
     return mutate((models, _r, pos) => {
       const b = models[0]; const rows = structuredClone(b.rows); const cols = rows[0].length; const blank = () => ({ c: [] });
-      let { row, col } = cell; let hdr = b.hdr;
+      let { row, col } = cell; let hdr = b.hdr; let noBorders = b.nb;
       if (op === 'rowAbove' || op === 'rowBelow') { const at = op === 'rowAbove' ? row : row + 1; if (rows.length >= 500) return null; rows.splice(at, 0, Array.from({ length: cols }, blank)); row = at; if (op === 'rowAbove' && at === 0) hdr = undefined; }
       else if (op === 'colLeft' || op === 'colRight') { const at = op === 'colLeft' ? col : col + 1; if (cols >= 20) return null; rows.forEach((r) => r.splice(at, 0, blank())); col = at; }
       else if (op === 'delRow') { if (rows.length === 1) return { blocks: [{ t: 'p', c: [] }] }; rows.splice(row, 1); row = Math.min(row, rows.length - 1); if (cell.row === 0) hdr = undefined; }
       else if (op === 'delCol') { if (cols === 1) return { blocks: [{ t: 'p', c: [] }] }; rows.forEach((r) => r.splice(col, 1)); col = Math.min(col, rows[0].length - 1); }
       else if (op === 'delTable') return { blocks: [{ t: 'p', c: [] }] };
       else if (op === 'header') hdr = hdr ? undefined : 1;
+      else if (op === 'nb') noBorders = noBorders ? undefined : 1;
+      else if (op === 'bg') { if (arg) rows[row][col].bg = arg; else delete rows[row][col].bg; }
       else return null;
-      const nb = { t: 'table', ...(hdr ? { hdr: 1 } : {}), rows };
+      const nb = { t: 'table', ...(hdr ? { hdr: 1 } : {}), ...(noBorders ? { nb: 1 } : {}), rows };
       const at = cellOffset(rows, row, col);
       return { blocks: [nb], sel: { s: { b: pos.b0, o: at }, e: { b: pos.b0, o: at } } };
     }, { start: true });
@@ -194,6 +196,43 @@ export function createEditor(o) {
     if (i >= cells.length) { tableOp('rowBelow'); return true; }
     if (i < 0) return true;
     const rr = d.createRange(); rr.selectNodeContents(cells[i]); rr.collapse(true); const s = win.getSelection(); s.removeAllRanges(); s.addRange(rr); return true;
+  }
+
+  function textToTable() {
+    return mutate((models, _r, pos) => {
+      if (!models.every((b) => TEXTY.has(b.t))) return null;
+      const lines = models.flatMap((b) => runsText(b.c).split('\n')).filter((l) => l.trim() !== '');
+      const delim = lines.some((l) => l.includes('\t')) ? '\t' : lines.some((l) => l.includes('|')) ? '|' : lines.some((l) => l.includes(',')) ? ',' : null;
+      if (!lines.length || (!delim && lines.length < 2)) return null;
+      const rows = lines.map((l) => (delim === '|' ? l.replace(/^\s*\|/, '').replace(/\|\s*$/, '').split('|') : delim ? l.split(delim) : [l]).map((x) => ({ c: x.trim() ? [{ x: x.trim() }] : [] })));
+      return { blocks: [{ t: 'table', hdr: 1, rows }], sel: { s: { b: pos.b0, o: 0 }, e: { b: pos.b0, o: 0 } } };
+    });
+  }
+  const setDirection = (dir) => eachText((b) => { const { dir: _d, ...rest } = b; return dir === 'rtl' ? { ...rest, dir: 'rtl' } : rest; });
+  /** Adds a block right after a given top-level element (the transcript lines use it) and puts the caret at its end. */
+  function appendAfter(el, block) {
+    const idx = kids().indexOf(el); if (idx < 0) return null;
+    mutate((models, _r, pos) => ({ blocks: [models[0], block], sel: { s: { b: pos.b0 + 1, o: 1e9 }, e: { b: pos.b0 + 1, o: 1e9 } } }), { pos: { s: { b: idx, o: 0 }, e: { b: idx, o: 0 } } });
+    return kids()[idx + 1] ?? null;
+  }
+  /** Typing "# ", "- ", "1. ", "[] ", "> " at the start of an empty-so-far paragraph, or "---" / "```" / "| a | b |" plus Enter, changes the block. */
+  const MD_SPACE = { '#': { t: 'h1' }, '##': { t: 'h2' }, '###': { t: 'h3' }, '-': { list: 'ul' }, '*': { list: 'ul' }, '1.': { list: 'ol' }, '[]': { list: 'cl' }, '[ ]': { list: 'cl' }, '>': { t: 'quote' }, '```': { t: 'code' } };
+  function markdown(trigger) {
+    const p = getPos(page); if (!p || !same(p.s, p.e)) return false;
+    const blk = kids()[p.s.b]; if (!blk || blk.tagName !== 'P' || blk.dataset?.t) return false;
+    const text = blk.textContent.replace(/\u200b/g, ''); if (p.s.o !== text.length || !text) return false;
+    let make = null;
+    if (trigger === ' ') { const r = MD_SPACE[text]; if (r) make = () => (r.list ? [{ t: 'list', items: [{ k: r.list, lv: 0, c: [] }] }] : [{ t: r.t, c: [] }]); }
+    else if (text === '---' || text === '***') make = () => [{ t: 'hr' }, { t: 'p', c: [] }];
+    else if (text === '```') make = () => [{ t: 'code', c: [] }];
+    else if (/^\|.+\|$/.test(text.trim())) {
+      const cells = text.trim().replace(/^\||\|$/g, '').split('|').map((x) => ({ c: x.trim() ? [{ x: x.trim() }] : [] })).slice(0, 20);
+      make = () => [{ t: 'table', hdr: 1, rows: [cells, cells.map(() => ({ c: [] }))] }];
+    }
+    if (!make) return false;
+    const isTable = /^\|/.test(text.trim()) && trigger !== ' ';
+    return mutate((models, _r, pos) => { const blocks = make(); const at = blocks.findIndex((x) => x.t === 'hp'); void at; const last = blocks.length - 1; const cellOff = isTable ? blocks[0].rows[0].reduce((n, c) => n + rlen(c.c), 0) : 0;
+      const bi = pos.b0 + (blocks[0].t === 'hr' ? 1 : 0); return { blocks, sel: { s: { b: bi, o: cellOff }, e: { b: bi, o: cellOff } } }; void last; }, { start: true });
   }
 
   // ---- inserting content
@@ -311,6 +350,7 @@ export function createEditor(o) {
     if (/^format(Bold|Italic|Underline|StrikeThrough|Superscript|Subscript)$/.test(t)) { e.preventDefault(); return; }
     if (/^(insertOrderedList|insertUnorderedList|formatJustify|formatIndent|formatOutdent|formatSetBlockTextDirection)/.test(t) || t.startsWith('formatJustify')) { e.preventDefault(); return; }
     const r = inside();
+    if ((t === 'insertText' && e.data === ' ' && markdown(' ')) || (t === 'insertParagraph' && markdown('\n'))) { e.preventDefault(); return; }
     if (t === 'insertText' && pending && r && r.collapsed && !e.isComposing && e.data) {
       e.preventDefault(); const marks = pending.marks; pending = null; insertRuns([{ x: e.data, ...marks }]); return;
     }
@@ -391,7 +431,7 @@ export function createEditor(o) {
   });
 
   return { el: page, load, blocks, mutate, hydrate, state, focus: () => page.focus({ preventScroll: true }),
-    changeCase, insertFootnote, toggleMark, setMark, clearFormat, setLink, linkAtCaret, setBlockType, setAlign, setCellAlign, setSpacing, indent, toggleList, toggleCheck,
+    textToTable, setDirection, appendAfter, changeCase, insertFootnote, toggleMark, setMark, clearFormat, setLink, linkAtCaret, setBlockType, setAlign, setCellAlign, setSpacing, indent, toggleList, toggleCheck,
     tableOp, tableCell, insertTable: (rows, cols, hdr) => insertBlocks([{ t: 'table', ...(hdr ? { hdr: 1 } : {}), rows: Array.from({ length: rows }, () => Array.from({ length: cols }, () => ({ c: [] }))) }]),
     insertBlocks, insertRuns, insertText, pasteContent, deleteSel, selectedImage, selectFig, setImage, removeFig,
     findRanges, highlight, reveal, replaceRange, currentMarks, getPos: () => getPos(page), setPos: (p) => setPos(page, p), lastPos: () => lastPos,
