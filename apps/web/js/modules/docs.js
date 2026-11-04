@@ -12,6 +12,7 @@ import { parseBody, serialize, normalize, wordCount, charCount, outline, sizeOf,
 import { blocksFromHtml, fillToc, fillNotes, dataUrlToBlob } from './docdom.js';
 import { createEditor } from './docedit.js';
 import { download, safeName, loadIo, printBlocks } from './docexport.js';
+import { LANGS, SPEAKER_COLOURS, MAX_SPEAKERS, isUrdu, fmtClock, nextSpeaker, turnChanged, applyVoiceCommands, withSpacing, createRecognizer, voiceSupported, ERRORS } from './docvoice.js';
 
 export const BOARD_MIME = 'application/vnd.excalidraw+json';
 const AUTOSAVE_IDLE_MS = 8000, AUTOSAVE_MIN_MS = 30000;      // every save is a version, so autosave is slow on purpose; Save and leaving are immediate
@@ -127,7 +128,12 @@ export function docView({ api, id, ctx, opts = {} }) {
       if (readOnly) return null;
       const mime = blob.type; if (!IMG_TYPES[mime]) { toast('Only PNG, JPEG, GIF and WebP pictures can be added.', false); return null; }
       if (blob.size > 10 * 1024 * 1024) { toast('That picture is over 10 MB. Resize it first.', false); return null; }
-      const fname = (/\.[a-z0-9]{2,4}$/i.test(name) ? name : `${name}-${Date.now()}.${IMG_TYPES[mime]}`).replace(/[\/\\]/g, '-').slice(0, 180);
+      const id2 = await uploadBlob(blob, name, mime, IMG_TYPES[mime]); if (id2) srcCache.set(id2, blobToUrl(blob)); return id2;
+    }
+    /** Stores bytes as a Drive file next to this document (same space, client, folder and project) and returns the new file's id. */
+    async function uploadBlob(blob, name, mime, ext) {
+      if (readOnly) return null;
+      const fname = (/\.[a-z0-9]{2,4}$/i.test(name) ? name : `${name}-${Date.now()}.${ext}`).replace(/[\/\\]/g, '-').slice(0, 180);
       const where = meta.client_id ? { space: 'client', client: meta.client_id } : { space: meta.space === 'personal' ? 'personal' : 'shared' };
       const s = await api.call('drive.uploads.sign', { ...where, name: fname, size_bytes: Math.max(1, blob.size), mime_type: mime });
       if (!s.ok || !s.data[0]) { toast(s.status === 422 ? 'The storage limit is reached.' : 'You can’t add pictures here.', false); return null; }
@@ -135,7 +141,6 @@ export function docView({ api, id, ctx, opts = {} }) {
       if (!sent) { toast('The upload failed. Try again.', false); return null; }
       const c = await api.call('drive.files.create', { ...where, ...(meta.folder_id ? { folder: meta.folder_id } : {}), ...(meta.project_id ? { project: meta.project_id } : {}), name: fname, kind: 'file', mime_type: mime, size_bytes: Math.max(1, blob.size), storage_path: s.data[0].path });
       if (!c.ok || !c.data[0]) { toast('The picture was uploaded but could not be added.', false); return null; }
-      srcCache.set(c.data[0].id, blobToUrl(blob));
       return c.data[0].id;
     }
     async function insertImageFile(file) {
@@ -442,7 +447,7 @@ export function docView({ api, id, ctx, opts = {} }) {
       tbtn('Line and paragraph spacing', '↕', (b) => spacingPop(b), { pri: 2 }),
       tbtn('Outdent', '⇤', C(() => ed.indent(-1)), { pri: 2 }), tbtn('Indent', '⇥', C(() => ed.indent(1)), { pri: 2 }), sep(2),
       tbtn('Bulleted list', icon('ul'), C(() => ed.toggleList('ul')), { key: 'list-ul' }), tbtn('Numbered list', '1.', C(() => ed.toggleList('ol')), { key: 'list-ol' }), tbtn('Checklist', '☑', C(() => ed.toggleList('cl')), { key: 'list-cl' }), sep(),
-      tbtn('Link', icon('link'), link, { key: 'link' }), tbtn('Picture', icon('imgI'), pickImage), tbtn('Table', icon('table'), (b) => tablePicker(b)), tbtn('Horizontal line', '—', C(() => ed.insertBlocks([{ t: 'hr' }])), { pri: 2 }),
+      tbtn('Link', icon('link'), link, { key: 'link' }), tbtn('Picture', icon('imgI'), pickImage), tbtn('Table', icon('table'), (b) => tablePicker(b)), tbtn('Voice typing', '🎤', () => openVoice(), { key: 'voice' }), tbtn('Horizontal line', '—', C(() => ed.insertBlocks([{ t: 'hr' }])), { pri: 2 }),
       moreBtn);
     const tbItems = [...toolbar.children].filter((x) => x !== moreBtn);
     function fitToolbar() {
@@ -465,6 +470,95 @@ export function docView({ api, id, ctx, opts = {} }) {
       if (![...sizeSel.options].some((o) => o.value === z)) sizeSel.append(h('option', { value: z }, z)); sizeSel.value = z;
       imgBar.hidden = !st.fig; fitHeight(); paintTableBar(); undoBtn.disabled = readOnly || at <= 0; redoBtn.disabled = readOnly || at >= stack.length - 1;
     }
+    // ---- voice typing and conversation transcripts
+    const vs = { open: false, mode: 'dictate', lang: store.get('dx-vlang') || 'en-US', rec: null, listening: false, speakers: [{ name: 'Person 1' }, { name: 'Person 2' }], cur: 0, auto: false, pause: 3, record: false, start: 0, lastAt: 0, lastEl: null, mr: null, chunks: [], stream: null, headerEl: null };
+    const vInterim = h('span', { class: 'dx-vint' }); const vMsg = h('p', { class: 'fine dx-vmsg', role: 'status', 'aria-live': 'polite' });
+    const vMic = h('button', { type: 'button', class: 'btn primary dx-vmic', 'aria-pressed': 'false', onmousedown: (e) => e.preventDefault(), onclick: () => (vs.listening ? voiceStop() : voiceStart()) }, '🎤 Start');
+    const vLang = h('select', { class: 'dx-sel', 'aria-label': 'Speech language', onchange: () => { vs.lang = vLang.value; store.set('dx-vlang', vs.lang); vs.rec?.setLang(vs.lang); } }, ...LANGS.map(([v, t]) => h('option', { value: v }, t)));
+    vLang.value = vs.lang;
+    const vModes = h('div', { class: 'dx-vmodes', role: 'group', 'aria-label': 'Mode' }, ...[['dictate', 'Dictation'], ['talk', 'Conversation']].map(([m, t]) => h('button', { type: 'button', class: 'btn', 'data-m': m, 'aria-pressed': String(m === vs.mode), onmousedown: (e) => e.preventDefault(), onclick: () => { vs.mode = m; paintVoice(); } }, t)));
+    const vSpk = h('div', { class: 'dx-vspk', role: 'group', 'aria-label': 'Speakers' });
+    const vTalk = h('div', { class: 'dx-vtalk' });
+    const vPanel = h('section', { class: 'dx-voice', 'aria-label': 'Voice typing', hidden: true },
+      h('div', { class: 'dx-vrow' }, vMic, vLang, vModes, h('span', { class: 'dx-spacer' }), h('button', { type: 'button', class: 'iconbtn', 'aria-label': 'Close voice panel', onclick: () => closeVoice() }, icon('cross'))),
+      h('div', { class: 'dx-vrow dx-vline', 'aria-live': 'off' }, h('span', { class: 'fine muted' }, 'Hearing: '), vInterim), vTalk, vMsg,
+      h('p', { class: 'fine muted dx-vnote' }, 'Speech recognition runs in your browser. In Chrome and Edge the audio may be sent to the browser maker’s speech service. English commands: “comma”, “full stop”, “question mark”, “new line”, “new paragraph”.'));
+    function paintVoice() {
+      for (const b of vModes.querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.m === vs.mode));
+      vMic.textContent = vs.listening ? '⏹ Stop' : '🎤 Start'; vMic.setAttribute('aria-pressed', String(vs.listening)); vMic.classList.toggle('on', vs.listening);
+      vTalk.hidden = vs.mode !== 'talk'; vSpk.replaceChildren(...vs.speakers.map((sp, i) => {
+        const col = SPEAKER_COLOURS[i % SPEAKER_COLOURS.length];
+        const b = h('button', { type: 'button', class: 'dx-spk', 'aria-pressed': String(i === vs.cur), title: `Speaker ${i + 1}: press Alt+${i + 1}`, onmousedown: (e) => e.preventDefault(), onclick: () => { vs.cur = i; paintVoice(); } }, h('span', { class: 'dx-dot', 'aria-hidden': 'true' }), `${sp.name} `, h('kbd', {}, String(i + 1)));
+        b.firstChild.style.background = col;
+        return h('span', { class: 'dx-spkw' }, b, h('button', { type: 'button', class: 'dx-spkren', 'aria-label': `Rename ${sp.name}`, title: 'Rename', onmousedown: (e) => e.preventDefault(), onclick: () => renameSpeaker(i) }, '✎'));
+      }), ...(vs.speakers.length < MAX_SPEAKERS ? [h('button', { type: 'button', class: 'btn dx-addspk', onmousedown: (e) => e.preventDefault(), onclick: () => { vs.speakers.push({ name: `Person ${vs.speakers.length + 1}` }); paintVoice(); } }, '+ Speaker')] : []));
+    }
+    vTalk.append(vSpk,
+      h('div', { class: 'dx-vrow' }, h('label', { class: 'dx-check' }, h('input', { type: 'checkbox', onchange: (e) => { vs.auto = e.target.checked; } }), ' Switch speaker after a pause of'), h('input', { type: 'number', class: 'dx-num', min: '1', max: '30', value: String(vs.pause), 'aria-label': 'Pause in seconds', onchange: (e) => { vs.pause = Math.max(1, Math.min(30, Number(e.target.value) || 3)); } }), h('span', { class: 'fine' }, 'seconds'),
+        h('label', { class: 'dx-check' }, h('input', { type: 'checkbox', onchange: (e) => { vs.record = e.target.checked; } }), ' Also record the audio and save it to Drive')),
+      h('p', { class: 'fine muted' }, 'The free browser mode cannot tell voices apart. Choose who is speaking with the buttons or Alt+1 to Alt+9; “switch after a pause” only alternates the speakers when someone stops talking for that long.'));
+    function renameSpeaker(i) {
+      const f = field({ id: 'dx-sn', label: 'Speaker name', value: vs.speakers[i].name, maxlength: 40 });
+      dialog({ title: 'Rename speaker', body: f.el, actions: [{ label: 'Save', cls: 'primary', on: () => { const v = f.input.value.trim(); if (!v) return f.error('Enter a name.'); vs.speakers[i].name = v; paintVoice(); } }, { label: 'Cancel' }] });
+    }
+    function openVoice() {
+      if (vs.open) { vPanel.hidden = false; return; }
+      vs.open = true; vPanel.hidden = false; paintVoice(); fitHeight();
+      if (!voiceSupported()) { vMic.disabled = true; vMsg.textContent = 'Voice typing needs a browser with speech recognition, such as Chrome or Edge. This browser does not have it, so you can still type as usual.'; }
+      else vMsg.textContent = readOnly ? 'This document is read only, so nothing can be dictated into it.' : 'Click in the text where the words should go, then press Start.';
+    }
+    function closeVoice() { voiceStop(); vs.open = false; vPanel.hidden = true; fitHeight(); ed.focus(); }
+    function voiceErr(code) { vMsg.textContent = ERRORS[code] ?? `Speech recognition stopped (${code}).`; }
+    function lineRuns(text, sp, idx) {
+      const urdu = isUrdu(vs.lang); const t = applyVoiceCommands(text, vs.lang).replace(/\u0001/g, '\n');
+      return [{ x: sp.name, b: 1, c: SPEAKER_COLOURS[idx % SPEAKER_COLOURS.length] }, { x: ` (${fmtClock(Date.now() - vs.start)}): `, c: '#737373' }, { x: t, ...(urdu ? { f: 'nastaliq' } : {}) }];
+    }
+    function onFinal(text) {
+      if (readOnly) return; const now = Date.now(); const urdu = isUrdu(vs.lang);
+      if (vs.mode === 'talk') {
+        if (vs.auto && turnChanged(vs.lastAt, now, vs.pause)) vs.cur = nextSpeaker(vs.cur, vs.speakers.length);
+        vs.lastAt = now; paintVoice(); const runs = lineRuns(text, vs.speakers[vs.cur], vs.cur); const dir = urdu ? { dir: 'rtl' } : {};
+        if (!vs.lastEl || !vs.lastEl.isConnected) {
+          const head = [{ x: `Conversation transcript, ${new Date().toLocaleString()}`, b: 1 }, ...(vs.record ? [{ x: ' · audio is being recorded and will be saved in Drive next to this document', i: 1, c: '#737373' }] : [])];
+          if (!ed.blockIsEmpty()) ed.insertBlocks([{ t: 'p', c: [] }, { t: 'p', c: [] }]);
+          ed.insertBlocks([{ t: 'p', c: head }, { t: 'p', ...dir, c: runs }]); vs.headerEl = ed.currentBlockEl()?.previousElementSibling ?? null; vs.lastEl = ed.currentBlockEl();
+        } else vs.lastEl = ed.appendAfter(vs.lastEl, { t: 'p', ...dir, c: runs }) ?? vs.lastEl;
+        return;
+      }
+      if (urdu && ed.blockIsEmpty()) ed.setDirection('rtl'); else if (!urdu && ed.blockIsEmpty()) ed.setDirection('ltr');
+      const parts = applyVoiceCommands(text, vs.lang).split('\u0001');
+      parts.forEach((part, i) => {
+        if (i) ed.insertBlocks([{ t: 'p', c: [] }, { t: 'p', c: [] }]);
+        if (part) ed.insertBlocks([{ t: 'p', c: [{ x: withSpacing(part, i ? '' : ed.charBefore()), ...(urdu ? { f: 'nastaliq' } : {}) }] }]);
+      });
+    }
+    async function voiceStart() {
+      if (readOnly) return; if (!voiceSupported()) return;
+      vMsg.textContent = ''; ed.focus();
+      if (!vs.rec) vs.rec = createRecognizer({ lang: vs.lang, onFinal: (t) => onFinal(t), onInterim: (t) => { vInterim.textContent = t; }, onState: (s) => { vs.listening = s === 'listening' || (s !== 'stopped' && vs.listening); if (s === 'stopped' && !vs.rec?.active) { vs.listening = false; } paintVoice(); }, onError: (c) => { voiceErr(c); } });
+      vs.start = Date.now(); vs.lastAt = 0; if (vs.mode === 'talk') vs.lastEl = null;
+      if (vs.mode === 'talk' && vs.record) await startAudio();
+      vs.rec.setLang?.(vs.lang); vs.rec.start(); vs.listening = true; paintVoice();
+    }
+    function voiceStop() { vs.rec?.stop(); vs.listening = false; vInterim.textContent = ''; paintVoice(); stopAudio(); }
+    async function startAudio() {
+      try {
+        vs.stream = await navigator.mediaDevices.getUserMedia({ audio: true }); vs.chunks = [];
+        vs.mr = new MediaRecorder(vs.stream, MediaRecorder.isTypeSupported?.('audio/webm;codecs=opus') ? { mimeType: 'audio/webm;codecs=opus' } : undefined);
+        vs.mr.ondataavailable = (e) => { if (e.data?.size) vs.chunks.push(e.data); };
+        vs.mr.onstop = async () => {
+          const blob = new Blob(vs.chunks, { type: 'audio/webm' }); vs.stream?.getTracks().forEach((t) => t.stop()); vs.stream = null; vs.mr = null; if (!blob.size) return;
+          const fid = await uploadBlob(blob, `Recording of ${meta.name}`, 'audio/webm', 'webm');
+          if (fid && vs.headerEl?.isConnected) { checkpoint(); vs.headerEl.append(document.createTextNode(' — audio saved in Drive next to this document as “Recording of ' + meta.name + '”')); onChange('edit'); }
+          vMsg.textContent = fid ? 'The audio was saved in Drive next to this document.' : 'The audio could not be saved.';
+        };
+        vs.mr.start(1000);
+      } catch { vMsg.textContent = ERRORS['not-allowed']; vs.mr = null; }
+    }
+    function stopAudio() { if (vs.mr && vs.mr.state !== 'inactive') vs.mr.stop(); }
+    root.addEventListener('keydown', (e) => { if (vs.open && vs.mode === 'talk' && e.altKey && !e.ctrlKey && !e.metaKey && /^Digit[1-9]$/.test(e.code)) { const i = Number(e.code.slice(5)) - 1; if (i < vs.speakers.length) { e.preventDefault(); vs.cur = i; paintVoice(); } } });
+    document.addEventListener('visibilitychange', () => { if (gone()) voiceStop(); });
+
     // ---- the "/" menu: type / at the start of an empty line to insert a block
     const SLASH = [
       ['Heading 1', 'h1 title', () => ed.setBlockType('h1')], ['Heading 2', 'h2 subheading', () => ed.setBlockType('h2')], ['Heading 3', 'h3', () => ed.setBlockType('h3')],
@@ -620,7 +714,7 @@ export function docView({ api, id, ctx, opts = {} }) {
           { group: 'Change case', items: [['upper', 'UPPERCASE'], ['lower', 'lowercase'], ['title', 'Title Case'], ['sentence', 'Sentence case']].map(([k, l]) => ({ label: l, disabled: E, run: C(() => ed.changeCase(k)) })) },
           { label: 'Bigger text', disabled: E, run: C(() => ed.setMark('z', Math.min(200, (st.marks.z ?? DEFAULT_SIZE) + 1))) }, { label: 'Smaller text', disabled: E, run: C(() => ed.setMark('z', Math.max(6, (st.marks.z ?? DEFAULT_SIZE) - 1))) }, { sep: true },
           { label: 'Clear formatting', shortcut: `${MOD}\\`, disabled: E, run: C(() => ed.clearFormat()) }, { label: 'Page setup…', run: () => pageSetup() }],
-        Tools: [{ label: 'Word count…', run: countDialog }, { label: 'Check spelling as I type', checked: spell, run: () => { spell = !spell; page.spellcheck = spell; store.set('dx-spell', spell ? '1' : '0'); } }, { label: 'Find and replace…', shortcut: `${MOD}H`, disabled: E, run: () => openFind(true) }, { sep: true }, { label: 'Keyboard shortcuts…', run: shortcuts }],
+        Tools: [{ label: 'Word count…', run: countDialog }, { label: 'Voice typing and transcripts…', run: () => openVoice() }, { label: 'Check spelling as I type', checked: spell, run: () => { spell = !spell; page.spellcheck = spell; store.set('dx-spell', spell ? '1' : '0'); } }, { label: 'Find and replace…', shortcut: `${MOD}H`, disabled: E, run: () => openFind(true) }, { sep: true }, { label: 'Keyboard shortcuts…', run: shortcuts }],
       };
     };
     const menubar = h('div', { class: 'dx-menubar', role: 'menubar', 'aria-label': 'Document menu' });
@@ -827,7 +921,7 @@ export function docView({ api, id, ctx, opts = {} }) {
     const banners = [];
     if (meta.archived_at) banners.push(notice('info', 'eye', [h('b', {}, 'Archived.'), ' This document is read only. ', btn('Restore', async () => { const r = await api.call('drive.files.restore', { id }); if (r.ok) { toast('Restored.'); load(); } else toast('You can’t restore this document.', false); }, 'link')]));
     else if (readOnly) banners.push(readOnlyNotice('You can read this document but not change it'));
-    root.replaceChildren(...banners, bar, chrome, body, statusbar, exitBtn);
+    root.replaceChildren(...banners, bar, chrome, body, vPanel, statusbar, exitBtn);
     page.spellcheck = spell; outlineEl.hidden = !outlineOpen;
     const ro = new ResizeObserver(() => { fitToolbar(); fitHeight(); }); ro.observe(chrome); addEventListener('resize', fitHeight); document.fonts?.ready.then(() => { fitToolbar(); fitHeight(); });
     hdrEl.addEventListener('click', () => pageSetup('hdr')); ftrEl.addEventListener('click', () => pageSetup('ftr'));

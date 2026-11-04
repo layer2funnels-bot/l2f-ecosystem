@@ -215,3 +215,17 @@
 .dx-table[data-nb] td,.dx-table[data-nb] th{border-color:transparent}
 .dx-doc [dir=rtl]{direction:rtl;text-align:right;line-height:1.9}.dx-doc [dir=rtl][data-al=c]{text-align:center}.dx-doc [dir=rtl][data-al=l]{text-align:left}
 .dx-doc ul[dir=rtl]{padding-left:0;padding-right:1.7em}
+
+/* ---- voice typing / transcript panel ---- */
+.dx-voice{flex:none;display:grid;gap:var(--space-2);padding:var(--space-2) var(--space-3);background:var(--surface2);border-top:1px solid var(--line2)}.dx-voice[hidden]{display:none}
+.dx-vrow{display:flex;flex-wrap:wrap;gap:var(--space-2);align-items:center}.dx-vrow .btn{min-height:34px}.dx-vrow .dx-sel{min-height:34px}
+.dx-vmic.on{background:var(--danger,#b91c1c);border-color:var(--danger,#b91c1c);color:#fff}
+.dx-vmodes{display:inline-flex;gap:0}.dx-vmodes .btn{border-radius:0}.dx-vmodes .btn:first-child{border-radius:8px 0 0 8px}.dx-vmodes .btn:last-child{border-radius:0 8px 8px 0}.dx-vmodes .btn[aria-pressed=true]{background:var(--action);color:var(--action-ink);border-color:var(--action)}
+.dx-vline{min-height:22px}.dx-vint{color:var(--muted);font-style:italic;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.dx-vmsg{margin:0;color:var(--text2)}.dx-vnote{margin:0}
+.dx-vtalk{display:grid;gap:var(--space-2)}.dx-vtalk[hidden]{display:none}
+.dx-vspk{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.dx-spkw{display:inline-flex;align-items:center}
+.dx-spk{display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:0 10px;border:1px solid var(--line2);border-radius:8px 0 0 8px;background:var(--surface);color:var(--text);font:500 13px var(--font);cursor:pointer}.dx-spk[aria-pressed=true]{border-color:var(--action);background:var(--action-tint);font-weight:700}
+.dx-spk kbd{font:500 11px var(--font-m);color:var(--muted)}.dx-dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+.dx-spkren{min-height:34px;width:30px;border:1px solid var(--line2);border-left:0;border-radius:0 8px 8px 0;background:var(--surface);color:var(--text2);cursor:pointer}
+.dx-addspk{min-height:34px}

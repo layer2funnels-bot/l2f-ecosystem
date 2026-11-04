@@ -435,5 +435,8 @@ export function createEditor(o) {
     tableOp, tableCell, insertTable: (rows, cols, hdr) => insertBlocks([{ t: 'table', ...(hdr ? { hdr: 1 } : {}), rows: Array.from({ length: rows }, () => Array.from({ length: cols }, () => ({ c: [] }))) }]),
     insertBlocks, insertRuns, insertText, pasteContent, deleteSel, selectedImage, selectFig, setImage, removeFig,
     findRanges, highlight, reveal, replaceRange, currentMarks, getPos: () => getPos(page), setPos: (p) => setPos(page, p), lastPos: () => lastPos,
+    charBefore: () => { const r = inside() ?? null; if (!r || !r.collapsed) return ''; const n = r.startContainer; if (n.nodeType === 3 && r.startOffset > 0) return n.data[r.startOffset - 1]; const p = getPos(page); return p && p.s.o > 0 ? 'x' : ''; },
+    currentBlockEl: () => { const p = getPos(page) ?? lastPos; return p ? kids()[Math.min(p.s.b, kids().length - 1)] ?? null : null; },
+    blockIsEmpty: () => { const p = getPos(page) ?? lastPos; const el = p ? kids()[p.s.b] : null; return Boolean(el && !el.textContent.replace(/\u200b/g, '').trim() && el.tagName === 'P'); },
     selectedText: () => { const r = inside(); return r && !r.collapsed ? r.toString() : ''; }, hasSelection: () => { const r = inside(); return Boolean(r && !r.collapsed); } };
 }
