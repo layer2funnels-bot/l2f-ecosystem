@@ -171,3 +171,4 @@
 .drv-share{margin-top:var(--space-3)}
 .drv-tbl td a[href]{min-height:44px;box-sizing:border-box}
 .drv-main a[href][title]{min-height:44px;display:inline-flex;align-items:center;box-sizing:border-box}
+.drv-main button.linklike{min-height:44px;box-sizing:border-box}
