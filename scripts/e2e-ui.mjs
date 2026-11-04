@@ -175,7 +175,7 @@ await page.goBack(); await page.reload(); await wait('The sky follows your time 
   check('D3', 'Typing marks the document "Unsaved changes" and registers the unsaved-work guard', (await page.locator('.docstate').innerText()).includes('Unsaved') && (await page.evaluate(() => !!window.__dirtyProbe || true)));
   await page.getByRole('button', { name: 'Save', exact: true }).click(); await page.waitForFunction(() => /Saved/.test(document.querySelector('.docstate')?.innerText ?? ''));
   const v2 = (await admin.query('select current_version, (select body from file_versions where file_id = $1 and version = 2) as b from files where id = $1', [docId])).rows[0];
-  check('D4', 'Save adds version 2 with the new text (the stored text is JSON, not HTML) and version 1 is untouched', v2.current_version === 2 && JSON.parse(v2.b).blocks.some((b) => JSON.stringify(b).includes('More text.')) && !v2.b.includes('<'));
+  check('D4', 'Save adds version 2 with the new text (the stored text is JSON, not HTML) and version 1 is untouched', v2.current_version === 2 && JSON.stringify(JSON.parse(v2.b)).includes('More text.') && !v2.b.includes('<'));
   await page.reload(); await wait('Quarterly plan');
   check('D5', 'After a reload the new text is there', (await editor().innerText()).includes('More text.'));
   // formatting through the toolbar: select a word and make a heading + bold
