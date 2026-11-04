@@ -38,6 +38,7 @@ writeFileSync(out + '/config.js', `window.L2F_CONFIG = ${JSON.stringify({ supaba
 const storageOrigin = process.env.STORAGE_CONNECT_ORIGIN || '';
 if (storageOrigin && !/^https:\/\/[a-z0-9]{32}\.r2\.cloudflarestorage\.com$/.test(storageOrigin)) { console.error('STORAGE_CONNECT_ORIGIN must look like https://<32-character account id>.r2.cloudflarestorage.com'); process.exit(1); }
 let headers = readFileSync(out + '/_headers', 'utf8').replace('connect-src \'self\' http://127.0.0.1:54321 https://*.supabase.co', `connect-src 'self' ${new URL(url).origin}${storageOrigin ? ` ${storageOrigin}` : ''}`);
-if (storageOrigin) headers = headers.replace("img-src 'self' data:", `img-src 'self' data: ${storageOrigin}`);
+// Drive previews: pictures, video/audio and PDFs (in a frame) come straight from that same one storage origin; nothing else is added.
+if (storageOrigin) headers = headers.replace("img-src 'self' data:", `img-src 'self' data: ${storageOrigin}`).replace(/(Content-Security-Policy: [^\n]*?)(frame-ancestors)/, `$1media-src 'self' ${storageOrigin}; frame-src ${storageOrigin}; $2`);
 writeFileSync(out + '/_headers', headers);
 console.log(`built dist/web for ${new URL(url).origin}`);

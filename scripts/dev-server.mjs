@@ -22,7 +22,7 @@ export const LOCAL_ENV = {
 
 export async function startDevServer({ port = 8788, env = { ...LOCAL_ENV, ...process.env }, sink, limits, weatherFetch, extraConnect } = {}) {
   const cspKey = Object.keys(pageHeaders).find((k) => k.toLowerCase() === 'content-security-policy');
-  const headersFor = extraConnect && cspKey ? { ...pageHeaders, [cspKey]: pageHeaders[cspKey].replace(/connect-src ([^;]*)/, (m) => `${m} ${extraConnect}`) } : pageHeaders;
+  const headersFor = extraConnect && cspKey ? { ...pageHeaders, [cspKey]: pageHeaders[cspKey].replace(/connect-src ([^;]*)/, (m) => `${m} ${extraConnect}`).replace(/img-src ([^;]*)/, (m) => `${m} ${extraConnect}`).replace(/$/, `; media-src 'self' ${extraConnect}; frame-src ${extraConnect}`) } : pageHeaders;
   const server = createServer(env, { ...(sink ? { sink } : {}), ...(limits ? { limits } : {}), ...(weatherFetch ? { weatherFetch } : {}) });
   const http_ = http.createServer(async (req, res) => {
     try {
