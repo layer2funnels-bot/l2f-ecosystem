@@ -63,7 +63,7 @@ export function pdfView({ api, id, ctx }) {
   };
 
   function mount(file, pdfjs, bytes0, doc0, firstVersion) {
-    const readOnly = Boolean(file.archived_at) || !ctx.can('drive.file.upload', file.client_id);
+    const readOnly = Boolean(file.archived_at) || !(ctx.can('drive.file.upload', file.client_id) || file.my_role === 'editor');
     let meta = file, version = firstVersion, savedAt = file.updated_at, status = readOnly ? 'readonly' : 'saved', saving = false;
     const srcs = [{ bytes: bytes0, doc: doc0, name: file.name, count: doc0.numPages }];          // source 0 is this file; merged files are added after it
     let S = { pages: M.initialPages(doc0.numPages, 0), ann: {}, form: {}, deco: {}, rev: 0 }; let rev = 0, savedRev = 0;

@@ -88,7 +88,7 @@ export function imageView({ api, id, ctx }) {
   };
 
   function mount(file, firstBase, firstVersion) {
-    const readOnly = Boolean(file.archived_at) || !ctx.can('drive.file.upload', file.client_id);
+    const readOnly = Boolean(file.archived_at) || !(ctx.can('drive.file.upload', file.client_id) || file.my_role === 'editor');
     let meta = file, version = firstVersion, savedAt = file.updated_at, status = readOnly ? 'readonly' : 'saved', saving = false;
     const orig = firstBase;                                         // "before": the picture as it was when opened
     const DEF = { ...M.ADJUST_DEFAULTS };

@@ -95,7 +95,7 @@ export function docView({ api, id, ctx, opts = {} }) {
   };
 
   function mount(file, ver) {
-    let meta = file, version = ver.version, status = 'saved', savedAt = ver.created_at, lastAuto = 0, timer = null, saving = false, readOnly = Boolean(file.archived_at) || !ctx.can('drive.file.upload', file.client_id);
+    let meta = file, version = ver.version, status = 'saved', savedAt = ver.created_at, lastAuto = 0, timer = null, saving = false, readOnly = Boolean(file.archived_at) || !(ctx.can('drive.file.upload', file.client_id) || file.my_role === 'editor');
     let doc = parseBody(ver.body ?? ''); let activeTab = doc.tabs[0].id; let savedBody = serialize(doc); let lastBody = savedBody;
     let spell = store.get('dx-spell') !== '0'; let outlineOpen = store.get('dx-outline') !== '0'; let mode = '';
     let zoom = Number(store.get('dx-zoom')) || 100; const narrow = innerWidth < 900; const tabsKey = narrow ? 'dx-tabs-narrow' : 'dx-tabs'; let tabsOpen = store.get(tabsKey) ? store.get(tabsKey) === '1' : !narrow;

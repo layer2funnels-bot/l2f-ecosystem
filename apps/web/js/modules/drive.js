@@ -39,6 +39,7 @@ export function driveView({ api, ctx, route }) {
   const live = () => ctx.live() && root.isConnected;
   const space = route.space === 'personal' ? 'personal' : 'shared'; const view = route.view ?? 'files'; const folderId = route.folder ?? null;
   const canWrite = ctx.can('drive.file.upload') || ctx.canAnywhere('drive.file.upload');
+  const isOwner = !!ctx.isOwner; const myId = ctx.userId;
   const fail = (r, what = 'do that') => toast(r?.status === 404 ? `You can’t ${what} here.` : (r?.error?.message ?? 'Something went wrong. Try again.'), false);
   const state = { q: '', type: 'all', sort: SORTS.some(([k]) => k === lsGet('l2f.drive.sort')) ? lsGet('l2f.drive.sort') : 'name', dir: lsGet('l2f.drive.dir') === 'desc' ? -1 : 1, mode: lsGet('l2f.drive.view') === 'grid' ? 'grid' : 'list', starOnly: false, folders: [], files: [], selected: new Set() };
   const starKey = `l2f.drive.stars.${ctx.orgName}`;
@@ -72,11 +73,15 @@ export function driveView({ api, ctx, route }) {
     if (view === 'files') { /* keep the toolbar, replace only the list */ list.replaceChildren(skeleton(3)); } else put(main, skeleton(4));
     if (view === 'trash') return trash();
     if (view === 'recent') return recent();
+    if (view === 'shared') return sharedWithMe();
+    if (view === 'open') return openLink();
     const arg = { space, ...(folderId ? { parent: folderId } : {}) };
-    const [fo, fi, path] = await Promise.all([api.call('drive.folders.list', arg), api.call('drive.files.list', { space, ...(folderId ? { folder: folderId } : {}), ...(state.q ? { q: state.q } : {}), ...(state.q || state.starOnly ? { anywhere: true } : {}) }), folderId ? api.call('drive.folders.path', { id: folderId }) : Promise.resolve({ ok: true, data: [] })]);
+    const [fo, fi, path, prot] = await Promise.all([api.call('drive.folders.list', arg), api.call('drive.files.list', { space, ...(folderId ? { folder: folderId } : {}), ...(state.q ? { q: state.q } : {}), ...(state.q || state.starOnly ? { anywhere: true } : {}) }), folderId ? api.call('drive.folders.path', { id: folderId }) : Promise.resolve({ ok: true, data: [] }), folderId ? api.call('drive.folders.protection', { id: folderId }) : Promise.resolve({ ok: true, data: [] })]);
     if (!live()) return;
     if (!fo.ok || !fi.ok) return put(view === 'files' ? list : main, fi.status === 404 || fo.status === 404 ? noAccessState({ action: h('a', { class: 'btn', href: driveHref(space) }, 'Back to Drive') }) : errorState(load));
     if (folderId && !path.data.length) return put(list, noAccessState({ title: 'Folder not found', action: h('a', { class: 'btn', href: driveHref(space) }, 'Back to Drive') }));
+    const gate = prot.ok && prot.data[0]; const crumbs = () => put(crumb, h('a', { href: driveHref(space) }, space === 'personal' ? 'Personal' : `${ctx.orgName} library`), ...path.data.flatMap((p) => [h('span', { class: 'sep', 'aria-hidden': 'true' }, '/'), p.id === folderId ? h('b', { title: p.name }, p.name) : h('a', { href: driveHref(space, p.id), title: p.name }, p.name)]));
+    if (gate && gate.protected && !gate.unlocked) { state.folders = []; state.files = []; state.selected.clear(); crumbs(); put(list, unlockPrompt(path.data.at(-1)?.name ?? 'This folder')); paintSel(); return; }
     state.folders = state.q || state.starOnly ? [] : fo.data; state.files = fi.data; state.selected.clear();
     put(crumb, h('a', { href: driveHref(space) }, space === 'personal' ? 'Personal' : `${ctx.orgName} library`), ...path.data.flatMap((p) => [h('span', { class: 'sep', 'aria-hidden': 'true' }, '/'), p.id === folderId ? h('b', { title: p.name }, p.name) : h('a', { href: driveHref(space, p.id), title: p.name }, p.name)]));
     paint();
@@ -138,21 +143,23 @@ export function driveView({ api, ctx, route }) {
   const moreBtn = (item, isFolder) => h('button', { type: 'button', class: 'btn quiet drv-more', 'aria-label': `Actions for ${item.name}`, title: 'Actions (Shift+F10)', 'aria-haspopup': 'true', onclick: (e) => rowMenu(e.currentTarget, item, isFolder) }, icon('more'));
   const nameOf = (f) => { const href = openHref(f); return href ? h('a', { href, title: f.name }, f.name) : h('button', { type: 'button', class: 'linklike', title: f.name, onclick: () => openFile(f) }, f.name); };
   const starMark = (f) => (stars.has(f.id) ? h('span', { class: 'drv-star', title: 'Starred', role: 'img', 'aria-label': 'Starred' }, icon('star')) : null);
+  const lockMark = (it) => (it.locked ? h('span', { class: 'drv-lock', title: 'Locked: only owners can see this', role: 'img', 'aria-label': 'Locked' }, icon('lock')) : null);
+  const pwMark = (d) => (d.protected ? h('span', { class: 'drv-lock pw', title: 'Password protected', role: 'img', 'aria-label': 'Password protected' }, icon('key')) : null);
   const fileCount = (d) => `${d.files} file${d.files === 1 ? '' : 's'}`;
   function rowEl(r) {
-    if (r.folder) { const d = r.folder; return h('tr', { 'data-drop-folder': d.id, 'data-item': d.id, tabindex: '-1', 'aria-label': `Folder ${d.name}` }, h('td', { class: 'c-sel' }, pick(d)), h('td', { class: 't1' }, h('span', { class: 'fname' }, folderTile(), h('span', { class: 'fn-text' }, h('a', { href: driveHref(space, d.id), title: d.name }, d.name), h('span', { class: 'drv-sub' }, `Folder · ${fileCount(d)} · ${when(d.updated_at)}`)))),
+    if (r.folder) { const d = r.folder; return h('tr', { 'data-drop-folder': d.id, 'data-item': d.id, tabindex: '-1', 'aria-label': `Folder ${d.name}` }, h('td', { class: 'c-sel' }, pick(d)), h('td', { class: 't1' }, h('span', { class: 'fname' }, folderTile(), h('span', { class: 'fn-text' }, h('span', { class: 'fn-line' }, h('a', { href: driveHref(space, d.id), title: d.name }, d.name), lockMark(d), pwMark(d)), h('span', { class: 'drv-sub' }, `Folder · ${fileCount(d)} · ${when(d.updated_at)}`)))),
       h('td', { class: 'c-meta' }, 'Folder'), h('td', { class: 'c-meta' }, fileCount(d)), h('td', { class: 'c-meta' }, when(d.updated_at)), h('td', { class: 'c-act' }, moreBtn(d, true))); }
     const f = r.file; const ty = fileType(f);
-    return h('tr', { 'data-item': f.id, tabindex: '-1', 'aria-label': `${ty.name} ${f.name}` }, h('td', { class: 'c-sel' }, pick(f)), h('td', { class: 't1' }, h('span', { class: 'fname' }, ftile(f), h('span', { class: 'fn-text' }, h('span', { class: 'fn-line' }, nameOf(f), starMark(f), f.protected_sop ? tag('Approved SOP', 'ok') : null), h('span', { class: 'drv-sub' }, [ty.name, formatSize(f.size_bytes), when(f.updated_at)].filter(Boolean).join(' · '))))),
+    return h('tr', { 'data-item': f.id, tabindex: '-1', 'aria-label': `${ty.name} ${f.name}` }, h('td', { class: 'c-sel' }, pick(f)), h('td', { class: 't1' }, h('span', { class: 'fname' }, ftile(f), h('span', { class: 'fn-text' }, h('span', { class: 'fn-line' }, nameOf(f), starMark(f), lockMark(f), f.protected_sop ? tag('Approved SOP', 'ok') : null), h('span', { class: 'drv-sub' }, [ty.name, formatSize(f.size_bytes), when(f.updated_at)].filter(Boolean).join(' · '))))),
       h('td', { class: 'c-meta' }, ty.name), h('td', { class: 'c-meta' }, formatSize(f.size_bytes)), h('td', { class: 'c-meta' }, when(f.updated_at)), h('td', { class: 'c-act' }, moreBtn(f, false)));
   }
   function gridCell(r) {
     if (r.folder) { const d = r.folder; return h('article', { class: 'gcard', role: 'listitem', 'data-drop-folder': d.id, 'data-item': d.id, tabindex: '-1' }, h('a', { class: 'gcard-art', href: driveHref(space, d.id), 'aria-label': `Open folder ${d.name}`, tabindex: '-1' }, h('span', { class: 'drv-art xl', 'aria-hidden': 'true' }, folderTile())), pick(d), moreBtn(d, true),
-      h('div', { class: 'gcard-foot' }, h('a', { class: 'gname', href: driveHref(space, d.id), title: d.name }, d.name), h('span', { class: 'drv-sub on' }, `Folder · ${fileCount(d)}`))); }
+      h('div', { class: 'gcard-foot' }, h('span', { class: 'gname-line' }, h('a', { class: 'gname', href: driveHref(space, d.id), title: d.name }, d.name), lockMark(d), pwMark(d)), h('span', { class: 'drv-sub on' }, `Folder · ${fileCount(d)}`))); }
     const f = r.file; const ty = fileType(f); const href = openHref(f);
     const artEl = art(f, true);
     return h('article', { class: 'gcard', role: 'listitem', 'data-item': f.id, tabindex: '-1' }, href ? h('a', { class: 'gcard-art', href, 'aria-label': `Open ${f.name}`, tabindex: '-1' }, artEl) : h('button', { type: 'button', class: 'gcard-art', 'aria-label': `${previewKind(f) ? 'Preview' : 'Download'} ${f.name}`, tabindex: '-1', onclick: () => openFile(f) }, artEl),
-      pick(f), moreBtn(f, false), h('div', { class: 'gcard-foot' }, h('span', { class: 'gname-line' }, nameOf(f), starMark(f), f.protected_sop ? tag('SOP', 'ok') : null), h('span', { class: 'drv-sub on' }, [ty.name, formatSize(f.size_bytes)].filter(Boolean).join(' · '))));
+      pick(f), moreBtn(f, false), h('div', { class: 'gcard-foot' }, h('span', { class: 'gname-line' }, nameOf(f), starMark(f), lockMark(f), f.protected_sop ? tag('SOP', 'ok') : null), h('span', { class: 'drv-sub on' }, [ty.name, formatSize(f.size_bytes)].filter(Boolean).join(' · '))));
   }
   function paintSel() {
     const n = state.selected.size; bar.hidden = n === 0; if (!n) return;
@@ -176,6 +183,9 @@ export function driveView({ api, ctx, route }) {
       !isFolder && !href ? { label: 'Download', ic: 'download', on: () => download(item) } : null,
       isFolder ? null : { label: stars.has(item.id) ? 'Remove star' : 'Star', ic: 'star', on: () => toggleStar([item.id]) },
       isFolder ? null : { label: 'Details', ic: 'info', on: () => details(item) },
+      sharable(item) ? { label: 'Share…', ic: 'share', on: () => shareDialog(item, isFolder) } : null,
+      sharable(item) && isOwner ? { label: item.locked ? 'Unlock' : 'Lock (owners only)', ic: 'lock', on: () => setLock(item, isFolder) } : null,
+      isFolder && space === 'shared' && (isOwner || item.created_by === myId) ? { label: item.protected ? 'Change or remove password…' : 'Set password…', ic: 'key', on: () => passwordDialog(item) } : null,
       mutable ? { label: 'Rename', ic: 'edit', on: () => rename(item, isFolder) } : null, mutable ? { label: 'Move', ic: 'move', on: () => moveDialog([isFolder ? { folder: item } : { file: item }]) } : null,
       canWrite && !isFolder ? { label: 'Make a copy', ic: 'copy', on: () => copyItem(item) } : null,
       mutable ? { label: 'Move to Trash', ic: 'trash', danger: true, on: () => (isFolder ? trashFolder(item) : trashMany([item])) } : null], `Actions for ${item.name}`);
@@ -233,6 +243,75 @@ export function driveView({ api, ctx, route }) {
       else if (e.key === 'Tab') { const f = [...box.querySelectorAll('button')]; if (!f.length) return; const i = f.indexOf(document.activeElement); if (e.shiftKey && i <= 0) { e.preventDefault(); f.at(-1).focus(); } else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); } }
     }
     document.addEventListener('keydown', onKey, true); document.body.append(box); x.focus(); show();
+  }
+  const sharable = (it) => space === 'shared' && !it.protected_sop && (canWrite || isOwner);
+  async function setLock(it, isFolder) {
+    const lock = !it.locked; const r = await api.call('drive.items.lock', { kind: isFolder ? 'folder' : 'file', id: it.id, locked: lock });
+    if (!r.ok) return fail(r, lock ? 'lock that' : 'unlock that');
+    toast(lock ? 'Locked. Only owners can see it now.' : 'Unlocked.'); load();
+  }
+  const when2 = (iso) => (iso ? `until ${when(iso)}` : 'no expiry');
+  const linkUrl = (token) => `${location.origin}${location.pathname}#/drive/open/${token}`;
+  async function copyText(text) { try { await navigator.clipboard.writeText(text); return true; } catch { return false; } }
+  /** Share with people of the organization (view or edit) and, for a file, by link. Everything is checked by the database; a refusal reads as "not allowed". */
+  async function shareDialog(item, isFolder) {
+    const body = h('div', { class: 'drv-share' }); const key = isFolder ? { folder: item.id } : { file: item.id }; let fresh = null;
+    const draw = async () => {
+      const [pp, sh, lk] = await Promise.all([api.call('drive.people', {}), api.call('drive.shares.list', key), isFolder ? Promise.resolve({ ok: true, data: [] }) : api.call('drive.links.list', { file: item.id })]);
+      if (!sh.ok) return put(body, notice('warn', 'lock', 'You can’t manage sharing for this. Only an owner, people with sharing rights, and the person who created it can.'));
+      const direct = sh.data.filter((x) => !x.via_link); const have = new Set(direct.map((x) => x.user_id));
+      const people = (pp.ok ? pp.data : []).filter((p) => !p.is_you && !have.has(p.user_id));
+      const who = h('select', { id: 'sh-who', 'aria-label': 'Person' }, h('option', { value: '' }, 'Choose a person…'), ...people.map((p) => h('option', { value: p.user_id }, p.display_name)));
+      const role = h('select', { id: 'sh-role', 'aria-label': 'What they can do' }, h('option', { value: 'viewer' }, 'Can view'), h('option', { value: 'editor' }, 'Can edit'));
+      const add = btn('Add', async () => { if (!who.value) return toast('Choose a person first.', false); const r = await api.call('drive.shares.set', { ...key, user: who.value, role: role.value }); if (!r.ok) return fail(r, 'share that'); toast('Shared.'); draw(); }, 'primary');
+      const setRole = (row) => h('select', { 'aria-label': `What ${row.display_name} can do`, onchange: async (e) => { const r = await api.call('drive.shares.set', { ...key, user: row.user_id, role: e.target.value }); if (!r.ok) fail(r, 'change that'); else toast('Updated.'); } },
+        h('option', { value: 'viewer', ...(row.role === 'viewer' ? { selected: true } : {}) }, 'Can view'), h('option', { value: 'editor', ...(row.role === 'editor' ? { selected: true } : {}) }, 'Can edit'));
+      const people$ = h('section', { 'aria-labelledby': 'sh-h1' }, h('h3', { id: 'sh-h1' }, 'People'),
+        h('p', { class: 'fine muted' }, `Only members of ${ctx.orgName} can be added. ${isFolder ? 'They get everything in this folder, including files added later.' : ''}`),
+        h('div', { class: 'drv-share-add' }, who, role, add),
+        direct.length ? h('ul', { class: 'drv-share-list' }, ...direct.map((x) => h('li', {}, h('span', { class: 'sh-name', title: x.display_name }, x.display_name), setRole(x), h('button', { type: 'button', class: 'btn quiet', 'aria-label': `Remove ${x.display_name}`, title: 'Remove access', onclick: async () => { const r = await api.call('drive.shares.remove', { id: x.id }); if (!r.ok) fail(r, 'change that'); else { toast('Access removed.'); draw(); } } }, icon('x')))))
+          : h('p', { class: 'fine muted' }, 'Not shared with anyone yet.'));
+      const parts = [people$];
+      if (!isFolder) {
+        const live = lk.ok ? lk.data.filter((l) => !l.revoked_at && (!l.expires_at || new Date(l.expires_at) > new Date())) : [];
+        const lrole = h('select', { id: 'lk-role', 'aria-label': 'Link rights' }, h('option', { value: 'viewer' }, 'Anyone with the link can view'), h('option', { value: 'editor' }, 'Anyone with the link can edit'));
+        const lexp = h('select', { id: 'lk-exp', 'aria-label': 'Link expires' }, ...[['7', 'Expires in 7 days'], ['1', 'Expires in 1 day'], ['30', 'Expires in 30 days'], ['90', 'Expires in 90 days'], ['365', 'Expires in 1 year'], ['never', 'Never expires']].map(([k, l]) => h('option', { value: k }, l)));
+        const make = btn('Create link', async () => { const r = await api.call('drive.links.create', { file: item.id, role: lrole.value, ...(lexp.value === 'never' ? { never: true } : { days: Number(lexp.value) }) }); if (!r.ok) return fail(r, 'make a link for that'); fresh = linkUrl(r.data[0].token); await copyText(fresh); toast('Link created and copied.'); draw(); }, '');
+        const freshBox = fresh ? h('div', { class: 'drv-newlink', role: 'status' }, h('input', { readonly: true, value: fresh, 'aria-label': 'The new link', onfocus: (e) => e.target.select() }), btn('Copy', async () => toast((await copyText(fresh)) ? 'Copied.' : 'Select the link and copy it.', true), 'ghost'), h('p', { class: 'fine muted' }, 'Copy it now: for safety it is shown only once.')) : null;
+        parts.push(h('section', { 'aria-labelledby': 'sh-h2' }, h('h3', { id: 'sh-h2' }, 'Link'),
+          h('p', { class: 'fine muted' }, `Only signed-in members of ${ctx.orgName} can open it. Clients and people outside the organization never can.`),
+          h('div', { class: 'drv-share-add' }, lrole, lexp, make), freshBox,
+          live.length ? h('ul', { class: 'drv-share-list' }, ...live.map((l) => h('li', {}, h('span', { class: 'sh-name' }, `${l.role === 'editor' ? 'Can edit' : 'Can view'} · ${when2(l.expires_at)} · opened ${l.use_count}×`), h('button', { type: 'button', class: 'btn quiet', 'aria-label': 'Revoke this link', onclick: async () => { const r = await api.call('drive.links.revoke', { id: l.id }); if (!r.ok) fail(r, 'change that'); else { toast('Link revoked.'); fresh = null; draw(); } } }, 'Revoke'))))
+            : h('p', { class: 'fine muted' }, 'No active links.')));
+      }
+      put(body, ...parts);
+    };
+    dialog({ title: `Share “${item.name}”`, body, wide: true, actions: [{ label: 'Done', cls: 'primary' }] }); draw();
+  }
+  /** Set, change or remove a folder password. The password is hashed on the server; the folder asks for it before showing anything inside. */
+  function passwordDialog(d) {
+    const a = field({ id: 'pw-new', label: 'New password', type: 'password', autocomplete: 'new-password', hint: 'At least 8 characters. Write it down somewhere safe: nobody can read it back.', maxlength: 200 });
+    const b = field({ id: 'pw-new2', label: 'Type it again', type: 'password', autocomplete: 'new-password', maxlength: 200 });
+    const actions = [{ label: 'Save password', cls: 'primary', on: async () => { a.error?.(''); const v = a.input.value;
+      if (v.length < 8) return a.error('Use at least 8 characters.'); if (v !== b.input.value) return b.error('The two passwords are different.');
+      const r = await api.call('drive.folders.setPassword', { id: d.id, password: v }); if (!r.ok) { fail(r, 'set a password for that'); return false; } toast('Password set. Everyone has to enter it again.'); load(); } }];
+    if (d.protected) actions.push({ label: 'Remove password', cls: 'dng', on: async () => { const r = await api.call('drive.folders.setPassword', { id: d.id }); if (!r.ok) { fail(r, 'change that'); return false; } toast('Password removed.'); load(); } });
+    actions.push({ label: 'Cancel' });
+    dialog({ title: d.protected ? `Password for “${d.name}”` : `Protect “${d.name}” with a password`, body: [h('p', { class: 'fine muted' }, 'Everything in this folder, and in the folders below it, stays hidden (also from search and Recent) until someone enters the password. It stays open for 12 hours on that device’s sign-in.'), a.el, b.el], actions });
+  }
+  /** The screen shown instead of a protected folder's contents. */
+  function unlockPrompt(name) { return unlockPromptFor(folderId, () => load(), name); }
+  function unlockPromptFor(fid, done, name = 'This folder') {
+    const pw = field({ id: 'dp-pw', label: 'Password', type: 'password', autocomplete: 'off', maxlength: 200 }); const msg = h('p', { class: 'fine', id: 'dp-msg', role: 'alert' });
+    const go = async (e) => {
+      e?.preventDefault(); if (!pw.input.value) { msg.textContent = 'Enter the password.'; return; }
+      const r = await api.call('drive.folders.unlock', { id: fid, password: pw.input.value }); if (!live()) return;
+      if (!r.ok) { msg.textContent = r.status === 404 ? 'You can’t open this folder.' : 'Something went wrong. Try again.'; return; }
+      const x = r.data[0]; if (x.unlocked) { toast('Unlocked for 12 hours.'); done(); return; }
+      pw.input.value = ''; msg.textContent = x.retry_after_seconds > 0 ? `Too many wrong passwords. Try again in ${Math.max(1, Math.ceil(x.retry_after_seconds / 60))} minute${x.retry_after_seconds > 90 ? 's' : ''}.` : `That password is not right. ${x.attempts_left} ${x.attempts_left === 1 ? 'try' : 'tries'} left.`;
+    };
+    return h('form', { class: 'empty drv-gate', onsubmit: go, 'aria-labelledby': 'dp-h' }, h('span', { class: 'ftile folder lg' }, icon('key')), h('h3', { id: 'dp-h' }, 'This folder is password protected'),
+      h('p', {}, `“${name}” stays closed until you enter its password. Ask the owner if you don’t have it.`), h('div', { class: 'drv-gate-f' }, pw.el, btn('Unlock', go, 'primary', { type: 'submit' })), msg);
   }
   function rename(item, isFolder) {
     const f = field({ id: 'dr-name', label: 'Name', value: item.name, maxlength: 200 });
@@ -403,8 +482,9 @@ export function driveView({ api, ctx, route }) {
     if (!people) { const r = await api.call('projects.people', {}); people = r.ok ? r.data : []; }
     const m = people.find((x) => x.user_id === f.uploaded_by); return m ? (m.is_you ? 'You' : m.display_name) : 'A teammate';
   }
+  let body$ = null;
   async function details(f) {
-    const tab = { cur: 'details' }; const body = h('div', {});
+    const tab = { cur: 'details' }; const body = h('div', {}); body$ = body;
     const draw = async () => {
       if (tab.cur === 'details') {
         const canLib = f.space === 'shared' && f.managed_by && ctx.can('drive.file.edit'); const prev = isImage(f) ? art(f, true) : null; const who = await ownerName(f);
@@ -413,6 +493,7 @@ export function driveView({ api, ctx, route }) {
           f.managed_by && f.space === 'shared' ? h('div', { class: 'fld' }, h('label', {}, h('input', { type: 'checkbox', checked: f.in_library, ...(canLib ? {} : { disabled: true }), onchange: async (e) => { const r = await api.call('drive.files.setLibrary', { id: f.id, in_library: e.target.checked }); if (!r.ok) { e.target.checked = !e.target.checked; fail(r, 'change that'); } else { f = { ...f, in_library: e.target.checked }; toast(e.target.checked ? 'Added to the library.' : 'Removed from the library.'); load(); } } }), ' Show in the library'),
             h('p', { class: 'fine muted' }, 'This file belongs to another app and is stored safely either way. Showing it here does not move it.')) : null);
       } else if (tab.cur === 'sharing') {
+        if (f.space === 'shared' && !f.protected_sop) { await sharingTab(f); return; }
         put(body, f.space === 'client' ? h('div', {}, h('label', {}, h('input', { type: 'checkbox', checked: f.client_visible, ...(ctx.can('drive.file.share', f.client_id) ? {} : { disabled: true }), onchange: async (e) => { const r = await api.call('drive.files.share', { id: f.id, visible: e.target.checked }); if (!r.ok) { e.target.checked = !e.target.checked; fail(r, 'share that'); } else f = { ...f, client_visible: e.target.checked }; } }), ' Shareable with the client'), h('p', { class: 'fine muted' }, 'The Client Portal is locked, so nothing reaches the client yet.'))
           : h('div', {}, h('p', {}, f.space === 'personal' ? 'Only you can open your personal files. Administrators cannot, except through a logged emergency access that names a reason and tells you.' : `Everyone in ${ctx.orgName} with Drive access can open this file. What each person can change follows their access level in Admin.`), h('p', { class: 'fine muted' }, 'Share links need a public viewer page, which arrives with the Client Portal.')));
       } else {
@@ -425,8 +506,40 @@ export function driveView({ api, ctx, route }) {
     drawer({ title: f.name, label: `Details of ${f.name}`, body: [strip, body], actions: [{ label: 'Close', cls: 'primary' }] }); draw();
   }
 
+  /** The Sharing tab of the details drawer for a file in the library: who has it, the way in, and (for owners) the lock. */
+  async function sharingTab(f) {
+    const [sh, lk] = await Promise.all([api.call('drive.shares.list', { file: f.id }), api.call('drive.links.list', { file: f.id })]); if (!live()) return;
+    const direct = sh.ok ? sh.data.filter((x) => !x.via_link) : []; const links = lk.ok ? lk.data.filter((l) => !l.revoked_at && (!l.expires_at || new Date(l.expires_at) > new Date())) : [];
+    put(body$, h('div', {}, h('p', {}, `Everyone in ${ctx.orgName} with Drive access can open this file. What each person can change follows their access level in Admin.`),
+      h('h3', { class: 'over' }, 'Shared with'), direct.length ? h('ul', { class: 'drv-share-list' }, ...direct.map((x) => h('li', {}, h('span', { class: 'sh-name', title: x.display_name }, x.display_name), tag(x.role === 'editor' ? 'Can edit' : 'Can view')))) : h('p', { class: 'fine muted' }, 'Nobody in particular.'),
+      h('p', { class: 'fine muted' }, links.length ? `${links.length} active link${links.length === 1 ? '' : 's'}.` : 'No active links.'),
+      sharable(f) ? btn('Share…', () => shareDialog(f, false), 'primary') : null,
+      isOwner ? h('div', { class: 'drv-lockbox' }, h('h3', { class: 'over' }, 'Owner lock'), h('p', { class: 'fine muted' }, 'A locked file disappears for everyone except owners: nobody else can see, open, download, change, share or delete it. Only an owner can unlock it.'), btn(f.locked ? 'Unlock' : 'Lock this file', async () => { await setLock(f, false); f = { ...f, locked: !f.locked }; sharingTab(f); }, f.locked ? 'ghost' : '')) : null));
+  }
+
+  // ---------------------------------------------------------------- shared with me, opening a link
+  async function sharedWithMe() {
+    const r = await api.call('drive.shares.mine', {}); if (!live()) return;
+    put(main, head('Shared with me', 'Files and folders other people gave you access to.'), r.ok && r.data.length ? h('ul', { class: 'drv-items card' }, ...r.data.map((x) => { const isF = x.kind === 'folder'; const it = isF ? x : { ...x, kind: x.file_kind };
+      return itemRow(it, isF, `${isF ? 'Folder' : fileType(it).name} · ${x.role === 'editor' ? 'You can edit' : 'You can view'} · ${when(x.updated_at)}`, isF ? h('a', { class: 'btn ghost', href: driveHref('shared', x.id) }, 'Open') : openHref(it) ? h('a', { class: 'btn ghost', href: openHref(it) }, 'Open') : btn('Open', () => openFile(it), 'ghost')); }))
+      : emptyState({ title: 'Nothing shared with you yet', body: 'When someone shares a file or folder with you, or you open a share link, it appears here.', ic: 'team' }));
+  }
+  async function openLink() {
+    const r = await api.call('drive.links.open', { token: route.token ?? '' }); if (!live()) return;
+    const back = h('a', { class: 'btn', href: driveHref('shared') }, 'Go to Drive');
+    if (!r.ok) return put(main, noAccessState({ title: 'This link doesn’t work for you', body: `It may have expired or been withdrawn, or it belongs to another organization (check the organization at the top). Only signed-in members of ${ctx.orgName} can open share links.`, action: back }));
+    const x = r.data[0];
+    if (x.protected_folder) {
+      const pr = await api.call('drive.folders.protection', { id: x.protected_folder }); if (!live()) return;
+      if (!pr.ok) return put(main, noAccessState({ title: 'This file is in a protected folder', body: 'Ask the owner for access to the folder and its password, then open the link again.', action: back }));
+      return put(main, head('Protected folder', null), h('div', { class: 'drv-gate-wrap' }, unlockPromptFor(x.protected_folder, () => openLink())));
+    }
+    const href = openHref(x); if (href) { ctx.go(href); return; }
+    put(main, head(x.name, x.role === 'editor' ? 'You can edit this file.' : 'You can view this file.'), previewKind(x) ? btn('Preview', () => openFile(x), 'primary') : btn('Download', () => download(x), 'primary'));
+  }
+
   // ---------------------------------------------------------------- recent, trash
-  const itemRow = (it, isFolder, ...end) => h('li', { class: 'drv-it' }, isFolder ? folderTile() : ftile(it), h('div', { class: 'drv-it-main' }, openHref(it) && !isFolder ? h('a', { class: 'pj-title', href: openHref(it), title: it.name }, it.name) : h('span', { class: 'pj-title', title: it.name }, it.name), h('span', { class: 'drv-sub on' }, end[0])), h('span', { class: 'drv-it-acts' }, ...end.slice(1)));
+  const itemRow = (it, isFolder, ...end) => h('li', { class: 'drv-it' }, isFolder ? folderTile() : ftile(it), h('div', { class: 'drv-it-main' }, isFolder ? h('a', { class: 'pj-title', href: driveHref('shared', it.id), title: it.name }, it.name) : openHref(it) ? h('a', { class: 'pj-title', href: openHref(it), title: it.name }, it.name) : h('span', { class: 'pj-title', title: it.name }, it.name), h('span', { class: 'drv-sub on' }, end[0])), h('span', { class: 'drv-it-acts' }, ...end.slice(1)));
   async function recent() {
     const [a, b] = await Promise.all([api.call('drive.files.list', { space: 'shared', anywhere: true }), api.call('drive.files.list', { space: 'personal', anywhere: true })]); if (!live()) return;
     const files = [...(a.ok ? a.data : []), ...(b.ok ? b.data : [])].sort((x, y) => new Date(y.updated_at) - new Date(x.updated_at)).slice(0, 25);

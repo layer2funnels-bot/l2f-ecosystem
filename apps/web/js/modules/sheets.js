@@ -36,7 +36,7 @@ export function sheetView({ api, id, ctx }) {
 
   function mount(file, ver) {
     let meta = file; const book = parseBook(ver.body ?? ''); let si = 0; let calc = createCalc(book);
-    const readOnly = Boolean(file.archived_at) || !ctx.can('drive.file.upload', file.client_id);
+    const readOnly = Boolean(file.archived_at) || !(ctx.can('drive.file.upload', file.client_id) || file.my_role === 'editor');
     let sel = { a: { c: 0, r: 0 }, f: { c: 0, r: 0 }, kind: 'cell' }; let editing = null; let hidden = { rows: new Set(), cols: new Set() }; let filtered = new Set(); let matches = new Set();
     let body = ''; let dirtyBody = true; const memo = new Map(); let painter = null; let fillSrc = null; let resizing = null;
     const sheet = () => book.sheets[si];

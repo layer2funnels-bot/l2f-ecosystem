@@ -45,7 +45,7 @@ export function boardView({ api, id, ctx }) {
 
   function mount(file, ver, editor) {
     let meta = file;
-    const readOnly = Boolean(file.archived_at) || !ctx.can('drive.file.upload', file.client_id);
+    const readOnly = Boolean(file.archived_at) || !(ctx.can('drive.file.upload', file.client_id) || file.my_role === 'editor');
     const scene = parseBoard(ver.body ?? '');
     let els = scene.elements, bg = scene.background, sig = signature(els), cache = { sig, body: null };
     const getBody = () => { if (cache.sig !== sig || cache.body === null) cache = { sig, body: serializeBoard(els, bg) }; return cache.body; };

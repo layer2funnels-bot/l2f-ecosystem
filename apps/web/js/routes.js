@@ -39,7 +39,8 @@ export function parseRoute(hash) {
   if (a === 'drive' && b === 'f' && c && seg.length === 3) return r('drive', { view: 'files', space: 'shared', folder: c });
   if (a === 'drive' && b === 'personal' && seg.length === 2) return r('drive', { view: 'files', space: 'personal' });
   if (a === 'drive' && b === 'personal' && c === 'f' && d && seg.length === 4) return r('drive', { view: 'files', space: 'personal', folder: d });
-  if (a === 'drive' && (b === 'recent' || b === 'trash') && seg.length === 2) return r('drive', { view: b, space: 'shared' });
+  if (a === 'drive' && (b === 'recent' || b === 'trash' || b === 'shared') && seg.length === 2) return r('drive', { view: b, space: 'shared' });
+  if (a === 'drive' && b === 'open' && c && seg.length === 3) return r('drive', { view: 'open', space: 'shared', token: c });
   if ((a === 'whiteboards' && !b) || (a === 'app' && b === 'whiteboard' && seg.length === 2)) return r('boards', {});
   if ((a === 'social' && !b) || (a === 'app' && b === 'social_planner' && seg.length === 2)) return r('social', { view: 'home' });
   if (a === 'social' && b === 'c' && c && seg.length === 3) return r('social', { view: 'c', id: c });

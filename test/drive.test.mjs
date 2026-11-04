@@ -174,8 +174,8 @@ const shared = (await db.query("insert into files (workspace_id,space,name,kind,
 await db.query("insert into file_versions (workspace_id,file_id,body) values ($1,$2,'one-pager text')", [L, shared]);
 const link = (await db.query("insert into drive_share_links (workspace_id,file_id,token_hash,expires_at) values ($1,$2,$3,now() + interval '2 days') returning id", [L, shared, hashOf(tokenA)])).rows[0].id;
 check('LK1', 'Someone who may share creates a link for a shared-space file; only a hash of the secret is stored', (await rows('select token_hash from drive_share_links where id=$1', [link]))[0].token_hash === hashOf(tokenA) && !JSON.stringify(await rows('select * from drive_share_links')).includes(tokenA));
-check('LK2', 'A link cannot outlive 31 days, or be made for personal, client, protected or archived files',
-  (await errCode(() => db.query("insert into drive_share_links (workspace_id,file_id,token_hash,expires_at) values ($1,$2,$3,now() + interval '40 days')", [L, shared, hashOf('b'.repeat(43))]))) === '23514'
+check('LK2', 'A link cannot outlive a year (31 days before the sharing update), or be made for personal, client, protected or archived files',
+  (await errCode(() => db.query("insert into drive_share_links (workspace_id,file_id,token_hash,expires_at) values ($1,$2,$3,now() + interval '400 days')", [L, shared, hashOf('b'.repeat(43))]))) === '23514'
   && (await errCode(() => db.query("insert into drive_share_links (workspace_id,file_id,token_hash,expires_at) values ($1,$2,$3,now() + interval '1 day')", [L, pfile, hashOf('c'.repeat(43))]))) !== 'no-error'
   && (await errCode(() => db.query("insert into drive_share_links (workspace_id,file_id,token_hash,expires_at) values ($1,$2,$3,now() + interval '1 day')", [L, cfile, hashOf('d'.repeat(43))]))) === 'P0001');
 await asUser(U.VW);
