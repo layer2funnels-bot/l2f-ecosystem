@@ -126,7 +126,20 @@ export function createEditor(o) {
 
   // ---- paragraphs
   const eachText = (fn) => mutate((models, ranges, pos) => ({ blocks: models.map((b, i) => (TEXTY.has(b.t) ? fn(b, ranges[i], pos) : b)) }));
-  const setBlockType = (t) => eachText((b) => ({ ...b, t }));
+  /** A paragraph style on a list item takes the item out of the list (like a word processor); the rest of the list stays a list. */
+  const setBlockType = (t) => mutate((models, ranges, pos) => {
+    const out = []; let last = -1;
+    models.forEach((b, i) => {
+      if (TEXTY.has(b.t)) { out.push({ ...b, t }); last = out.length - 1; }
+      else if (b.t === 'list') {
+        const { i0 = 0, i1 = b.items.length - 1 } = ranges[i]; const before = b.items.slice(0, i0), after = b.items.slice(i1 + 1);
+        if (before.length) out.push({ t: 'list', items: before });
+        b.items.slice(i0, i1 + 1).forEach((it) => { out.push({ t, ...(it.lv ? { ind: it.lv } : {}), c: it.c }); last = out.length - 1; });
+        if (after.length) out.push({ t: 'list', items: after });
+      } else out.push(b);
+    });
+    return { blocks: out, sel: last >= 0 ? { s: { b: pos.b0 + last, o: 1e9 }, e: { b: pos.b0 + last, o: 1e9 } } : undefined };
+  });
   const setAlign = (al) => mutate((models, ranges) => ({ blocks: models.map((b, i) => {
     if (TEXTY.has(b.t)) { const { al: _x, ...rest } = b; return al && al !== 'l' ? { ...rest, al } : rest; }
     if (b.t === 'table') return mapC({ ...b, rows: b.rows.map((r) => r.map((c) => c)) }, ranges[i].from, ranges[i].to, (rs) => rs);   // cells keep their own alignment below

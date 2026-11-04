@@ -243,3 +243,5 @@
 .dx-preview .dx-paper{max-width:100%}
 @media (max-width:700px){.dx-statusbar .docstat:nth-last-child(-n+2){display:none}.dx-statusbar{gap:2px 12px;padding:2px var(--space-2)}.dx-voice{max-height:45vh;overflow:auto}}
 .dx-voice .dx-vmodes .btn[aria-pressed=true]:disabled,.dx-voice .dx-vmodes .btn[aria-pressed=true][aria-disabled=true]{opacity:1;background:var(--action);color:var(--action-ink);border-color:var(--action)}
+
+.dx-zoom{display:inline-flex;align-items:center;gap:2px}.dx-zb{width:28px;height:28px;border:1px solid var(--line2);border-radius:6px;background:var(--surface);color:var(--text);font:600 16px/1 var(--font);cursor:pointer}.dx-zb:hover,.dx-zb:focus-visible{background:var(--action-tint)}
