@@ -170,3 +170,4 @@
 .drv-lockbox{margin-top:var(--space-5);padding-top:var(--space-4);border-top:var(--bw) solid var(--line)}
 .drv-share{margin-top:var(--space-3)}
 .drv-tbl td a[href]{min-height:44px;box-sizing:border-box}
+.drv-main a[href][title]{min-height:44px;display:inline-flex;align-items:center;box-sizing:border-box}
