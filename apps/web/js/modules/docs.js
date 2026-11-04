@@ -78,7 +78,7 @@ function menuItems(items, close, place) {
 // ---- the view
 /** `opts.crumbs(meta)` replaces the breadcrumb parts; `opts.side(meta)` adds a side panel next to the page (Funnel Strategies use both). */
 export function docView({ api, id, ctx, opts = {} }) {
-  const root = h('section', { class: 'docs' }, skeleton(4));
+  const root = h('section', { class: 'docs ed-full' }, skeleton(4));
   const load = async () => {
     const f = await api.call('drive.files.get', { id });
     if (!ctx.live()) return;
@@ -109,7 +109,7 @@ export function docView({ api, id, ctx, opts = {} }) {
     const counter = h('span', { class: 'docstat' }); const spaceEl = h('span', { class: 'docstat dx-space' });
     const saveBtn = btn('Save', () => save({ manual: true }), 'primary');
     const titleIn = h('input', { class: 'doctitle', value: meta.name, 'aria-label': 'Document name', maxlength: '200', ...(readOnly ? { readonly: true } : {}) });
-    const crumb = h('nav', { class: 'fpath fine', 'aria-label': 'Where this document lives' });
+    const backA = h('a', { class: 'dx-back', href: '#/drive', 'aria-label': 'Back to Drive', title: 'Back' }, icon('arrow'));
     const tools = [];                                          // toolbar controls that edit (disabled when read only)
 
     // ---- images (stored as Drive files; the document keeps only the file id)
@@ -397,23 +397,24 @@ export function docView({ api, id, ctx, opts = {} }) {
         const rec = recent(markKey); const grid = h('div', { class: 'dx-pal' }, ...palette.map(sw));
         const none = h('button', { type: 'button', class: 'btn', onclick: () => { closePop(); back(); ed.setMark(markKey, null); paintTools(); } }, markKey === 'c' ? 'Automatic' : 'No highlight');
         const custom = h('input', { type: 'color', 'aria-label': `Custom ${label.toLowerCase()}`, value: '#1d4ed8', onchange: () => pick(custom.value) });
-        pop(b, h('div', { class: 'dx-palwrap' }, grid, rec.length ? h('div', { class: 'dx-recent' }, h('span', { class: 'fine muted' }, 'Recent'), ...rec.map(sw)) : null, h('div', { class: 'dx-palrow' }, none, h('label', { class: 'fine' }, 'Custom ', custom))), { role: 'dialog', label });
+        pop(anch(b), h('div', { class: 'dx-palwrap' }, grid, rec.length ? h('div', { class: 'dx-recent' }, h('span', { class: 'fine muted' }, 'Recent'), ...rec.map(sw)) : null, h('div', { class: 'dx-palrow' }, none, h('label', { class: 'fine' }, 'Custom ', custom))), { role: 'dialog', label });
       }, { pri }); return b;
     };
     const spacingPop = (b) => {
       keepSel(); const st = ed.state();
       const opt = [1, 1.15, 1.5, 2, 2.5, 3].map((n) => h('button', { type: 'button', class: 'dx-mi', role: 'menuitemradio', 'aria-checked': String(Math.abs(st.ls - n) < 0.01), onclick: () => { closePop(); back(); ed.setSpacing({ ls: n === 1.15 ? null : n }); paintTools(); } }, h('span', { class: 'dx-mc' }, Math.abs(st.ls - n) < 0.01 ? '✓' : ''), h('span', { class: 'dx-ml' }, n === 1.15 ? '1.15 (default)' : String(n))));
       const num = (lab, key, val) => { const i = h('input', { type: 'number', min: '0', max: '200', value: String(val), 'aria-label': lab, class: 'dx-num', onchange: () => { back(); ed.setSpacing({ [key]: Math.max(0, Math.min(200, Math.round(Number(i.value) || 0))) }); paintTools(); } }); return h('label', { class: 'dx-numrow' }, lab, i); };
-      pop(b, h('div', {}, h('div', { class: 'dx-mh' }, 'Line spacing'), ...opt, h('div', { class: 'dx-sep' }), h('div', { class: 'dx-mh' }, 'Paragraph spacing (points)'), num('Before', 'sb', st.sb), num('After', 'sa', st.sa)), { role: 'dialog', label: 'Spacing' });
+      pop(anch(b), h('div', {}, h('div', { class: 'dx-mh' }, 'Line spacing'), ...opt, h('div', { class: 'dx-sep' }), h('div', { class: 'dx-mh' }, 'Paragraph spacing (points)'), num('Before', 'sb', st.sb), num('After', 'sa', st.sa)), { role: 'dialog', label: 'Spacing' });
     };
     const alignBtn = (al, label, glyph) => tbtn(label, glyph, C(() => (ed.state().table && !ed.state().collapsed === false && ed.state().type === 'p' && false ? 0 : ed.setAlign(al))), { key: `al-${al}`, pri: 2 });
     const undoBtn = tbtn('Undo', icon('undo'), () => { ed.focus(); undo(); }, { key: 'undo' }); const redoBtn = tbtn('Redo', icon('redo'), () => { ed.focus(); redo(); }, { key: 'redo' });
-    const imgBar = h('span', { class: 'dx-imgtools', hidden: true },
+    const imgBar = h('div', { class: 'dx-imgtools', hidden: true, role: 'toolbar', 'aria-label': 'Picture' },
       ...[['l', 'Align picture left', '◧'], ['c', 'Centre picture', '▣'], ['r', 'Align picture right', '◨']].map(([a, lab, g]) => tbtn(lab, g, () => ed.setImage({ al: a }))),
       ...[[25, '25%'], [50, '50%'], [100, '100%']].map(([p, t]) => tbtn(`Picture width ${t} of the page`, t, () => ed.setImage({ w: Math.round((page.clientWidth * p) / 100) }))),
       ...[['', 'In line with text', 'In line'], ['l', 'Wrap text around, picture on the left', 'Wrap L'], ['r', 'Wrap text around, picture on the right', 'Wrap R'], ['b', 'Break text above and below', 'Break']].map(([w, lab, t]) => tbtn(lab, t, () => ed.setImage({ wr: w || null }), { cls: 'dx-txt' })),
       tbtn('Picture description and width', 'Alt text', imageDetails), tbtn('Remove picture', icon('trash'), () => ed.removeFig()));
-    const moreBtn = h('button', { type: 'button', class: 'dx-tb dx-more', 'aria-label': 'More formatting', 'aria-expanded': 'false', title: 'More formatting', onclick: () => { const on = toolbar.classList.toggle('dx-open'); moreBtn.setAttribute('aria-expanded', String(on)); } }, icon('more'));
+    const ovf = h('div', { class: 'dx-ovf' });
+    const moreBtn = h('button', { type: 'button', class: 'dx-tb dx-more', 'aria-label': 'More formatting tools', 'aria-haspopup': 'dialog', title: 'More tools', hidden: true, onclick: () => pop(moreBtn, ovf, { role: 'dialog', label: 'More formatting tools' }) }, icon('more'));
     const toolbar = h('div', { class: 'dx-toolbar doctools', role: 'toolbar', 'aria-label': 'Formatting' },
       undoBtn, redoBtn, sep(), styleSel, fontSel, sizeSel, sep(2),
       markBtn('Bold', icon('bold'), 'b'), markBtn('Italic', icon('italic'), 'i'), markBtn('Underline', icon('under'), 'u'), markBtn('Strikethrough', h('s', {}, 'S'), 's', '', 2),
@@ -425,14 +426,27 @@ export function docView({ api, id, ctx, opts = {} }) {
       tbtn('Outdent', '⇤', C(() => ed.indent(-1)), { pri: 2 }), tbtn('Indent', '⇥', C(() => ed.indent(1)), { pri: 2 }), sep(2),
       tbtn('Bulleted list', icon('ul'), C(() => ed.toggleList('ul')), { key: 'list-ul' }), tbtn('Numbered list', '1.', C(() => ed.toggleList('ol')), { key: 'list-ol' }), tbtn('Checklist', '☑', C(() => ed.toggleList('cl')), { key: 'list-cl' }), sep(),
       tbtn('Link', icon('link'), link, { key: 'link' }), tbtn('Picture', icon('imgI'), pickImage), tbtn('Table', icon('table'), insertTable), tbtn('Horizontal line', '—', C(() => ed.insertBlocks([{ t: 'hr' }])), { pri: 2 }),
-      imgBar, moreBtn);
+      moreBtn);
+    const tbItems = [...toolbar.children].filter((x) => x !== moreBtn);
+    function fitToolbar() {
+      if (gone() || !toolbar.clientWidth) return;
+      for (const it of tbItems) toolbar.insertBefore(it, moreBtn);
+      moreBtn.hidden = true;
+      const avail = toolbar.clientWidth - 16; const widths = tbItems.map((i) => i.offsetWidth + 2);
+      if (widths.reduce((a, b) => a + b, 0) <= avail) return;
+      moreBtn.hidden = false; const limit = avail - (moreBtn.offsetWidth || 40) - 4; let used = 0, cut = tbItems.length;
+      for (let i = 0; i < tbItems.length; i += 1) { used += widths[i]; if (used > limit) { cut = i; break; } }
+      while (cut > 0 && tbItems[cut - 1].classList.contains('dx-tsep')) cut -= 1;
+      for (let i = cut; i < tbItems.length; i += 1) ovf.append(tbItems[i]);
+    }
+    const anch = (b) => (b.isConnected ? b : moreBtn);
     const lockTools = () => { for (const c of tools) c.disabled = true; for (const c of findBar.querySelectorAll('[data-edit]')) c.disabled = true; rIn.readOnly = true; titleIn.readOnly = true; paintTabs(); };
     function paintTools() {
       if (gone()) return; const st = ed.state(); const m = st.marks;
-      for (const b of toolbar.querySelectorAll('[data-k]')) { const k = b.dataset.k; if (['b', 'i', 'u', 's', 'sup', 'sub', 'cd'].includes(k)) btnOn(b, m[k]); else if (k.startsWith('list-')) btnOn(b, st.list === k.slice(5)); else if (k.startsWith('al-')) btnOn(b, st.al === k.slice(3) || (k === 'al-l' && st.al === 'l')); else if (k === 'link') btnOn(b, st.link); }
+      for (const b of [...toolbar.querySelectorAll('[data-k]'), ...ovf.querySelectorAll('[data-k]')]) { const k = b.dataset.k; if (['b', 'i', 'u', 's', 'sup', 'sub', 'cd'].includes(k)) btnOn(b, m[k]); else if (k.startsWith('list-')) btnOn(b, st.list === k.slice(5)); else if (k.startsWith('al-')) btnOn(b, st.al === k.slice(3) || (k === 'al-l' && st.al === 'l')); else if (k === 'link') btnOn(b, st.link); }
       styleSel.value = st.type === 'list' ? 'p' : st.type; fontSel.value = m.f ?? ''; const z = String(m.z ?? DEFAULT_SIZE);
       if (![...sizeSel.options].some((o) => o.value === z)) sizeSel.append(h('option', { value: z }, z)); sizeSel.value = z;
-      imgBar.hidden = !st.fig; undoBtn.disabled = readOnly || at <= 0; redoBtn.disabled = readOnly || at >= stack.length - 1;
+      imgBar.hidden = !st.fig; fitHeight(); undoBtn.disabled = readOnly || at <= 0; redoBtn.disabled = readOnly || at >= stack.length - 1;
     }
     let toolRaf = 0; document.addEventListener('selectionchange', function f() { if (gone()) { document.removeEventListener('selectionchange', f); return; } if (toolRaf) return; toolRaf = requestAnimationFrame(() => { toolRaf = 0; if (page.contains(getSelection()?.anchorNode)) paintTools(); }); });
     if (readOnly) lockTools();
@@ -547,15 +561,29 @@ export function docView({ api, id, ctx, opts = {} }) {
       };
     };
     const menubar = h('div', { class: 'dx-menubar', role: 'menubar', 'aria-label': 'Document menu' });
-    const menuBtns = Object.keys(menus()).map((name) => {
-      const b = h('button', { type: 'button', class: 'dx-mb', role: 'menuitem', 'aria-haspopup': 'menu', 'aria-expanded': 'false' }, name);
-      const open = () => { const self = pop(b, [], { role: 'menu', label: name, onClose: () => b.setAttribute('aria-expanded', 'false') }); const items = menus()[name]; self.el.replaceChildren(...menuItems(items, self.close, self.place)); self.place(); b.setAttribute('aria-expanded', 'true'); self.el.querySelector('[role^=menuitem]:not(:disabled)')?.focus(); };
-      b.addEventListener('click', () => (b.getAttribute('aria-expanded') === 'true' ? closePop() : open()));
-      b.addEventListener('mouseenter', () => { if (openPop && menuBtns.some((x) => x.getAttribute('aria-expanded') === 'true') && b.getAttribute('aria-expanded') !== 'true') open(); });
-      b.addEventListener('keydown', (e) => { const i = menuBtns.indexOf(b); if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } else if (e.key === 'ArrowRight') { e.preventDefault(); menuBtns[(i + 1) % menuBtns.length].focus(); } else if (e.key === 'ArrowLeft') { e.preventDefault(); menuBtns[(i + menuBtns.length - 1) % menuBtns.length].focus(); } });
-      return b;
-    });
-    menubar.append(...menuBtns);
+    const narrowMq = matchMedia('(max-width: 700px)'); let menuBtns = [];
+    function buildMenubar() {
+      if (gone()) return;
+      if (narrowMq.matches) {
+        const b = h('button', { type: 'button', class: 'dx-mb', role: 'menuitem', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-label': 'Menu' }, '☰ Menu');
+        b.addEventListener('click', () => { const self = pop(b, [], { role: 'menu', label: 'Menu', onClose: () => b.setAttribute('aria-expanded', 'false') }); self.el.replaceChildren(...menuItems(Object.entries(menus()).map(([group, items]) => ({ group, items })), self.close, self.place)); self.place(); b.setAttribute('aria-expanded', 'true'); self.el.querySelector('[role^=menuitem]')?.focus(); });
+        menuBtns = [b]; menubar.replaceChildren(b); return;
+      }
+      menuBtns = Object.keys(menus()).map((name) => {
+        const b = h('button', { type: 'button', class: 'dx-mb', role: 'menuitem', 'aria-haspopup': 'menu', 'aria-expanded': 'false' }, name);
+        const open = () => { const self = pop(b, [], { role: 'menu', label: name, onClose: () => b.setAttribute('aria-expanded', 'false') }); const items = menus()[name]; self.el.replaceChildren(...menuItems(items, self.close, self.place)); self.place(); b.setAttribute('aria-expanded', 'true'); self.el.querySelector('[role^=menuitem]:not(:disabled)')?.focus(); };
+        b.addEventListener('click', () => (b.getAttribute('aria-expanded') === 'true' ? closePop() : open()));
+        b.addEventListener('mouseenter', () => { if (openPop && menuBtns.some((x) => x.getAttribute('aria-expanded') === 'true') && b.getAttribute('aria-expanded') !== 'true') open(); });
+        b.addEventListener('keydown', (e) => { const i = menuBtns.indexOf(b); if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } else if (e.key === 'ArrowRight') { e.preventDefault(); menuBtns[(i + 1) % menuBtns.length].focus(); } else if (e.key === 'ArrowLeft') { e.preventDefault(); menuBtns[(i + menuBtns.length - 1) % menuBtns.length].focus(); } });
+        return b;
+      });
+      menubar.replaceChildren(...menuBtns);
+    }
+    buildMenubar(); narrowMq.addEventListener('change', buildMenubar);
+    // F10, or Alt pressed on its own, moves focus to the menu bar
+    let altOnly = false;
+    root.addEventListener('keydown', (e) => { if (e.key === 'F10') { e.preventDefault(); menuBtns[0]?.focus(); } altOnly = e.key === 'Alt'; });
+    root.addEventListener('keyup', (e) => { if (e.key === 'Alt' && altOnly) { menuBtns[0]?.focus(); } altOnly = false; });
     // the Left/Right arrows inside an open menu move to the neighbouring menu
     document.addEventListener('keydown', function f(e) { if (gone()) { document.removeEventListener('keydown', f); return; } if (!openPop || !['ArrowLeft', 'ArrowRight'].includes(e.key)) return; const i = menuBtns.findIndex((b) => b.getAttribute('aria-expanded') === 'true'); if (i < 0) return; e.preventDefault(); const n = menuBtns[(i + (e.key === 'ArrowRight' ? 1 : menuBtns.length - 1)) % menuBtns.length]; n.focus(); n.click(); });
 
@@ -719,14 +747,17 @@ export function docView({ api, id, ctx, opts = {} }) {
       else if (meta.project_id) { const p = await api.call('projects.get', { id: meta.project_id }); parts = [h('a', { href: '#/projects' }, 'Projects'), p.ok ? p.data[0].name : 'Project', 'Docs']; }
       else if (meta.client_id) parts = [h('a', { href: '#/clients' }, 'Clients'), h('a', { href: `#/clients/c/${meta.client_id}?tab=documents` }, ctx.clients?.get?.(meta.client_id) ?? 'Client'), 'Documents'];
       else parts = [h('a', { href: '#/drive' }, 'Drive'), meta.space === 'personal' ? 'Personal' : ctx.orgName];
-      if (gone()) return; crumb.replaceChildren(...parts.flatMap((x, i) => (i ? [h('span', { 'aria-hidden': 'true' }, ' / '), x] : [x])));
+      if (gone()) return; const anchors = parts.filter((x) => x?.tagName === 'A'); const last = anchors.at(-1);
+      const where = parts.map((x) => (typeof x === 'string' ? x : x.textContent)).join(' / ');
+      if (last) backA.href = last.getAttribute('href'); backA.setAttribute('aria-label', `Back to ${last?.textContent ?? 'Drive'}`); backA.title = `Back · ${where}`; titleIn.title = where;
     })();
 
     // ---- assemble
+    function fitHeight() { if (gone() || !root.isConnected) return; const top = root.getBoundingClientRect().top + scrollY; root.style.height = `max(420px, calc(100dvh - ${Math.max(0, Math.round(top))}px))`; }
     const addTabBtn = readOnly ? null : h('button', { type: 'button', class: 'btn dx-addtab', onclick: () => newTab(null) }, icon('plus'), ' New tab');
     const tabsPanel = h('aside', { class: 'dx-tabs', id: 'dx-tabs-panel', 'aria-label': 'Document tabs' }, h('div', { class: 'dx-tabshead' }, h('h2', {}, 'Tabs'), addTabBtn), tabsEl);
-    const bar = h('div', { class: 'docbar' }, crumb, h('div', { class: 'docrow' }, titleIn, h('div', { class: 'docacts' }, statusEl, btn('History', openHistory), saveBtn)));
-    const chrome = h('div', { class: 'dx-chrome' }, h('div', { class: 'dx-menurow' }, menubar, tabsToggle), toolbar, findBar);
+    const bar = h('div', { class: 'docbar dx-top' }, backA, h('span', { class: 'dx-docico', 'aria-hidden': 'true' }, icon('doc')), titleIn, h('span', { class: 'dx-spacer' }), statusEl, btn('History', openHistory), saveBtn);
+    const chrome = h('div', { class: 'dx-chrome' }, h('div', { class: 'dx-menurow' }, menubar, tabsToggle), toolbar, imgBar, findBar);
     const workspace = h('div', { class: 'dx-work' }, h('div', { class: 'dx-canvas' }, paper));
     const body = h('div', { class: `docbody dx-body${opts.side ? ' has-side' : ''}${tabsOpen ? '' : ' no-tabs'}` }, tabsPanel, workspace, opts.side ? opts.side(meta) : null);
     const statusbar = h('div', { class: 'dx-statusbar' }, counter, spaceEl, h('span', { class: 'dx-spacer' }), h('span', { class: 'docstat' }, pageInfo), h('label', { class: 'docstat' }, 'Zoom ', zoomSel));
@@ -735,6 +766,7 @@ export function docView({ api, id, ctx, opts = {} }) {
     else if (readOnly) banners.push(readOnlyNotice('You can read this document but not change it'));
     root.replaceChildren(...banners, bar, chrome, body, statusbar, exitBtn);
     page.spellcheck = spell; outlineEl.hidden = !outlineOpen;
+    const ro = new ResizeObserver(() => { fitToolbar(); fitHeight(); }); ro.observe(chrome); addEventListener('resize', fitHeight); document.fonts?.ready.then(() => { fitToolbar(); fitHeight(); });
     hdrEl.addEventListener('click', () => pageSetup('hdr')); ftrEl.addEventListener('click', () => pageSetup('ftr'));
     document.title = `${meta.name} · Docs`;
     ed.load(findTab(doc, activeTab).tab.blocks); applyPage(); checkpoint(); paintStatus(); paintTools(); if (readOnly) { status = 'readonly'; paintStatus(); }
