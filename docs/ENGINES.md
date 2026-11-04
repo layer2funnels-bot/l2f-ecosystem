@@ -15,3 +15,7 @@ Rule ER1: each engine is a **shared package** used by every app that needs it; t
 
 ## Shared services build order (Phase 5)
 1 API layer (typed operations + error contract + rate limit + safe logs) · 2 Storage service (files, versions, trash, signed links; files keep `owner_app`) · 3 Activity/comments · 4 Notifications (permission-filtered) · 5 Search (pointers only, re-checked). Approvals, audit and permissions already exist.
+
+
+## Sheets editor (Nov 2026): own engine, SheetJS only for .xlsx
+The Drive Sheets editor is our own code (apps/web/js/modules/sheet*.js: model v2, formula parser/evaluator without eval, virtualised grid, SVG charts), not Univer: no licence risk and no heavy bundle. `.xlsx` import/export uses **SheetJS Community Edition 0.20.3** (Apache-2.0) from SheetJS's official tarball (cdn.sheetjs.com), pinned in `apps/sheetjs/package.json` + lockfile and bundled at build time by `scripts/build-sheetjs.mjs` into `apps/web/sheetjs/xlsx.js` (lazy-loaded; the outdated, vulnerable npm `xlsx` 0.18.x is not used). `npm run check:licences` verifies the tarball source and the allowlist. CE does not write cell styles, so Excel export carries values, formulas, merges and number formats; fonts and colours stay in the app.

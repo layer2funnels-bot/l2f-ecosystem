@@ -10,7 +10,7 @@ const SHORT = { Documents: 'Docs', 'My Work': 'My Work' };
 export function appIdFor(route, inOffice) {
   if (inOffice) return 'office';
   switch (route.name) {
-    case 'doc': case 'sheet': case 'drive': return 'drive';
+    case 'doc': case 'sheet': case 'image': case 'pdf': case 'drive': return 'drive';
     case 'board': case 'boards': return 'whiteboard';
     case 'planner': return 'planner';
     case 'projects': return 'projects'; case 'clients': return 'clients'; case 'portal': return 'portal'; case 'forms': return 'forms';
@@ -39,8 +39,8 @@ export function appNav(appId, route, { isAdmin = false } = {}) {
         current: ['requests', 'sops', 'tools', 'settings'].includes(route.params?.view) ? route.params.view : 'list' };
     case 'drive': {
       const v = route.params?.view; const space = route.params?.space;
-      return { items: [it('files', '#/drive', 'Library', 'folder'), it('personal', '#/drive/personal', 'Personal', 'drive'), it('recent', '#/drive/recent', 'Recent', 'clock'), it('trash', '#/drive/trash', 'Trash', 'trash')],
-        current: v === 'recent' ? 'recent' : v === 'trash' ? 'trash' : space === 'personal' ? 'personal' : 'files' };
+      return { items: [it('files', '#/drive', 'Library', 'drive'), it('personal', '#/drive/personal', 'Personal', 'user'), it('recent', '#/drive/recent', 'Recent', 'clock'), it('shared', '#/drive/shared', 'Shared with me', 'team'), it('trash', '#/drive/trash', 'Trash', 'trash')],
+        current: v === 'recent' ? 'recent' : v === 'shared' ? 'shared' : v === 'trash' ? 'trash' : space === 'personal' ? 'personal' : 'files' };
     }
     case 'forms':
       return { items: [it('list', '#/forms', 'Forms', 'forms'), it('submissions', '#/forms/submissions', 'Submissions', 'inbox'), it('templates', '#/forms/templates', 'Templates', 'copy')], current: route.params?.view === 'templates' ? 'templates' : route.params?.view === 'submissions' ? 'submissions' : 'list' };

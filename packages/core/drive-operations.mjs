@@ -4,6 +4,7 @@
 // browser would upload to storage through a signed address (packages/core/storage.mjs, prepared), then register the path.
 import { defineOperation } from './define.mjs';
 import { newObjectPath } from './storage.mjs';
+import { hashPassword, verifyPassword } from './drive-password.mjs';
 
 const T = (max = 500) => ({ type: 'text', min: 0, max });
 const id = { id: { type: 'uuid', required: true } };
@@ -28,8 +29,8 @@ const byteLength = (text) => new TextEncoder().encode(text).length;
 export const newLinkToken = () => toBase64Url(crypto.getRandomValues(new Uint8Array(32)));
 
 const FSELECT = `select f.id, f.space, f.client_id, f.owner_id, f.folder_id, f.name, f.kind, f.mime_type, f.size_bytes::float8 as size_bytes, f.current_version, f.protected_sop, f.sop_key,
-    f.client_visible, f.project_id, f.managed_by, f.in_library, f.uploaded_by, f.archived_at, f.created_at, f.updated_at from files f`;
-const DSELECT = `select d.id, d.space, d.client_id, d.owner_id, d.parent_id, d.name, d.archived_at, d.created_at, d.updated_at,
+    f.client_visible, f.project_id, f.managed_by, f.in_library, f.uploaded_by, f.archived_at, f.created_at, f.updated_at, (f.locked_at is not null) as locked from files f`;
+const DSELECT = `select d.id, d.space, d.client_id, d.owner_id, d.parent_id, d.name, d.archived_at, d.created_at, d.updated_at, d.created_by, (d.locked_at is not null) as locked, private.drive_folder_has_password(d.id) as protected,
     (select count(*)::int from files f where f.folder_id = d.id and f.archived_at is null and (f.space <> 'shared' or f.in_library)) as files,
     (select count(*)::int from drive_folders c where c.parent_id = d.id and c.archived_at is null) as folders from drive_folders d`;
 
@@ -92,12 +93,12 @@ const fileOps = [
       and ($2::text is null or $2 = 'all' or ($2 = 'shared' and f.space = 'shared' and f.project_id is null) or ($2 = 'client' and f.space = 'client' and f.project_id is null and f.client_id is not distinct from $3) or ($2 = 'project' and f.project_id is not distinct from $4))
       and ($5::text is null or f.name ilike $5) order by f.updated_at desc limit 500`, [i.archived ?? false, i.scope ?? null, i.client ?? null, i.project ?? null, i.q ? like(i.q) : null]),
   }),
-  defineOperation({ name: 'drive.files.get', class: 'read', single: true, input: id, run: (q, _c, i) => q(`${FSELECT} where f.id = $1`, [i.id]) }),
+  defineOperation({ name: 'drive.files.get', class: 'read', single: true, input: id, run: (q, _c, i) => q(`${FSELECT.replace(' from files f', ', private.drive_share_role(f.workspace_id, f.id, f.folder_id) as my_role from files f')} where f.id = $1`, [i.id]) }),
   defineOperation({
     // a file (bytes already uploaded to the signed address, path given) or a first-party document (text given); version 1 is created with it
     name: 'drive.files.create', class: 'write', single: true,
     input: { space: SPACE, client: { type: 'uuid' }, folder: { type: 'uuid' }, project: { type: 'uuid' }, name: NAME, kind: { type: 'enum', values: ['file', 'document'], required: true }, mime_type: T(120), size_bytes: { type: 'int', min: 0 },
-      storage_path: T(600), body: T(200000), note: T(300), app: { type: 'enum', values: APPS } },
+      storage_path: T(600), body: T(1000000), note: T(300), app: { type: 'enum', values: APPS } },
     run: async (q, ctx, i) => {
       if (i.kind === 'file' && (!i.storage_path || i.body !== undefined)) throw bad('a file needs the path of its stored copy');
       if (i.kind === 'document' && (i.body === undefined || i.storage_path)) throw bad('a document needs its text');
@@ -109,7 +110,7 @@ const fileOps = [
     },
   }),
   defineOperation({
-    name: 'drive.files.versions.add', class: 'write', single: true, input: { ...id, storage_path: T(600), body: T(200000), size_bytes: { type: 'int', min: 0 }, note: T(300), expected: { type: 'int', min: 1 } },
+    name: 'drive.files.versions.add', class: 'write', single: true, input: { ...id, storage_path: T(600), body: T(1000000), size_bytes: { type: 'int', min: 0 }, note: T(300), expected: { type: 'int', min: 1 } },
     run: async (q, ctx, i) => {
       const [f] = await q('select kind, current_version from files where id = $1', [i.id]);
       if (!f) return [];
@@ -160,19 +161,77 @@ const sopOps = [
   }),
 ];
 
+const ROLE = { type: 'enum', values: ['viewer', 'editor'], required: true };
 const linkOps = [
   defineOperation({
-    // the secret is returned ONCE; only its hash is stored
-    name: 'drive.links.create', class: 'sensitive', single: true, input: { file: { type: 'uuid', required: true }, days: { type: 'int', min: 1, max: 31 } },
+    // the secret is returned ONCE; only its hash is stored. A link carries a right (viewer / editor) and an expiry (default 7 days; days up to 365, or never: true).
+    name: 'drive.links.create', class: 'sensitive', single: true, input: { file: { type: 'uuid', required: true }, days: { type: 'int', min: 1, max: 365 }, never: { type: 'bool' }, role: { type: 'enum', values: ['viewer', 'editor'] } },
     run: async (q, ctx, i) => {
       const token = newLinkToken();
-      const rows = await q(`insert into drive_share_links (workspace_id, file_id, token_hash, expires_at) values ($1, $2, encode(sha256(convert_to($3, 'UTF8')), 'hex'), now() + make_interval(days => $4::int)) returning id, file_id, expires_at`,
-        [ctx.orgId, i.file, token, i.days ?? 7]);
+      const rows = await q(`insert into drive_share_links (workspace_id, file_id, token_hash, role, expires_at) values ($1, $2, encode(sha256(convert_to($3, 'UTF8')), 'hex'), $5, case when $6::boolean then null else now() + make_interval(days => $4::int) end) returning id, file_id, role, expires_at`,
+        [ctx.orgId, i.file, token, i.days ?? 7, i.role ?? 'viewer', i.never ?? false]);
       return rows.map((r) => ({ ...r, token }));
     },
   }),
-  defineOperation({ name: 'drive.links.list', class: 'read', input: { file: { type: 'uuid', required: true } }, run: (q, _c, i) => q('select id, file_id, expires_at, revoked_at, use_count, last_used_at, created_by, created_at from drive_share_links where file_id = $1 order by created_at desc', [i.file]) }),
+  defineOperation({ name: 'drive.links.list', class: 'read', input: { file: { type: 'uuid', required: true } }, run: (q, _c, i) => q('select id, file_id, role, expires_at, revoked_at, use_count, last_used_at, created_by, created_at from drive_share_links where file_id = $1 order by created_at desc', [i.file]) }),
   defineOperation({ name: 'drive.links.revoke', class: 'write', single: true, input: id, run: (q, _c, i) => q('update drive_share_links set revoked_at = now() where id = $1 and revoked_at is null returning id, revoked_at', [i.id]) }),
+  // Opening a link: a signed-in team member of the organization gets the link's right on that file (a normal share from then on). Anyone else: nothing ("not found").
+  defineOperation({
+    name: 'drive.links.open', class: 'sensitive', single: true, input: { token: { type: 'text', required: true, min: 32, max: 200 } },
+    run: async (q, _c, i) => q('select file_id as id, role, name, kind, mime_type, protected_folder from private.drive_link_open($1)', [i.token]),
+  }),
+];
+
+// sharing with people of the organization (view or edit), what is shared with me, and the team list for the picker
+const shareOps = [
+  defineOperation({ name: 'drive.people', class: 'read',
+    run: (q, ctx) => q(`select m.user_id, coalesce(nullif(pr.display_name, ''), 'Member ' || left(m.user_id::text, 4)) as display_name, m.role, (m.user_id = $1) as is_you
+      from memberships m left join profiles pr on pr.id = m.user_id where m.kind = 'staff' and m.status = 'active' order by lower(coalesce(pr.display_name, '')) limit 300`, [ctx.userId]) }),
+  defineOperation({ name: 'drive.shares.list', class: 'read', input: { file: { type: 'uuid' }, folder: { type: 'uuid' } },
+    run: (q, _c, i) => {
+      if (!i.file === !i.folder) throw bad('give a file or a folder');
+      return q(`select s.id, s.user_id, s.role, s.expires_at, s.created_at, (s.link_id is not null) as via_link, coalesce(nullif(pr.display_name, ''), 'Member ' || left(s.user_id::text, 4)) as display_name
+        from drive_shares s left join profiles pr on pr.id = s.user_id where s.file_id is not distinct from $1 and s.folder_id is not distinct from $2 order by s.created_at`, [i.file ?? null, i.folder ?? null]);
+    } }),
+  defineOperation({ name: 'drive.shares.set', class: 'write', single: true, input: { file: { type: 'uuid' }, folder: { type: 'uuid' }, user: { type: 'uuid', required: true }, role: ROLE },
+    run: async (q, ctx, i) => {
+      if (!i.file === !i.folder) throw bad('give a file or a folder');
+      return i.file
+        ? q(`insert into drive_shares (workspace_id, file_id, user_id, role) values ($1,$2,$3,$4) on conflict (workspace_id, file_id, user_id) where file_id is not null and link_id is null do update set role = excluded.role returning id, user_id, role`, [ctx.orgId, i.file, i.user, i.role])
+        : q(`insert into drive_shares (workspace_id, folder_id, user_id, role) values ($1,$2,$3,$4) on conflict (workspace_id, folder_id, user_id) where folder_id is not null and link_id is null do update set role = excluded.role returning id, user_id, role`, [ctx.orgId, i.folder, i.user, i.role]);
+    } }),
+  defineOperation({ name: 'drive.shares.remove', class: 'write', single: true, input: id, run: (q, _c, i) => q('delete from drive_shares where id = $1 returning id', [i.id]) }),
+  // what other people shared with me (files and folders), without their contents
+  defineOperation({ name: 'drive.shares.mine', class: 'read',
+    run: (q) => q(`select * from (
+        select distinct on (x.kind, x.id) x.* from (
+          select s.id as share_id, s.role, s.expires_at, 'file' as kind, f.id, f.name, f.mime_type, f.size_bytes::float8 as size_bytes, f.updated_at, f.kind as file_kind from drive_shares s join files f on f.id = s.file_id
+            where private.drive_share_live(s.id) and f.archived_at is null
+          union all select s.id, s.role, s.expires_at, 'folder', d.id, d.name, null::text, null::float8, d.updated_at, null::text from drive_shares s join drive_folders d on d.id = s.folder_id
+            where private.drive_share_live(s.id) and d.archived_at is null) x order by x.kind, x.id, (x.role = 'editor') desc) y order by y.updated_at desc limit 200`) }),
+];
+
+// owner lock and folder passwords
+const guardOps = [
+  defineOperation({ name: 'drive.items.lock', class: 'sensitive', single: true, input: { kind: { type: 'enum', values: ['file', 'folder'], required: true }, id: { type: 'uuid', required: true }, locked: { type: 'bool', required: true } },
+    run: (q, _c, i) => q('select id, locked from private.drive_set_lock($1, $2, $3)', [i.kind, i.id, i.locked]) }),
+  defineOperation({ name: 'drive.folders.protection', class: 'read', single: true, input: id, run: (q, _c, i) => q('select protected, unlocked, can_manage from private.drive_folder_protection($1)', [i.id]) }),
+  // Enter a folder's password. The hash is checked here; the database counts wrong attempts (5 per 15 minutes per person and folder) and records the 12-hour grant.
+  // A wrong password is an ordinary answer (unlocked: false), not an error, so the attempt is kept.
+  defineOperation({ name: 'drive.folders.unlock', class: 'sensitive', single: true, input: { id: { type: 'uuid', required: true }, password: { type: 'text', required: true, min: 1, max: 200 } },
+    run: async (q, _c, i) => {
+      const [b] = await q('select hash, attempts_left, retry_after_seconds from private.drive_unlock_begin($1)', [i.id]);
+      if (!b) return [{ unlocked: true, attempts_left: 5, retry_after_seconds: 0, protected: false }];
+      if (b.retry_after_seconds > 0 || !b.hash) return [{ unlocked: false, attempts_left: 0, retry_after_seconds: b.retry_after_seconds, protected: true }];
+      const ok = await verifyPassword(i.password, b.hash);
+      const [r] = await q('select unlocked, attempts_left, retry_after_seconds from private.drive_unlock_finish($1, $2)', [i.id, ok]);
+      return [{ ...r, protected: true }];
+    } }),
+  defineOperation({ name: 'drive.folders.setPassword', class: 'sensitive', single: true, input: { id: { type: 'uuid', required: true }, password: { type: 'text', min: 8, max: 200 } },
+    run: async (q, _c, i) => {
+      const hash = i.password ? await hashPassword(i.password) : null;
+      const [r] = await q('select private.drive_set_folder_password($1, $2) as protected', [i.id, hash]); return [{ id: i.id, protected: r.protected }];
+    } }),
 ];
 
 // personal space: break-glass (reason, log, notice to the owner) and the notices
@@ -231,4 +290,4 @@ const uploadOps = [
   defineOperation({ name: 'storage.usage', class: 'read', single: true, run: (q) => q('select total_bytes::float8 as total_bytes, cap_bytes::float8 as cap_bytes, org_bytes::float8 as org_bytes, files, versions, by_space from storage_usage()') }),
 ];
 
-export const driveOperations = [...folderOps, ...fileOps, ...sopOps, ...linkOps, ...personalOps, ...uploadOps];
+export const driveOperations = [...folderOps, ...fileOps, ...sopOps, ...linkOps, ...shareOps, ...guardOps, ...personalOps, ...uploadOps];

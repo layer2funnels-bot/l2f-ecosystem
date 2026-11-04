@@ -14,8 +14,22 @@ const url = process.env.SUPABASE_URL || 'http://127.0.0.1:54321';
 const key = process.env.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH';
 if (/service_role|sb_secret_/i.test(key) || /^eyJ/.test(key)) { console.error('Refusing: that looks like a privileged or legacy JWT key. Use the publishable key.'); process.exit(1); }
 import { buildWhiteboard } from './build-whiteboard.mjs';
+import { buildMedia } from './build-media.mjs';
+import { buildDocsIo } from './build-docs-io.mjs';
+import { buildSheetjs } from './build-sheetjs.mjs';
 const out = at('dist/web'); rmSync(out, { recursive: true, force: true }); mkdirSync(out + '/packages/core', { recursive: true });
+// Cloudflare runs only this script: it installs the editors' build-time dependencies itself (like Planner below), so the live site never ships
+// without the whiteboard editor or .xlsx support. Each tree has its own lockfile; `npm ci` installs exactly what was reviewed.
+if (process.env.CF_PAGES) {
+  for (const app of ['whiteboard', 'sheetjs', 'media', 'docs-io']) {
+    if (existsSync(at(`apps/${app}/package-lock.json`)) && !existsSync(at(`apps/${app}/node_modules`))
+        && spawnSync('npm', ['ci', '--prefix', at(`apps/${app}`)], { stdio: 'inherit' }).status !== 0) { console.error(`${app}: npm ci failed: stopping the build (the previous deployment stays live).`); process.exit(1); }
+  }
+}
+await buildSheetjs({ quiet: true });             // .xlsx import/export for Sheets (skipped when apps/sheetjs dependencies are not installed: CSV still works)
 await buildWhiteboard({ quiet: true });          // the editor bundle (skipped when its build-time dependencies are not installed: the board page then says so)
+await buildMedia({ quiet: true });               // pdf.js + pdf-lib for the PDF editor (skipped when apps/media dependencies are not installed: the PDF page then says so)
+await buildDocsIo({ quiet: true });             // Word (.docx) export/import for Docs (skipped when apps/docs-io dependencies are not installed: the menu then says so)
 cpSync(at('apps/web'), out, { recursive: true });
 // Planner (React, migration 0033): built by its own Vite config into apps/planner/dist, served at /planner/; the shell mounts /planner/embed.js at #/planner.
 // Cloudflare runs only this script, so it installs and builds Planner itself when the bundle is missing; on Cloudflare a failure stops the build
@@ -38,6 +52,7 @@ writeFileSync(out + '/config.js', `window.L2F_CONFIG = ${JSON.stringify({ supaba
 const storageOrigin = process.env.STORAGE_CONNECT_ORIGIN || '';
 if (storageOrigin && !/^https:\/\/[a-z0-9]{32}\.r2\.cloudflarestorage\.com$/.test(storageOrigin)) { console.error('STORAGE_CONNECT_ORIGIN must look like https://<32-character account id>.r2.cloudflarestorage.com'); process.exit(1); }
 let headers = readFileSync(out + '/_headers', 'utf8').replace('connect-src \'self\' http://127.0.0.1:54321 https://*.supabase.co', `connect-src 'self' ${new URL(url).origin}${storageOrigin ? ` ${storageOrigin}` : ''}`);
-if (storageOrigin) headers = headers.replace("img-src 'self' data:", `img-src 'self' data: ${storageOrigin}`);
+// Drive previews: pictures, video/audio and PDFs (in a frame) come straight from that same one storage origin; nothing else is added.
+if (storageOrigin) headers = headers.replace("img-src 'self' data:", `img-src 'self' data: ${storageOrigin}`).replace(/(Content-Security-Policy: [^\n]*?)(frame-ancestors)/, `$1media-src 'self' ${storageOrigin}; frame-src ${storageOrigin}; $2`);
 writeFileSync(out + '/_headers', headers);
 console.log(`built dist/web for ${new URL(url).origin}`);

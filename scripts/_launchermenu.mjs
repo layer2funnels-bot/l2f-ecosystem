@@ -3,7 +3,7 @@ import pg from 'pg';
 import { startDevServer, LOCAL_ENV } from './dev-server.mjs';
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE ?? 'playwright');
-const admin = new pg.Client({ connectionString: 'postgresql://supabase_admin:postgres@127.0.0.1:54322/postgres' }); await admin.connect();
+const admin = new pg.Client({ connectionString: 'postgresql://supabase_admin:postgres@127.0.0.1:54332/postgres' }); await admin.connect();
 const q = async (s, a = []) => (await admin.query(s, a)).rows;
 const s = await startDevServer({ port: 0, sink: () => {}, env: { ...LOCAL_ENV, ...process.env, RATE_LIMIT_STORE: 'memory' } });
 const base = `http://127.0.0.1:${s.port}`; const PW = 'correct-horse-battery-staple'; const mail = `lm.${Date.now()}@example.com`;

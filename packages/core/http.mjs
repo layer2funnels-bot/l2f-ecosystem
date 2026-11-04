@@ -10,6 +10,9 @@
 import { NOT_FOUND, SESSION_EXPIRED, BAD_REQUEST, FAILED } from './errors.mjs';
 
 const MAX_BODY_BYTES = 16 * 1024;
+// Saving a first-party document (Docs, Sheets, boards: up to 1,000,000 characters) needs a larger body; every other operation keeps the 16 KB limit.
+const LARGE_BODY_OPS = new Set(['drive.files.create', 'drive.files.versions.add']);
+const LARGE_BODY_BYTES = 4 * 1024 * 1024;
 export const BATCH_MAX = 4;   // about one connection plus four short transactions: stays near Cloudflare Free's 10 ms CPU (DECISIONS V4-28)
 const BASE_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
@@ -38,10 +41,11 @@ export function createHttpHandler({ api, verifyToken, extraOrigins = [] }) {
       if (!who.ok) return reply(SESSION_EXPIRED.status, errorBody(SESSION_EXPIRED));
 
       if (!(request.headers.get('content-type') ?? '').toLowerCase().startsWith('application/json')) return reply(BAD_REQUEST.status, errorBody(BAD_REQUEST));
+      const limit = LARGE_BODY_OPS.has(decodeURIComponent(url.pathname.slice('/api/'.length))) ? LARGE_BODY_BYTES : MAX_BODY_BYTES;
       const declared = Number(request.headers.get('content-length') ?? 0);
-      if (declared > MAX_BODY_BYTES) return reply(BAD_REQUEST.status, errorBody(BAD_REQUEST));
+      if (declared > limit) return reply(BAD_REQUEST.status, errorBody(BAD_REQUEST));
       const text = await request.text();
-      if (text.length > MAX_BODY_BYTES) return reply(BAD_REQUEST.status, errorBody(BAD_REQUEST));
+      if (text.length > limit) return reply(BAD_REQUEST.status, errorBody(BAD_REQUEST));
       let input = {};
       if (text) { try { input = JSON.parse(text); } catch { return reply(BAD_REQUEST.status, errorBody(BAD_REQUEST)); } }
 

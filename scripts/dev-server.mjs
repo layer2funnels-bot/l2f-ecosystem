@@ -15,14 +15,14 @@ const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; ch
 // The same headers Cloudflare Pages will send (apps/web/_headers), so CSP problems show up in development.
 const pageHeaders = (() => { try { return Object.fromEntries(readFileSync(new URL('../apps/web/_headers', import.meta.url), 'utf8').split('\n').filter((l) => /^\s+\S+: /.test(l)).map((l) => l.trim().split(/: (.*)/s).slice(0, 2))); } catch { return {}; } })();
 export const LOCAL_ENV = {
-  DATABASE_URL: 'postgresql://postgres:postgres@127.0.0.1:54322/postgres',
+  DATABASE_URL: 'postgresql://postgres:postgres@127.0.0.1:54332/postgres',
   SUPABASE_JWKS_URL: 'http://127.0.0.1:54321/auth/v1/.well-known/jwks.json',          // the local stack signs with ES256
   SUPABASE_JWT_ISSUER: 'http://127.0.0.1:54321/auth/v1',
 };
 
 export async function startDevServer({ port = 8788, env = { ...LOCAL_ENV, ...process.env }, sink, limits, weatherFetch, extraConnect } = {}) {
   const cspKey = Object.keys(pageHeaders).find((k) => k.toLowerCase() === 'content-security-policy');
-  const headersFor = extraConnect && cspKey ? { ...pageHeaders, [cspKey]: pageHeaders[cspKey].replace(/connect-src ([^;]*)/, (m) => `${m} ${extraConnect}`) } : pageHeaders;
+  const headersFor = extraConnect && cspKey ? { ...pageHeaders, [cspKey]: pageHeaders[cspKey].replace(/connect-src ([^;]*)/, (m) => `${m} ${extraConnect}`).replace(/img-src ([^;]*)/, (m) => `${m} ${extraConnect}`).replace(/$/, `; media-src 'self' ${extraConnect}; frame-src ${extraConnect}`) } : pageHeaders;
   const server = createServer(env, { ...(sink ? { sink } : {}), ...(limits ? { limits } : {}), ...(weatherFetch ? { weatherFetch } : {}) });
   const http_ = http.createServer(async (req, res) => {
     try {

@@ -7,7 +7,7 @@ import { startDevServer, LOCAL_ENV } from './dev-server.mjs';
 import { startFakeSupabaseStorage } from '../test/fakes/fake-supabase-storage.mjs';
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE ?? 'playwright');
-const admin = new pg.Client({ connectionString: 'postgresql://supabase_admin:postgres@127.0.0.1:54322/postgres' }); await admin.connect();
+const admin = new pg.Client({ connectionString: 'postgresql://supabase_admin:postgres@127.0.0.1:54332/postgres' }); await admin.connect();
 const q = async (s, a = []) => (await admin.query(s, a)).rows;
 const stamp = Date.now(), PW = 'correct-horse-battery-staple';
 const results = []; const check = (id, name, ok, detail = '') => { results.push({ id, name, ok: !!ok, detail }); console.log(`${ok ? 'PASS' : 'FAIL'}  ${id.padEnd(4)} ${name}${ok ? '' : `  [${detail}]`}`); };

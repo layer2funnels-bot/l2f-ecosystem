@@ -29,6 +29,33 @@ try {
   console.log(`PASS licence check (whiteboard build tree): ${wn} packages, all on the allowlist or reviewed`);
 } catch (e) { if (e.code !== 'ENOENT') throw e; }
 
+// Docs Word support build tree (apps/docs-io: docx MIT, mammoth BSD-2-Clause, bundled only for the lazy-loaded Word download/open). Reviewed in docs/DECISIONS.md DOC-1:
+// `duck` is licensed "BSD" (a dependency of mammoth's parser, BSD text read in the package), `jszip` and `pako` are dual licences with MIT chosen.
+const DOCS_REVIEWED = new Map([['duck', 'BSD (license text read in the package)'], ['jszip', '(MIT OR GPL-3.0-or-later): MIT chosen'], ['pako', '(MIT AND Zlib): both permissive']]);
+try {
+  const dio = JSON.parse(readFileSync(new URL('../apps/docs-io/package-lock.json', import.meta.url), 'utf8')); const dbad = []; let dn = 0;
+  for (const [path, meta] of Object.entries(dio.packages || {})) {
+    if (!path) continue; dn++;
+    const name = path.replace(/^.*node_modules\//, ''); const lic = String(meta.license ?? 'UNKNOWN');
+    if (!(lic.replace(/[()]/g, '').split(/\s+OR\s+/).some((p) => ALLOW.has(p.trim())) || DOCS_REVIEWED.has(name))) dbad.push(`${name}: ${lic}`);
+  }
+  if (dbad.length) { console.log('FAIL licence check (docs-io build tree):\n  ' + dbad.join('\n  ')); process.exit(1); }
+  console.log(`PASS licence check (docs-io build tree): ${dn} packages, all on the allowlist or reviewed`);
+} catch (e) { if (e.code !== 'ENOENT') throw e; }
+
+// Sheets .xlsx bridge build tree (apps/sheetjs): SheetJS CE official tarball (Apache-2.0) + esbuild.
+try {
+  const sj = JSON.parse(readFileSync(new URL('../apps/sheetjs/package-lock.json', import.meta.url), 'utf8')); const sbad = []; let sn = 0;
+  for (const [path, meta] of Object.entries(sj.packages || {})) {
+    if (!path) continue; sn++;
+    const lic = String(meta.license ?? 'UNKNOWN');
+    if (!lic.replace(/[()]/g, '').split(/\s+OR\s+/).some((p) => ALLOW.has(p.trim()))) sbad.push(`${path.replace(/^.*node_modules\//, '')}: ${lic}`);
+    if (/node_modules\/xlsx$/.test(path) && !/^https:\/\/cdn\.sheetjs\.com\/xlsx-0\.(2\d|[3-9]\d)\./.test(meta.resolved ?? '')) sbad.push('xlsx must come from the official cdn.sheetjs.com tarball, version 0.20 or newer');
+  }
+  if (sbad.length) { console.log('FAIL licence check (sheetjs build tree):\n  ' + sbad.join('\n  ')); process.exit(1); }
+  console.log(`PASS licence check (sheetjs build tree): ${sn} packages, all on the allowlist`);
+} catch (e) { if (e.code !== 'ENOENT') throw e; }
+
 // Funnel Mapper Pro code copy: its own dependency tree (not installed or shipped by the ecosystem). Reported, not failing:
 // anything listed here needs a review entry in docs/DECISIONS.md BEFORE the copy is reshaped into the ecosystem or deployed.
 try {
@@ -42,3 +69,16 @@ try {
   console.log(`INFO FMP copy: ${total} packages, ${[...flagged.values()].flat().length} outside the allowlist (review before reshaping or deploying)`);
   for (const [lic, pk] of flagged) console.log(`  ${lic}: ${[...new Set(pk)].slice(0, 6).join(', ')}${pk.length > 6 ? ', …' : ''}`);
 } catch { /* copy not present */ }
+
+// PDF viewer/editor build tree (apps/media, build-time only, bundled into the site): same allowlist.
+try {
+  const md = JSON.parse(readFileSync(new URL('../apps/media/package-lock.json', import.meta.url), 'utf8')); const mbad = []; let mn = 0;
+  for (const [path, meta] of Object.entries(md.packages || {})) {
+    if (!path) continue; mn++;
+    const lic = String(meta.license ?? 'UNKNOWN');
+    const name = path.replace(/^.*node_modules\//, '');
+    if (!lic.replace(/[()]/g, '').split(/\s+OR\s+/).some((p) => ALLOW.has(p.trim())) && !REVIEWED.has(name)) mbad.push(`${path.replace(/^.*node_modules\//, '')}: ${lic}`);
+  }
+  if (mbad.length) { console.log('FAIL licence check (media build tree):\n  ' + mbad.join('\n  ')); process.exit(1); }
+  console.log(`PASS licence check (media build tree): ${mn} packages, all on the allowlist`);
+} catch (e) { if (e.code !== 'ENOENT') throw e; }

@@ -15,7 +15,7 @@ import { startFakeS3 } from '../test/fakes/fake-s3.mjs';
 import { createS3Storage } from '../packages/core/storage-adapter.mjs';
 const runAsync = (cmd, args, opts = {}) => new Promise((done) => { execFile(cmd, args, { encoding: 'utf8', ...opts }, (err, stdout, stderr) => done({ status: err ? (err.code ?? 1) : 0, stdout, stderr })); });   // not spawnSync: the in-process fake server must keep answering
 
-const ADMIN = 'postgresql://supabase_admin:postgres@127.0.0.1:54322';
+const ADMIN = 'postgresql://supabase_admin:postgres@127.0.0.1:54332';
 const KEY = process.env.STACK_PUBLISHABLE_KEY || 'sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH';
 const DBC = 'supabase_db_l2f-ecosystem';
 const out = []; const note = (k, id, name, d = '') => { out.push({ k, id, name, d }); console.log(`${k.padEnd(4)} ${id.padEnd(5)} ${name}${d ? `  [${d}]` : ''}`); };
@@ -73,7 +73,7 @@ const dist = join(root, 'dist/web');
 const hdr = readFileSync(join(dist, '_headers'), 'utf8');
 ok('R8c', 'The page policy allows only our own files and the live project (no localhost left)', hdr.includes('rehearsalref.supabase.co') && !hdr.includes('127.0.0.1') && /script-src 'self'/.test(hdr) && /frame-ancestors 'none'/.test(hdr));
 const walk = (d) => readdirSync(d, { withFileTypes: true }).flatMap((e) => e.isDirectory() ? walk(join(d, e.name)) : [join(d, e.name)]);
-const files = walk(dist).filter((f) => /\.(html|js|css|mjs)$/.test(f) && !f.includes('/whiteboard/'));          // the editor bundle has its own check (R8i)
+const files = walk(dist).filter((f) => /\.(html|js|css|mjs)$/.test(f) && !/\/(whiteboard|docs-io|sheetjs|media)\//.test(f));          // the editor bundles have their own checks (R8i, R8k)
 const hosts = new Set(); for (const f of files) for (const m of readFileSync(f, 'utf8').matchAll(/https?:\/\/([a-z0-9.-]+)/gi)) hosts.add(m[1].toLowerCase());
 const allowedHosts = new Set(['rehearsalref.supabase.co', 'www.w3.org', 'openfontlicense.org', 'scripts.sil.org', 'fonts.google.com', 'github.com', 'www.met.no', 'creativecommons.org', 'example.com', 'office.example', 'layer2funnels.com', 'www.layer2funnels.com',
   'reactjs.org']);   // text only: React's production error messages carry an "error decoder" link (Planner bundle); nothing is fetched, and the page policy allows our own files only
@@ -90,6 +90,12 @@ if (existsSync(boardDir)) {
   ok('R8i', 'The whiteboard editor bundle only mentions the pinned list of addresses (none can load: the page policy forbids them)', newHosts.length === 0, newHosts.join(','));
   ok('R8j', 'The editor bundle, its stylesheet, its fonts and its licence notices are in the build; the 13 MB CJK font set is not', ['board.js', 'board.css', 'NOTICES.txt'].every((n) => existsSync(join(boardDir, n))) && existsSync(join(boardDir, 'fonts')) && !existsSync(join(boardDir, 'fonts', 'Xiaolai')));
 } else gap('R8j', 'The whiteboard editor was not part of this build (npm ci --prefix apps/whiteboard first); the board page then says the editor is not available', 'runbook step 8 build command');
+// The document libraries (docx/mammoth, SheetJS, pdf.js/pdf-lib) carry XML namespace and help addresses as text; none can load (page policy).
+// Pinned list, so a library upgrade that adds an address fails here and gets a look before it goes live.
+const LIB_HOSTS = new Set(["answers.microsoft.com","docs.oasis-open.org","github.com","goo.gl","macvmlschemauri","ns.adobe.com","openoffice.org","purl.oclc.org","purl.org","schemas.microsoft.com","schemas.openxmlformats.org","schemas.zwobble.org","sheetjs.com","sheetjs.openxmlformats.org","stuk.github.io","www.idpf.org","www.w3.org","www.xfa.org"]);
+{ const lh = new Set(); for (const d of ['docs-io', 'sheetjs', 'media']) { const dir = join(dist, d); if (existsSync(dir)) for (const f of walk(dir).filter((x) => /\.(js|css)$/.test(x))) for (const m of readFileSync(f, 'utf8').matchAll(/https?:\/\/([a-z0-9.-]+)/gi)) lh.add(m[1].toLowerCase()); }
+  const extra = [...lh].filter((x) => !LIB_HOSTS.has(x));
+  ok('R8k', 'The document library bundles (Word, Excel, PDF) only mention the pinned list of addresses (none can load: the page policy forbids them)', extra.length === 0, extra.join(',')); }
 const cfgjs = readFileSync(join(dist, 'config.js'), 'utf8');
 ok('R8e', 'config.js carries only the public URL and publishable key', cfgjs.includes('rehearsalref') && !/service_role|sb_secret|eyJ/.test(cfgjs));
 ok('R8f', 'The four self-hosted v4 font families are in the build', ['bricolage-grotesque', 'geist-latin', 'geist-mono', 'noto-nastaliq-urdu'].every((n) => files.concat(walk(dist)).some((f) => f.includes(n))));
@@ -143,7 +149,7 @@ docker exec -i ${DBC} pg_dump "\${args[@]}" > "$file"\n`);
 if (!native17) chmodSync(join(bin, 'pg_dump'), 0o755);
 const kg = sh('age-keygen', []); const privKey = kg.stdout; const pub = (kg.stderr.match(/Public key: (age1\S+)/) || privKey.match(/public key: (age1\S+)/) || [])[1];
 writeFileSync(join(work, 'key.txt'), privKey);
-const bk = sh('bash', [join(root, 'scripts/backup-supabase.sh')], { cwd: work, env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, SUPABASE_DB_URL: 'postgresql://postgres:postgres@127.0.0.1:54322/postgres', AGE_RECIPIENT: pub } });
+const bk = sh('bash', [join(root, 'scripts/backup-supabase.sh')], { cwd: work, env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, SUPABASE_DB_URL: 'postgresql://postgres:postgres@127.0.0.1:54332/postgres', AGE_RECIPIENT: pub } });
 const enc = readdirSync(work).find((f) => f.startsWith('l2f-backup-') && f.endsWith('.tar.age'));
 ok('R10a', 'The backup script writes one encrypted file', bk.status === 0 && !!enc, (bk.stderr || bk.stdout).slice(0, 300));
 if (enc) {
