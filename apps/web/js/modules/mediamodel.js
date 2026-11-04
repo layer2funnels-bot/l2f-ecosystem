@@ -264,3 +264,74 @@ export function transformAnnotation(a, op) {
   }
   const p1 = P(a.x1, a.y1), p2 = P(a.x2, a.y2); return { ...a, x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y, size: (a.size ?? 4) * k };
 }
+
+// ---------------------------------------------------------------- image: regions (blur / pixelate), handles, canvas growth, sizes
+/** Pixelate a rectangle of RGBA bytes in place: every block x block square becomes its average colour. */
+export function pixelate(data, w, h, block) {
+  const b = Math.max(2, Math.round(block));
+  for (let by = 0; by < h; by += b) for (let bx = 0; bx < w; bx += b) {
+    let r = 0, g = 0, bl = 0, a = 0, n = 0; const ex = Math.min(w, bx + b), ey = Math.min(h, by + b);
+    for (let y = by; y < ey; y++) for (let x = bx; x < ex; x++) { const i = (y * w + x) * 4; r += data[i]; g += data[i + 1]; bl += data[i + 2]; a += data[i + 3]; n++; }
+    r /= n; g /= n; bl /= n; a /= n;
+    for (let y = by; y < ey; y++) for (let x = bx; x < ex; x++) { const i = (y * w + x) * 4; data[i] = r; data[i + 1] = g; data[i + 2] = bl; data[i + 3] = a; }
+  }
+  return data;
+}
+/** Handle points (image pixels) of a selected annotation that can be dragged to resize it. */
+export function annHandles(a) {
+  if (a.t === 'pen' || a.t === 'hl') return [];
+  if (a.t === 'text') { const b = annBounds(a); return [{ id: 'se', x: b.x + b.w, y: b.y + b.h }]; }
+  if (a.t === 'line' || a.t === 'arrow') return [{ id: 'p1', x: a.x1, y: a.y1 }, { id: 'p2', x: a.x2, y: a.y2 }];
+  return [{ id: 'nw', x: Math.min(a.x1, a.x2), y: Math.min(a.y1, a.y2) }, { id: 'ne', x: Math.max(a.x1, a.x2), y: Math.min(a.y1, a.y2) }, { id: 'se', x: Math.max(a.x1, a.x2), y: Math.max(a.y1, a.y2) }, { id: 'sw', x: Math.min(a.x1, a.x2), y: Math.max(a.y1, a.y2) }];
+}
+/** Drag one handle to point p. Text scales its font size with the pointer; boxes and lines move that corner or end. */
+export function dragHandle(a, id, p) {
+  if (a.t === 'text') { const b = annBounds(a); const k = Math.max(0.2, Math.max((p.x - b.x) / Math.max(1, b.w), (p.y - b.y) / Math.max(1, b.h))); const size = clamp(Math.round(a.size * k), 6, 1200); const f = size / a.size; return { ...a, size, w: (a.w ?? b.w) * f, h: (a.h ?? b.h) * f }; }
+  if (id === 'p1') return { ...a, x1: p.x, y1: p.y }; if (id === 'p2') return { ...a, x2: p.x, y2: p.y };
+  const x1 = Math.min(a.x1, a.x2), x2 = Math.max(a.x1, a.x2), y1 = Math.min(a.y1, a.y2), y2 = Math.max(a.y1, a.y2);
+  const nx1 = id.includes('w') ? p.x : x1, nx2 = id.includes('e') ? p.x : x2, ny1 = id.includes('n') ? p.y : y1, ny2 = id.includes('s') ? p.y : y2;
+  return { ...a, x1: nx1, y1: ny1, x2: nx2, y2: ny2 };
+}
+export const reorderAnnotation = (list, i, to) => { if (i < 0 || i >= list.length) return list; const c = [...list]; const [x] = c.splice(i, 1); c.splice(clamp(to, 0, c.length), 0, x); return c; };
+/** Size of the picture after adding space around it. */
+export const expandedSize = (w, h, { top = 0, right = 0, bottom = 0, left = 0 }) => ({ w: w + Math.max(0, left) + Math.max(0, right), h: h + Math.max(0, top) + Math.max(0, bottom), dx: Math.max(0, left), dy: Math.max(0, top) });
+/** Where a text mark goes on a picture: returns { x, y, align, rotate, tile } in image pixels. */
+export function markPlacement(pos, W, H, size) {
+  const m = Math.max(8, size * 0.6);
+  switch (pos) { case 'tl': return { x: m, y: m, align: 'left' }; case 'tr': return { x: W - m, y: m, align: 'right' }; case 'bl': return { x: m, y: H - m - size, align: 'left' }; case 'br': return { x: W - m, y: H - m - size, align: 'right' }; case 'tile': return { x: 0, y: 0, align: 'center', tile: true, rotate: -30 }; default: return { x: W / 2, y: (H - size) / 2, align: 'center' }; }
+}
+/** Rough picture file size shown before the download is made is measured, not guessed; this formats it. */
+export const fmtBytes = (n) => (n == null ? '' : n < 1024 ? `${n} B` : n < 1048576 ? `${Math.round(n / 1024)} KB` : `${(n / 1048576).toFixed(1)} MB`);
+
+// ---------------------------------------------------------------- PDF: blank pages, page numbers, watermark, outline
+/** A blank page of the given size (points) inserted after position `at` (-1 = first). */
+export function insertBlank(pages, at, w = 595, h = 842) { const c = [...pages]; c.splice(at + 1, 0, { uid: newUid(), src: -1, i: 0, rot: 0, blank: { w, h } }); return c; }
+export const PAGE_SIZES = { a4: [595, 842], letter: [612, 792] };
+export function formatPageNumber(fmt, n, total) { return fmt === 'of' ? `${n} of ${total}` : fmt === 'page' ? `Page ${n}` : fmt === 'pageof' ? `Page ${n} of ${total}` : fmt === 'dash' ? `- ${n} -` : String(n); }
+/** Page numbers and watermark in the page as shown (points from the top-left): what the editor previews and what planDecor turns into PDF commands. */
+export function decorShown(deco, k, total, sz) {
+  const out = [];
+  if (deco?.numbers && !(deco.numbers.skipFirst && k === 0)) {
+    const n = deco.numbers; const start = n.start ?? 1; const text = formatPageNumber(n.format, k + start, total + start - 1); const size = n.size ?? 10; const approx = text.length * size * 0.5; const m = 28;
+    const x = n.pos.endsWith('l') ? m : n.pos.endsWith('r') ? sz.w - m - approx : (sz.w - approx) / 2; const y = n.pos.startsWith('t') ? m + size : sz.h - m;
+    out.push({ kind: 'num', x, y, text, size, color: n.color ?? '#444444' });
+  }
+  if (deco?.watermark?.text) { const w = deco.watermark; out.push({ kind: 'mark', cx: sz.w / 2, cy: sz.h / 2, text: w.text, size: w.size ?? 64, angle: w.angle ?? 45, color: w.color ?? '#999999', opacity: w.opacity ?? 0.25 }); }
+  return out;
+}
+/** The same as PDF drawing commands for one page (index k of total; page box pw x ph turned R). */
+export function planDecor(deco, k, total, page) {
+  const { pw, ph, R } = page; const out = [];
+  for (const d of decorShown(deco, k, total, displaySize(pw, ph, R))) {
+    if (d.kind === 'num') { const o = toPdfPoint(d.x, d.y, pw, ph, R); out.push({ op: 'text', x: o.x, y: o.y, text: d.text, size: d.size, rotate: R, color: hexToRgb(d.color), bold: false }); }
+    else {
+      const rad = (d.angle * Math.PI) / 180, approx = d.text.length * d.size * 0.5;
+      const sx = d.cx - (Math.cos(rad) * approx) / 2 + Math.sin(rad) * d.size * 0.3, sy = d.cy + (Math.sin(rad) * approx) / 2 + Math.cos(rad) * d.size * 0.3;
+      const o = toPdfPoint(sx, sy, pw, ph, R); out.push({ op: 'text', x: o.x, y: o.y, text: d.text, size: d.size, rotate: (((R + d.angle) % 360) + 360) % 360, color: hexToRgb(d.color), bold: true, opacity: d.opacity });
+    }
+  }
+  return out;
+}
+export const hexToRgb = (hexv) => { const m = /^#?([0-9a-f]{6})$/i.exec(String(hexv ?? '')); const n = m ? parseInt(m[1], 16) : 0; return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255]; };
+/** Which pages carry a redaction (their content is replaced by a picture when the PDF is written). */
+export const redactedPages = (pages, ann) => pages.filter((p) => (ann[p.uid] ?? []).some((a) => a.t === 'redact')).map((p) => p.uid);

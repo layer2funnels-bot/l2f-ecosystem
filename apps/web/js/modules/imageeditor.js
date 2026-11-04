@@ -37,6 +37,34 @@ export function drawAnnotations(c, anns, k) {
     c.restore();
   }
 }
+const isRegion = (a) => a.t === 'blur' || a.t === 'pixel';
+/** Blur / pixelate the areas people marked, on pixels already drawn into c (scale k = canvas pixels per image pixel). */
+function applyRegions(c, regions, k, pw, ph) {
+  for (const a of regions) {
+    const x = Math.max(0, Math.floor(Math.min(a.x1, a.x2) * k)), y = Math.max(0, Math.floor(Math.min(a.y1, a.y2) * k)); const w = Math.min(pw, Math.ceil(Math.max(a.x1, a.x2) * k)) - x, hh = Math.min(ph, Math.ceil(Math.max(a.y1, a.y2) * k)) - y;
+    if (w < 2 || hh < 2) continue; const img = c.getImageData(x, y, w, hh);
+    if (a.t === 'pixel') M.pixelate(img.data, w, hh, (a.level ?? 12) * k); else img.data.set(M.boxBlur(img.data, w, hh, (a.level ?? 12) * k * 0.6));
+    c.putImageData(img, x, y);
+  }
+}
+const roundRectPath = (c, x, y, w, h, r) => { const rr = Math.max(0, Math.min(r, w / 2, h / 2)); c.beginPath(); c.moveTo(x + rr, y); c.arcTo(x + w, y, x + w, y + h, rr); c.arcTo(x + w, y + h, x, y + h, rr); c.arcTo(x, y + h, x, y, rr); c.arcTo(x, y, x + w, y, rr); c.closePath(); };
+/** Everything the picture is made of, in order: base (already adjusted), blurred areas, annotations, text mark, frame (border and rounded corners). */
+export function paintAll(c, src, pw, ph, W, H, snap, extra = []) {
+  const k = pw / W; c.clearRect(0, 0, pw, ph); c.drawImage(src, 0, 0, pw, ph);
+  const all = [...snap.anns, ...extra]; applyRegions(c, all.filter(isRegion), k, pw, ph); drawAnnotations(c, all.filter((a) => !isRegion(a)), k);
+  const m = snap.mark; if (m?.text) {
+    c.save(); c.scale(k, k); c.globalAlpha = m.opacity ?? 0.4; c.fillStyle = m.color; c.font = `700 ${m.size}px ${fontCss('sans')}`; c.textBaseline = 'top'; const pl = M.markPlacement(m.pos, W, H, m.size);
+    if (pl.tile) { c.translate(W / 2, H / 2); c.rotate((pl.rotate * Math.PI) / 180); c.textAlign = 'center'; const step = m.size * 3.2, wd = c.measureText(m.text).width + m.size * 2; for (let yy = -H; yy <= H; yy += step) for (let xx = -W; xx <= W; xx += wd * 1.3) c.fillText(m.text, xx, yy); }
+    else { c.textAlign = pl.align; c.fillText(m.text, pl.x, pl.y); }
+    c.restore();
+  }
+  const f = snap.frame; if (f && (f.width > 0 || f.radius > 0)) {
+    c.save(); c.scale(k, k);
+    if (f.radius > 0) { c.globalCompositeOperation = 'destination-in'; roundRectPath(c, 0, 0, W, H, f.radius); c.fillStyle = '#000'; c.fill(); c.globalCompositeOperation = 'source-over'; }
+    if (f.width > 0) { c.strokeStyle = f.color; c.lineWidth = f.width; roundRectPath(c, f.width / 2, f.width / 2, W - f.width, H - f.width, Math.max(0, f.radius - f.width / 2)); c.stroke(); }
+    c.restore();
+  }
+}
 const measureText = (a) => { const c = mkCanvas(1, 1).getContext('2d'); c.font = `${a.size}px ${fontCss(a.font)}`; const lines = String(a.text).split('\n'); return { ...a, w: Math.max(...lines.map((l) => c.measureText(l).width)), h: lines.length * a.size * 1.3 }; };
 const clone = (v) => JSON.parse(JSON.stringify(v));
 
@@ -63,11 +91,11 @@ export function imageView({ api, id, ctx }) {
     let meta = file, version = firstVersion, savedAt = file.updated_at, status = readOnly ? 'readonly' : 'saved', saving = false;
     const orig = firstBase;                                         // "before": the picture as it was when opened
     const DEF = { ...M.ADJUST_DEFAULTS };
-    let S = { base: firstBase, adj: { ...DEF }, filter: 'none', anns: [] };
+    let S = { base: firstBase, adj: { ...DEF }, filter: 'none', anns: [], frame: { width: 0, color: '#ffffff', radius: 0 }, mark: null };
     let rev = 0, savedRev = 0; S.rev = 0;
     const hist = M.createHistory(S);
     let tool = readOnly ? 'view' : 'select', sub = { draw: 'pen', shape: 'rect' }, draft = null, sel = null, compare = false, zoom = 'fit', crop = null, cropRatio = null, textEd = null;
-    const opts = { color: '#e5484d', size: Math.max(3, Math.round(Math.max(firstBase.width, firstBase.height) / 220)), hlColor: '#fde047', textSize: Math.max(18, Math.round(firstBase.width / 24)), font: 'sans', textBg: false, textBgColor: '#ffffff', fill: false, lock: true };
+    const opts = { color: '#e5484d', size: Math.max(3, Math.round(Math.max(firstBase.width, firstBase.height) / 220)), hlColor: '#fde047', level: Math.max(8, Math.round(firstBase.width / 50)), textSize: Math.max(18, Math.round(firstBase.width / 24)), font: 'sans', textBg: false, textBgColor: '#ffffff', fill: false, lock: true };
 
     // ---------------------------------------------------------------- pieces of the page
     const statusEl = h('span', { class: 'docstate', role: 'status', 'aria-live': 'polite' });
@@ -105,9 +133,8 @@ export function imageView({ api, id, ctx }) {
       const c = cv.getContext('2d'); c.clearRect(0, 0, pw, ph);
       if (compare) { const f = Math.min(pw / orig.width, ph / orig.height); const ow = orig.width * f, oh = orig.height * f; c.drawImage(orig, (pw - ow) / 2, (ph - oh) / 2, ow, oh); }
       else {
-        const p = processed(pw, ph); if (p) c.drawImage(p, 0, 0); else c.drawImage(S.base, 0, 0, pw, ph);
-        drawAnnotations(c, draft ? [...S.anns, draft] : S.anns, pw / W);
-        if (sel != null && S.anns[sel]) { const b = M.annBounds(S.anns[sel]); c.save(); c.scale(pw / W, pw / W); c.setLineDash([6, 4]); c.lineWidth = 2 * (W / pw); c.strokeStyle = '#2b5cf0'; c.strokeRect(b.x - 4, b.y - 4, b.w + 8, b.h + 8); c.restore(); }
+        paintAll(c, processed(pw, ph) ?? S.base, pw, ph, W, H, S, draft ? [draft] : []);
+        if (sel != null && S.anns[sel]) { const b = M.annBounds(S.anns[sel]); c.save(); c.scale(pw / W, pw / W); c.setLineDash([6, 4]); c.lineWidth = 2 * (W / pw); c.strokeStyle = '#2b5cf0'; c.strokeRect(b.x - 4, b.y - 4, b.w + 8, b.h + 8); c.setLineDash([]); c.fillStyle = '#ffffff'; c.lineWidth = 2 * (W / pw); const hr = 6 / zoomValue() * (W / W); for (const hd of M.annHandles(S.anns[sel])) { c.beginPath(); c.rect(hd.x - hr, hd.y - hr, hr * 2, hr * 2); c.fill(); c.stroke(); } c.restore(); }
       }
       layout();
     }
@@ -122,7 +149,7 @@ export function imageView({ api, id, ctx }) {
       const isDirty = !readOnly && S.rev !== savedRev;
       if (!readOnly && !saving && status !== 'failed') { const was = status; status = isDirty ? 'dirty' : 'saved'; if (status === 'dirty' && was !== 'dirty') { dirty.set(meta.name, () => save()); window.addEventListener('beforeunload', warn); } if (status === 'saved') { dirty.clear(); window.removeEventListener('beforeunload', warn); } }
       const t = { saved: `Saved ${timeOf(savedAt)}`, dirty: 'Unsaved changes', saving: 'Saving…', failed: 'Couldn’t save. Your changes are still here.', readonly: 'Read only' }[status];
-      statusEl.replaceChildren(h('span', { class: `dot ${status}` }), t, status === 'failed' ? btn('Retry', () => save(), 'link') : null);
+      statusEl.replaceChildren(...[h('span', { class: `dot ${status}` }), t, status === 'failed' ? btn('Retry', () => save(), 'link') : null].filter(Boolean));
       saveBtn.disabled = readOnly || status === 'saved' || saving || !M.saveFormat(meta.mime_type);
       saveBtn.title = !M.saveFormat(meta.mime_type) && !readOnly ? 'GIF files can’t be re-encoded here. Use Save as copy to keep a PNG.' : '';
     }
@@ -131,15 +158,15 @@ export function imageView({ api, id, ctx }) {
     // ---------------------------------------------------------------- history
     function commit(next) { rev += 1; S = { ...next, rev }; hist.push(S); sel = sel != null && S.anns[sel] ? sel : null; changed(); render(); paintPanel(); }
     function live(patch) { S = { ...S, ...patch }; render(); }                       // while a slider moves: no history entry yet
-    function settle() { if (hist.current() !== S && JSON.stringify([S.adj, S.filter, S.anns]) !== JSON.stringify([hist.current().adj, hist.current().filter, hist.current().anns])) { rev += 1; S = { ...S, rev }; hist.push(S); changed(); } }
+    function settle() { if (hist.current() !== S && JSON.stringify([S.adj, S.filter, S.anns, S.frame, S.mark]) !== JSON.stringify([hist.current().adj, hist.current().filter, hist.current().anns, hist.current().frame, hist.current().mark])) { rev += 1; S = { ...S, rev }; hist.push(S); changed(); } }
     function undo() { if (!hist.canUndo()) return; S = hist.undo(); sel = null; crop = null; afterJump(); }
     function redo() { if (!hist.canRedo()) return; S = hist.redo(); sel = null; crop = null; afterJump(); }
     function afterJump() { changed(); render(); paintPanel(); }
 
     // ---------------------------------------------------------------- picture operations
     const flatten = () => { const { W, H } = dims(); const c = mkCanvas(W, H); const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(S.base, 0, 0);
-      if (!M.isNeutral(S.adj) || S.filter !== 'none') { const img = x.getImageData(0, 0, W, H); M.processPixels(img.data, W, H, { adj: S.adj, filter: S.filter, scale: W / 1000 }); x.putImageData(img, 0, 0); }
-      drawAnnotations(x, S.anns, 1); return tag(c); };
+      let src = S.base; if (!M.isNeutral(S.adj) || S.filter !== 'none') { const img = x.getImageData(0, 0, W, H); M.processPixels(img.data, W, H, { adj: S.adj, filter: S.filter, scale: W / 1000 }); x.putImageData(img, 0, 0); src = mkCanvas(W, H); src.getContext('2d').drawImage(c, 0, 0); }
+      paintAll(x, src, W, H, W, H, S); return tag(c); };
     function withBase(nb, op) { commit({ ...S, base: tag(nb), anns: op ? S.anns.map((a) => M.transformAnnotation(a, op)) : S.anns }); }
     function turn(cw) {
       const { W, H } = dims(); const c = mkCanvas(H, W); const x = c.getContext('2d');
@@ -154,7 +181,7 @@ export function imageView({ api, id, ctx }) {
     function rotateFree(deg) {
       if (!deg) return; const f = flatten(); const { W, H } = { W: f.width, H: f.height }; const size = M.rotatedSize(W, H, deg); const c = mkCanvas(size.w, size.h); const x = c.getContext('2d');
       x.translate(size.w / 2, size.h / 2); x.rotate((deg * Math.PI) / 180); x.drawImage(f, -W / 2, -H / 2);
-      commit({ base: tag(c), adj: { ...DEF }, filter: 'none', anns: [] });
+      commit({ base: tag(c), adj: { ...DEF }, filter: 'none', anns: [], frame: { width: 0, color: '#ffffff', radius: 0 }, mark: null });
     }
     function resizeTo(nw, nh) {
       const { W, H } = dims(); if (nw === W && nh === H) return;
@@ -167,12 +194,13 @@ export function imageView({ api, id, ctx }) {
       if (!crop) return; const r = M.clampRect(crop, ...Object.values(dims()).slice(0, 2)); const c = mkCanvas(r.w, r.h); c.getContext('2d').drawImage(S.base, r.x, r.y, r.w, r.h, 0, 0, r.w, r.h);
       crop = null; withBase(c, { type: 'translate', dx: -r.x, dy: -r.y }); setTool('select');
     }
-    function reset() { commit({ base: orig, adj: { ...DEF }, filter: 'none', anns: [] }); toast('Back to the original picture. You can undo this.'); }
+    function reset() { commit({ base: orig, adj: { ...DEF }, filter: 'none', anns: [], frame: { width: 0, color: '#ffffff', radius: 0 }, mark: null }); toast('Back to the original picture. You can undo this.'); }
 
     // ---------------------------------------------------------------- output
     const encode = (canvas, mime, q) => new Promise((resolve) => canvas.toBlob((b) => resolve(b), mime, q));
-    async function renderOut(mime) {
-      const f = flatten();
+    async function renderOut(mime, scale = 1) {
+      let f = flatten();
+      if (scale !== 1) { const sc = mkCanvas(f.width * scale, f.height * scale); const sx = sc.getContext('2d'); sx.imageSmoothingQuality = 'high'; sx.drawImage(f, 0, 0, sc.width, sc.height); f = sc; }
       if (mime === 'image/jpeg') { const c = mkCanvas(f.width, f.height); const x = c.getContext('2d'); x.fillStyle = '#ffffff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(f, 0, 0); return c; }
       return f;
     }
@@ -206,24 +234,30 @@ export function imageView({ api, id, ctx }) {
         actions: [{ label: 'Save copy', cls: 'primary', on: async () => { await copyDialogSave(fmtSel.value); } }, { label: 'Cancel' }] });
     }
     function downloadDialog() {
-      const fmtSel = h('select', { id: 'ix-dfmt', class: 'tbsel' }, ...[['image/png', 'PNG'], ['image/jpeg', 'JPEG'], ['image/webp', 'WebP']].map(([v, t]) => h('option', { value: v }, t)));
-      const q = h('input', { id: 'ix-dq', type: 'range', min: '40', max: '100', value: '92' }); const qv = h('output', { for: 'ix-dq' }, '92%');
+      const { W, H } = dims();
+      const fmtSel = h('select', { id: 'ix-dfmt', class: 'tbsel' }, ...[['image/png', 'PNG (sharp, supports transparency)'], ['image/jpeg', 'JPEG (small photos)'], ['image/webp', 'WebP (small, modern)']].map(([v, t]) => h('option', { value: v }, t)));
+      const q = h('input', { id: 'ix-dq', type: 'range', min: '30', max: '100', value: '90' }); const qv = h('output', { for: 'ix-dq' }, '90%');
       const qrow = h('div', { class: 'ix-row' }, h('label', { for: 'ix-dq' }, 'Quality '), q, qv);
-      q.addEventListener('input', () => { qv.textContent = `${q.value}%`; });
-      const sync = () => { qrow.hidden = fmtSel.value === 'image/png'; }; fmtSel.addEventListener('change', sync); sync();
-      dialog({ title: 'Download', body: [h('div', { class: 'ix-row' }, h('label', { for: 'ix-dfmt' }, 'Format '), fmtSel), qrow, h('p', { class: 'fine muted' }, 'The download includes your edits. The file in Drive is not changed.')],
-        actions: [{ label: 'Download', cls: 'primary', on: async () => { const mime = fmtSel.value; const blob = await encode(await renderOut(mime), mime, Number(q.value) / 100); if (!blob) return toast('Couldn’t create the download.', false); downloadBlob(blob, M.withExt(meta.name, blob.type || mime)); } }, { label: 'Cancel' }] });
+      const scl = h('select', { id: 'ix-dsc', class: 'tbsel' }, ...[['1', 'Original size'], ['0.75', '75%'], ['0.5', '50%'], ['0.25', '25%'], ['2', '200%']].map(([v, t]) => h('option', { value: v }, t)));
+      const est = h('p', { class: 'ix-est', role: 'status', 'aria-live': 'polite' }, 'Calculating size…'); let tm = 0, lastBlob = null, seq = 0, ready = false;
+      const dimsOf = () => { const k = Number(scl.value); return `${Math.max(1, Math.round(W * k))} × ${Math.max(1, Math.round(H * k))} px`; };
+      const refresh = () => { clearTimeout(tm); ready = false; est.textContent = 'Calculating size…'; tm = setTimeout(async () => { const my = ++seq; const mime = fmtSel.value; const blob = await encode(await renderOut(mime, Number(scl.value)), mime, Number(q.value) / 100); if (my !== seq) return; lastBlob = blob; ready = true; est.textContent = blob ? `${dimsOf()} · about ${M.fmtBytes(blob.size)}${blob.type !== mime ? ` (this browser makes ${blob.type.replace('image/', '').toUpperCase()} instead)` : ''}` : 'This format isn’t available in this browser.'; }, 250); };
+      q.addEventListener('input', () => { qv.textContent = `${q.value}%`; refresh(); }); scl.addEventListener('change', refresh);
+      const sync = () => { qrow.hidden = fmtSel.value === 'image/png'; refresh(); }; fmtSel.addEventListener('change', sync); sync();
+      dialog({ title: 'Download', body: [h('div', { class: 'ix-row' }, h('label', { for: 'ix-dfmt' }, 'Format '), fmtSel), qrow, h('div', { class: 'ix-row' }, h('label', { for: 'ix-dsc' }, 'Size '), scl), est, h('p', { class: 'fine muted' }, 'The download includes your edits. The file in Drive is not changed.')],
+        actions: [{ label: 'Download', cls: 'primary', on: async () => { const mime = fmtSel.value; const blob = lastBlob && ready ? lastBlob : await encode(await renderOut(mime, Number(scl.value)), mime, Number(q.value) / 100); if (!blob) return toast('Couldn’t create the download.', false); downloadBlob(blob, M.withExt(meta.name, blob.type || mime)); } }, { label: 'Cancel' }] });
     }
     async function copyToClipboard() {
       try { const blob = await encode(await renderOut('image/png'), 'image/png'); await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]); toast('Picture copied.'); }
       catch { toast('Your browser didn’t allow copying the picture. Use Download instead.', false); }
     }
     function restoredFrom(blob, newVersion) {
-      createImageBitmap(blob).then((bmp) => { const b = tag(mkCanvas(bmp.width, bmp.height)); b.getContext('2d').drawImage(bmp, 0, 0); S = { base: b, adj: { ...DEF }, filter: 'none', anns: [], rev: ++rev }; savedRev = S.rev; hist.reset(S); version = newVersion; savedAt = new Date().toISOString(); status = 'saved'; sel = null; changed(); render(); paintPanel(); });
+      createImageBitmap(blob).then((bmp) => { const b = tag(mkCanvas(bmp.width, bmp.height)); b.getContext('2d').drawImage(bmp, 0, 0); S = { base: b, adj: { ...DEF }, filter: 'none', anns: [], frame: { width: 0, color: '#ffffff', radius: 0 }, mark: null, rev: ++rev }; savedRev = S.rev; hist.reset(S); version = newVersion; savedAt = new Date().toISOString(); status = 'saved'; sel = null; changed(); render(); paintPanel(); });
     }
 
     // ---------------------------------------------------------------- tools and panel
-    const TOOLS = [['select', 'cursor', 'Select'], ['crop', 'crop', 'Crop'], ['transform', 'rotate', 'Rotate and resize'], ['adjust', 'sliders', 'Adjust'], ['filters', 'imgI', 'Filters'], ['draw', 'pen', 'Draw'], ['text', 'text', 'Text'], ['shape', 'shape', 'Shapes']];
+    const TOOLS = [['select', 'cursor', 'Select'], ['crop', 'crop', 'Crop'], ['transform', 'rotate', 'Transform'], ['adjust', 'sliders', 'Adjust'], ['filters', 'imgI', 'Filters'], ['draw', 'pen', 'Draw'], ['text', 'text', 'Text'], ['shape', 'shape', 'Shapes'], ['frame', 'frame', 'Frame']];
+    const IKEYS = { select: 'V', crop: 'C', transform: 'O', adjust: 'A', filters: 'F', draw: 'P', text: 'T', shape: 'S', frame: 'B' };
     function setTool(t) {
       if (tool === 'crop' && t !== 'crop') crop = null;
       tool = t; sel = t === 'select' ? sel : null;
@@ -231,7 +265,7 @@ export function imageView({ api, id, ctx }) {
       closeTextEditor(); paintTools(); paintPanel(); render();
     }
     function paintTools() {
-      tools.replaceChildren(...TOOLS.filter(([k]) => !readOnly || k === 'select').map(([k, ic, label]) => h('button', { type: 'button', class: 'ix-tool', 'aria-pressed': String(tool === k), title: label, onclick: () => setTool(k) }, icon(ic), h('span', {}, label))));
+      tools.replaceChildren(...TOOLS.filter(([k]) => !readOnly || k === 'select').map(([k, ic, label]) => h('button', { type: 'button', class: 'ix-tool', 'aria-pressed': String(tool === k), title: `${label} (${IKEYS[k]})`, onclick: () => setTool(k) }, icon(ic), h('span', {}, label))));
       stage.dataset.tool = tool;
     }
     const slider = (key, label, min, max, getV, onLive, onDone) => {
@@ -241,7 +275,13 @@ export function imageView({ api, id, ctx }) {
       inp.addEventListener('dblclick', () => { inp.value = String(min < 0 ? 0 : min); inp.dispatchEvent(new Event('input')); inp.dispatchEvent(new Event('change')); });
       return h('div', { class: 'ix-sl' }, h('label', { for: idn }, label), inp, out);
     };
-    const colorIn = (label, value, on) => { const idn = `ix-c-${label.replace(/\W/g, '')}`; const i = h('input', { id: idn, type: 'color', value }); i.addEventListener('input', () => on(i.value)); i.addEventListener('change', () => settle()); return h('div', { class: 'ix-row' }, h('label', { for: idn }, label), i); };
+    let pickCb = null;
+    const startPick = (cb) => { pickCb = cb; stage.classList.add('picking'); toast('Click the picture to pick a colour.'); };
+    const colorIn = (label, value, on) => {
+      const idn = `ix-c-${label.replace(/\W/g, '')}`; const i = h('input', { id: idn, type: 'color', value }); i.addEventListener('input', () => on(i.value)); i.addEventListener('change', () => settle());
+      const pk = h('button', { type: 'button', class: 'btn ix-pick', title: 'Pick a colour from the picture', 'aria-label': `Pick ${label} from the picture`, onclick: () => startPick((hx) => { i.value = hx; on(hx); settle(); }) }, 'Pick');
+      return h('div', { class: 'ix-row' }, h('label', { for: idn }, label), i, pk);
+    };
     const segBtns = (items, cur, on, label) => h('div', { class: 'ix-seg', role: 'group', 'aria-label': label }, ...items.map(([k, t]) => h('button', { type: 'button', class: 'btn', 'aria-pressed': String(cur === k), onclick: () => on(k) }, t)));
     function paintPanel() {
       const ro = readOnly; const kids = [];
@@ -249,7 +289,15 @@ export function imageView({ api, id, ctx }) {
       else if (tool === 'select') {
         const a = sel != null ? S.anns[sel] : null;
         kids.push(h('h3', {}, 'Select'), h('p', { class: 'fine muted' }, a ? 'Drag to move. Delete removes it. Double-click text to edit it.' : 'Click something you drew or typed to move or remove it. Pick a tool on the left to change the picture.'));
-        if (a) { kids.push(colorIn('Colour', a.color, (v) => { S = { ...S, anns: S.anns.map((x, i) => (i === sel ? { ...x, color: v } : x)) }; render(); }), btn('Delete', () => deleteSel(), '')); }
+        if (a) {
+          const upd = (patch) => { S = { ...S, anns: S.anns.map((x, i) => (i === sel ? (x.t === 'text' ? measureText({ ...x, ...patch }) : { ...x, ...patch }) : x)) }; render(); };
+          if (!isRegion(a)) kids.push(colorIn('Colour', a.color, (v) => upd({ color: v })));
+          if (a.t === 'text') { const fs = h('select', { id: 'ix-sfont', class: 'tbsel' }, ...FONTS.map(([k, l]) => h('option', { value: k }, l))); fs.value = a.font; fs.addEventListener('change', () => { upd({ font: fs.value }); settle(); });
+            kids.push(h('div', { class: 'ix-row' }, h('label', { for: 'ix-sfont' }, 'Font'), fs), slider('ssize', 'Text size', 6, Math.max(120, Math.round(dims().W / 4)), () => Math.round(a.size), (v) => upd({ size: v }), () => settle()), btn('Edit text', () => openTextEditor({ x: a.x, y: a.y }, sel), '')); }
+          else if (isRegion(a)) kids.push(slider('slevel', 'Strength', 2, Math.max(40, Math.round(dims().W / 8)), () => Math.round(a.level ?? 12), (v) => upd({ level: v }), () => settle()));
+          else kids.push(slider('ssz', 'Line width', 1, 80, () => Math.round(a.size ?? 4), (v) => upd({ size: v }), () => settle()));
+          kids.push(h('div', { class: 'ix-row' }, btn('Duplicate', () => dupSel(), '', { title: 'Duplicate (Ctrl+D)' }), btn('To front', () => layerSel(S.anns.length - 1), ''), btn('To back', () => layerSel(0), ''), btn('Delete', () => deleteSel(), '', { title: 'Delete (Del)' })), h('p', { class: 'fine muted' }, 'Drag the white squares to resize. Arrow keys nudge it.'));
+        }
       } else if (tool === 'crop') {
         const { W, H } = dims(); const r = crop ?? { x: 0, y: 0, w: W, h: H };
         const num = (k, label) => { const i = h('input', { type: 'number', min: '0', max: String(k === 'x' || k === 'w' ? W : H), value: String(r[k]), 'aria-label': label }); i.addEventListener('change', () => { crop = M.clampRect({ ...crop, [k]: Number(i.value) }, W, H, 1); placeCrop(); paintPanel(); }); return h('label', { class: 'ix-num' }, label, i); };
@@ -283,10 +331,35 @@ export function imageView({ api, id, ctx }) {
           h('label', { class: 'ix-check' }, bgC, 'Background behind text'), colorIn('Background', opts.textBgColor, (v) => { opts.textBgColor = v; }), h('p', { class: 'fine muted' }, 'Click the picture where the text should start. Ctrl+Enter or clicking away places it.'));
       } else if (tool === 'shape') {
         const fillC = h('input', { id: 'ix-fill', type: 'checkbox', checked: opts.fill }); fillC.addEventListener('change', () => { opts.fill = fillC.checked; });
-        kids.push(h('h3', {}, 'Shapes'), segBtns([['rect', 'Rectangle'], ['ellipse', 'Ellipse'], ['arrow', 'Arrow'], ['line', 'Line']], sub.shape, (k) => { sub.shape = k; paintPanel(); }, 'Shape'), colorIn('Colour', opts.color, (v) => { opts.color = v; }), slider('lsize', 'Line width', 1, 60, () => opts.size, (v) => { opts.size = v; }),
-          ['rect', 'ellipse'].includes(sub.shape) ? h('label', { class: 'ix-check' }, fillC, 'Fill the shape') : null, h('p', { class: 'fine muted' }, 'Drag on the picture to draw.'));
+        kids.push(h('h3', {}, 'Shapes'), segBtns([['rect', 'Rectangle'], ['ellipse', 'Ellipse'], ['arrow', 'Arrow'], ['line', 'Line'], ['box', 'Black box'], ['blur', 'Blur area'], ['pixel', 'Pixelate']], sub.shape, (k) => { sub.shape = k; paintPanel(); }, 'Shape'),
+          ...(['blur', 'pixel'].includes(sub.shape) ? [slider('rlevel', 'Strength', 2, Math.max(40, Math.round(dims().W / 8)), () => opts.level, (v) => { opts.level = v; }), h('p', { class: 'fine muted' }, 'Hides detail inside the area you drag. To cover something completely (a password or a number) use Black box. Nothing is final until you save or download, so you can still move or undo it.')]
+            : sub.shape === 'box' ? [h('p', { class: 'fine muted' }, 'Drag to cover an area with solid black.')]
+              : [colorIn('Colour', opts.color, (v) => { opts.color = v; }), slider('lsize', 'Line width', 1, 60, () => opts.size, (v) => { opts.size = v; }), ['rect', 'ellipse'].includes(sub.shape) ? h('label', { class: 'ix-check' }, fillC, 'Fill the shape') : null, h('p', { class: 'fine muted' }, 'Drag on the picture to draw.')]));
+      } else if (tool === 'frame') {
+        const { W, H } = dims(); const fr = S.frame; const m = S.mark ?? { text: '', size: Math.max(20, Math.round(W / 14)), color: '#ffffff', opacity: 0.5, pos: 'br' };
+        const setMark = (patch) => live({ mark: { ...m, ...S.mark, ...patch } });
+        const mt = h('input', { id: 'ix-mark', type: 'text', maxlength: '80', placeholder: 'For example: Draft', class: 'ix-text-in', value: S.mark?.text ?? '' }); mt.addEventListener('input', () => setMark({ text: mt.value })); mt.addEventListener('change', () => settle());
+        const mp = h('select', { id: 'ix-mpos', class: 'tbsel' }, ...[['br', 'Bottom right'], ['bl', 'Bottom left'], ['tr', 'Top right'], ['tl', 'Top left'], ['c', 'Centre'], ['tile', 'Repeated across the picture']].map(([v, t]) => h('option', { value: v }, t))); mp.value = (S.mark ?? m).pos; mp.addEventListener('change', () => { setMark({ pos: mp.value }); settle(); });
+        const padI = h('input', { id: 'ix-pad', type: 'number', min: '1', max: '4000', value: '40', 'aria-label': 'Space on every side, in pixels' }); const clearC = h('input', { id: 'ix-padclear', type: 'checkbox' }); let padColor = '#ffffff';
+        kids.push(h('h3', {}, 'Border and corners'), slider('fw', 'Border width', 0, Math.max(10, Math.round(Math.max(W, H) / 8)), () => Math.round(fr.width), (v) => live({ frame: { ...S.frame, width: v } }), () => settle()), colorIn('Border colour', fr.color, (v) => live({ frame: { ...S.frame, color: v } })), slider('fr', 'Rounded corners', 0, Math.round(Math.min(W, H) / 2), () => Math.round(fr.radius), (v) => live({ frame: { ...S.frame, radius: v } }), () => settle()),
+          h('p', { class: 'fine muted' }, 'Rounded corners are see-through in PNG and WebP, and white in JPEG.'),
+          h('h3', {}, 'Text watermark'), h('div', { class: 'ix-row' }, h('label', { for: 'ix-mark' }, 'Text'), mt), h('div', { class: 'ix-row' }, h('label', { for: 'ix-mpos' }, 'Where'), mp),
+          slider('msz', 'Size', 8, Math.max(60, Math.round(W / 3)), () => Math.round((S.mark ?? m).size), (v) => setMark({ size: v }), () => settle()), slider('mop', 'Strength', 5, 100, () => Math.round(((S.mark ?? m).opacity ?? 0.5) * 100), (v) => setMark({ opacity: v / 100 }), () => settle()), colorIn('Watermark colour', (S.mark ?? m).color, (v) => setMark({ color: v })),
+          S.mark ? btn('Remove watermark', () => commit({ ...S, mark: null }), '') : null,
+          h('h3', {}, 'Add space around'), h('div', { class: 'ix-row' }, h('label', { for: 'ix-pad' }, 'Pixels'), padI), colorIn('Space colour', padColor, (v) => { padColor = v; }), h('label', { class: 'ix-check' }, clearC, 'See-through (PNG and WebP)'),
+          btn('Add space', () => { const n = M.clamp(Number(padI.value) || 0, 1, 4000); const e = M.expandedSize(W, H, { top: n, right: n, bottom: n, left: n }); if (e.w * e.h > MAX_PIXELS) return toast('That would be too large.', false); expandCanvas(n, clearC.checked ? null : padColor); }, ''));
       }
       panel.replaceChildren(...kids.filter(Boolean));
+    }
+    function expandCanvas(n, color) {
+      const { W, H } = dims(); const e = M.expandedSize(W, H, { top: n, right: n, bottom: n, left: n }); const c = mkCanvas(e.w, e.h); const x = c.getContext('2d');
+      if (color) { x.fillStyle = color; x.fillRect(0, 0, e.w, e.h); } x.drawImage(S.base, e.dx, e.dy); withBase(c, { type: 'translate', dx: e.dx, dy: e.dy });
+    }
+    function dupSel() { if (sel == null || !S.anns[sel]) return; const copy = M.moveAnnotation(clone(S.anns[sel]), 24, 24); commit({ ...S, anns: [...S.anns, copy] }); sel = S.anns.length - 1; paintPanel(); render(); }
+    function layerSel(to) { if (sel == null) return; commit({ ...S, anns: M.reorderAnnotation(S.anns, sel, to) }); sel = to; paintPanel(); render(); }
+    function shortcutsDialog() {
+      const rows = [['V C O A F P T S B', 'Select, Crop, Transform, Adjust, Filters, Draw, Text, Shapes, Frame'], ['Ctrl+Z / Ctrl+Shift+Z', 'Undo / redo'], ['Ctrl+S', 'Save as a new version'], ['Ctrl+D', 'Duplicate the selected item'], ['Delete', 'Remove the selected item'], ['Arrow keys', 'Nudge the selected item (Shift = bigger steps)'], ['+ / - / 0', 'Zoom in / out / fit'], ['Hold Before / after', 'See the original picture'], ['Esc', 'Deselect or leave crop'], ['Right-click', 'Menu: undo, redo, copy picture, reset, download']];
+      dialog({ title: 'Keyboard shortcuts', body: h('table', { class: 'px-keys' }, h('tbody', {}, ...rows.map(([a, b]) => h('tr', {}, h('th', { scope: 'row' }, a), h('td', {}, b))))), actions: [{ label: 'Close', focus: true }] });
     }
     function deleteSel() { if (sel == null || readOnly) return; const next = S.anns.filter((_, i) => i !== sel); sel = null; commit({ ...S, anns: next }); }
 
@@ -311,24 +384,28 @@ export function imageView({ api, id, ctx }) {
     let drag = null;
     cv.addEventListener('pointerdown', (e) => {
       if (readOnly || compare || e.button !== 0) return; const p = imgPoint(e);
+      if (pickCb) { const r = cv.getBoundingClientRect(); const px = Math.min(cv.width - 1, Math.max(0, Math.floor(((e.clientX - r.left) / r.width) * cv.width))), py = Math.min(cv.height - 1, Math.max(0, Math.floor(((e.clientY - r.top) / r.height) * cv.height))); const d = cv.getContext('2d').getImageData(px, py, 1, 1).data; const hx = `#${[d[0], d[1], d[2]].map((v) => v.toString(16).padStart(2, '0')).join('')}`; const cb = pickCb; pickCb = null; stage.classList.remove('picking'); cb(hx); toast(`Picked ${hx}.`); return; }
+      if (tool === 'select' && sel != null && S.anns[sel]) { const hd = M.annHandles(S.anns[sel]).find((q) => Math.hypot(q.x - p.x, q.y - p.y) <= 12 / zoomValue()); if (hd) { drag = { kind: 'handle', id: hd.id, orig: S.anns[sel], moved: false }; cv.setPointerCapture(e.pointerId); return; } }
       if (tool === 'select') { const i = topHit(p); sel = i >= 0 ? i : null; paintPanel(); render(); if (i >= 0) { drag = { kind: 'move', last: p, moved: false }; cv.setPointerCapture(e.pointerId); } }
       else if (tool === 'draw') {
         cv.setPointerCapture(e.pointerId);
         if (sub.draw === 'eraser') { drag = { kind: 'erase', removed: false, r: opts.size }; eraseAt(p); }
         else { draft = { t: sub.draw, color: sub.draw === 'hl' ? opts.hlColor : opts.color, size: sub.draw === 'hl' ? opts.size * 3 : opts.size, pts: [[p.x, p.y]] }; drag = { kind: 'draw' }; render(); }
-      } else if (tool === 'shape') { cv.setPointerCapture(e.pointerId); draft = { t: sub.shape, color: opts.color, size: opts.size, x1: p.x, y1: p.y, x2: p.x, y2: p.y, ...(opts.fill && ['rect', 'ellipse'].includes(sub.shape) ? { fill: opts.color } : {}) }; drag = { kind: 'shape' }; }
+      } else if (tool === 'shape') { cv.setPointerCapture(e.pointerId); const sh = sub.shape;
+        draft = sh === 'box' ? { t: 'rect', color: '#000000', fill: '#000000', size: 1, x1: p.x, y1: p.y, x2: p.x, y2: p.y } : sh === 'blur' || sh === 'pixel' ? { t: sh, level: opts.level, color: '#000000', size: 2, x1: p.x, y1: p.y, x2: p.x, y2: p.y } : { t: sh, color: opts.color, size: opts.size, x1: p.x, y1: p.y, x2: p.x, y2: p.y, ...(opts.fill && ['rect', 'ellipse'].includes(sh) ? { fill: opts.color } : {}) }; drag = { kind: 'shape' }; }
       else if (tool === 'text') { e.preventDefault(); setTimeout(() => openTextEditor(p), 0); }
     });
     cv.addEventListener('pointermove', (e) => {
       if (!drag) return; const p = imgPoint(e);
-      if (drag.kind === 'move') { const dx = p.x - drag.last.x, dy = p.y - drag.last.y; if (dx || dy) { S = { ...S, anns: S.anns.map((a, i) => (i === sel ? M.moveAnnotation(a, dx, dy) : a)) }; drag.last = p; drag.moved = true; render(); } }
+      if (drag.kind === 'handle') { S = { ...S, anns: S.anns.map((a, i) => (i === sel ? M.dragHandle(drag.orig, drag.id, p) : a)) }; drag.moved = true; render(); }
+      else if (drag.kind === 'move') { const dx = p.x - drag.last.x, dy = p.y - drag.last.y; if (dx || dy) { S = { ...S, anns: S.anns.map((a, i) => (i === sel ? M.moveAnnotation(a, dx, dy) : a)) }; drag.last = p; drag.moved = true; render(); } }
       else if (drag.kind === 'erase') eraseAt(p);
       else if (drag.kind === 'draw') { const last = draft.pts.at(-1); if (Math.hypot(p.x - last[0], p.y - last[1]) > 0.5 / zoomValue()) { draft.pts.push([p.x, p.y]); render(); } }
       else if (drag.kind === 'shape') { draft.x2 = p.x; draft.y2 = p.y; if (e.shiftKey && ['rect', 'ellipse'].includes(draft.t)) { const s = Math.max(Math.abs(p.x - draft.x1), Math.abs(p.y - draft.y1)); draft.x2 = draft.x1 + Math.sign(p.x - draft.x1 || 1) * s; draft.y2 = draft.y1 + Math.sign(p.y - draft.y1 || 1) * s; } render(); }
     });
     const endDrag = () => {
       if (!drag) return; const d = drag; drag = null;
-      if (d.kind === 'move') { if (d.moved) { rev += 1; S = { ...S, rev }; hist.push(S); changed(); } }
+      if (d.kind === 'move' || d.kind === 'handle') { if (d.moved) { rev += 1; S = { ...S, rev }; hist.push(S); changed(); } }
       else if (d.kind === 'erase') { if (d.removed) { rev += 1; S = { ...S, rev }; hist.push(S); changed(); } }
       else if (d.kind === 'draw' && draft) { const a = draft; draft = null; commit({ ...S, anns: [...S.anns, a] }); }
       else if (d.kind === 'shape' && draft) { const a = draft; draft = null; if (['line', 'arrow'].includes(a.t) ? Math.hypot(a.x2 - a.x1, a.y2 - a.y1) > 2 : Math.abs(a.x2 - a.x1) > 2 && Math.abs(a.y2 - a.y1) > 2) commit({ ...S, anns: [...S.anns, a] }); else render(); }
@@ -355,8 +432,8 @@ export function imageView({ api, id, ctx }) {
     }
 
     // ---------------------------------------------------------------- zoom, compare, menu, keys
-    const setZoom = (z) => { zoom = z === 'fit' ? 'fit' : M.clamp(z, 0.05, 16); layout(); zoomOut.textContent = zoom === 'fit' ? 'Fit' : `${Math.round(zoom * 100)}%`; };
-    const zoomOut = h('span', { class: 'ix-zv', 'aria-hidden': 'true' }, 'Fit');
+    const setZoom = (z) => { zoom = z === 'fit' ? 'fit' : M.clamp(z, 0.05, 16); layout(); zoomOut.textContent = `${Math.round(zoomValue() * 100)}%`; };
+    const zoomOut = h('span', { class: 'ix-zv', 'aria-hidden': 'true' }, '');
     const zbar = h('div', { class: 'ix-zoom', role: 'group', 'aria-label': 'Zoom' }, btn([icon('zout'), h('span', { class: 'sr' }, 'Zoom out')], () => setZoom(zoomValue() / 1.25), 'ix-ic'), zoomOut, btn([icon('zin'), h('span', { class: 'sr' }, 'Zoom in')], () => setZoom(zoomValue() * 1.25), 'ix-ic'), btn('Fit', () => setZoom('fit'), ''), btn('100%', () => setZoom(1), ''));
     stage.addEventListener('wheel', (e) => { if (e.ctrlKey || e.metaKey) { e.preventDefault(); setZoom(zoomValue() * (e.deltaY < 0 ? 1.1 : 1 / 1.1)); } }, { passive: false });
     const holdCompare = (on) => { compare = on; cmpB.setAttribute('aria-pressed', String(on)); render(); };
@@ -383,6 +460,8 @@ export function imageView({ api, id, ctx }) {
       const mod = e.ctrlKey || e.metaKey; const k = e.key.toLowerCase();
       if (mod && k === 's') { e.preventDefault(); save(); } else if (mod && k === 'z' && !e.shiftKey) { e.preventDefault(); undo(); } else if (mod && (k === 'y' || (k === 'z' && e.shiftKey))) { e.preventDefault(); redo(); }
       else if ((k === 'delete' || k === 'backspace') && sel != null) { e.preventDefault(); deleteSel(); } else if (k === 'escape') { if (tool === 'crop' || sel != null) { sel = null; if (tool === 'crop') setTool('select'); else render(); } }
+      else if (mod && k === 'd' && sel != null) { e.preventDefault(); dupSel(); } else if (k.startsWith('arrow') && sel != null && !readOnly) { e.preventDefault(); const d = e.shiftKey ? 10 : 1; commit({ ...S, anns: S.anns.map((a, i) => (i === sel ? M.moveAnnotation(a, k === 'arrowleft' ? -d : k === 'arrowright' ? d : 0, k === 'arrowup' ? -d : k === 'arrowdown' ? d : 0) : a)) }); }
+      else if (!mod && !readOnly && Object.values(IKEYS).some((v) => v.toLowerCase() === k)) setTool(Object.keys(IKEYS).find((t) => IKEYS[t].toLowerCase() === k)); else if (k === '?') shortcutsDialog();
       else if (k === '+' || k === '=') setZoom(zoomValue() * 1.25); else if (k === '-') setZoom(zoomValue() / 1.25); else if (k === '0') setZoom('fit');
     };
     document.addEventListener('keydown', onKey);
@@ -395,7 +474,7 @@ export function imageView({ api, id, ctx }) {
     if (!readOnly && !M.saveFormat(meta.mime_type)) banners.push(notice('info', 'info', [h('b', {}, 'GIF picture.'), ' The first frame is shown. Use Save as copy to keep your edits as a PNG; Save is only for PNG, JPEG and WebP.']));
     const bar = h('div', { class: 'ix-bar' },
       h('div', { class: 'ix-title' }, crumb, h('h1', { 'data-page-title': true, class: 'ix-name' }, meta.name)),
-      h('div', { class: 'docacts' }, statusEl, undoB, redoB, cmpB, btn('History', () => versionsDrawer({ api, file: meta, current: () => version, readOnly, canRestore: !readOnly && status !== 'dirty', onRestored: restoredFrom }), ''), btn('Download', () => downloadDialog(), ''), readOnly ? null : btn('Save as copy', () => saveAsCopy(), ''), saveBtn));
+      h('div', { class: 'docacts' }, statusEl, undoB, redoB, cmpB, btn('History', () => versionsDrawer({ api, file: meta, current: () => version, readOnly, canRestore: !readOnly && status !== 'dirty', onRestored: restoredFrom }), ''), btn('Download', () => downloadDialog(), ''), btn('?', () => shortcutsDialog(), 'ix-ic', { title: 'Keyboard shortcuts (?)', 'aria-label': 'Keyboard shortcuts' }), readOnly ? null : btn('Save as copy', () => saveAsCopy(), ''), saveBtn));
     root.replaceChildren(...banners, bar, h('div', { class: 'ix-body' }, tools, h('div', { class: 'ix-center' }, stage, h('div', { class: 'ix-foot' }, info, zbar)), h('aside', { class: 'ix-side', 'aria-label': 'Tool options' }, panel)));
     document.title = `${meta.name} · Image editor`;
     paintTools(); paintPanel(); changed(); setZoom('fit'); render();

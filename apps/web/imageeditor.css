@@ -62,3 +62,8 @@
   .ix-stage{height:clamp(260px,52dvh,640px)}
   .ix-grid4{grid-template-columns:1fr 1fr}
 }
+.ix-pick{min-height:44px;padding:0 12px;box-shadow:none;background:var(--surface);border:1px solid var(--control);color:var(--text);font-size:13px}
+.ix-est{font:600 14px var(--font);padding:var(--space-2) var(--space-3);background:var(--sunk);border-radius:var(--radius-md)}
+.ix-text-in{flex:1;min-width:0;min-height:44px;border:1px solid var(--control);border-radius:var(--radius-md);padding:0 var(--space-3);background:var(--surface);color:var(--text);font:500 14px var(--font)}
+.ix-stage.picking .ix-cv{cursor:crosshair}
+.ix-row .tbsel{min-height:44px;border:1px solid var(--control);border-radius:var(--radius-md);background:var(--surface);color:var(--text);padding:0 var(--space-2);max-width:100%}

@@ -130,6 +130,29 @@ check('MD41', 'Freehand strokes become connected line segments; a single tap sti
 })());
 check('MD42', 'Unknown annotation kinds draw nothing (never throw)', M.planAnnotation({ t: 'weird' }, { pw: 10, ph: 10, R: 0 }).length === 0);
 
+// ---- added after the owner's completeness review
+check('MD45', 'Pixelate turns each block into its average colour (a checker pattern becomes flat grey) and keeps alpha', (() => { const d = new Uint8ClampedArray(16 * 4); for (let i = 0; i < 16; i++) d.set(i % 2 ? [255, 255, 255, 255] : [0, 0, 0, 255], i * 4); M.pixelate(d, 4, 4, 4); return d[0] >= 127 && d[0] <= 128 && d[4] === d[0] && d[63 - 3] === d[0] && d[3] === 255; })());
+check('MD46', 'Selected-annotation handles: corners for boxes, two ends for lines, one for text, none for strokes', M.annHandles({ t: 'rect', x1: 0, y1: 0, x2: 10, y2: 10 }).length === 4 && M.annHandles({ t: 'arrow', x1: 0, y1: 0, x2: 5, y2: 5 }).length === 2 && M.annHandles({ t: 'text', x: 0, y: 0, text: 'a', size: 10, w: 20, h: 13 }).length === 1 && M.annHandles({ t: 'pen', pts: [[0, 0]] }).length === 0);
+check('MD47', 'Dragging a handle resizes a box from that corner (even past the opposite one), moves a line end, and scales text', (() => {
+  const r = { t: 'rect', x1: 10, y1: 10, x2: 50, y2: 40 }; const se = M.dragHandle(r, 'se', { x: 80, y: 90 }), nw = M.dragHandle(r, 'nw', { x: 0, y: 5 }), ln = M.dragHandle({ t: 'line', x1: 0, y1: 0, x2: 5, y2: 5 }, 'p2', { x: 9, y: 9 });
+  const tx = M.dragHandle({ t: 'text', x: 0, y: 0, text: 'ab', size: 10, w: 20, h: 13 }, 'se', { x: 40, y: 26 });
+  return se.x2 === 80 && se.y2 === 90 && se.x1 === 10 && nw.x1 === 0 && nw.y1 === 5 && nw.x2 === 50 && ln.x2 === 9 && tx.size === 20 && tx.w === 40;
+})());
+check('MD48', 'Layer order: bring to front, send to back, and out-of-range does nothing', (() => { const l = ['a', 'b', 'c']; return M.reorderAnnotation(l, 0, 2).join() === 'b,c,a' && M.reorderAnnotation(l, 2, 0).join() === 'c,a,b' && M.reorderAnnotation(l, 9, 0) === l; })());
+check('MD49', 'Adding space around grows the canvas and reports where the old picture sits', (() => { const e = M.expandedSize(100, 50, { top: 10, right: 20, bottom: 30, left: 5 }); return e.w === 125 && e.h === 90 && e.dx === 5 && e.dy === 10; })());
+check('MD50', 'Text watermark placement: corners keep a margin, centre is centred, tiled turns the text', (() => { const br = M.markPlacement('br', 1000, 500, 40), c = M.markPlacement('c', 1000, 500, 40), t = M.markPlacement('tile', 1000, 500, 40); return br.align === 'right' && br.x === 976 && c.x === 500 && c.y === 230 && t.tile === true && t.rotate === -30; })());
+check('MD51', 'File sizes are shown in plain units', M.fmtBytes(512) === '512 B' && M.fmtBytes(2048) === '2 KB' && M.fmtBytes(3 * 1048576) === '3.0 MB' && M.fmtBytes(null) === '');
+check('MD52', 'A blank page is inserted after the chosen page (or first), is its own source, and forces a rebuilt document', (() => { const p = M.insertBlank(P(3), 0, 400, 600), f = M.insertBlank(P(2), -1); return p.length === 4 && p[1].src === -1 && p[1].blank.w === 400 && f[0].src === -1 && f[0].blank.w === 595 && M.needsRebuild(p, 3); })());
+check('MD53', 'Page number formats', M.formatPageNumber('n', 3, 10) === '3' && M.formatPageNumber('page', 3, 10) === 'Page 3' && M.formatPageNumber('of', 3, 10) === '3 of 10' && M.formatPageNumber('pageof', 3, 10) === 'Page 3 of 10' && M.formatPageNumber('dash', 3, 10) === '- 3 -');
+check('MD54', 'Page numbers: bottom centre by default, start number and "skip first page" are honoured; no numbers = no commands', (() => {
+  const deco = { numbers: { pos: 'bc', format: 'pageof', start: 5, size: 10, skipFirst: true } }; const sz = { w: 600, h: 800 };
+  const first = M.decorShown(deco, 0, 3, sz), second = M.decorShown(deco, 1, 3, sz); const plan = M.planDecor(deco, 1, 3, { pw: 600, ph: 800, R: 0 });
+  return first.length === 0 && second.length === 1 && second[0].text === 'Page 6 of 7' && second[0].y === 772 && plan.length === 1 && plan[0].y === 28 && M.planDecor({}, 0, 1, { pw: 600, ph: 800, R: 0 }).length === 0;
+})());
+check('MD55', 'A watermark is one rotated, translucent text per page, centred, and follows the page rotation', (() => { const deco = { watermark: { text: 'DRAFT', size: 60, angle: 45, opacity: 0.3 } }; const a = M.planDecor(deco, 0, 1, { pw: 600, ph: 800, R: 0 })[0], b = M.planDecor(deco, 0, 1, { pw: 600, ph: 800, R: 90 })[0]; return a.text === 'DRAFT' && a.rotate === 45 && a.opacity === 0.3 && b.rotate === 135; })());
+check('MD56', 'Pages with a redaction are found (they are written as pictures); others are not', (() => { const pages = P(3); const ann = { [pages[1].uid]: [{ t: 'redact', x: 0, y: 0, w: 5, h: 5 }, { t: 'rect' }], [pages[2].uid]: [{ t: 'rect' }] }; const r = M.redactedPages(pages, ann); return r.length === 1 && r[0] === pages[1].uid && M.planAnnotation({ t: 'redact', x: 0, y: 0, w: 5, h: 5 }, { pw: 10, ph: 10, R: 0 }).length === 0; })());
+check('MD57', 'Hex colours become PDF colours', M.hexToRgb('#ff8000')[0] === 1 && Math.abs(M.hexToRgb('#ff8000')[1] - 0.502) < 0.01 && M.hexToRgb('nonsense').join() === '0,0,0');
+
 // ---- build / shipping rules
 const csp = readFileSync('apps/web/_headers', 'utf8');
 check('MD43', 'The page policy still forbids remote scripts and frames (pdf.js and pdf-lib are self-hosted)', /script-src 'self';/.test(csp) && /default-src 'self'/.test(csp) && !/unsafe-eval|unsafe-inline/.test(csp));

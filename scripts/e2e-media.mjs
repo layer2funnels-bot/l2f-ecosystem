@@ -32,12 +32,13 @@ async function pdf(lines) {
 }
 
 const fake = await startFakeSupabaseStorage({ serviceKey: 'k' });
-const s = await startDevServer({ port: 0, sink: () => {}, env: { ...LOCAL_ENV, ...process.env, STORAGE_DRIVER: 'supabase', STORAGE_URL: fake.url, STORAGE_SERVER_KEY: 'k', STORAGE_BUCKET: 'drive', RATE_LIMIT_STORE: 'memory' }, extraConnect: fake.url,
+const s = await startDevServer({ port: 0, sink: process.env.DEBUG_MEDIA ? (e) => { if (JSON.stringify(e).includes('versions.add')) console.log('SINK', JSON.stringify(e).slice(0, 500)); } : () => {}, env: { ...LOCAL_ENV, ...process.env, STORAGE_DRIVER: 'supabase', STORAGE_URL: fake.url, STORAGE_SERVER_KEY: 'k', STORAGE_BUCKET: 'drive', RATE_LIMIT_STORE: 'memory' }, extraConnect: fake.url,
   limits: { read: { max: 5000, windowMs: 60000 }, write: { max: 5000, windowMs: 60000 }, sensitive: { max: 500, windowMs: 60000 } } });
 const base = `http://127.0.0.1:${s.port}`;
 const b = await chromium.launch(); const problems = [];
+process.on('uncaughtException', (e) => { console.log('FATAL', e.message.split('\n')[0]); console.log('PROBLEMS', problems.slice(0, 6).join(' | ')); process.exit(1); });
 const newPage = async (viewport = { width: 1366, height: 860 }) => { const c = await b.newContext({ viewport }); const p = await c.newPage(); if (process.env.DEBUG_MEDIA) { p.on('requestfailed', (r) => console.log('REQFAIL', r.method(), r.url().slice(0, 140), r.failure()?.errorText)); p.on('response', async (r) => { if (r.status() >= 400) console.log('HTTP', r.status(), r.url().slice(0, 140), (await r.text().catch(() => '')).slice(0, 200), r.request().postData()?.slice(0, 300)); }); }
-  p.on('pageerror', (e) => problems.push(`page: ${e.message.slice(0, 160)}`)); p.on('console', (m) => { const t = m.text(); if (/Content Security Policy|violates|Refused to/i.test(t)) problems.push(`csp: ${t.slice(0, 200)}`); }); return p; };
+  p.on('console', (m) => { if (process.env.DEBUG_MEDIA && /pdf build/.test(m.text())) console.log('BUILDERR', m.text(), m.args().length); }); p.on('pageerror', (e) => problems.push(`page: ${e.message.slice(0, 160)}`)); p.on('console', (m) => { const t = m.text(); if (/Content Security Policy|violates|Refused to/i.test(t)) problems.push(`csp: ${t.slice(0, 200)}`); }); return p; };
 const text = (p) => p.locator('body').innerText();
 const until = (p, t, ms = 15000) => p.waitForSelector(`text=${t}`, { timeout: ms });
 async function signUp(p, name, email) { await p.goto(`${base}/#/signup`); await p.reload(); await p.waitForSelector('#nm', { timeout: 9000 }); await p.fill('#nm', name); await p.fill('#em', email); await p.fill('#pw', PW); await p.click('button[type=submit]'); }
@@ -65,32 +66,33 @@ check('MG0', 'Setup: a PNG and two PDFs are stored through Drive', !!pngId && !!
 
 // ---- Drive opens each file in its editor
 await op.goto(`${base}/#/drive`); await op.reload(); await op.waitForSelector('.drv', { timeout: 15000 });
+await op.waitForSelector(`a:text-is("${pngName}")`, { timeout: 15000 });
 const hrefs = await op.evaluate((names) => Object.fromEntries(names.map((n) => [n, [...document.querySelectorAll('a')].find((a) => a.textContent === n)?.getAttribute('href') ?? null])), [pngName, pdfName]);
 check('MG1', 'In Drive, the PNG links to #/image/<id> and the PDF to #/pdf/<id>', hrefs[pngName] === `#/image/${pngId}` && hrefs[pdfName] === `#/pdf/${pdfId}`, JSON.stringify(hrefs));
 
 // ================================================================= image editor
-await op.click(`a:text-is("${pngName}")`); await op.waitForSelector('.ix-cv', { timeout: 15000 }); await op.waitForTimeout(500);
+await op.click(`a:text-is("${pngName}")`); await op.waitForTimeout(4000); if (process.env.DEBUG_MEDIA)  await op.waitForSelector('.ix-cv', { timeout: 15000 }); await op.waitForTimeout(500);
 check('MG2', 'The image editor opens from Drive and shows the size of the picture', (await op.locator('.ix-info').innerText()).includes('60 × 40') && (await text(op)).includes(pngName));
 const pixel = () => op.evaluate(() => { const c = document.querySelector('.ix-cv'); const d = c.getContext('2d').getImageData(Math.floor(c.width / 2), Math.floor(c.height / 2), 1, 1).data; return [...d]; });
 const before = await pixel();
 await shot(op, 'image-1366-open');
 // crop 1:1
-await op.click('.ix-tool[title="Crop"]'); await op.getByRole('button', { name: '1:1', exact: true }).click(); await op.getByRole('button', { name: 'Apply crop' }).click(); await op.waitForTimeout(300);
+await op.click('.ix-tool[title^="Crop"]'); await op.getByRole('button', { name: '1:1', exact: true }).click(); await op.getByRole('button', { name: 'Apply crop' }).click(); await op.waitForTimeout(300);
 check('MG3', 'Crop 1:1 turns 60 × 40 into 40 × 40', (await op.locator('.ix-info').innerText()).includes('40 × 40'));
 // rotate 90 -> still 40x40; then resize to 20 wide with the lock
-await op.click('.ix-tool[title="Rotate and resize"]'); await op.getByRole('button', { name: 'Turn right' }).click(); await op.getByRole('button', { name: 'Flip horizontal' }).click();
+await op.click('.ix-tool[title^="Transform"]'); await op.getByRole('button', { name: 'Turn right' }).click(); await op.getByRole('button', { name: 'Flip horizontal' }).click();
 await op.fill('#ix-rw', '20'); await op.getByRole('button', { name: 'Apply size' }).click(); await op.waitForTimeout(300);
 check('MG4', 'Turn, flip and a locked resize give 20 × 20', (await op.locator('.ix-info').innerText()).includes('20 × 20') && (await op.locator('#ix-rh').inputValue()) === '20');
 // adjust + filter
-await op.click('.ix-tool[title="Adjust"]'); await op.locator('#ix-s-brightness').fill('40'); await op.waitForTimeout(400); const bright = await pixel();
-await op.click('.ix-tool[title="Filters"]'); await op.getByRole('button', { name: 'Grayscale' }).click(); await op.waitForTimeout(400); const grey = await pixel();
+await op.click('.ix-tool[title^="Adjust"]'); await op.locator('#ix-s-brightness').fill('40'); await op.waitForTimeout(400); const bright = await pixel();
+await op.click('.ix-tool[title^="Filters"]'); await op.getByRole('button', { name: 'Grayscale' }).click(); await op.waitForTimeout(400); const grey = await pixel();
 check('MG5', 'Brightness changes the picture and the Grayscale filter makes it grey', JSON.stringify(bright) !== JSON.stringify(before) && Math.abs(grey[0] - grey[1]) <= 2 && Math.abs(grey[1] - grey[2]) <= 2, JSON.stringify({ before, bright, grey }));
 // draw + text + shape
-await op.click('.ix-tool[title="Draw"]'); const box = await op.locator('.ix-cv').boundingBox();
+await op.click('.ix-tool[title^="Draw"]'); const box = await op.locator('.ix-cv').boundingBox();
 await op.mouse.move(box.x + box.width * 0.2, box.y + box.height * 0.3); await op.mouse.down(); await op.mouse.move(box.x + box.width * 0.7, box.y + box.height * 0.6, { steps: 6 }); await op.mouse.up();
-await op.click('.ix-tool[title="Shapes"]'); await op.getByRole('button', { name: 'Arrow' }).click(); await op.mouse.move(box.x + box.width * 0.1, box.y + box.height * 0.8); await op.mouse.down(); await op.mouse.move(box.x + box.width * 0.5, box.y + box.height * 0.9, { steps: 4 }); await op.mouse.up();
-await op.click('.ix-tool[title="Text"]'); await op.mouse.click(box.x + box.width * 0.3, box.y + box.height * 0.2); await op.waitForSelector('.ix-text', { timeout: 3000 }); await op.fill('.ix-text', 'Hi'); await op.keyboard.press('Control+Enter'); await op.waitForTimeout(300);
-await op.click('.ix-tool[title="Select"]');
+await op.click('.ix-tool[title^="Shapes"]'); await op.getByRole('button', { name: 'Arrow' }).click(); await op.mouse.move(box.x + box.width * 0.1, box.y + box.height * 0.8); await op.mouse.down(); await op.mouse.move(box.x + box.width * 0.5, box.y + box.height * 0.9, { steps: 4 }); await op.mouse.up();
+await op.click('.ix-tool[title^="Text"]'); await op.mouse.click(box.x + box.width * 0.3, box.y + box.height * 0.2); await op.waitForSelector('.ix-text', { timeout: 3000 }); await op.fill('.ix-text', 'Hi'); await op.keyboard.press('Control+Enter'); await op.waitForTimeout(300);
+await op.click('.ix-tool[title^="Select"]');
 check('MG6', 'Pen, arrow and text were added; undo removes the text and redo brings it back', await (async () => { const n = async () => op.evaluate(() => document.querySelector('.ix-cv').toDataURL().length); const a = await n(); await op.keyboard.press('Control+z'); await op.waitForTimeout(250); const bUndo = await n(); await op.keyboard.press('Control+Shift+z'); await op.waitForTimeout(250); const c = await n(); return a !== bUndo && c === a; })());
 // compare
 await op.locator('.ix-cmp').dispatchEvent('pointerdown'); await op.waitForTimeout(250); const cmpPx = await pixel(); await op.locator('.ix-cmp').dispatchEvent('pointerup'); await op.waitForTimeout(250);
@@ -116,7 +118,7 @@ check('MG12', 'History lists both versions', hist.includes('Version 1') && hist.
 await op.getByRole('button', { name: 'Restore as new' }).first().click(); await until(op, 'Restored version 1 as version 3'); await op.waitForTimeout(600);
 check('MG13', 'Restore as new makes version 3 from version 1 (60 × 40 again) without deleting anything', (await q('select current_version from files where id=$1', [pngId]))[0].current_version === 3 && (await op.locator('.ix-info').innerText()).includes('60 × 40'));
 // save as copy + download
-await op.click('.ix-tool[title="Filters"]'); await op.getByRole('button', { name: 'Sepia' }).click(); await op.waitForTimeout(300);
+await op.click('.ix-tool[title^="Filters"]'); await op.getByRole('button', { name: 'Sepia' }).click(); await op.waitForTimeout(300);
 await op.getByRole('button', { name: 'Save as copy' }).click(); await op.getByRole('button', { name: 'Save copy' }).click(); await until(op, 'Saved a copy'); await op.waitForTimeout(400);
 const copies = await q("select name, mime_type from files where workspace_id=$1 and name like $2", [L, `pic-${stamp} (copy)%`]);
 check('MG14', 'Save as copy creates a new Drive file next to it, and the original keeps version 3', copies.length === 1 && copies[0].mime_type === 'image/png' && (await q('select current_version from files where id=$1', [pngId]))[0].current_version === 3, JSON.stringify(copies));
@@ -128,6 +130,7 @@ await ph.goto(`${base}/#/image/${pngId}`); await ph.reload(); await ph.waitForSe
 check('MG16', 'At 390 px the image editor has no sideways page scroll', await ph.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
 
 // ================================================================= PDF editor
+await op.getByRole('button', { name: 'Save', exact: true }).click(); await until(op, 'Saved as a new version'); await op.waitForTimeout(500);
 await op.goto(`${base}/#/drive`); await op.reload(); await op.waitForSelector('.drv', { timeout: 15000 }); await op.click(`a:text-is("${pdfName}")`); await op.waitForSelector('.px-page', { timeout: 20000 });
 await op.waitForFunction(() => document.querySelectorAll('.px-page canvas').length >= 1 && [...document.querySelectorAll('.px-cv')].some((c) => { const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; for (let i = 0; i < d.length; i += 4) if (d[i] < 200) return true; return false; }), null, { timeout: 20000 });
 check('MG17', 'The PDF viewer opens from Drive, shows 2 pages, and the page is really drawn (not blank)', (await op.locator('.px-page').count()) === 2 && (await text(op)).includes('of 2'));
@@ -145,16 +148,16 @@ await op.getByRole('button', { name: 'Rotate view' }).click(); await op.waitForT
 check('MG21', 'Rotate view turns the pages sideways (landscape) without changing the file', rv[0] > rv[1] && (await text(op)).includes('Unsaved') === false);
 await op.getByRole('button', { name: 'Rotate view' }).click(); await op.getByRole('button', { name: 'Rotate view' }).click(); await op.getByRole('button', { name: 'Rotate view' }).click(); await op.waitForTimeout(700);
 // edit: text, rectangle, draw, highlight on page 1
-const pgEl = op.locator('.px-page').first(); await pgEl.scrollIntoViewIfNeeded(); const pb = await pgEl.boundingBox();
-await op.getByRole('button', { name: 'Text', exact: true }).click(); await op.mouse.click(pb.x + pb.width * 0.15, pb.y + pb.height * 0.5); await op.waitForSelector('.px-entry', { timeout: 3000 }); await op.fill('.px-entry', 'E2E note'); await op.keyboard.press('Control+Enter'); await op.waitForTimeout(300);
-await op.getByRole('button', { name: 'Rectangle' }).click(); await op.mouse.move(pb.x + pb.width * 0.2, pb.y + pb.height * 0.6); await op.mouse.down(); await op.mouse.move(pb.x + pb.width * 0.6, pb.y + pb.height * 0.7, { steps: 5 }); await op.mouse.up();
-await op.getByRole('button', { name: 'Highlight' }).click(); await op.mouse.move(pb.x + pb.width * 0.1, pb.y + pb.height * 0.15); await op.mouse.down(); await op.mouse.move(pb.x + pb.width * 0.7, pb.y + pb.height * 0.2, { steps: 5 }); await op.mouse.up();
-await op.getByRole('button', { name: 'Draw', exact: true }).click(); await op.mouse.move(pb.x + pb.width * 0.2, pb.y + pb.height * 0.8); await op.mouse.down(); await op.mouse.move(pb.x + pb.width * 0.5, pb.y + pb.height * 0.85, { steps: 6 }); await op.mouse.up();
+const pgEl = op.locator('.px-page').first(); await op.locator('.px-scroll').evaluate((e) => { e.scrollTop = 0; }); const pb = await pgEl.boundingBox(); const sb = await op.locator('.px-scroll').boundingBox(); const X = (f) => pb.x + pb.width * f; const Y = (d) => sb.y + 12 + d;
+await op.getByRole('button', { name: 'Text', exact: true }).click(); await op.mouse.click(X(0.15), Y(150)); await op.waitForSelector('.px-entry', { timeout: 3000 }); await op.fill('.px-entry', 'E2E note'); await op.keyboard.press('Control+Enter'); await op.waitForTimeout(300);
+await op.getByRole('button', { name: 'Rectangle' }).click(); await op.mouse.move(X(0.2), Y(230)); await op.mouse.down(); await op.mouse.move(X(0.6), Y(300), { steps: 5 }); await op.mouse.up();
+await op.getByRole('button', { name: 'Highlight' }).click(); await op.mouse.move(X(0.1), Y(100)); await op.mouse.down(); await op.mouse.move(X(0.7), Y(135), { steps: 5 }); await op.mouse.up();
+await op.getByRole('button', { name: 'Draw', exact: true }).click(); await op.mouse.move(X(0.2), Y(330)); await op.mouse.down(); await op.mouse.move(X(0.5), Y(380), { steps: 6 }); await op.mouse.up();
 await op.getByRole('button', { name: 'Select', exact: true }).click();
 check('MG22', 'A text box, a rectangle, a highlight and a drawing were added to page 1', (await op.locator('.px-page').first().locator('.px-a').count()) === 4, String(await op.locator('.px-page').first().locator('.px-a').count()));
 // signature (typed)
 await op.getByRole('button', { name: 'Signature' }).click(); await op.getByRole('dialog').getByRole('button', { name: 'Type' }).click(); await op.fill('#px-typed', 'Mia Media'); await op.getByRole('button', { name: 'Place on page' }).click();
-await op.mouse.click(pb.x + pb.width * 0.55, pb.y + pb.height * 0.9); await op.waitForTimeout(300);
+await op.mouse.click(X(0.55), Y(420)); await op.waitForTimeout(300);
 check('MG23', 'A typed signature can be placed on the page', (await op.locator('.px-page').first().locator('.px-a').count()) === 5);
 // page ops: rotate page 2, add pages from the other PDF
 await op.getByRole('button', { name: 'Rotate right (page 2)' }).click(); await op.waitForTimeout(700);
@@ -167,7 +170,7 @@ check('MG26', 'Reordering pages works (page 3 moved up)', (await op.locator('.px
 await op.getByRole('button', { name: 'Undo' }).first().click(); await op.waitForTimeout(500); await op.getByRole('button', { name: 'Redo' }).first().click(); await op.waitForTimeout(500);
 await shot(op, 'pdf-1366-edited');
 // extract page 1 to a new file
-await op.getByRole('button', { name: 'Extract…' }).click(); await op.fill('#px-range', '1'); await op.getByRole('dialog').getByRole('button', { name: 'Save as new file' }).click(); await until(op, 'Saved plan-'); await op.waitForTimeout(500);
+await op.getByRole('button', { name: 'Extract…' }).click(); await op.fill('#px-range', '1'); await op.getByRole('dialog').getByRole('button', { name: 'Save as new file' }).click(); await op.waitForTimeout(2500); if (process.env.DEBUG_MEDIA) console.log('TOAST', await op.locator('.toast').innerText()); await until(op, 'Saved plan-', 5000); await op.waitForTimeout(500);
 const ex = await q("select id, name from files where workspace_id=$1 and name like $2", [L, `plan-${stamp} (pages 1)%`]);
 check('MG27', 'Extract pages saves a new PDF file in the same place', ex.length === 1);
 // save the edited PDF
