@@ -23,7 +23,7 @@ const normNL = (t) => String(t).replace(/\r\n?/g, '\n').replace(/\n$/, '');
 let clipboardMemory = null;                                  // the last copy made inside the app: keeps formulas and formatting when pasted back
 
 export function sheetView({ api, id, ctx }) {
-  const root = h('section', { class: 'sheets', 'aria-busy': 'true' }, skeleton(4));
+  const root = h('section', { class: 'sheets ed-full', 'aria-busy': 'true' }, skeleton(4));
   const load = async () => {
     const f = await api.call('drive.files.get', { id }); if (!ctx.live()) return;
     if (!f.ok) return put(root, f.status === 404 ? noAccessState({ action: h('a', { class: 'btn', href: '#/launcher' }, 'Back to the Launcher') }) : errorState(() => { put(root, skeleton(4)); load(); }));
@@ -47,7 +47,6 @@ export function sheetView({ api, id, ctx }) {
     const statusEl = h('span', { class: 'docstate', role: 'status', 'aria-live': 'polite' }); const counter = h('span', { class: 'docstat muted' });
     const saveBtn = btn('Save', () => sess.save({ manual: true }), 'primary');
     const titleIn = h('input', { class: 'doctitle', value: meta.name, 'aria-label': 'Spreadsheet name', maxlength: '200', ...(readOnly ? { readonly: true } : {}) });
-    const crumb = h('nav', { class: 'fpath fine', 'aria-label': 'Where this spreadsheet lives' });
     const paintStatus = ({ status, savedAt, readOnly: ro, saving }) => {
       const t = { saved: `Saved ${timeOf(savedAt)}`, dirty: 'Unsaved changes', saving: 'Saving…', failed: 'Couldn’t save. Your changes are still here.', readonly: 'Read only' }[status];
       put(statusEl, h('span', { class: `dot ${status}` }), t, status === 'failed' ? btn('Retry', () => sess.save({ manual: true }), 'link') : null); saveBtn.disabled = ro || status === 'saved' || saving;
@@ -437,13 +436,15 @@ export function sheetView({ api, id, ctx }) {
     const popup = (() => {
       let el = null, off = null; const api2 = { open: false };
       const close = () => { if (!el) return; el.remove(); el = null; api2.open = false; document.removeEventListener('pointerdown', off, true); document.removeEventListener('keydown', onKey, true); window.removeEventListener('resize', close); };
+      let sideCb = null;
       const onKey = (e) => {
+        if (sideCb && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) { e.preventDefault(); e.stopPropagation(); const cb = sideCb; close(); cb(e.key === 'ArrowRight' ? 1 : -1); return; }
         if (e.key === 'Escape') { e.stopPropagation(); close(); focusGrid(); return; }
         if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && el) { const items = [...el.querySelectorAll('button:not([disabled])')]; if (!items.length || e.target.matches('input')) return; e.preventDefault(); const i = items.indexOf(document.activeElement); items[(i + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length].focus(); }
       };
       api2.close = close;
-      api2.show = (anchor, build, { wide = false, at } = {}) => {
-        close(); const content = build(close); el = h('div', { class: `sx-pop${wide ? ' wide' : ''}`, role: 'menu' }, content); document.body.append(el); api2.open = true;
+      api2.show = (anchor, build, { wide = false, at, onSide } = {}) => {
+        close(); sideCb = onSide ?? null; const content = build(close); el = h('div', { class: `sx-pop${wide ? ' wide' : ''}`, role: 'menu' }, content); document.body.append(el); api2.open = true;
         const r = at ?? anchor.getBoundingClientRect(); const pw = el.offsetWidth, ph = el.offsetHeight; const x = at ? at.x : r.left, y = at ? at.y : r.bottom + 4;
         el.style.left = `${Math.max(8, Math.min(innerWidth - pw - 8, x))}px`; el.style.top = `${Math.max(8, y + ph > innerHeight - 8 ? (at ? Math.max(8, innerHeight - ph - 8) : r.top - ph - 4) : y)}px`;
         off = (e) => { if (!el?.contains(e.target) && !(anchor?.contains?.(e.target))) close(); }; document.addEventListener('pointerdown', off, true); document.addEventListener('keydown', onKey, true); window.addEventListener('resize', close);
@@ -700,19 +701,25 @@ export function sheetView({ api, id, ctx }) {
       for (let r = 0; r <= u.r2; r++) { const row = []; for (let c = 0; c <= u.c2; c++) { const v = calc.value(s, c, r); const t = cellText(book, s, calc, c, r); row.push(csvCell(v, t)); } rows.push(row); } return rows;
     }
     function exportCSV() { const rows = sheetRows(si); download(`${baseName()} - ${sheet().name}.csv`, new Blob(['﻿', toCSV(rows)], { type: 'text/csv;charset=utf-8' })); toast('Downloaded as CSV (the current sheet).'); }
+    function exportTSV() { download(`${baseName()} - ${sheet().name}.tsv`, new Blob([toTSV(sheetRows(si))], { type: 'text/tab-separated-values;charset=utf-8' })); toast('Downloaded as TSV (the current sheet).'); }
+    function exportHTML() {
+      const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); const rows = sheetRows(si).map((r) => r.map((t) => String(t).replace(/^'(?=[=+\-@\t\r])/, '')));
+      const html = `<!doctype html><meta charset="utf-8"><title>${esc(meta.name)}</title><h1>${esc(meta.name)} — ${esc(sheet().name)}</h1><table border="1" cellspacing="0" cellpadding="4">${rows.map((r) => `<tr>${r.map((t) => `<td>${esc(t)}</td>`).join('')}</tr>`).join('')}</table>`;
+      download(`${baseName()} - ${sheet().name}.html`, new Blob([html], { type: 'text/html;charset=utf-8' })); toast('Downloaded as a web page (the current sheet).');
+    }
     const excelFormat = (nf) => !nf ? undefined : nf.k === 'pct' ? `0${nf.d ? `.${'0'.repeat(nf.d)}` : ''}%` : nf.k === 'cur' ? `"${nf.sym ?? '$'}"#,##0${(nf.d ?? 2) ? `.${'0'.repeat(nf.d ?? 2)}` : ''}` : nf.k === 'num' ? `${nf.th === false ? '0' : '#,##0'}${(nf.d ?? 2) ? `.${'0'.repeat(nf.d ?? 2)}` : ''}` : nf.k === 'date' ? ({ iso: 'yyyy-mm-dd', us: 'mm/dd/yyyy', eu: 'dd/mm/yyyy', long: 'mmm d, yyyy' }[nf.f ?? 'iso']) : nf.k === 'time' ? 'hh:mm:ss' : nf.k === 'datetime' ? 'yyyy-mm-dd hh:mm' : undefined;
     const nfFromExcel = (z, isDate) => {
       if (!z || z === 'General') return isDate ? { k: 'date', f: 'iso' } : null; const dec = (z.split('.')[1] ?? '').replace(/[^0]/g, '').length; const sym = /\[\$([^\]-]+)|"([$€£¥])"|([$€£¥])/.exec(z); const s = sym ? (sym[1] || sym[2] || sym[3]) : null;
       if (/%/.test(z)) return { k: 'pct', d: dec }; if (/[ymd]/i.test(z.replace(/"[^"]*"|\[[^\]]*\]/g, '')) && /y|d/i.test(z) && !/^0/.test(z)) return /h/i.test(z) ? { k: 'datetime', f: 'iso' } : { k: 'date', f: /dd?\/mm?\//i.test(z) ? 'eu' : /mm?\/dd?\//i.test(z) ? 'us' : /mmm/i.test(z) ? 'long' : 'iso' };
       if (/h+:mm/i.test(z)) return { k: 'time' }; if (s) return { k: 'cur', d: dec, sym: s.length > 3 ? '$' : s }; if (/0|#/.test(z)) return { k: 'num', d: dec, ...(/,/.test(z) ? {} : { th: false }) }; return null;
     };
-    async function exportXLSX() {
+    async function exportXLSX(type = 'xlsx') {
       let bridge; try { bridge = await import('/sheetjs/xlsx.js'); } catch { toast('Excel export isn’t available in this build. Use CSV instead.', false); return; }
       const sheets = book.sheets.map((s, i) => { const u = usedRange(s); const rows = []; if (u) for (let r = 0; r <= u.r2; r++) { const row = []; for (let c = 0; c <= u.c2; c++) { const k = ref(c, r); const raw = s.cells[k]; const v = calc.value(i, c, r); const st = s.sty[k] !== undefined ? book.styles[s.sty[k]] : null; const z = excelFormat(st?.nf ?? impliedFormat(raw));
         if (raw === undefined || raw === '') { row.push(null); continue; } if (isError(v)) { row.push(String(v)); continue; }
         if (raw[0] === '=' && raw.length > 1) row.push({ f: raw.slice(1), v: v === null ? '' : v, z }); else if (typeof v === 'number') row.push({ v, z }); else if (typeof v === 'boolean') row.push(v); else row.push(v === null ? null : String(v)); } rows.push(row); }
         return { name: s.name, rows, merges: s.merges.map((m) => ({ r1: m.r1, c1: m.c1, r2: m.r2, c2: m.c2 })) }; });
-      try { const bytes = bridge.writeXlsx(sheets); download(`${baseName()}.xlsx`, new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })); toast('Downloaded as Excel (values, formulas and number formats; colours and fonts stay in this app).'); } catch { toast('Couldn’t create the Excel file.', false); }
+      try { const bytes = bridge.writeXlsx(sheets, type); download(`${baseName()}.${type}`, new Blob([bytes], { type: type === 'ods' ? 'application/vnd.oasis.opendocument.spreadsheet' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })); toast(`Downloaded as ${type === 'ods' ? 'OpenDocument (.ods)' : 'Excel (.xlsx)'}: values, formulas and number formats; colours and fonts stay in this app.`); } catch { toast('Couldn’t create the Excel file.', false); }
     }
     function importFile() {
       const inp = h('input', { type: 'file', accept: '.csv,.tsv,.txt,.xlsx,text/csv', hidden: true, 'aria-label': 'Choose a file to import' }); document.body.append(inp);
@@ -794,25 +801,69 @@ export function sheetView({ api, id, ctx }) {
       const r = await api.call('drive.files.update', { id, name }); if (r.ok) { meta = { ...meta, name }; document.title = `${name} · Sheets`; toast('Renamed.'); } else { toast(r.message ?? 'Couldn’t rename.', false); titleIn.value = meta.name; }
     };
     titleIn.addEventListener('change', rename); titleIn.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); titleIn.blur(); } });
-    (async () => {
-      let parts;
-      if (meta.project_id) { const p = await api.call('projects.get', { id: meta.project_id }); parts = [h('a', { href: '#/projects' }, 'Projects'), p.ok ? p.data[0].name : 'Project', 'Sheets']; }
-      else if (meta.client_id) parts = [h('a', { href: '#/clients' }, 'Clients'), h('a', { href: `#/clients/c/${meta.client_id}?tab=documents` }, ctx.clients?.get?.(meta.client_id) ?? 'Client'), 'Sheets'];
-      else parts = [h('a', { href: '#/drive' }, 'Drive'), meta.space === 'personal' ? 'Personal' : ctx.orgName];
-      if (root.isConnected) put(crumb, ...parts.flatMap((x, i) => (i ? [h('span', { 'aria-hidden': 'true' }, ' / '), x] : [x])));
-    })();
+    const backHref = meta.project_id ? '#/projects' : meta.client_id ? `#/clients/c/${meta.client_id}?tab=documents` : meta.space === 'personal' ? '#/drive/personal' : '#/drive';
+    const backLabel = meta.project_id ? 'Back to Projects' : meta.client_id ? 'Back to the client' : 'Back to Drive';
+    // ---- menu bar: every command is reachable from here; the toolbar keeps the frequent ones
+    const sub = (n) => ({ label: n, disabled: true, on: () => {} });
+    const colorFrom = (field, label) => () => colorMenu(anchorNow(), field, label);
+    const mod = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl+';
+    const NAMES = ['File', 'Edit', 'View', 'Insert', 'Format', 'Data', 'Help'];
+    const menuItems = {
+      File: () => [{ label: 'Import CSV or Excel…', disabled: readOnly, on: importFile }, '-', { label: 'Download as Excel (.xlsx)', on: () => exportXLSX('xlsx') }, { label: 'Download as OpenDocument (.ods)', on: () => exportXLSX('ods') }, { label: 'Download as CSV (this sheet)', on: exportCSV }, { label: 'Download as TSV (this sheet)', on: exportTSV }, { label: 'Download as web page (.html)', on: exportHTML }, { label: 'Download as PDF (print)…', on: printSheet }, '-', { label: 'Make a copy', on: makeCopy }, { label: 'Version history', on: () => sess.openHistory(!readOnly) }, { label: 'Save now', hint: `${mod}S`, disabled: readOnly, on: () => sess.save({ manual: true }) }, '-', { label: 'Page setup…', on: pageSetup }, { label: 'Print or save as PDF…', on: printSheet }],
+      Edit: () => [{ label: 'Undo', hint: `${mod}Z`, disabled: readOnly || !undo.length, on: doUndo }, { label: 'Redo', hint: `${mod}Y`, disabled: readOnly || !redo.length, on: doRedo }, '-', { label: 'Cut', hint: `${mod}X`, disabled: readOnly, on: () => doCopy(true) }, { label: 'Copy', hint: `${mod}C`, on: () => doCopy(false) }, { label: 'Paste', hint: `${mod}V`, disabled: readOnly, on: () => pasteFromClipboard('all') }, { label: 'Paste values only', disabled: readOnly, on: () => pasteFromClipboard('values') }, '-',
+        { label: 'Select all', hint: `${mod}A`, on: () => ed.selectAll() }, { label: 'Find and replace…', hint: `${mod}F`, on: openFind }, '-', { label: 'Fill down', hint: `${mod}D`, disabled: readOnly, on: () => fillDown(false) }, { label: 'Fill right', hint: `${mod}R`, disabled: readOnly, on: () => fillDown(true) }, { label: 'Clear contents', hint: 'Delete', disabled: readOnly, on: clearContents }, { label: 'Clear formatting', hint: `${mod}\\`, disabled: readOnly, on: clearFormats }, '-',
+        { label: 'Delete row(s)', disabled: readOnly, on: () => deleteSel('r') }, { label: 'Delete column(s)', disabled: readOnly, on: () => deleteSel('c') }],
+      View: () => [{ label: 'Zoom in', on: () => setZoom(zoomPct + 10) }, { label: 'Zoom out', on: () => setZoom(zoomPct - 10) }, { label: 'Reset zoom (100%)', on: () => setZoom(100) }, '-', { label: 'Freeze first row', checked: sheet().freeze.r === 1 && !sheet().freeze.c, on: () => freeze('row') }, { label: 'Freeze first column', checked: sheet().freeze.c === 1 && !sheet().freeze.r, on: () => freeze('col') }, { label: 'Freeze up to this cell', on: () => freeze('cell') }, { label: 'Unfreeze', disabled: !sheet().freeze.r && !sheet().freeze.c, on: () => freeze('none') }, '-',
+        { label: 'Hide row(s)', disabled: readOnly, on: () => hideLines('r', false) }, { label: 'Unhide rows here', disabled: readOnly, on: () => hideLines('r', true) }, { label: 'Hide column(s)', disabled: readOnly, on: () => hideLines('c', false) }, { label: 'Unhide columns here', disabled: readOnly, on: () => hideLines('c', true) }, '-', { label: 'Page setup…', on: pageSetup }],
+      Insert: () => [{ label: 'Chart…', disabled: readOnly, on: () => chartDialog() }, { label: 'Link…', disabled: readOnly, on: () => linkDialog() }, { label: sheet().notes[keyOfActive()] ? 'Edit note…' : 'Note…', disabled: readOnly, on: () => noteDialog() }, '-', { label: 'Row above', disabled: readOnly, on: () => insertAt('r', false) }, { label: 'Row below', disabled: readOnly, on: () => insertAt('r', true) }, { label: 'Column left', disabled: readOnly, on: () => insertAt('c', false) }, { label: 'Column right', disabled: readOnly, on: () => insertAt('c', true) }, '-', { label: 'New sheet', disabled: readOnly || book.sheets.length >= MAX_SHEETS, on: addSheet }],
+      Format: () => [{ label: 'Bold', hint: `${mod}B`, checked: Boolean(activeStyle().b), disabled: readOnly, on: () => toggle('b') }, { label: 'Italic', hint: `${mod}I`, checked: Boolean(activeStyle().i), disabled: readOnly, on: () => toggle('i') }, { label: 'Underline', hint: `${mod}U`, checked: Boolean(activeStyle().u), disabled: readOnly, on: () => toggle('u') }, { label: 'Strikethrough', checked: Boolean(activeStyle().st), disabled: readOnly, on: () => toggle('st') }, '-',
+        ...nfItems().map((x) => (x === '-' ? x : { ...x, disabled: readOnly })), '-',
+        { label: 'Align left', checked: activeStyle().ha === 'l', disabled: readOnly, on: () => applyStyle(() => ({ ha: 'l' })) }, { label: 'Align centre', checked: activeStyle().ha === 'c', disabled: readOnly, on: () => applyStyle(() => ({ ha: 'c' })) }, { label: 'Align right', checked: activeStyle().ha === 'r', disabled: readOnly, on: () => applyStyle(() => ({ ha: 'r' })) }, { label: 'Align top', disabled: readOnly, on: () => applyStyle(() => ({ va: 't' })) }, { label: 'Align middle', disabled: readOnly, on: () => applyStyle(() => ({ va: 'm' })) }, { label: 'Align bottom', disabled: readOnly, on: () => applyStyle(() => ({ va: 'b' })) }, { label: 'Wrap text', checked: Boolean(activeStyle().wr), disabled: readOnly, on: () => toggle('wr') }, '-',
+        { label: 'Borders: all', disabled: readOnly, on: () => setBorders('all') }, { label: 'Borders: outer', disabled: readOnly, on: () => setBorders('outer') }, { label: 'Borders: none', disabled: readOnly, on: () => setBorders('none') }, { label: 'Merge cells', disabled: readOnly || !isMulti(), on: () => merge(true) }, { label: 'Unmerge cells', disabled: readOnly, on: () => merge(false) }, '-',
+        { label: 'Text colour…', disabled: readOnly, on: colorFrom('fc', 'text colour') }, { label: 'Fill colour…', disabled: readOnly, on: colorFrom('bg', 'fill colour') }, { label: 'Conditional formatting…', disabled: readOnly, on: () => cfDialog() }, { label: 'Format cells…', disabled: readOnly, on: formatDialog }, { label: 'Clear formatting', disabled: readOnly, on: clearFormats }],
+      Data: () => [{ label: 'Sort A→Z by this column', disabled: readOnly, on: () => sortSel('asc') }, { label: 'Sort Z→A by this column', disabled: readOnly, on: () => sortSel('desc') }, { label: sheet().filter ? 'Remove filter' : 'Create a filter', disabled: readOnly, on: toggleFilter }, '-', { label: 'Dropdown list (data validation)…', disabled: readOnly, on: () => dvDialog() }, { label: 'Conditional formatting…', disabled: readOnly, on: () => cfDialog() }, '-',
+        { label: sheet().lock ? 'Unprotect sheet' : 'Protect sheet', disabled: readOnly, on: () => structural(() => { sheet().lock = !sheet().lock; return true; }, { force: true }) }, { label: 'Sheet tab colour…', disabled: readOnly, on: () => tabColor(anchorNow(), si) }],
+      Help: () => [{ label: 'Keyboard shortcuts', on: shortcutsDialog }, { label: 'Formula functions', on: functionsDialog }],
+    };
+    void sub;
+    function shortcutsDialog() {
+      const rows = [['Move', 'Arrow keys, Tab, Enter, Home, End, PageUp/PageDown'], ['Jump to the edge of data', `${mod}Arrow`], ['Select a range', 'Shift+Arrow, or drag'], ['Edit a cell', 'F2, Enter, or just type'], ['New line in a cell', 'Alt+Enter'], ['Undo / Redo', `${mod}Z / ${mod}Y`], ['Copy / Cut / Paste', `${mod}C / ${mod}X / ${mod}V`], ['Fill down / right', `${mod}D / ${mod}R`], ['Bold / Italic / Underline', `${mod}B / ${mod}I / ${mod}U`], ['Find and replace', `${mod}F / ${mod}H`], ['Select all', `${mod}A`], ['Save', `${mod}S`], ['Open a link in a cell', `${mod}click`], ['Menu bar', 'Alt or F10, then arrows']];
+      dialog({ title: 'Keyboard shortcuts', body: h('table', { class: 'sx-keys' }, ...rows.map(([a, b]) => h('tr', {}, h('th', { scope: 'row' }, a), h('td', {}, b)))), actions: [{ label: 'Close', focus: true }] });
+    }
+    function functionsDialog() {
+      dialog({ title: 'Formula functions', wide: true, body: h('div', {}, h('p', { class: 'fine muted' }, 'Start a cell with = . Ranges like A1:B5, other sheets like Sheet2!A1, and $A$1 for fixed references work.'), h('table', { class: 'sx-keys' }, ...Object.values(FUNCTION_DOCS).map(([sig, d]) => h('tr', {}, h('th', { scope: 'row' }, sig), h('td', {}, d))))), actions: [{ label: 'Close', focus: true }] });
+    }
+    let menuIdx = 0; const anchorNow = () => (mbBtns[menuIdx].offsetParent ? mbBtns[menuIdx] : burger);
+    const mbBtns = NAMES.map((n, i) => h('button', { type: 'button', role: 'menuitem', class: 'sx-mb', 'aria-haspopup': 'menu', tabindex: i === 0 ? 0 : -1, onclick: () => openMenu(i) }, n));
+    function openMenu(i) {
+      menuIdx = i; mbBtns.forEach((x, j) => { x.tabIndex = j === i ? 0 : -1; }); const b = mbBtns[i]; b.focus();
+      popup.show(b, menuList(menuItems[NAMES[i]]().filter(Boolean)), { wide: true, onSide: (d) => openMenu((i + d + NAMES.length) % NAMES.length) });
+    }
+    const menubar = h('nav', { class: 'sx-menubar', role: 'menubar', 'aria-label': 'Spreadsheet menus' }, ...mbBtns);
+    menubar.addEventListener('keydown', (e) => {
+      const i = mbBtns.indexOf(document.activeElement); if (i < 0) return;
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); const j = (i + (e.key === 'ArrowRight' ? 1 : -1) + NAMES.length) % NAMES.length; mbBtns.forEach((x, k) => { x.tabIndex = k === j ? 0 : -1; }); mbBtns[j].focus(); }
+      else if (e.key === 'ArrowDown') { e.preventDefault(); openMenu(i); } else if (e.key === 'Escape') focusGrid();
+    });
+    let altDown = false;
+    const menuKeys = (e) => { if (!root.isConnected) return; if (e.key === 'Alt') { altDown = true; return; } altDown = false; if (e.key === 'F10' && !e.shiftKey) { e.preventDefault(); mbBtns[menuIdx].focus(); } };
+    const menuKeyUp = (e) => { if (e.key === 'Alt' && altDown && root.isConnected && !document.querySelector('.ovl')) { altDown = false; mbBtns[menuIdx].focus(); } };
+    document.addEventListener('keydown', menuKeys, true); document.addEventListener('keyup', menuKeyUp, true);
+    const burger = h('button', { type: 'button', class: 'sx-burger', 'aria-label': 'Menu', 'aria-haspopup': 'menu', title: 'Menu', onclick: (e) => popup.show(e.currentTarget, (close) => h('div', { class: 'sx-menu' }, ...NAMES.flatMap((n) => [h('div', { class: 'sx-mh' }, n), ...menuList(menuItems[n]().filter(Boolean))(close).children])), { wide: true }) }, '☰');
     const banners = [];
     if (meta.archived_at) banners.push(notice('info', 'eye', [h('b', {}, 'In the trash.'), ' This spreadsheet is read only. ', btn('Restore', async () => { const r = await api.call('drive.files.restore', { id }); if (r.ok) { toast('Restored.'); load(); } else toast('You can’t restore this spreadsheet.', false); }, 'link')]));
     else if (readOnly) banners.push(readOnlyNotice('You can look at this spreadsheet but not change it'));
-    const fileBtn = btn('File', fileMenu, '', { 'aria-haspopup': 'menu' });
+    const back = h('a', { class: 'sx-back', href: backHref, 'aria-label': backLabel, title: backLabel }, icon('arrow'));
+    const histBtn = btn('History', () => sess.openHistory(!readOnly), 'sx-hist');
+    const top = h('header', { class: 'sx-topbar' }, back, h('span', { class: 'sx-ficon', 'aria-hidden': 'true' }, icon('sheetI')), titleIn, statusEl, h('span', { class: 'sx-grow' }), histBtn, saveBtn, burger);
     const bar = h('div', { class: 'sx-bar-row' }, nameBox, h('span', { class: 'sx-fxl', 'aria-hidden': 'true' }, 'fx'), h('div', { class: 'sx-fxwrap' }, fbar, acBox));
-    put(root, ...banners, h('div', { class: 'docbar' }, crumb, h('div', { class: 'docrow' }, titleIn, h('div', { class: 'docacts' }, statusEl, counter, fileBtn, btn('History', () => sess.openHistory(!readOnly)), saveBtn))), tools, bar, hint, findBar, grid.el, h('div', { class: 'sx-foot' }, tabsEl, stats, zoomBox), live);
+    put(root, ...banners, top, menubar, tools, bar, hint, findBar, grid.el, h('div', { class: 'sx-tabsbar' }, tabsEl), h('div', { class: 'sx-status' }, stats, h('span', { class: 'sx-grow' }), counter, zoomBox), live);
     root.removeAttribute('aria-busy'); document.title = `${meta.name} · Sheets`;
     
-    const fit = () => { const top = Math.max(0, root.getBoundingClientRect().top); const phone = window.innerWidth <= 700 ? 84 : 12; root.style.height = `${Math.max(460, window.innerHeight - top - phone)}px`; };
+    const fit = () => { const top = Math.max(0, root.getBoundingClientRect().top); root.style.height = `${Math.max(360, window.innerHeight - top)}px`; };
     fit(); window.addEventListener('resize', fit); setTimeout(fit, 300);
     recalcFilter(); drawTabs(); grid.attach(); syncBar(); syncTools(); paintCount(); focusGrid();
-    const leave = () => { if (location.hash.startsWith(`#/sheet/${id}`)) return; window.removeEventListener('hashchange', leave); window.removeEventListener('resize', fit); document.removeEventListener('copy', onCopy); document.removeEventListener('cut', onCopy); document.removeEventListener('paste', onPaste); popup.close(); grid.destroy(); sess.destroy(); };
+    const leave = () => { if (location.hash.startsWith(`#/sheet/${id}`)) return; window.removeEventListener('hashchange', leave); window.removeEventListener('resize', fit); document.removeEventListener('keydown', menuKeys, true); document.removeEventListener('keyup', menuKeyUp, true); document.removeEventListener('copy', onCopy); document.removeEventListener('cut', onCopy); document.removeEventListener('paste', onPaste); popup.close(); grid.destroy(); sess.destroy(); };
     window.addEventListener('hashchange', leave);
     root.sxTest = { book, get calc() { return calc; }, get sel() { return sel; }, select: (c, r) => setSel({ c, r }), setCell, doUndo, doRedo, grid };
   }

@@ -172,10 +172,10 @@ await toolbar('Filter').click(); await page.waitForTimeout(150); check('SX57', '
 { const edge = await page.locator('.sx-h.sx-hc, .sx-h:not(.sx-hr):not(.sx-hx)').nth(1).boundingBox(); void edge; }
 
 // ---- xlsx: export, read it back with SheetJS in Node, import it again
-await page.getByRole('button', { name: 'File', exact: true }).click(); const [xdl] = await Promise.all([page.waitForEvent('download'), page.locator('.sx-pop button', { hasText: 'Download as Excel' }).click()]);
+await page.locator('.sx-mb', { hasText: 'File' }).click(); const [xdl] = await Promise.all([page.waitForEvent('download'), page.locator('.sx-pop button', { hasText: 'Download as Excel' }).click()]);
 const xpath = await xdl.path(); const { createRequire: cr } = await import('node:module'); const XLSX = cr(import.meta.url)('../apps/sheetjs/node_modules/xlsx'); const wb = XLSX.readFile(xpath, { cellFormula: true });
 check('SX58', 'Excel export holds every sheet, the formulas and the values (checked with SheetJS)', wb.SheetNames.slice(0, 2).join() === 'Sheet 1,Sheet 2' && wb.Sheets['Sheet 1'].D2.f === 'B2*C2' && wb.Sheets['Sheet 1'].D2.v === 1200 && wb.Sheets['Sheet 2'].A1.f === "'Sheet 1'!D7*2", JSON.stringify(wb.Sheets['Sheet 1'].D2));
-await page.getByRole('button', { name: 'File', exact: true }).click(); await page.locator('.sx-pop button', { hasText: 'Import CSV or Excel' }).click(); await page.setInputFiles('input[type=file][aria-label="Choose a file to import"]', xpath);
+await page.locator('.sx-mb', { hasText: 'File' }).click(); await page.locator('.sx-pop button', { hasText: 'Import CSV or Excel' }).click(); await page.setInputFiles('input[type=file][aria-label="Choose a file to import"]', xpath);
 await dlgBtn('Import').click(); await page.waitForTimeout(600);
 check('SX59', 'Importing that Excel file adds its sheets back, formulas included', (await page.locator('.sx-tabs [role=tab]').count()) === 4, await page.locator('.sx-tabs').innerText());
 await page.keyboard.press('Control+z'); await page.waitForTimeout(200); check('SX60', 'Undo removes the imported sheets in one step', (await page.locator('.sx-tabs [role=tab]').count()) === 2);
@@ -191,14 +191,28 @@ await page.getByRole('button', { name: 'History' }).click(); await page.waitForT
 await page.keyboard.press('Escape');
 
 // ---- import / export (CSV) and make a copy
-await page.getByRole('button', { name: 'File', exact: true }).click(); const [dl] = await Promise.all([page.waitForEvent('download'), page.locator('.sx-pop button', { hasText: 'Download as CSV' }).click()]);
+await page.locator('.sx-mb', { hasText: 'File' }).click(); const [dl] = await Promise.all([page.waitForEvent('download'), page.locator('.sx-pop button', { hasText: 'Download as CSV' }).click()]);
 const csv = await (await import('node:fs')).promises.readFile(await dl.path(), 'utf8'); check('SX45', 'CSV download contains the sheet’s shown values', csv.includes('Item,Price,Qty,Total') && csv.includes('Ads,"$1,200.00",1') , csv.slice(0, 160));
-await page.getByRole('button', { name: 'File', exact: true }).click(); await page.locator('.sx-pop button', { hasText: 'Import CSV' }).click(); await page.setInputFiles('input[type=file][aria-label="Choose a file to import"]', { name: 'in.csv', mimeType: 'text/csv', buffer: Buffer.from('a;b\n1;2\n3;4\n') });
+await page.locator('.sx-mb', { hasText: 'File' }).click(); await page.locator('.sx-pop button', { hasText: 'Import CSV' }).click(); await page.setInputFiles('input[type=file][aria-label="Choose a file to import"]', { name: 'in.csv', mimeType: 'text/csv', buffer: Buffer.from('a;b\n1;2\n3;4\n') });
 await dlgBtn('Import').click(); await page.waitForTimeout(400); check('SX46', 'Importing a CSV adds a new sheet with its data', (await page.locator('.sx-tabs [role=tab]').count()) === 3 && (await text(1, 2)) === '4', String(await page.locator('.sx-tabs [role=tab]').count()));
-await page.getByRole('button', { name: 'File', exact: true }).click(); await page.locator('.sx-pop button', { hasText: 'Make a copy' }).click(); await page.waitForTimeout(1500);
+await page.locator('.sx-mb', { hasText: 'File' }).click(); await page.locator('.sx-pop button', { hasText: 'Make a copy' }).click(); await page.waitForTimeout(1500);
 await page.waitForTimeout(800); check('SX47', 'Make a copy opens a new spreadsheet named “Copy of …”', !page.url().includes(fid) && (await page.inputValue('.doctitle')).startsWith('Copy of'), page.url() + ' ' + await page.inputValue('.doctitle'));
 const xl = await page.evaluate(async () => { const r = await fetch('/sheetjs/xlsx.js'); const t = await r.text(); return r.ok && t.length > 100000 && /writeXlsx|readXlsx/.test(t.slice(-4000)) || r.ok && t.length > 100000; }); check('SX48', 'The .xlsx bridge is built and served (SheetJS CE)', xl);
 
+// ---- layout and menus
+await open();
+const rowsShown = await page.evaluate(() => new Set([...document.querySelectorAll('.sx-c')].filter((e) => e.getBoundingClientRect().bottom <= window.innerHeight).map((e) => e.dataset.r)).size);
+check('SX61', 'The editor fills the window: at 1366×820 at least 20 rows are visible, no sidebar', rowsShown >= 20 && (await page.locator('.side').isVisible().catch(() => false)) === false, String(rowsShown));
+check('SX62', 'The menu bar has File, Edit, View, Insert, Format, Data and Help', (await page.locator('.sx-mb').allInnerTexts()).join() === 'File,Edit,View,Insert,Format,Data,Help');
+await page.keyboard.press('F10'); await page.keyboard.press('ArrowRight'); await page.keyboard.press('ArrowDown'); await page.waitForTimeout(100);
+check('SX63', 'F10 focuses the menu bar, arrows move between menus and open them (Edit)', /Undo/.test(await page.locator('.sx-pop').innerText()) && /Find and replace/.test(await page.locator('.sx-pop').innerText()));
+await page.keyboard.press('ArrowRight'); await page.waitForTimeout(100); check('SX64', 'Arrow right inside an open menu opens the next menu (View)', /Freeze first row/.test(await page.locator('.sx-pop').innerText())); await page.keyboard.press('Escape');
+await page.locator('.sx-mb', { hasText: 'Help' }).click(); await page.locator('.sx-pop button', { hasText: 'Keyboard shortcuts' }).click(); check('SX65', 'Help opens the shortcut list', /Fill down/.test(await page.getByRole('dialog').innerText())); await page.keyboard.press('Escape');
+for (const [label, ext] of [['OpenDocument', 'ods'], ['TSV', 'tsv'], ['web page', 'html']]) {
+  await page.locator('.sx-mb', { hasText: 'File' }).click(); const [d] = await Promise.all([page.waitForEvent('download'), page.locator('.sx-pop button', { hasText: `Download as ${label}` }).click()]);
+  const buf = await (await import('node:fs')).promises.readFile(await d.path()); check(`SX66${ext}`, `File › Download as .${ext} produces a ${ext} file`, buf.length > 20 && d.suggestedFilename().endsWith(`.${ext}`) && (ext !== 'ods' || (buf[0] === 0x50 && buf[1] === 0x4b)) && (ext !== 'html' || buf.toString().includes('<table')) && (ext !== 'tsv' || buf.toString().includes('\t')), d.suggestedFilename());
+}
+check('SX67', 'The grid has no heavy outline around it', await page.evaluate(() => getComputedStyle(document.querySelector('.sx-scroll')).outlineStyle === 'none' || getComputedStyle(document.querySelector('.sx-scroll')).outlineWidth === '0px'));
 // ---- visual: light, dark, phone
 await open(); await clickCell(1, 2); await shot('grid-light-1366');
 await page.evaluate(() => { document.documentElement.dataset.theme = 'dark'; }); await page.waitForTimeout(300); await shot('grid-dark-1366');
