@@ -10,3 +10,7 @@ dist/
 # built bundle of the whiteboard editor (scripts/build-whiteboard.mjs)
 apps/web/whiteboard/
 apps/whiteboard/node_modules/
+
+# built bundles of the PDF viewer/editor libraries (scripts/build-media.mjs)
+apps/web/media/
+apps/media/node_modules/

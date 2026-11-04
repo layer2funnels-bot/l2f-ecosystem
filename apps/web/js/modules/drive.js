@@ -4,6 +4,7 @@
 import { inp, h, put, icon, btn, chip, dialog, drawer, toast, field, notice, skeleton, emptyState, errorState, noAccessState, seg, readOnlyNotice } from '../ui.js';
 import { emptyDoc, serialize } from './docmodel.js';
 import { emptyBook, serializeBook, MIME as SHEET_MIME } from './sheetmodel.js';
+import { mediaHref } from './mediamodel.js';
 
 const DOC_MIME = 'application/vnd.l2f.doc+json'; const BOARD_MIME = 'application/vnd.excalidraw+json';
 export const driveHref = (space, folder) => `#/drive${space === 'personal' ? '/personal' : ''}${folder ? `/f/${folder}` : ''}`;
@@ -14,7 +15,7 @@ const TILE = { Document: ['DOC', '#2B5CF0'], Spreadsheet: ['XLS', '#13A592'], Wh
 /** The file-type tile (Design v4): three letters on the type's colour. */
 const ftile = (f) => { const [t, c] = TILE[kindOf(f)] ?? (/^image\//.test(f.mime_type ?? '') ? ['IMG', '#6B4FF0'] : f.mime_type === 'application/pdf' ? ['PDF', '#E8553D'] : ['FILE', '#7D8190']); return h('span', { class: 'ftile', style: `--c:${c}`, 'aria-hidden': 'true' }, t); };
 const iconOf = (f) => (f.mime_type === BOARD_MIME ? 'wb' : f.kind === 'document' ? 'doc' : 'drv');
-export const openHref = (f) => (f.mime_type === SHEET_MIME ? `#/sheet/${f.id}` : f.mime_type === BOARD_MIME ? `#/board/${f.id}` : f.kind === 'document' ? `#/doc/${f.id}` : null);
+export const openHref = (f) => (mediaHref(f) ?? (f.mime_type === SHEET_MIME ? `#/sheet/${f.id}` : f.mime_type === BOARD_MIME ? `#/board/${f.id}` : f.kind === 'document' ? `#/doc/${f.id}` : null));
 
 export function driveView({ api, ctx, route }) {
   const root = h('section', { class: 'drv' }); const main = h('div', { class: 'drv-main' });

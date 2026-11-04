@@ -28,7 +28,9 @@
     "rehearsal:local": "node scripts/rehearsal.mjs",
     "check:pg17": "node scripts/check-pg17.mjs",
     "test:e2e:planner": "node scripts/e2e-planner.mjs",
-    "test:e2e:onboarding": "node scripts/e2e-onboarding.mjs"
+    "test:e2e:onboarding": "node scripts/e2e-onboarding.mjs",
+    "test:e2e:media": "node scripts/e2e-media.mjs",
+    "build:media": "node scripts/build-media.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "0.3.10",

@@ -10,7 +10,7 @@ const SHORT = { Documents: 'Docs', 'My Work': 'My Work' };
 export function appIdFor(route, inOffice) {
   if (inOffice) return 'office';
   switch (route.name) {
-    case 'doc': case 'sheet': case 'drive': return 'drive';
+    case 'doc': case 'sheet': case 'image': case 'pdf': case 'drive': return 'drive';
     case 'board': case 'boards': return 'whiteboard';
     case 'planner': return 'planner';
     case 'projects': return 'projects'; case 'clients': return 'clients'; case 'portal': return 'portal'; case 'forms': return 'forms';
