@@ -7,7 +7,7 @@
 import { h, icon, toast, dialog, btn, notice, skeleton, errorState, noAccessState, readOnlyNotice } from '../ui.js';
 import { dirty } from '../dirty.js';
 import * as M from './mediamodel.js';
-import { readStored, saveVersion, saveCopy, downloadBlob, versionsDrawer } from './mediaio.js';
+import { readStored, saveVersion, saveCopy, downloadBlob, versionsDrawer, autosavePref, createAutosave } from './mediaio.js';
 import { menuBar, topBar, backFor } from './edchrome.js';
 
 const BASE = '/media/';
@@ -79,12 +79,14 @@ export function pdfView({ api, id, ctx }) {
     function jump(to) { S = to; st.sel = null; st.checked.clear(); changed(); buildPages(); buildThumbs(); }
     const undo = () => { if (hist.canUndo()) jump(hist.undo()); }, redo = () => { if (hist.canRedo()) jump(hist.redo()); };
     const warn = (e) => { if (status === 'dirty' || status === 'failed') { e.preventDefault(); e.returnValue = ''; } };
+    let autoOn = autosavePref.get();
+    const auto = createAutosave({ ok: () => autoOn && !readOnly && status === 'dirty', busy: () => saving || document.querySelector('.px-entry, .ovl, .drawer'), run: () => save({ auto: true }) });
     function changed() {
       undoB.disabled = readOnly || !hist.canUndo(); redoB.disabled = readOnly || !hist.canRedo();
       if (!readOnly && !saving && status !== 'failed') { const was = status; status = dirtyNow() ? 'dirty' : 'saved'; if (status === 'dirty' && was !== 'dirty') { dirty.set(meta.name, () => save()); window.addEventListener('beforeunload', warn); } if (status === 'saved') { dirty.clear(); window.removeEventListener('beforeunload', warn); } }
       const t = { saved: `Saved ${timeOf(savedAt)}`, dirty: 'Unsaved changes', saving: 'Saving…', failed: 'Couldn’t save. Your changes are still here.', readonly: 'Read only' }[status];
       statusEl.replaceChildren(...[h('span', { class: `dot ${status}` }), t, status === 'failed' ? btn('Retry', () => save(), 'link') : null].filter(Boolean));
-      saveBtn.disabled = readOnly || status === 'saved' || saving;
+      saveBtn.disabled = readOnly || status === 'saved' || saving; if (status === 'dirty') auto.kick(); else auto.cancel();
       pageNum.max = String(S.pages.length); total.textContent = `of ${S.pages.length}`; paintSize();
     }
 
@@ -434,11 +436,11 @@ export function pdfView({ api, id, ctx }) {
       }
     }
     const buildBlob = async (pages, opts) => (await build(pages, opts))?.blob ?? null;
-    async function save() {
-      if (readOnly || saving) return false; saving = true; status = 'saving'; changed();
+    async function save({ auto: isAuto = false } = {}) {
+      if (readOnly || saving) return false; const revAt = S.rev; saving = true; status = 'saving'; changed();
       const made = await build(S.pages); if (!made) { saving = false; status = 'failed'; changed(); return false; } const blob = made.blob; const before = meta.size_bytes ?? 0;
-      const r = await saveVersion(api, meta, blob, 'application/pdf', version, 'Edited in the PDF editor'); saving = false; if (gone()) return false;
-      if (r.ok) { version = r.data[0].current_version; savedAt = new Date().toISOString(); await reloadFrom(blob, false); meta = { ...meta, size_bytes: blob.size }; status = 'saved'; changed(); ctx.announce('Saved.'); toast(`Saved as a new version. ${M.fmtBytes(blob.size)}${before ? ` (was ${M.fmtBytes(before)})` : ''}.${made.rasterised.length ? ` ${made.rasterised.length} page${made.rasterised.length === 1 ? ' was' : 's were'} saved as a picture so redacted content is gone.` : ''}`); return true; }
+      const r = await saveVersion(api, meta, blob, 'application/pdf', version, isAuto ? 'Autosave' : 'Edited in the PDF editor'); saving = false; if (gone()) return false;
+      if (r.ok) { version = r.data[0].current_version; savedAt = new Date().toISOString(); if (isAuto) { savedRev = revAt; } else await reloadFrom(blob, false); meta = { ...meta, size_bytes: blob.size }; status = 'saved'; changed(); ctx.announce('Saved.'); if (!isAuto) toast(`Saved as a new version. ${M.fmtBytes(blob.size)}${before ? ` (was ${M.fmtBytes(before)})` : ''}.${made.rasterised.length ? ` ${made.rasterised.length} page${made.rasterised.length === 1 ? ' was' : 's were'} saved as a picture so redacted content is gone.` : ''}`); return true; }
       if (r.status === 409) { status = 'failed'; changed(); conflict(); return false; }
       status = 'failed'; changed(); toast(r.status === 404 ? 'You can read this but not change it, so your edit was not saved.' : (r.message ?? 'Couldn’t save. Try again.'), false); return false;
     }
@@ -596,7 +598,7 @@ export function pdfView({ api, id, ctx }) {
     const ro2 = readOnly; const tg = (t) => () => setTool(t);
     const cur = () => targets();
     const menus = menuBar([
-      { label: 'File', items: [{ label: 'Save', key: 'Ctrl+S', on: () => save(), disabled: () => ro2 || status === 'saved' }, { label: 'Save as copy', on: () => saveCopyNow(), disabled: ro2 }, { label: 'Download', on: () => download() }, { label: 'Print…', on: () => printNow() }, 'sep', { label: 'Version history', on: () => histBtn.click() }, 'sep', { label: 'Back to Drive', on: () => { location.hash = backFor(meta); } }] },
+      { label: 'File', items: [{ label: 'Save', key: 'Ctrl+S', on: () => save(), disabled: () => ro2 || status === 'saved' }, { label: 'Save as copy', on: () => saveCopyNow(), disabled: ro2 }, { label: 'Download', on: () => download() }, { label: 'Print…', on: () => printNow() }, 'sep', { label: 'Autosave', checked: () => autoOn, disabled: () => ro2, on: () => { autoOn = !autoOn; autosavePref.set(autoOn); toast(autoOn ? 'Autosave is on: a new version is saved after a short pause.' : 'Autosave is off.'); changed(); } }, { label: 'Version history', on: () => histBtn.click() }, 'sep', { label: 'Back to Drive', on: () => { location.hash = backFor(meta); } }] },
       { label: 'Edit', items: [{ label: 'Undo', key: 'Ctrl+Z', on: undo, disabled: () => ro2 || !hist.canUndo() }, { label: 'Redo', key: 'Ctrl+Shift+Z', on: redo, disabled: () => ro2 || !hist.canRedo() }, 'sep', { label: 'Delete selected item', key: 'Del', on: deleteSel, disabled: () => ro2 || !st.sel }, 'sep', { label: 'Find…', key: 'Ctrl+F', on: () => { searchIn.focus(); searchIn.select(); } }] },
       { label: 'View', items: [{ label: 'Zoom in', key: '+', on: () => zoomBy(1.2) }, { label: 'Zoom out', key: '-', on: () => zoomBy(1 / 1.2) }, { label: 'Fit width', on: () => applyZoom('width') }, { label: 'Fit page', on: () => applyZoom('page') }, { label: 'Actual size (100%)', on: () => applyZoom(1) }, 'sep', { label: 'Rotate view', on: turnView }, { label: 'Show pages and bookmarks', checked: () => st.sidebar, on: toggleSide }, 'sep', { label: 'Keyboard shortcuts', key: '?', on: shortcutsDialog }] },
       { label: 'Insert', items: [{ label: 'Text', key: 'T', on: tg('text'), disabled: ro2 }, { label: 'Highlight', key: 'H', on: tg('hl'), disabled: ro2 }, { label: 'Rectangle', key: 'R', on: tg('rect'), disabled: ro2 }, { label: 'Draw', key: 'D', on: tg('pen'), disabled: ro2 }, { label: 'Signature…', key: 'S', on: tg('sign'), disabled: ro2 }, { label: 'Picture…', key: 'I', on: tg('img'), disabled: ro2 }, 'sep', { label: 'Redact (cover for good)', key: 'X', on: tg('redact'), disabled: ro2 }, 'sep', { label: 'Blank page after this one', on: () => blankPage(), disabled: ro2 }, { label: 'Pages from another PDF…', on: () => mergeDialog(), disabled: ro2 }] },

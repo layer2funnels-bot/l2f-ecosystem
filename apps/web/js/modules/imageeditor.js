@@ -6,7 +6,7 @@
 import { h, icon, toast, dialog, btn, notice, skeleton, errorState, noAccessState, readOnlyNotice } from '../ui.js';
 import { dirty } from '../dirty.js';
 import * as M from './mediamodel.js';
-import { readStored, saveVersion, saveCopy, downloadBlob, versionsDrawer } from './mediaio.js';
+import { readStored, saveVersion, saveCopy, downloadBlob, versionsDrawer, autosavePref, createAutosave } from './mediaio.js';
 import { menuBar, topBar, backFor } from './edchrome.js';
 
 const PREVIEW = 2400;          // longest side of the working preview (the saved picture always uses the full size)
@@ -152,8 +152,11 @@ export function imageView({ api, id, ctx }) {
       const t = { saved: `Saved ${timeOf(savedAt)}`, dirty: 'Unsaved changes', saving: 'Saving…', failed: 'Couldn’t save. Your changes are still here.', readonly: 'Read only' }[status];
       statusEl.replaceChildren(...[h('span', { class: `dot ${status}` }), t, status === 'failed' ? btn('Retry', () => save(), 'link') : null].filter(Boolean));
       saveBtn.disabled = readOnly || status === 'saved' || saving || !M.saveFormat(meta.mime_type);
+      if (status === 'dirty') auto.kick(); else auto.cancel();
       saveBtn.title = !M.saveFormat(meta.mime_type) && !readOnly ? 'GIF files can’t be re-encoded here. Use Save as copy to keep a PNG.' : '';
     }
+    let autoOn = autosavePref.get();
+    const auto = createAutosave({ ok: () => autoOn && !readOnly && Boolean(M.saveFormat(meta.mime_type)) && status === 'dirty', busy: () => saving || drag || textEd || pickCb || document.querySelector('.ovl, .drawer'), run: () => save({ auto: true }) });
     const warn = (e) => { if (status === 'dirty' || status === 'failed') { e.preventDefault(); e.returnValue = ''; } };
 
     // ---------------------------------------------------------------- history
@@ -205,14 +208,14 @@ export function imageView({ api, id, ctx }) {
       if (mime === 'image/jpeg') { const c = mkCanvas(f.width, f.height); const x = c.getContext('2d'); x.fillStyle = '#ffffff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(f, 0, 0); return c; }
       return f;
     }
-    async function save() {
-      const mime = M.saveFormat(meta.mime_type); if (readOnly || saving || !mime) return false;
+    async function save({ auto: isAuto = false } = {}) {
+      const mime = M.saveFormat(meta.mime_type); if (readOnly || saving || !mime) return false; const revAt = S.rev;
       saving = true; status = 'saving'; paintStatus();
       const blob = await encode(await renderOut(mime), mime, 0.92);
       if (!blob || blob.type !== mime) { saving = false; status = 'failed'; paintStatus(); toast('This browser can’t save this format. Use Save as copy and choose PNG.', false); return false; }
-      const r = await saveVersion(api, meta, blob, mime, version, 'Edited in the image editor');
+      const r = await saveVersion(api, meta, blob, mime, version, isAuto ? 'Autosave' : 'Edited in the image editor');
       saving = false; if (gone()) return false;
-      if (r.ok) { version = r.data[0].current_version; savedRev = S.rev; savedAt = new Date().toISOString(); status = 'saved'; paintStatus(); ctx.announce('Saved.'); toast('Saved as a new version.'); return true; }
+      if (r.ok) { version = r.data[0].current_version; savedRev = revAt; savedAt = new Date().toISOString(); status = 'saved'; paintStatus(); ctx.announce('Saved.'); if (!isAuto) toast('Saved as a new version.'); return true; }
       if (r.status === 409) { status = 'failed'; paintStatus(); conflict(); return false; }
       if (r.status === 404) { toast('You can read this but not change it, so your edit was not saved.', false); status = 'failed'; paintStatus(); return false; }
       status = 'failed'; paintStatus(); toast(r.message ?? 'Couldn’t save. Try again.', false); return false;
@@ -479,7 +482,7 @@ export function imageView({ api, id, ctx }) {
     const dis = (f) => () => readOnly || f();
     const goTool = (t, subKey, v) => () => { if (subKey) { sub[subKey] = v; } setTool(t); };
     const menus = menuBar([
-      { label: 'File', items: [{ label: 'Save', key: 'Ctrl+S', on: () => save(), disabled: () => readOnly || status === 'saved' || !M.saveFormat(meta.mime_type) }, { label: 'Save as copy…', on: () => saveAsCopy(), disabled: readOnly }, { label: 'Download…', on: () => downloadDialog() }, 'sep', { label: 'Version history', on: () => histBtn.click() }, 'sep', { label: 'Back to Drive', on: () => { location.hash = backFor(meta); } }] },
+      { label: 'File', items: [{ label: 'Save', key: 'Ctrl+S', on: () => save(), disabled: () => readOnly || status === 'saved' || !M.saveFormat(meta.mime_type) }, { label: 'Save as copy…', on: () => saveAsCopy(), disabled: readOnly }, { label: 'Download…', on: () => downloadDialog() }, 'sep', { label: 'Autosave', checked: () => autoOn && Boolean(M.saveFormat(meta.mime_type)), disabled: () => readOnly || !M.saveFormat(meta.mime_type), on: () => { autoOn = !autoOn; autosavePref.set(autoOn); toast(autoOn ? 'Autosave is on: a new version is saved after a short pause.' : 'Autosave is off.'); paintStatus(); } }, { label: 'Version history', on: () => histBtn.click() }, 'sep', { label: 'Back to Drive', on: () => { location.hash = backFor(meta); } }] },
       { label: 'Edit', items: [{ label: 'Undo', key: 'Ctrl+Z', on: undo, disabled: () => readOnly || !hist.canUndo() }, { label: 'Redo', key: 'Ctrl+Shift+Z', on: redo, disabled: () => readOnly || !hist.canRedo() }, 'sep', { label: 'Duplicate selected', key: 'Ctrl+D', on: dupSel, disabled: dis(() => sel == null) }, { label: 'Delete selected', key: 'Del', on: deleteSel, disabled: dis(() => sel == null) }, 'sep', { label: 'Copy picture', on: copyToClipboard }, { label: 'Reset to the original', on: reset, disabled: dis(() => S.base === orig && M.isNeutral(S.adj) && S.filter === 'none' && !S.anns.length && !S.mark && !S.frame.width && !S.frame.radius) }] },
       { label: 'View', items: [{ label: 'Zoom in', key: '+', on: () => setZoom(zoomValue() * 1.25) }, { label: 'Zoom out', key: '-', on: () => setZoom(zoomValue() / 1.25) }, { label: 'Fit to window', key: '0', on: () => setZoom('fit') }, { label: 'Actual size (100%)', on: () => setZoom(1) }, 'sep', { label: 'Show original (before / after)', checked: () => cmpToggle, on: () => { cmpToggle = !cmpToggle; holdCompare(cmpToggle); } }, 'sep', { label: 'Keyboard shortcuts', key: '?', on: shortcutsDialog }] },
       { label: 'Image', items: [{ label: 'Crop', key: 'C', on: goTool('crop'), disabled: readOnly }, { label: 'Turn left', on: () => turn(false), disabled: readOnly }, { label: 'Turn right', on: () => turn(true), disabled: readOnly }, { label: 'Flip horizontal', on: () => flip(true), disabled: readOnly }, { label: 'Flip vertical', on: () => flip(false), disabled: readOnly }, { label: 'Resize and any angle…', key: 'O', on: goTool('transform'), disabled: readOnly }, 'sep', { label: 'Adjust colours…', key: 'A', on: goTool('adjust'), disabled: readOnly }, { label: 'Filters…', key: 'F', on: goTool('filters'), disabled: readOnly }, { label: 'Border, corners and extra space…', key: 'B', on: goTool('frame'), disabled: readOnly }] },
