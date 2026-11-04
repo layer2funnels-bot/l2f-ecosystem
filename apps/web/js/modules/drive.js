@@ -1,35 +1,57 @@
-// Drive (v4): the organization library and each person's Personal space. Folders, files, documents and spreadsheets in one list, uploads by drag and drop,
-// a details drawer (Details, Sharing, Versions), Trash. Files that belong to another app (project, client, whiteboard…) are stored in the same place but are not
-// listed here unless someone adds them to the library. Everything goes through the permission-checked API; the database decides.
-import { inp, h, put, icon, btn, chip, dialog, drawer, toast, field, notice, skeleton, emptyState, errorState, noAccessState, seg, readOnlyNotice } from '../ui.js';
+// Drive (v4): the organization library and each person's Personal space. Folders, files, documents and spreadsheets in one list or grid, uploads by drag and drop
+// (files and whole folders) with a progress panel, a details drawer (Details, Sharing, Versions), Trash. Files that belong to another app (project, client, whiteboard…) are
+// stored in the same place but are not listed here unless someone adds them to the library. Everything goes through the permission-checked API; the database decides.
+import { inp, h, put, icon, btn, dialog, drawer, toast, field, notice, skeleton, emptyState, errorState, noAccessState, readOnlyNotice } from '../ui.js';
 import { emptyDoc, serialize } from './docmodel.js';
 import { emptyBook, serializeBook, MIME as SHEET_MIME } from './sheetmodel.js';
+import { DOC_MIME, BOARD_MIME, fileType, matchesType, isImage, formatSize, classifyUploadError, precheckUploads, sortRows } from './driveutil.js';
 
-const DOC_MIME = 'application/vnd.l2f.doc+json'; const BOARD_MIME = 'application/vnd.excalidraw+json';
 export const driveHref = (space, folder) => `#/drive${space === 'personal' ? '/personal' : ''}${folder ? `/f/${folder}` : ''}`;
 const when = (iso) => (iso ? new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '');
-const size = (n) => (n == null ? '' : n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(0)} KB` : n < 1073741824 ? `${(n / 1048576).toFixed(1)} MB` : `${(n / 1073741824).toFixed(2)} GB`);
-const kindOf = (f) => (f.mime_type === DOC_MIME ? 'Document' : f.mime_type === SHEET_MIME ? 'Spreadsheet' : f.mime_type === BOARD_MIME ? 'Whiteboard' : f.kind === 'document' ? 'Text' : (f.mime_type ?? 'File').split('/').pop());
-const TILE = { Document: ['DOC', '#2B5CF0'], Spreadsheet: ['XLS', '#13A592'], Whiteboard: ['WB', '#1B1D23'], Text: ['TXT', '#6B4FF0'] };
-/** The file-type tile (Design v4): three letters on the type's colour. */
-const ftile = (f) => { const [t, c] = TILE[kindOf(f)] ?? (/^image\//.test(f.mime_type ?? '') ? ['IMG', '#6B4FF0'] : f.mime_type === 'application/pdf' ? ['PDF', '#E8553D'] : ['FILE', '#7D8190']); return h('span', { class: 'ftile', style: `--c:${c}`, 'aria-hidden': 'true' }, t); };
-const iconOf = (f) => (f.mime_type === BOARD_MIME ? 'wb' : f.kind === 'document' ? 'doc' : 'drv');
+const lsGet = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch { /* private mode: the choice lasts for this page only */ } };
+/** The file-type tile (Design v4): the type's short label on its own colour (one colour per kind, see drive.css). */
+const ftile = (f) => { const t = fileType(f); return h('span', { class: `ftile ft-${t.key}`, 'aria-hidden': 'true' }, t.label); };
+const folderTile = () => h('span', { class: 'ftile folder', 'aria-hidden': 'true' }, icon('folder'));
+/** The one tag/chip used in Drive: never wider than its box, cut with an ellipsis, full text on hover. */
+const tag = (text, kind = '') => h('span', { class: `drv-tag${kind ? ` ${kind}` : ''}`, title: text }, text);
+const srOnly = (t) => h('span', { class: 'sr' }, t);
 export const openHref = (f) => (f.mime_type === SHEET_MIME ? `#/sheet/${f.id}` : f.mime_type === BOARD_MIME ? `#/board/${f.id}` : f.kind === 'document' ? `#/doc/${f.id}` : null);
+const SORTS = [['name', 'Name'], ['modified', 'Last modified'], ['size', 'Size']];
+const TYPES = [['all', 'All types'], ['Document', 'Documents'], ['Spreadsheet', 'Spreadsheets'], ['Whiteboard', 'Whiteboards'], ['image', 'Images'], ['pdf', 'PDFs'], ['media', 'Video and audio'], ['other', 'Other files']];
+
+let openPop = null;       // the one open pop-up menu (closing it is idempotent)
+const closePop = () => { openPop?.(); openPop = null; };
 
 export function driveView({ api, ctx, route }) {
   const root = h('section', { class: 'drv' }); const main = h('div', { class: 'drv-main' });
   const live = () => ctx.live() && root.isConnected;
   const space = route.space === 'personal' ? 'personal' : 'shared'; const view = route.view ?? 'files'; const folderId = route.folder ?? null;
   const canWrite = ctx.can('drive.file.upload') || ctx.canAnywhere('drive.file.upload');
-  const fail = (r, what = 'do that') => toast(r?.status === 404 ? `You can’t ${what} here.` : (r?.message ?? 'Something went wrong. Try again.'), false);
-  const state = { q: '', type: 'all', folders: [], files: [], selected: new Set() };
+  const fail = (r, what = 'do that') => toast(r?.status === 404 ? `You can’t ${what} here.` : (r?.error?.message ?? 'Something went wrong. Try again.'), false);
+  const state = { q: '', type: 'all', sort: SORTS.some(([k]) => k === lsGet('l2f.drive.sort')) ? lsGet('l2f.drive.sort') : 'name', dir: lsGet('l2f.drive.dir') === 'desc' ? -1 : 1, mode: lsGet('l2f.drive.view') === 'grid' ? 'grid' : 'list', folders: [], files: [], selected: new Set() };
 
   // ---------------------------------------------------------------- navigation
-  const side = h('nav', { class: 'pj-side', 'aria-label': 'Drive' });
-  const link = (href, ic, text, on) => h('a', { class: 'pj-link', href, ...(on ? { 'aria-current': 'page' } : {}) }, icon(ic), text);
-  put(side, link(driveHref('shared'), 'drv', `${ctx.orgName} library`, view === 'files' && space === 'shared'), link(driveHref('personal'), 'user', 'Personal', view === 'files' && space === 'personal'),
-    link('#/drive/recent', 'clock', 'Recent', view === 'recent'), link('#/drive/trash', 'trash', 'Trash', view === 'trash'));
+  // the spaces (library, Personal, Recent, Trash) live in the app's side rail (appnav.js)
   const crumb = h('nav', { class: 'fpath fine', 'aria-label': 'Folder path' });
+
+  // ---------------------------------------------------------------- pop-up menu (row actions, New)
+  function popMenu(anchor, items, label) {
+    closePop();
+    const menu = h('div', { class: 'drv-pop', role: 'group', 'aria-label': label }, ...items.filter(Boolean).map((a) => h('button', { type: 'button', class: `drv-pop-i${a.danger ? ' danger' : ''}`, onclick: () => { closePop(); a.on(); } }, a.ic ? icon(a.ic) : null, h('span', {}, a.label))));
+    document.body.append(menu);
+    const r = anchor.getBoundingClientRect(); const mw = menu.offsetWidth; const mh = menu.offsetHeight;
+    const left = Math.max(8, Math.min(innerWidth - mw - 8, r.right - mw)); const below = r.bottom + 6 + mh <= innerHeight - 8; const top = below ? r.bottom + 6 : Math.max(8, r.top - 6 - mh);
+    menu.style.left = `${left}px`; menu.style.top = `${top}px`;
+    const btns = [...menu.querySelectorAll('button')]; btns[0]?.focus();
+    const onKey = (e) => {
+      if (e.key === 'Escape') { e.preventDefault(); closePop(); anchor.focus?.(); } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); const i = btns.indexOf(document.activeElement); btns[(i + (e.key === 'ArrowDown' ? 1 : -1) + btns.length) % btns.length]?.focus(); }
+      else if (e.key === 'Tab') closePop();
+    };
+    const onDown = (e) => { if (!menu.contains(e.target) && !anchor.contains(e.target)) closePop(); };
+    document.addEventListener('keydown', onKey, true); document.addEventListener('pointerdown', onDown, true); window.addEventListener('resize', closePop); window.addEventListener('hashchange', closePop);
+    openPop = () => { menu.remove(); document.removeEventListener('keydown', onKey, true); document.removeEventListener('pointerdown', onDown, true); window.removeEventListener('resize', closePop); window.removeEventListener('hashchange', closePop); };
+  }
 
   // ---------------------------------------------------------------- loading
   async function load() {
@@ -42,41 +64,82 @@ export function driveView({ api, ctx, route }) {
     if (!fo.ok || !fi.ok) return put(view === 'files' ? list : main, fi.status === 404 || fo.status === 404 ? noAccessState({ action: h('a', { class: 'btn', href: driveHref(space) }, 'Back to Drive') }) : errorState(load));
     if (folderId && !path.data.length) return put(list, noAccessState({ title: 'Folder not found', action: h('a', { class: 'btn', href: driveHref(space) }, 'Back to Drive') }));
     state.folders = state.q ? [] : fo.data; state.files = fi.data; state.selected.clear();
-    put(crumb, h('a', { href: driveHref(space) }, space === 'personal' ? 'Personal' : `${ctx.orgName} library`), ...path.data.flatMap((p) => [h('span', { 'aria-hidden': 'true' }, ' / '), p.id === folderId ? h('b', {}, p.name) : h('a', { href: driveHref(space, p.id) }, p.name)]));
+    put(crumb, h('a', { href: driveHref(space) }, space === 'personal' ? 'Personal' : `${ctx.orgName} library`), ...path.data.flatMap((p) => [h('span', { class: 'sep', 'aria-hidden': 'true' }, '/'), p.id === folderId ? h('b', { title: p.name }, p.name) : h('a', { href: driveHref(space, p.id), title: p.name }, p.name)]));
     paint();
   }
   const bar = h('div', { class: 'drv-sel', hidden: true, role: 'region', 'aria-label': 'Selected items' });
   const list = h('div', { class: 'drv-list' });
-  const TYPES = [['all', 'All types'], ['Document', 'Documents'], ['Spreadsheet', 'Spreadsheets'], ['Whiteboard', 'Whiteboards'], ['other', 'Other files']];
-  const typeSel = h('select', { class: 'sel', 'aria-label': 'Type', onchange: (e) => { state.type = e.target.value; paint(); } }, ...TYPES.map(([k, t]) => h('option', { value: k }, t)));
+
+  // ---------------------------------------------------------------- toolbar: search, type, sort, view
+  const search = h('input', { type: 'search', placeholder: space === 'personal' ? 'Search your files' : 'Search the library', 'aria-label': 'Search files', autocomplete: 'off' }); let t = null;
+  search.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { state.q = search.value.trim(); load(); }, 250); });
+  const typeSel = h('select', { class: 'sel', 'aria-label': 'Type', onchange: (e) => { state.type = e.target.value; paint(); } }, ...TYPES.map(([k, x]) => h('option', { value: k }, x)));
+  const sortSel = h('select', { class: 'sel', 'aria-label': 'Sort by', onchange: (e) => { state.sort = e.target.value; lsSet('l2f.drive.sort', state.sort); paint(); } }, ...SORTS.map(([k, x]) => h('option', { value: k, ...(k === state.sort ? { selected: true } : {}) }, x)));
+  const dirBtn = h('button', { type: 'button', class: 'btn ghost drv-dir', onclick: () => { state.dir = -state.dir; lsSet('l2f.drive.dir', state.dir < 0 ? 'desc' : 'asc'); dirState(); paint(); } }, icon('down'));
+  const dirState = () => { dirBtn.setAttribute('aria-label', state.dir > 0 ? 'Sorted ascending. Switch to descending' : 'Sorted descending. Switch to ascending'); dirBtn.title = state.dir > 0 ? 'Ascending' : 'Descending'; dirBtn.dataset.dir = state.dir > 0 ? 'asc' : 'desc'; }; dirState();
+  const modeBtn = (k, ic, label) => h('button', { type: 'button', 'data-k': k, 'aria-pressed': String(state.mode === k), 'aria-label': label, title: label, onclick: () => { state.mode = k; lsSet('l2f.drive.view', k); modes.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.k === k))); paint(); } }, icon(ic));
+  const modes = h('div', { class: 'vsw drv-modes', role: 'group', 'aria-label': 'View' }, modeBtn('list', 'list', 'List view'), modeBtn('grid', 'tiles', 'Grid view'));
+
+  // ---------------------------------------------------------------- thumbnails (images, in the grid and on Home), fetched only when they scroll into view
+  const thumbUrls = new Map();
+  const io = typeof IntersectionObserver === 'function' ? new IntersectionObserver((entries) => { for (const e of entries) if (e.isIntersecting) { io.unobserve(e.target); fillThumb(e.target); } }, { rootMargin: '200px' }) : null;
+  async function fillThumb(art) {
+    const f = art.__file; if (!f || !live()) return;
+    let url = thumbUrls.get(f.id);
+    if (!url) { const r = await api.call('drive.files.download', { id: f.id }); url = r.ok && r.data?.[0]?.url; if (!url) return; thumbUrls.set(f.id, url); }
+    if (!art.isConnected) return;
+    const img = h('img', { alt: '', decoding: 'async', draggable: 'false' }); img.onload = () => { art.replaceChildren(img); art.classList.add('has-img'); }; img.onerror = () => { thumbUrls.delete(f.id); }; img.src = url;
+  }
+  const art = (f, big) => { const el = h('span', { class: `drv-art${big ? ' xl' : ''}`, 'aria-hidden': 'true' }, ftile(f)); if (isImage(f)) { el.__file = f; io ? io.observe(el) : fillThumb(el); } return el; };
+
+  // ---------------------------------------------------------------- list and grid
+  function visibleRows() {
+    const files = state.files.filter((f) => matchesType(f, state.type));
+    return sortRows([...(state.type !== 'all' ? [] : state.folders).map((d) => ({ folder: d })), ...files.map((f) => ({ file: f }))], state.sort, state.dir);
+  }
   /** Home (the top of a space, not searching): files edited lately as cards and the folders as quick links, above the full list. */
   function homeBlocks(files) {
     const latest = [...files].sort((a, b) => String(b.updated_at).localeCompare(String(a.updated_at))).slice(0, 4);
-    const card = (f) => { const href = openHref(f); const inner = [h('span', { class: 'dcard-art', 'aria-hidden': 'true' }, ftile(f)), h('span', { class: 'dcard-foot' }, h('b', {}, f.name), h('small', { class: 'muted' }, `Edited ${when(f.updated_at)}`))];
+    const card = (f) => { const href = openHref(f); const inner = [art(f, true), h('span', { class: 'dcard-foot' }, h('b', { title: f.name }, f.name), h('small', { class: 'muted' }, `Edited ${when(f.updated_at)}`))];
       return href ? h('a', { class: 'dcard', href }, ...inner) : h('button', { type: 'button', class: 'dcard', onclick: () => download(f) }, ...inner); };
     return [latest.length ? h('section', { 'aria-labelledby': 'dh-sg' }, h('h2', { id: 'dh-sg', class: 'over' }, 'Recently edited'), h('div', { class: 'dcards' }, ...latest.map(card))) : null,
-      state.folders.length ? h('section', { 'aria-labelledby': 'dh-fo' }, h('h2', { id: 'dh-fo', class: 'over' }, 'Folders'), h('div', { class: 'dfolders' }, ...state.folders.map((d) => h('a', { class: 'dfolder', href: driveHref(space, d.id) }, icon('folder'), d.name)))) : null,
+      state.folders.length ? h('section', { 'aria-labelledby': 'dh-fo' }, h('h2', { id: 'dh-fo', class: 'over' }, 'Folders'), h('div', { class: 'dfolders' }, ...state.folders.map((d) => h('a', { class: 'dfolder', href: driveHref(space, d.id), 'data-drop-folder': d.id, title: d.name }, icon('folder'), h('span', {}, d.name))))) : null,
       latest.length || state.folders.length ? h('h2', { class: 'over' }, 'All files and folders') : null];
   }
   function paint() {
-    const files = state.type && state.type !== 'all' ? state.files.filter((f) => (state.type === 'other' ? !['Document', 'Spreadsheet', 'Whiteboard'].includes(kindOf(f)) : kindOf(f) === state.type)) : state.files;
-    const rows = [...(state.type && state.type !== 'all' ? [] : state.folders).map((d) => ({ folder: d })), ...files.map((f) => ({ file: f }))];
-    const atHome = !folderId && !state.q && (!state.type || state.type === 'all');
-    put(list, rows.length ? h('div', { class: 'drv-home' }, ...(atHome ? homeBlocks(state.files) : []), h('div', { class: 'tblwrap' }, h('table', { class: 'tbl drv-tbl' }, h('caption', { class: 'sr' }, 'Folders and files'),
-      h('thead', {}, h('tr', {}, h('th', { scope: 'col' }, h('span', { class: 'sr' }, 'Select')), ...['Name', 'Type', 'Size', 'Updated'].map((x) => h('th', { scope: 'col' }, x)), h('th', { scope: 'col' }, h('span', { class: 'sr' }, 'Actions')))),
-      h('tbody', {}, ...rows.map(rowEl)))))
-      : emptyState({ title: state.q ? 'No file matches' : folderId ? 'This folder is empty' : space === 'personal' ? 'Your personal space is empty' : `${ctx.orgName} library is empty`, body: state.q ? 'Try another word.' : canWrite ? 'Drop files anywhere on this page, or use New.' : 'Nothing has been added here yet.', ic: 'drv', first: !state.q && !folderId, action: canWrite && !state.q ? btn('New', newMenu, 'primary') : null }));
-    paintSel();
+    const rows = visibleRows(); const atHome = !folderId && !state.q && state.type === 'all' && state.mode === 'list';
+    let body;
+    if (!rows.length) body = emptyState({ title: state.q ? 'No file matches' : state.type !== 'all' ? 'Nothing of this type here' : folderId ? 'This folder is empty' : space === 'personal' ? 'Your personal space is empty' : `${ctx.orgName} library is empty`,
+      body: state.q ? 'Try another word.' : state.type !== 'all' ? 'Choose “All types” to see everything.' : canWrite ? 'Drop files or folders anywhere on this page, or use New.' : 'Nothing has been added here yet.', ic: 'drv', first: !state.q && !folderId && state.type === 'all', action: canWrite && !state.q && state.type === 'all' ? btn('New', (e) => newMenu(e.currentTarget), 'primary') : null });
+    else if (state.mode === 'grid') body = h('div', { class: 'drv-home' }, h('div', { class: 'dgrid', role: 'list', 'aria-label': 'Folders and files' }, ...rows.map(gridCell)));
+    else body = h('div', { class: 'drv-home' }, ...(atHome ? homeBlocks(state.files) : []), h('div', { class: 'tblwrap' }, h('table', { class: 'tbl drv-tbl' }, h('caption', { class: 'sr' }, 'Folders and files'),
+      h('thead', {}, h('tr', {}, h('th', { scope: 'col', class: 'c-sel' }, selectAll()), h('th', { scope: 'col' }, 'Name'), h('th', { scope: 'col', class: 'c-meta' }, 'Type'), h('th', { scope: 'col', class: 'c-meta' }, 'Size'), h('th', { scope: 'col', class: 'c-meta' }, 'Updated'), h('th', { scope: 'col', class: 'c-act' }, srOnly('Actions')))),
+      h('tbody', {}, ...rows.map(rowEl)))));
+    put(list, body); paintSel();
   }
+  const selectAll = () => { const files = visibleRows().filter((r) => r.file); if (!files.length) return srOnly('Select'); return h('input', { type: 'checkbox', 'aria-label': 'Select all files', onchange: (e) => { for (const r of files) e.target.checked ? state.selected.add(r.file.id) : state.selected.delete(r.file.id); list.querySelectorAll('.drv-pick').forEach((c) => { c.checked = e.target.checked; }); paintSel(); } }); };
+  const pick = (f) => h('input', { type: 'checkbox', class: 'drv-pick', 'aria-label': `Select ${f.name}`, ...(state.selected.has(f.id) ? { checked: true } : {}), onchange: (e) => { e.target.checked ? state.selected.add(f.id) : state.selected.delete(f.id); paintSel(); } });
+  const moreBtn = (item, isFolder) => h('button', { type: 'button', class: 'btn quiet drv-more', 'aria-label': `Actions for ${item.name}`, title: 'Actions', 'aria-haspopup': 'true', onclick: (e) => rowMenu(e.currentTarget, item, isFolder) }, icon('more'));
+  const nameOf = (f) => { const href = openHref(f); return href ? h('a', { href, title: f.name }, f.name) : h('button', { type: 'button', class: 'linklike', title: f.name, onclick: () => download(f) }, f.name); };
+  const fileCount = (d) => `${d.files} file${d.files === 1 ? '' : 's'}`;
   function rowEl(r) {
-    if (r.folder) { const d = r.folder; return h('tr', {}, h('td', {}), h('td', { class: 't1' }, h('span', { class: 'fname' }, h('span', { class: 'ftile folder', 'aria-hidden': 'true' }, icon('folder')), h('a', { href: driveHref(space, d.id) }, d.name), h('small', {}, `${d.files} file${d.files === 1 ? '' : 's'}`))), h('td', {}, 'Folder'), h('td', {}, ''), h('td', {}, when(d.updated_at)), h('td', {}, menuBtn(d, true))); }
-    const f = r.file; const href = openHref(f);
-    const cb = h('input', { type: 'checkbox', 'aria-label': `Select ${f.name}`, onchange: (e) => { e.target.checked ? state.selected.add(f.id) : state.selected.delete(f.id); paintSel(); } });
-    return h('tr', {}, h('td', {}, cb), h('td', { class: 't1' }, h('span', { class: 'fname' }, ftile(f), href ? h('a', { href }, f.name) : h('button', { type: 'button', class: 'linklike', onclick: () => download(f) }, f.name), f.protected_sop ? chip('Approved SOP', 'ok') : null)), h('td', {}, kindOf(f)), h('td', {}, size(f.size_bytes)), h('td', {}, when(f.updated_at)), h('td', {}, menuBtn(f, false)));
+    if (r.folder) { const d = r.folder; return h('tr', { 'data-drop-folder': d.id }, h('td', { class: 'c-sel' }), h('td', { class: 't1' }, h('span', { class: 'fname' }, folderTile(), h('span', { class: 'fn-text' }, h('a', { href: driveHref(space, d.id), title: d.name }, d.name), h('span', { class: 'drv-sub' }, `Folder · ${fileCount(d)} · ${when(d.updated_at)}`)))),
+      h('td', { class: 'c-meta' }, 'Folder'), h('td', { class: 'c-meta' }, fileCount(d)), h('td', { class: 'c-meta' }, when(d.updated_at)), h('td', { class: 'c-act' }, moreBtn(d, true))); }
+    const f = r.file; const ty = fileType(f);
+    return h('tr', {}, h('td', { class: 'c-sel' }, pick(f)), h('td', { class: 't1' }, h('span', { class: 'fname' }, ftile(f), h('span', { class: 'fn-text' }, h('span', { class: 'fn-line' }, nameOf(f), f.protected_sop ? tag('Approved SOP', 'ok') : null), h('span', { class: 'drv-sub' }, [ty.name, formatSize(f.size_bytes), when(f.updated_at)].filter(Boolean).join(' · '))))),
+      h('td', { class: 'c-meta' }, ty.name), h('td', { class: 'c-meta' }, formatSize(f.size_bytes)), h('td', { class: 'c-meta' }, when(f.updated_at)), h('td', { class: 'c-act' }, moreBtn(f, false)));
+  }
+  function gridCell(r) {
+    if (r.folder) { const d = r.folder; return h('article', { class: 'gcard', role: 'listitem', 'data-drop-folder': d.id }, h('a', { class: 'gcard-art', href: driveHref(space, d.id), 'aria-label': `Open folder ${d.name}`, tabindex: '-1' }, h('span', { class: 'drv-art xl', 'aria-hidden': 'true' }, folderTile())), moreBtn(d, true),
+      h('div', { class: 'gcard-foot' }, h('a', { class: 'gname', href: driveHref(space, d.id), title: d.name }, d.name), h('span', { class: 'drv-sub on' }, `Folder · ${fileCount(d)}`))); }
+    const f = r.file; const ty = fileType(f); const href = openHref(f);
+    const artEl = art(f, true);
+    return h('article', { class: 'gcard', role: 'listitem' }, href ? h('a', { class: 'gcard-art', href, 'aria-label': `Open ${f.name}`, tabindex: '-1' }, artEl) : h('button', { type: 'button', class: 'gcard-art', 'aria-label': `Download ${f.name}`, tabindex: '-1', onclick: () => download(f) }, artEl),
+      pick(f), moreBtn(f, false), h('div', { class: 'gcard-foot' }, h('span', { class: 'gname-line' }, nameOf(f), f.protected_sop ? tag('SOP', 'ok') : null), h('span', { class: 'drv-sub on' }, [ty.name, formatSize(f.size_bytes)].filter(Boolean).join(' · '))));
   }
   function paintSel() {
     const n = state.selected.size; bar.hidden = n === 0; if (!n) return;
-    put(bar, h('b', {}, `${n} selected`), btn('Download', async () => { for (const id of state.selected) { const f = state.files.find((x) => x.id === id); if (f?.kind === 'file') await download(f); } }, ''), canWrite ? btn('Move', () => moveDialog([...state.selected].map((id) => ({ file: state.files.find((x) => x.id === id) }))), '') : null, canWrite ? btn('Move to Trash', () => trashMany([...state.selected].map((id) => state.files.find((x) => x.id === id))), '') : null, btn('Clear', () => { state.selected.clear(); paint(); }, 'link'));
+    put(bar, h('b', {}, `${n} selected`), btn('Download', async () => { for (const id of state.selected) { const f = state.files.find((x) => x.id === id); if (f?.kind === 'file') await download(f); } }, 'ghost'), canWrite ? btn('Move', () => moveDialog([...state.selected].map((id) => ({ file: state.files.find((x) => x.id === id) }))), 'ghost') : null, canWrite ? btn('Move to Trash', () => trashMany([...state.selected].map((id) => state.files.find((x) => x.id === id))), 'ghost') : null, btn('Clear', () => { state.selected.clear(); paint(); }, 'quiet'));
   }
   async function download(f) {
     if (f.kind !== 'file') { const h2 = openHref(f); if (h2) ctx.go(h2); return; }
@@ -85,15 +148,13 @@ export function driveView({ api, ctx, route }) {
   }
 
   // ---------------------------------------------------------------- row menu
-  function menuBtn(item, isFolder) {
-    const name = item.name;
-    return btn(['Actions', h('span', { class: 'sr' }, ` for ${name}`)], () => {
-      const acts = [];
-      if (!isFolder) { const href = openHref(item); acts.push({ label: href ? 'Open' : 'Download', on: () => (href ? ctx.go(href) : download(item)) }, { label: 'Details', on: () => details(item) }); }
-      if (canWrite && !item.protected_sop) acts.push({ label: 'Rename', on: () => rename(item, isFolder) }, { label: 'Move', on: () => moveDialog([isFolder ? { folder: item } : { file: item }]) });
-      if (canWrite && !item.protected_sop) acts.push({ label: 'Move to Trash', on: () => (isFolder ? trashFolder(item) : trashMany([item])) });
-      dialog({ title: name, body: h('p', { class: 'fine muted' }, 'Choose what to do.'), actions: [...acts.map((a) => ({ ...a, cls: '' })), { label: 'Close', focus: true }] });
-    }, 'link');
+  function rowMenu(anchor, item, isFolder) {
+    const mutable = canWrite && !item.protected_sop; const href = isFolder ? null : openHref(item);
+    popMenu(anchor, [
+      isFolder ? { label: 'Open', ic: 'folder', on: () => ctx.go(driveHref(space, item.id)) } : { label: href ? 'Open' : 'Download', ic: href ? 'arrow' : 'download', on: () => (href ? ctx.go(href) : download(item)) },
+      isFolder ? null : { label: 'Details', ic: 'info', on: () => details(item) },
+      mutable ? { label: 'Rename', ic: 'edit', on: () => rename(item, isFolder) } : null, mutable ? { label: 'Move', ic: 'move', on: () => moveDialog([isFolder ? { folder: item } : { file: item }]) } : null,
+      mutable ? { label: 'Move to Trash', ic: 'trash', danger: true, on: () => (isFolder ? trashFolder(item) : trashMany([item])) } : null], `Actions for ${item.name}`);
   }
   function rename(item, isFolder) {
     const f = field({ id: 'dr-name', label: 'Name', value: item.name, maxlength: 200 });
@@ -101,7 +162,7 @@ export function driveView({ api, ctx, route }) {
       const r = await api.call(isFolder ? 'drive.folders.update' : 'drive.files.update', { id: item.id, name: n }); if (!r.ok) { fail(r, 'rename that'); return false; } toast('Renamed.'); load(); } }, { label: 'Cancel' }] });
   }
   async function moveDialog(items) {
-    const r = await api.call('drive.folders.list', { space }); const all = [];
+    const r = await api.call('drive.folders.list', { space });
     // one level at a time would need many calls; list the folders at the top and inside the current folder
     const inCurrent = folderId ? await api.call('drive.folders.list', { space, parent: folderId }) : { ok: true, data: [] };
     const ids = new Set(items.filter((x) => x.folder).map((x) => x.folder.id));
@@ -120,12 +181,10 @@ export function driveView({ api, ctx, route }) {
     dialog({ title: `Move “${d.name}” to the Trash?`, body: h('p', {}, 'The folder leaves the list. Files inside it stay where they are and keep their place if you restore the folder.'), actions: [{ label: 'Move to Trash', cls: 'primary', on: async () => { const r = await api.call('drive.folders.archive', { id: d.id }); if (!r.ok) { fail(r, 'move that to the Trash'); return false; } toast('Moved to the Trash.'); load(); } }, { label: 'Cancel', focus: true }] });
   }
 
-  // ---------------------------------------------------------------- New, upload
-  function newMenu() {
-    const make = (label, ic, fn, extra = {}) => ({ label, on: fn, ...extra });
-    dialog({ title: 'New', body: h('p', { class: 'fine muted' }, 'Create something here, or drop files anywhere on this page.'), actions: [
-      make('Folder', 'folder', newFolder), make('Document', 'doc', () => newFile('Document', DOC_MIME, serialize(emptyDoc()))), make('Spreadsheet', 'doc', () => newFile('Spreadsheet', SHEET_MIME, serializeBook(emptyBook()))),
-      make('Upload files', 'drv', () => picker.click()), { label: 'Close', focus: true }] });
+  // ---------------------------------------------------------------- New
+  function newMenu(anchor) {
+    popMenu(anchor, [{ label: 'Folder', ic: 'folder', on: newFolder }, { label: 'Document', ic: 'doc', on: () => newFile('Document', DOC_MIME, serialize(emptyDoc())) }, { label: 'Spreadsheet', ic: 'table', on: () => newFile('Spreadsheet', SHEET_MIME, serializeBook(emptyBook())) },
+      { label: 'Upload files', ic: 'upload', on: () => picker.click() }, { label: 'Upload folder', ic: 'upload', on: pickFolder }], 'New');
   }
   function newFolder() {
     const f = field({ id: 'nf-name', label: 'Folder name', value: 'New folder', maxlength: 200 });
@@ -138,34 +197,117 @@ export function driveView({ api, ctx, route }) {
       const r = await api.call('drive.files.create', { space, name: n, kind: 'document', mime_type: mime, body, ...(folderId ? { folder: folderId } : {}) }); if (!r.ok) { fail(r, 'add files'); return false; }
       ctx.go(openHref(r.data[0])); } }, { label: 'Cancel' }] });
   }
-  const picker = h('input', { type: 'file', multiple: true, class: 'sr', tabindex: '-1', 'aria-hidden': 'true' }); picker.addEventListener('change', () => { upload([...picker.files]); picker.value = ''; });
-  const progress = h('div', { class: 'drv-progress', role: 'status', 'aria-live': 'polite' });
-  async function upload(files) {
-    if (!canWrite) return toast('You can’t add files here.', false);
-    for (const file of files) {
-      const row = h('div', { class: 'drv-up' }, h('span', {}, file.name), h('progress', { max: '100', value: '0', 'aria-label': `Uploading ${file.name}` })); progress.append(row);
-      try {
-        const s = await api.call('drive.uploads.sign', { space, name: file.name, size_bytes: Math.max(1, file.size), mime_type: file.type || 'application/octet-stream' });
-        if (!s.ok || !s.data[0]) throw new Error(s.status === 422 ? 'The storage limit is reached.' : 'Not allowed here.');
-        await put2(s.data[0], file, (p) => { row.querySelector('progress').value = p; });
-        const c = await api.call('drive.files.create', { space, name: file.name, kind: 'file', mime_type: file.type || 'application/octet-stream', size_bytes: Math.max(1, file.size), storage_path: s.data[0].path, ...(folderId ? { folder: folderId } : {}) });
-        if (!c.ok) throw new Error('The file was uploaded but could not be added.');
-        row.replaceChildren(h('span', {}, `${file.name} · done`));
-      } catch (e) { row.replaceChildren(h('span', { class: 'err' }, `${file.name} · ${e.message}`)); }
-    }
-    setTimeout(() => progress.replaceChildren(), 4000); if (live()) load();
+
+  // ---------------------------------------------------------------- uploads: queue, progress panel, retry, cancel
+  const picker = h('input', { type: 'file', multiple: true, class: 'sr', tabindex: '-1', 'aria-hidden': 'true' }); picker.addEventListener('change', () => { upload([...picker.files].map((file) => ({ file, rel: [] }))); picker.value = ''; });
+  function pickFolder() {     // created on demand so the page keeps a single file input
+    const i = document.createElement('input'); i.type = 'file'; i.multiple = true; i.webkitdirectory = true;
+    i.addEventListener('change', () => { upload([...i.files].map((file) => ({ file, rel: String(file.webkitRelativePath || '').split('/').slice(0, -1) }))); });
+    i.click();
   }
-  const put2 = (target, file, onP) => new Promise((resolve, reject) => {
-    const x = new XMLHttpRequest(); x.open(target.method || 'PUT', target.url); for (const [k, v] of Object.entries(target.headers ?? {})) x.setRequestHeader(k, v);
-    x.upload.onprogress = (e) => { if (e.lengthComputable) onP(Math.round((100 * e.loaded) / e.total)); };
-    x.onload = () => (x.status >= 200 && x.status < 300 ? resolve() : reject(new Error('The upload failed.'))); x.onerror = () => reject(new Error('The upload failed.')); x.send(file);
+  const up = { items: [], seq: 0, running: 0, usage: undefined, folders: new Map(), hideTimer: null };
+  const panel = h('section', { class: 'drv-up-panel', role: 'region', 'aria-label': 'Uploads', hidden: true });
+  const panelHead = h('div', { class: 'up-head' }); const panelBar = h('progress', { class: 'up-all', max: '100', value: '0', 'aria-label': 'Overall upload progress' }); const panelRows = h('ul', { class: 'up-rows' });
+  panel.append(panelHead, panelBar, panelRows);
+  const isLive = (i) => i.status === 'queued' || i.status === 'working';
+  function paintPanel() {
+    const items = up.items; panel.hidden = items.length === 0; if (!items.length) return;
+    const total = items.reduce((s, i) => s + (i.status === 'cancelled' ? 0 : Math.max(1, i.file.size)), 0); const done = items.reduce((s, i) => s + (i.status === 'cancelled' ? 0 : i.status === 'done' ? Math.max(1, i.file.size) : Math.min(i.loaded, i.file.size)), 0);
+    const pct = total ? Math.round((100 * done) / total) : 100; const n = (s) => items.filter((i) => i.status === s).length; const active = items.filter(isLive).length; const errs = n('error');
+    panelBar.value = pct; panelBar.hidden = !active;
+    const ended = items.length - active; const title = active ? `Uploading ${Math.min(ended + 1, items.length - n('cancelled'))} of ${items.length - n('cancelled')} · ${pct}%` : errs ? `${errs} upload${errs === 1 ? '' : 's'} did not finish` : n('done') ? `${n('done')} file${n('done') === 1 ? '' : 's'} uploaded` : 'Uploads stopped';
+    put(panelHead, h('b', { 'data-up-title': true }, title), h('span', { class: 'up-acts' }, active ? btn('Cancel all', cancelAll, 'quiet') : null, active ? null : btn('Clear', clearPanel, 'quiet')));
+    const keep = new Set(items.map((i) => i.id));
+    for (const el of [...panelRows.children]) if (!keep.has(el.dataset.id)) el.remove();
+    items.forEach((i, ix) => { let el = panelRows.children[ix]; if (!el || el.dataset.id !== i.id) { const fresh = rowUp(i); el ? panelRows.insertBefore(fresh, el) : panelRows.append(fresh); el = fresh; } updRow(el, i); });
+  }
+  const rowUp = (i) => h('li', { class: 'up-row', 'data-id': i.id }, ftile({ name: i.file.name, mime_type: i.file.type, kind: 'file' }), h('div', { class: 'up-main' }, h('span', { class: 'up-name', title: i.file.name }, i.rel.length ? `${i.rel.join('/')}/${i.file.name}` : i.file.name), h('span', { class: 'up-state fine' }), h('progress', { max: '100', value: '0', 'aria-label': `Uploading ${i.file.name}` })), h('span', { class: 'up-btns' }));
+  function updRow(el, i) {
+    el.dataset.status = i.status; const st = el.querySelector('.up-state'); const pr = el.querySelector('progress'); const bt = el.querySelector('.up-btns');
+    const msg = i.status === 'queued' ? 'Waiting…' : i.status === 'working' ? `${formatSize(i.file.size)} · ${Math.round(i.pct)}%` : i.status === 'done' ? `${formatSize(i.file.size)} · done` : i.status === 'cancelled' ? 'Cancelled' : i.error?.message ?? 'Failed';
+    if (st.textContent !== msg) st.textContent = msg; st.classList.toggle('err', i.status === 'error'); pr.hidden = i.status !== 'working' && i.status !== 'queued'; pr.value = i.pct;
+    if (el.dataset.btn !== `${i.status}${i.error?.retryable}`) { el.dataset.btn = `${i.status}${i.error?.retryable}`; bt.replaceChildren(
+      ...(isLive(i) ? [h('button', { type: 'button', class: 'btn quiet up-x', 'aria-label': `Cancel upload of ${i.file.name}`, title: 'Cancel', onclick: () => cancelItem(i) }, icon('x'))]
+        : i.status === 'done' ? [] : [...(i.status === 'cancelled' || i.error?.retryable ? [h('button', { type: 'button', class: 'btn ghost up-retry', 'aria-label': `Retry ${i.file.name}`, onclick: () => retryItem(i) }, 'Retry')] : []), h('button', { type: 'button', class: 'btn quiet up-x', 'aria-label': `Dismiss ${i.file.name}`, title: 'Dismiss', onclick: () => { up.items = up.items.filter((x) => x !== i); paintPanel(); } }, icon('x'))])); }
+  }
+  const clearPanel = () => { up.items = []; paintPanel(); };
+  const cancelItem = (i) => { if (i.status === 'working') { i.cancelled = true; i.xhr?.abort(); } else if (i.status === 'queued') { i.status = 'cancelled'; } paintPanel(); };
+  const cancelAll = () => { for (const i of up.items) if (isLive(i)) cancelItem(i); };
+  const retryItem = (i) => { i.status = 'queued'; i.error = null; i.pct = 0; i.loaded = 0; i.cancelled = false; paintPanel(); pump(); };
+  const fail2 = (i, e) => { i.status = 'error'; i.error = e; i.pct = 0; };
+
+  async function usageOnce() { if (up.usage === undefined) { const r = await api.call('storage.usage', {}); up.usage = r.ok && r.data?.[0] ? r.data[0] : null; } return up.usage; }
+  async function upload(entries, targetFolder = folderId) {
+    if (!canWrite) return toast('You can’t add files here.', false);
+    entries = entries.filter((e) => e.file); if (!entries.length) return;
+    clearTimeout(up.hideTimer); up.items = up.items.filter((i) => i.status !== 'done'); up.usage = undefined;
+    const added = entries.map(({ file, rel }) => ({ id: `u${++up.seq}`, file, rel, parent: targetFolder, status: 'queued', pct: 0, loaded: 0, error: null, xhr: null, stored: null }));
+    up.items.push(...added); paintPanel();
+    const usage = await usageOnce(); const checks = precheckUploads(added.map((i) => i.file.size), usage);
+    added.forEach((i, ix) => { if (checks[ix]) fail2(i, { ...checks[ix], retryable: false }); }); paintPanel(); pump();
+  }
+  function pump() {
+    while (up.running < 3) { const next = up.items.find((i) => i.status === 'queued'); if (!next) break; next.status = 'working'; up.running += 1; runItem(next).finally(() => { up.running -= 1; paintPanel(); pump(); }); }
+    if (!up.running && !up.items.some(isLive)) finished();
+  }
+  function finished() {
+    if (up.items.some((i) => i.status === 'done') && live() && !up.refreshed) { up.refreshed = true; load(); }
+    if (!up.items.some((i) => i.status === 'error' || i.status === 'cancelled')) { clearTimeout(up.hideTimer); up.hideTimer = setTimeout(() => { if (!up.items.some(isLive)) clearPanel(); }, 4000); }
+  }
+  /** Finds or makes the folder `name` inside `parent` (same name = same folder), remembering the answer for the rest of the drop. */
+  function ensureFolder(parent, name) {
+    const key = `${parent ?? ''}/${name.toLowerCase()}`; if (up.folders.has(key)) return up.folders.get(key);
+    const p = (async () => {
+      const l = await api.call('drive.folders.list', { space, ...(parent ? { parent } : {}) }); const hit = l.ok && l.data.find((d) => d.name.toLowerCase() === name.toLowerCase()); if (hit) return { id: hit.id };
+      const c = await api.call('drive.folders.create', { space, name, ...(parent ? { parent } : {}) }); return c.ok && c.data?.[0] ? { id: c.data[0].id } : { error: classifyUploadError('create', c) };
+    })(); up.folders.set(key, p); p.then((r) => { if (r.error) up.folders.delete(key); }); return p;
+  }
+  async function runItem(i) {
+    up.refreshed = false; const { file } = i; const mime = file.type || 'application/octet-stream'; const size = Math.max(1, file.size);
+    try {
+      let parent = i.parent;
+      for (const name of i.rel) { const r = await ensureFolder(parent, name); if (r.error) return fail2(i, r.error); parent = r.id; }
+      if (!i.stored) {
+        const s = await api.call('drive.uploads.sign', { space, name: file.name, size_bytes: size, mime_type: mime });
+        if (!s.ok || !s.data?.[0]) return fail2(i, classifyUploadError('sign', s, { size }));
+        const r = await putBytes(i, s.data[0], file); if (r.cancelled) { i.status = 'cancelled'; return; } if (r.error) return fail2(i, r.error);
+        i.stored = s.data[0].path;
+      }
+      const c = await api.call('drive.files.create', { space, name: file.name, kind: 'file', mime_type: mime, size_bytes: size, storage_path: i.stored, ...(parent ? { folder: parent } : {}) });
+      if (!c.ok) return fail2(i, classifyUploadError('create', c, { size }));
+      i.status = 'done'; i.pct = 100; i.loaded = file.size;
+    } catch { fail2(i, { kind: 'failed', message: 'Something went wrong while uploading. Try again.', retryable: true }); }
+  }
+  const putBytes = (i, target, file) => new Promise((resolve) => {
+    const x = new XMLHttpRequest(); i.xhr = x; x.open(target.method || 'PUT', target.url); for (const [k, v] of Object.entries(target.headers ?? {})) x.setRequestHeader(k, v);
+    let raf = 0; x.upload.onprogress = (e) => { if (!e.lengthComputable) return; i.loaded = e.loaded; i.pct = (100 * e.loaded) / e.total; if (!raf) raf = requestAnimationFrame(() => { raf = 0; paintPanel(); }); };
+    x.onload = () => resolve(x.status >= 200 && x.status < 300 ? {} : { error: classifyUploadError('put', { status: x.status }) });
+    x.onerror = () => resolve({ error: classifyUploadError('put', { status: 0 }) }); x.onabort = () => resolve({ cancelled: true }); x.ontimeout = () => resolve({ error: classifyUploadError('put', { status: 0 }) });
+    x.send(file);
   });
+
+  // ---------------------------------------------------------------- drag and drop: files, whole folders, or onto a folder in the list
+  const readAll = (reader) => new Promise((ok, no) => { const all = []; const go = () => reader.readEntries((b) => { if (!b.length) ok(all); else { all.push(...b); go(); } }, no); go(); });
+  async function walk(entry, rel, out) {
+    if (entry.isFile) { const file = await new Promise((ok, no) => entry.file(ok, no)); out.push({ file, rel }); }
+    else if (entry.isDirectory) { const kids = await readAll(entry.createReader()); if (!kids.length) out.push({ dir: [...rel, entry.name] }); for (const k of kids) await walk(k, [...rel, entry.name], out); }
+  }
+  async function dropped(dt, targetFolder) {
+    const entries = [...(dt.items ?? [])].map((it) => it.webkitGetAsEntry?.()).filter(Boolean);    // must be read synchronously, before the event ends
+    if (!entries.length || !entries.some((e) => e.isDirectory)) return upload([...dt.files].map((file) => ({ file, rel: [] })), targetFolder);
+    const out = []; try { for (const e of entries) await walk(e, [], out); } catch { toast('Some of the dropped items could not be read.', false); }
+    for (const d of out.filter((x) => x.dir)) { let parent = targetFolder; for (const n of d.dir) { const r = await ensureFolder(parent, n); if (r.error) { toast(r.error.message, false); break; } parent = r.id; } }
+    if (out.some((x) => x.dir) && live()) load();
+    const files = out.filter((x) => x.file); if (files.length) upload(files, targetFolder);
+  }
   const dropZone = () => {
-    let depth = 0; const hint = h('div', { class: 'drv-drop', hidden: true, 'aria-hidden': 'true' }, 'Drop files to upload'); root.append(hint);
-    root.addEventListener('dragenter', (e) => { if (!e.dataTransfer?.types?.includes('Files')) return; depth += 1; hint.hidden = false; });
-    root.addEventListener('dragover', (e) => { if (e.dataTransfer?.types?.includes('Files')) e.preventDefault(); });
-    root.addEventListener('dragleave', () => { depth = Math.max(0, depth - 1); if (!depth) hint.hidden = true; });
-    root.addEventListener('drop', (e) => { if (!e.dataTransfer?.files?.length) return; e.preventDefault(); depth = 0; hint.hidden = true; upload([...e.dataTransfer.files]); });
+    let depth = 0; const hint = h('div', { class: 'drv-drop', hidden: true, 'aria-hidden': 'true' }, h('span', {}, 'Drop files or folders to upload')); root.append(hint);
+    const isFiles = (e) => e.dataTransfer?.types?.includes('Files'); const folderEl = (e) => e.target.closest?.('[data-drop-folder]');
+    const clearHot = () => root.querySelectorAll('.drop-hot').forEach((x) => x.classList.remove('drop-hot'));
+    root.addEventListener('dragenter', (e) => { if (!isFiles(e)) return; depth += 1; hint.hidden = !canWrite; });
+    root.addEventListener('dragover', (e) => { if (!isFiles(e)) return; e.preventDefault(); clearHot(); const f = folderEl(e); if (f && canWrite) { f.classList.add('drop-hot'); hint.classList.add('over-folder'); } else hint.classList.remove('over-folder'); });
+    root.addEventListener('dragleave', () => { depth = Math.max(0, depth - 1); if (!depth) { hint.hidden = true; clearHot(); } });
+    root.addEventListener('drop', (e) => { if (!isFiles(e)) return; e.preventDefault(); depth = 0; hint.hidden = true; hint.classList.remove('over-folder'); const f = folderEl(e); clearHot(); dropped(e.dataTransfer, f?.dataset.dropFolder ?? folderId); });
   };
 
   // ---------------------------------------------------------------- details drawer
@@ -173,8 +315,8 @@ export function driveView({ api, ctx, route }) {
     const tab = { cur: 'details' }; const body = h('div', {});
     const draw = async () => {
       if (tab.cur === 'details') {
-        const canLib = f.space === 'shared' && f.managed_by && ctx.can('drive.file.edit');
-        put(body, h('dl', { class: 'drv-dl' }, ...[['Type', kindOf(f)], ['Size', size(f.size_bytes)], ['Version', String(f.current_version)], ['Location', f.space === 'personal' ? 'Personal' : f.space === 'client' ? 'A client’s own space' : `${ctx.orgName} library`], ['Added', when(f.created_at)], ['Updated', when(f.updated_at)], ['Belongs to', f.managed_by ? `the ${f.managed_by.replace(/_/g, ' ')} app` : 'Drive']].flatMap(([k, v]) => [h('dt', {}, k), h('dd', {}, v)])),
+        const canLib = f.space === 'shared' && f.managed_by && ctx.can('drive.file.edit'); const prev = isImage(f) ? art(f, true) : null;
+        put(body, prev ? h('div', { class: 'drv-prev' }, prev) : null, h('dl', { class: 'drv-dl' }, ...[['Type', fileType(f).name], ['Size', formatSize(f.size_bytes)], ['Version', String(f.current_version)], ['Location', f.space === 'personal' ? 'Personal' : f.space === 'client' ? 'A client’s own space' : `${ctx.orgName} library`], ['Added', when(f.created_at)], ['Updated', when(f.updated_at)], ['Belongs to', f.managed_by ? `the ${f.managed_by.replace(/_/g, ' ')} app` : 'Drive']].flatMap(([k, v]) => [h('dt', {}, k), h('dd', {}, v)])),
           f.protected_sop ? notice('info', 'lock', 'This is an approved SOP. It is protected: only owners change it.') : null,
           f.managed_by && f.space === 'shared' ? h('div', { class: 'fld' }, h('label', {}, h('input', { type: 'checkbox', checked: f.in_library, ...(canLib ? {} : { disabled: true }), onchange: async (e) => { const r = await api.call('drive.files.setLibrary', { id: f.id, in_library: e.target.checked }); if (!r.ok) { e.target.checked = !e.target.checked; fail(r, 'change that'); } else { f = { ...f, in_library: e.target.checked }; toast(e.target.checked ? 'Added to the library.' : 'Removed from the library.'); load(); } } }), ' Show in the library'),
             h('p', { class: 'fine muted' }, 'This file belongs to another app and is stored safely either way. Showing it here does not move it.')) : null);
@@ -183,38 +325,38 @@ export function driveView({ api, ctx, route }) {
           : h('div', {}, h('p', {}, f.space === 'personal' ? 'Only you can open your personal files. Administrators cannot, except through a logged emergency access that names a reason and tells you.' : `Everyone in ${ctx.orgName} with Drive access can open this file. What each person can change follows their access level in Admin.`), h('p', { class: 'fine muted' }, 'Share links need a public viewer page, which arrives with the Client Portal.')));
       } else {
         put(body, skeleton(2)); const r = await api.call('drive.files.versions', { file: f.id }); if (!live()) return;
-        put(body, r.ok ? h('ul', { class: 'rows' }, ...r.data.map((x) => h('li', {}, h('div', {}, h('b', {}, `Version ${x.version}${x.version === f.current_version ? ' · newest' : ''}`), h('div', { class: 'fine muted' }, `${when(x.created_at)}${x.note ? ` · ${x.note}` : ''}`)), f.kind === 'file' ? btn('Download', async () => { const d = await api.call('drive.files.download', { id: f.id, version: x.version }); if (d.ok && d.data[0]) window.open(d.data[0].url, '_blank', 'noopener'); else fail(d, 'download that'); }, 'link') : null))) : errorState(draw));
+        put(body, r.ok ? h('ul', { class: 'drv-vers' }, ...r.data.map((x) => h('li', {}, h('div', {}, h('b', {}, `Version ${x.version}${x.version === f.current_version ? ' · newest' : ''}`), h('div', { class: 'fine muted' }, `${when(x.created_at)}${x.note ? ` · ${x.note}` : ''}`)), f.kind === 'file' ? btn(['Download', srOnly(` version ${x.version}`)], async () => { const d = await api.call('drive.files.download', { id: f.id, version: x.version }); if (d.ok && d.data[0]) window.open(d.data[0].url, '_blank', 'noopener'); else fail(d, 'download that'); }, 'ghost') : null))) : errorState(draw));
         if (r.ok && f.kind === 'document') body.append(h('p', { class: 'fine muted' }, 'To restore an older version, open the file and use History.'));
       }
     };
-    const strip = h('div', { class: 'tabs', role: 'tablist', 'aria-label': 'Details' }, ...[['details', 'Details'], ['sharing', 'Sharing'], ['versions', 'Versions']].map(([k, l]) => h('button', { type: 'button', role: 'tab', 'aria-selected': String(k === tab.cur), 'data-k': k, onclick: (e) => { tab.cur = k; strip.querySelectorAll('[role=tab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.k === k))); draw(); } }, l)));
+    const strip = h('div', { class: 'tabs', role: 'tablist', 'aria-label': 'Details' }, ...[['details', 'Details'], ['sharing', 'Sharing'], ['versions', 'Versions']].map(([k, l]) => h('button', { type: 'button', role: 'tab', 'aria-selected': String(k === tab.cur), 'data-k': k, onclick: () => { tab.cur = k; strip.querySelectorAll('[role=tab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.k === k))); draw(); } }, l)));
     drawer({ title: f.name, label: `Details of ${f.name}`, body: [strip, body], actions: [{ label: 'Close', cls: 'primary' }] }); draw();
   }
 
   // ---------------------------------------------------------------- recent, trash
+  const itemRow = (it, isFolder, ...end) => h('li', { class: 'drv-it' }, isFolder ? folderTile() : ftile(it), h('div', { class: 'drv-it-main' }, openHref(it) && !isFolder ? h('a', { class: 'pj-title', href: openHref(it), title: it.name }, it.name) : h('span', { class: 'pj-title', title: it.name }, it.name), h('span', { class: 'drv-sub on' }, end[0])), h('span', { class: 'drv-it-acts' }, ...end.slice(1)));
   async function recent() {
     const [a, b] = await Promise.all([api.call('drive.files.list', { space: 'shared', anywhere: true }), api.call('drive.files.list', { space: 'personal', anywhere: true })]); if (!live()) return;
     const files = [...(a.ok ? a.data : []), ...(b.ok ? b.data : [])].sort((x, y) => new Date(y.updated_at) - new Date(x.updated_at)).slice(0, 25);
     state.files = files; state.folders = [];
-    put(main, head('Recent', 'The files you can open that changed most recently.'), files.length ? h('div', { class: 'card' }, h('ul', { class: 'rows' }, ...files.map((f) => h('li', {}, icon(iconOf(f)), openHref(f) ? h('a', { class: 'pj-title', href: openHref(f) }, f.name) : h('button', { type: 'button', class: 'linklike pj-title', onclick: () => download(f) }, f.name), h('span', { class: 'fine muted' }, `${kindOf(f)} · ${f.space === 'personal' ? 'Personal' : ctx.orgName} · ${when(f.updated_at)}`))))) : emptyState({ title: 'Nothing recent', body: 'Files you add or change appear here.', ic: 'clock' }));
+    put(main, head('Recent', 'The files you can open that changed most recently.'), files.length ? h('ul', { class: 'drv-items card' }, ...files.map((f) => itemRow(f, false, `${fileType(f).name} · ${f.space === 'personal' ? 'Personal' : ctx.orgName} · ${when(f.updated_at)}`, openHref(f) ? null : btn(['Download', srOnly(` ${f.name}`)], () => download(f), 'ghost')))) : emptyState({ title: 'Nothing recent', body: 'Files you add or change appear here.', ic: 'clock' }));
   }
   async function trash() {
     const [fi, fo, fp, fop] = await Promise.all([api.call('drive.files.list', { space: 'shared', anywhere: true, archived: true }), api.call('drive.folders.list', { space: 'shared', archived: true }), api.call('drive.files.list', { space: 'personal', anywhere: true, archived: true }), api.call('drive.folders.list', { space: 'personal', archived: true })]); if (!live()) return;
     const rows = [...(fo.ok ? fo.data : []), ...(fop.ok ? fop.data : [])].map((d) => ({ folder: d })).concat([...(fi.ok ? fi.data : []), ...(fp.ok ? fp.data : [])].map((f) => ({ file: f })));
     const canDelete = ctx.canAnywhere('drive.file.delete_any') || ctx.can('drive.file.delete_any');
     put(main, head('Trash', 'Items you moved to the Trash. Restoring puts them back where they were.'),
-      rows.length ? h('div', { class: 'card' }, h('ul', { class: 'rows' }, ...rows.map((r) => { const it = r.folder ?? r.file; return h('li', {}, icon(r.folder ? 'folder' : iconOf(it)), h('span', { class: 'pj-title' }, it.name), h('span', { class: 'fine muted' }, when(it.archived_at)),
-        canWrite ? btn(['Restore', h('span', { class: 'sr' }, ` ${it.name}`)], async () => { const x = await api.call(r.folder ? 'drive.folders.restore' : 'drive.files.restore', { id: it.id }); if (x.ok) { toast('Restored.'); trash(); } else fail(x, 'restore that'); }, 'link') : null,
-        canDelete ? btn(['Delete for good', h('span', { class: 'sr' }, ` ${it.name}`)], () => dialog({ title: `Delete “${it.name}” for good?`, body: notice('err', 'warn', [h('b', {}, 'This can’t be undone.'), ' The item and all its versions are removed.']), actions: [{ label: 'Delete for good', cls: 'dng', on: async () => { const x = await api.call(r.folder ? 'drive.folders.delete' : 'drive.files.delete', { id: it.id }); if (!x.ok) { fail(x, 'delete that'); return false; } toast('Deleted for good.', false); trash(); } }, { label: 'Cancel', focus: true }] }), 'link') : null); }))) : emptyState({ title: 'The Trash is empty', body: 'Things you move to the Trash wait here until someone deletes them for good.', ic: 'trash' }));
+      rows.length ? h('ul', { class: 'drv-items card' }, ...rows.map((r) => { const it = r.folder ?? r.file;
+        return itemRow(it, !!r.folder, `${r.folder ? 'Folder' : fileType(it).name} · deleted ${when(it.archived_at)}`,
+          canWrite ? h('button', { type: 'button', class: 'btn ghost', 'aria-label': `Restore ${it.name}`, onclick: async () => { const x = await api.call(r.folder ? 'drive.folders.restore' : 'drive.files.restore', { id: it.id }); if (x.ok) { toast('Restored.'); trash(); } else fail(x, 'restore that'); } }, 'Restore') : null,
+          canDelete ? h('button', { type: 'button', class: 'btn quiet drv-del', 'aria-label': `Delete ${it.name} for good`, onclick: () => dialog({ title: `Delete “${it.name}” for good?`, body: notice('err', 'warn', [h('b', {}, 'This can’t be undone.'), ' The item and all its versions are removed.']), actions: [{ label: 'Delete for good', cls: 'dng', on: async () => { const x = await api.call(r.folder ? 'drive.folders.delete' : 'drive.files.delete', { id: it.id }); if (!x.ok) { fail(x, 'delete that'); return false; } toast('Deleted for good.', false); trash(); } }, { label: 'Cancel', focus: true }] }) }, 'Delete for good') : null); })) : emptyState({ title: 'The Trash is empty', body: 'Things you move to the Trash wait here until someone deletes them for good.', ic: 'trash' }));
   }
   const head = (title, sub, ...acts) => h('div', { class: 'pj-head' }, h('div', {}, h('div', { class: 'crumbs fine' }, 'Drive'), h('h1', { 'data-page-title': true }, title), sub ? h('p', { class: 'sub' }, sub) : null), acts.filter(Boolean).length ? h('div', { class: 'pj-actions' }, ...acts) : null);
 
   // ---------------------------------------------------------------- shell
-  const search = h('input', { type: 'search', placeholder: 'Search the library', 'aria-label': 'Search files', autocomplete: 'off' }); let t = null;
-  search.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { state.q = search.value.trim(); load(); }, 250); });
-  const filesShell = () => { put(main, head(space === 'personal' ? 'Personal' : 'Drive', space === 'personal' ? 'Only you can open these files.' : `The ${ctx.orgName} library: files and documents the whole team can find. Project and client files stay with their own app.`, canWrite ? btn('New', newMenu, 'primary') : null),
-    !canWrite ? readOnlyNotice('You can look at the library but not add to it', '') : null, crumb, h('div', { class: 'toolbar' }, inp(search), typeSel), bar, list, progress); };
-  put(root, h('div', { class: 'pj-grid' }, main), picker); dropZone();     // the spaces live in the app's side rail (appnav.js)
+  const filesShell = () => { put(main, head(space === 'personal' ? 'Personal' : 'Drive', space === 'personal' ? 'Only you can open these files.' : `The ${ctx.orgName} library: files and documents the whole team can find. Project and client files stay with their own app.`, canWrite ? btn('New', (e) => newMenu(e.currentTarget), 'primary') : null),
+    !canWrite ? readOnlyNotice('You can look at the library but not add to it', '') : null, crumb, h('div', { class: 'toolbar drv-tools' }, inp(search), typeSel, h('span', { class: 'drv-sortbox' }, sortSel, dirBtn), modes), bar, list); };
+  put(root, h('div', { class: 'pj-grid' }, main), picker, panel); dropZone();
   if (view === 'files') filesShell();
   load();
   return root;
