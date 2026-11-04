@@ -134,7 +134,7 @@ await page.keyboard.type('form'); const found = await page.locator('.tile').eval
 await page.keyboard.press('Enter'); await wait('Form Builder: coming soon'); await page.getByRole('button', { name: 'Got it' }).click();
 check('V5', 'Find an app shows only matching apps; a search with no match says so', found.join() === 'forms' && (await (async () => { await page.fill('#app-find', 'zzzz'); return page.getByText('No app matches').count(); })()) === 1);
 await page.fill('#app-find', ''); await page.keyboard.press('Escape');
-await page.goto(`${base}/#/office`); await wait('Your work in'); await page.locator('#app-switcher').click();
+await page.goto(`${base}/#/office`); await wait('Your work in'); await page.locator('#app-switcher:visible, #app-switcher-m:visible').first().click();
 const swApps = await page.locator('#apps-menu .appitem').evaluateAll((els) => els.map((e) => e.dataset.app));
 check('V6', 'The app switcher offers Back to Launcher and the apps this person may open here (not the locked or coming-soon ones)', (await page.locator('#apps-menu .back').innerText()).includes('Back to Launcher') && swApps.includes('office') && !swApps.includes('portal') && !swApps.includes('forms'), swApps.join());
 await page.keyboard.press('Escape'); await page.goto(`${base}/#/launcher`); await wait('The sky follows your time of day');
@@ -181,6 +181,7 @@ await page.goBack(); await page.reload(); await wait('The sky follows your time 
   // formatting through the toolbar: select a word and make a heading + bold
   await editor().click(); await page.keyboard.press('Control+End'); await page.keyboard.press('Enter');
   await page.locator('select[aria-label="Text style"]').selectOption('h2'); await page.keyboard.type('Added heading'); const boldOff = true;
+  await page.waitForFunction(() => [...document.querySelectorAll('.docoutline li')].some((li) => li.innerText.includes('Added heading')), null, { timeout: 8000 }).catch(() => {});
   check('D6', 'The toolbar makes a heading and the outline updates', (await page.locator('.docoutline li').allInnerTexts()).some((t) => t.includes('Added heading')) && boldOff);
   // paste is plain text only: foreign markup never enters
   await page.evaluate(() => { const el = document.querySelector('.docpage'); el.focus(); const dt = new DataTransfer(); dt.setData('text/html', '<img src=x onerror="window.__pwn=1"><b>BOLD</b>'); dt.setData('text/plain', 'plain <b>text</b>'); el.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true })); });
@@ -213,7 +214,7 @@ await page.goBack(); await page.reload(); await wait('The sky follows your time 
   check('D13', 'Restoring old text saves it as version 6 and the editor shows it; nothing is deleted', (await editor().locator('h1').innerText()) === 'Quarterly plan' && (await admin.query('select count(*)::int n from file_versions where file_id = $1', [docId])).rows[0].n === 6);
   // leaving with unsaved changes asks first
   await editor().click(); await page.keyboard.press('Control+End'); await page.keyboard.type(' unsaved');
-  await page.locator('#app-switcher').click(); await page.locator('#apps-menu .back').click();
+  await page.locator('#app-switcher:visible, #app-switcher-m:visible').first().click(); await page.locator('#apps-menu .back:visible, #apps-menu-m .back:visible').first().click();
   await wait('You have unsaved changes');
   check('D14', 'Leaving with unsaved changes opens the unsaved-changes dialog instead of losing the work', (await page.getByRole('button', { name: 'Keep editing' }).count()) === 1);
   await page.getByRole('button', { name: 'Keep editing' }).click();

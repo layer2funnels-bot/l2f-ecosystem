@@ -219,3 +219,6 @@ details.support{margin-top:12px;font-size:13px;color:var(--muted)}
 .shell:has(.ed-full) .side{display:none}
 .app:has(.ed-full) .bbar{display:none}
 .main:has(.ed-full) .content{padding:0;max-width:none}
+/* In editor mode the sidebar (and its app switcher) is hidden, so the header shows the app switcher on every screen size. */
+.main:has(.ed-full) .hdr .only-m{display:inline-grid}
+.main:has(.ed-full) .hdr .appsw{display:block}
