@@ -55,3 +55,16 @@ try {
   console.log(`INFO FMP copy: ${total} packages, ${[...flagged.values()].flat().length} outside the allowlist (review before reshaping or deploying)`);
   for (const [lic, pk] of flagged) console.log(`  ${lic}: ${[...new Set(pk)].slice(0, 6).join(', ')}${pk.length > 6 ? ', …' : ''}`);
 } catch { /* copy not present */ }
+
+// PDF viewer/editor build tree (apps/media, build-time only, bundled into the site): same allowlist.
+try {
+  const md = JSON.parse(readFileSync(new URL('../apps/media/package-lock.json', import.meta.url), 'utf8')); const mbad = []; let mn = 0;
+  for (const [path, meta] of Object.entries(md.packages || {})) {
+    if (!path) continue; mn++;
+    const lic = String(meta.license ?? 'UNKNOWN');
+    const name = path.replace(/^.*node_modules\//, '');
+    if (!lic.replace(/[()]/g, '').split(/\s+OR\s+/).some((p) => ALLOW.has(p.trim())) && !REVIEWED.has(name)) mbad.push(`${path.replace(/^.*node_modules\//, '')}: ${lic}`);
+  }
+  if (mbad.length) { console.log('FAIL licence check (media build tree):\n  ' + mbad.join('\n  ')); process.exit(1); }
+  console.log(`PASS licence check (media build tree): ${mn} packages, all on the allowlist`);
+} catch (e) { if (e.code !== 'ENOENT') throw e; }

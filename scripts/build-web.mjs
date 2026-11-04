@@ -14,6 +14,7 @@ const url = process.env.SUPABASE_URL || 'http://127.0.0.1:54321';
 const key = process.env.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH';
 if (/service_role|sb_secret_/i.test(key) || /^eyJ/.test(key)) { console.error('Refusing: that looks like a privileged or legacy JWT key. Use the publishable key.'); process.exit(1); }
 import { buildWhiteboard } from './build-whiteboard.mjs';
+import { buildMedia } from './build-media.mjs';
 import { buildSheetjs } from './build-sheetjs.mjs';
 const out = at('dist/web'); rmSync(out, { recursive: true, force: true }); mkdirSync(out + '/packages/core', { recursive: true });
 // Cloudflare runs only this script: it installs the editors' build-time dependencies itself (like Planner below), so the live site never ships
@@ -26,6 +27,7 @@ if (process.env.CF_PAGES) {
 }
 await buildSheetjs({ quiet: true });             // .xlsx import/export for Sheets (skipped when apps/sheetjs dependencies are not installed: CSV still works)
 await buildWhiteboard({ quiet: true });          // the editor bundle (skipped when its build-time dependencies are not installed: the board page then says so)
+await buildMedia({ quiet: true });               // pdf.js + pdf-lib for the PDF editor (skipped when apps/media dependencies are not installed: the PDF page then says so)
 cpSync(at('apps/web'), out, { recursive: true });
 // Planner (React, migration 0033): built by its own Vite config into apps/planner/dist, served at /planner/; the shell mounts /planner/embed.js at #/planner.
 // Cloudflare runs only this script, so it installs and builds Planner itself when the bundle is missing; on Cloudflare a failure stops the build

@@ -60,6 +60,8 @@ export function parseRoute(hash) {
   if (a === 'projects' && ['all', 'docs', 'dashboards', 'ai', 'workload', 'portfolio'].includes(b) && seg.length === 2) return r('projects', { view: b });
   if (a === 'projects' && b === 'p' && c && seg.length === 3) return r('projects', { view: 'project', id: c });
   if (a === 'doc' && b && seg.length === 2) return r('doc', { id: b });
+  if (a === 'image' && b && seg.length === 2) return r('image', { id: b });
+  if (a === 'pdf' && b && seg.length === 2) return r('pdf', { id: b });
   if (a === 'board' && b && seg.length === 2) return r('board', { id: b });
   if (a === 'office' && seg.length === 1) return r('office');
   if (a === 'office' && b === 'projects' && c === 'mine' && seg.length === 3) return r('office-page', { page: 'projects', view: 'mine' });
@@ -113,7 +115,7 @@ export function pageKeyFor(route) {
     case 'funnel-record': return { app: 'office', page: route.params.id === 'new' ? byKey[route.params.type].page : byKey[route.params.type].record };
     case 'admin': return { app: 'office', page: route.params.tab === 'access' ? 'admin.access' : 'admin.members' };
     case 'app': return { app: route.params.app, page: null };
-    case 'doc': case 'sheet': case 'drive': return { app: 'drive', page: null };
+    case 'doc': case 'sheet': case 'image': case 'pdf': case 'drive': return { app: 'drive', page: null };
     case 'projects': return { app: 'projects', page: null };
     case 'clients': return { app: 'clients', page: null };
     case 'portal': return { app: 'portal', page: null };

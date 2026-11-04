@@ -4,6 +4,7 @@
 import { inp, h, put, icon, btn, dialog, drawer, toast, field, notice, skeleton, emptyState, errorState, noAccessState, readOnlyNotice } from '../ui.js';
 import { emptyDoc, serialize } from './docmodel.js';
 import { emptyBook, serializeBook, MIME as SHEET_MIME } from './sheetmodel.js';
+import { mediaHref } from './mediamodel.js';
 import { emptyBoard } from './boardmodel.js';
 import { ICONS } from '../icons.js';
 import { DOC_MIME, BOARD_MIME, CORS_HINT, previewKind, fileType, matchesType, isImage, formatSize, classifyUploadError, precheckUploads, sortRows } from './driveutil.js';
@@ -26,7 +27,7 @@ const folderTile = () => h('span', { class: 'ftile folder', 'aria-hidden': 'true
 /** The one tag/chip used in Drive: never wider than its box, cut with an ellipsis, full text on hover. */
 const tag = (text, kind = '') => h('span', { class: `drv-tag${kind ? ` ${kind}` : ''}`, title: text }, text);
 const srOnly = (t) => h('span', { class: 'sr' }, t);
-export const openHref = (f) => (f.mime_type === SHEET_MIME ? `#/sheet/${f.id}` : f.mime_type === BOARD_MIME ? `#/board/${f.id}` : f.kind === 'document' ? `#/doc/${f.id}` : null);
+export const openHref = (f) => (mediaHref(f) ?? (f.mime_type === SHEET_MIME ? `#/sheet/${f.id}` : f.mime_type === BOARD_MIME ? `#/board/${f.id}` : f.kind === 'document' ? `#/doc/${f.id}` : null));
 const SORTS = [['name', 'Name'], ['modified', 'Last modified'], ['size', 'Size']];
 const TYPES = [['all', 'All types'], ['Document', 'Documents'], ['Spreadsheet', 'Spreadsheets'], ['Whiteboard', 'Whiteboards'], ['image', 'Images'], ['pdf', 'PDFs'], ['media', 'Video and audio'], ['other', 'Other files']];
 

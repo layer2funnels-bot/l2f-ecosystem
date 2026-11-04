@@ -1,0 +1,14 @@
+{
+  "name": "l2f-media-bundle",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Build-time only: bundles pdf.js (Apache-2.0) and pdf-lib (MIT) for the PDF viewer/editor into self-hosted ES modules for the web app. Not a runtime dependency of the API.",
+  "type": "module",
+  "dependencies": {
+    "pdf-lib": "1.17.1",
+    "pdfjs-dist": "4.10.38"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.10"
+  }
+}
