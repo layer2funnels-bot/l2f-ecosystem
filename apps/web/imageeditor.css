@@ -116,3 +116,4 @@
 .ix-sl input[type=range]{grid-row:2}
 @media (max-width:700px){.edx-top .edx-title{flex:1 1 40px;min-width:40px}.edx-top>.btn:not(.primary){display:none}.edx-status .ix-info{display:none}.edx-top{gap:4px;padding:4px var(--space-2)}}
 
+.edx-title{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}
