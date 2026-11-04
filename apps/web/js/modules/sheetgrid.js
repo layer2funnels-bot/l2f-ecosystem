@@ -66,7 +66,7 @@ export function createGrid(ed) {
 
   // ---- painting
   function paintHeader(el, kind, i, hot, whole) {
-    el.className = `sx-h sx-h${kind}${hot ? ' hot' : ''}${whole ? ' whole' : ''}`; el.textContent = kind === 'c' ? colName(i) : String(i + 1);
+    el.className = `sx-h sx-h${kind}${hot ? ' sx-hot' : ''}${whole ? ' sx-whole' : ''}`; el.textContent = kind === 'c' ? colName(i) : String(i + 1);
     el.setAttribute('role', kind === 'c' ? 'columnheader' : 'rowheader');
     if (kind === 'c' && ed.filterOn(i)) { /* filter dropdown lives on the header row cell of the filter, not here */ }
   }
@@ -78,13 +78,13 @@ export function createGrid(ed) {
     const eT = touchesR && mm.r1 <= rng.r1, eB = touchesR && mm.r2 >= rng.r2, eL = touchesR && mm.c1 <= rng.c1, eR = touchesR && mm.c2 >= rng.c2;
     const isAct = act && act.c >= mm.c1 && act.c <= mm.c2 && act.r >= mm.r1 && act.r <= mm.r2;
     const z = ed.zoom(); const cf = ed.cfFor(c, r, v, text); const note = ed.noteAt(key); const link = ed.linkAt(key); const dv = isAct && ed.dvAt(c, r);
-    const kind = v instanceof Object ? 'err' : typeof v === 'number' ? 'num' : typeof v === 'boolean' ? 'bool' : '';
+    const kind = v instanceof Object ? 'err' : typeof v === 'number' ? 'num' : typeof v === 'boolean' ? 'bool' : '';  const kcls = kind ? `sx-${kind}` : '';
     const fb = ed.filterBtnAt(c, r); const fill = ed.fillPoint?.(); const hasFill = fill && fill.c === c && fill.r === r;
     const flags = (touchesR ? 'R' : '') + (eT ? 'T' : '') + (eB ? 'B' : '') + (eL ? 'L' : '') + (eR ? 'r' : '') + (isAct ? 'A' : '') + (fb ? 'F' : '') + (hasFill ? 'H' : '') + (ed.matchAt(c, r) ? 'M' : '') + (dv ? 'D' : '') + (note ? 'N' : '') + (link ? 'L' : '') + z + (cf ? `${cf.fc ?? ''}${cf.bg ?? ''}` : '');
     const w = colLeft[mm.c2 + 1] - colLeft[mm.c1], hh = rowTop[mm.r2 + 1] - rowTop[mm.r1];
     const sig = `${text}|${ed.sheet().sty[key] ?? ''}|${flags}|${w}|${hh}|${kind}|${fb ?? ''}`;
     if (el._sig === sig) return; el._sig = sig;
-    el.className = `sx-c${kind ? ` ${kind}` : ''}${inR || touchesR ? ' in' : ''}${eT ? ' eT' : ''}${eB ? ' eB' : ''}${eL ? ' eL' : ''}${eR ? ' eR' : ''}${isAct ? ' act' : ''}${ed.matchAt(c, r) ? ' match' : ''}${st?.wr ? ' wrap' : ''}${link ? ' link' : ''}`;
+    el.className = `sx-c${kcls ? ` ${kcls}` : ''}${inR || touchesR ? ' sx-in' : ''}${eT ? ' sx-eT' : ''}${eB ? ' sx-eB' : ''}${eL ? ' sx-eL' : ''}${eR ? ' sx-eR' : ''}${isAct ? ' sx-act' : ''}${ed.matchAt(c, r) ? ' sx-match' : ''}${st?.wr ? ' sx-wrap' : ''}${link ? ' sx-lnk' : ''}`;
     el.setAttribute('aria-selected', isAct ? 'true' : 'false');
     const s = el.style; s.width = `${w}px`; s.height = `${hh}px`;
     s.fontSize = st?.fs || z !== 1 ? `${(st?.fs ?? 14) * z}px` : ''; s.fontWeight = st?.b ? '700' : ''; s.fontStyle = st?.i ? 'italic' : '';
@@ -96,7 +96,7 @@ export function createGrid(ed) {
     s.justifyContent = { l: 'flex-start', c: 'center', r: 'flex-end' }[ha]; s.alignItems = { t: 'flex-start', m: 'center', b: 'flex-end' }[va]; s.textAlign = { l: 'left', c: 'center', r: 'right' }[ha];
     const bd = st?.bd; const sh = []; if (bd) { const col = 'var(--text)'; if (bd.t) sh.push(`inset 0 1px 0 0 ${col}`); if (bd.b) sh.push(`inset 0 -1px 0 0 ${col}`); if (bd.l) sh.push(`inset 1px 0 0 0 ${col}`); if (bd.r) sh.push(`inset -1px 0 0 0 ${col}`); }
     s.boxShadow = sh.join(',');
-    const t = el.firstChild ?? el.appendChild(h('span', { class: 't' })); t.textContent = text;
+    const t = el.firstChild ?? el.appendChild(h('span', { class: 'sx-t' })); t.textContent = text;
     while (el.childNodes.length > 1) el.lastChild.remove();
     if (fb) el.append(h('button', { type: 'button', class: 'sx-fbtn', 'aria-label': `Filter column ${colName(c)}`, 'data-fc': String(c), title: 'Filter' }, '▾'));
     if (note) { el.append(h('i', { class: 'sx-note', 'aria-hidden': 'true' })); el.title = note; } else el.removeAttribute('title');

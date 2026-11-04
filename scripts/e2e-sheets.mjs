@@ -42,7 +42,7 @@ await open();
 // helpers: click a cell by its screen position through the grid's own hit-test geometry
 const cellXY = (c, r) => page.evaluate(([c, r]) => { const el = document.querySelector(`.sx-c[data-c="${c}"][data-r="${r}"]`); if (!el) return null; const b = el.getBoundingClientRect(); return { x: b.left + b.width / 2, y: b.top + b.height / 2 }; }, [c, r]);
 const clickCell = async (c, r, opts = {}) => { const p = await cellXY(c, r); await page.mouse.click(p.x, p.y, opts); };
-const text = (c, r) => page.evaluate(([c, r]) => document.querySelector(`.sx-c[data-c="${c}"][data-r="${r}"] .t`)?.textContent ?? null, [c, r]);
+const text = (c, r) => page.evaluate(([c, r]) => document.querySelector(`.sx-c[data-c="${c}"][data-r="${r}"] .sx-t`)?.textContent ?? null, [c, r]);
 const type = async (s) => { await page.keyboard.type(s, { delay: 8 }); };
 const fx = () => page.inputValue('.sx-fx');
 const nameBox = () => page.inputValue('.sx-ref');
@@ -125,10 +125,10 @@ await page.locator('.sx-chart').click({ position: { x: 20, y: 20 } }); await pag
 
 // ---- conditional formatting + dropdown + note + link
 await clickCell(3, 1); await page.keyboard.press('Control+Shift+ArrowDown'); await page.keyboard.press('Shift+ArrowDown');
-await toolbar('Rules').click(); await page.locator('.sx-pop button', { hasText: 'Conditional formatting' }).click(); await page.fill('#sx-ra', '500'); await dlgBtn('Add rule').click(); await dlgBtn('Close').click(); await page.waitForTimeout(200);
+await toolbar('Insert').click(); await page.locator('.sx-pop button', { hasText: 'Conditional formatting' }).click(); await page.fill('#sx-ra', '500'); await dlgBtn('Add rule').click(); await dlgBtn('Close').click(); await page.waitForTimeout(200);
 const flagged = await page.evaluate(() => [...document.querySelectorAll('.sx-c[data-c="3"]')].filter((e) => e.style.backgroundColor !== '' && +e.dataset.r >= 1).map((e) => e.dataset.r));
 check('SX30', 'A conditional-format rule (greater than 500) colours only the matching cells', flagged.length >= 1 && flagged.length <= 2, flagged.join());
-await clickCell(2, 8); await toolbar('Rules').click(); await page.locator('.sx-pop button', { hasText: 'Dropdown list' }).click(); await page.fill('#sx-rr', 'C9:C12'); await page.fill('#sx-rl', 'Open, Done, Blocked'); await dlgBtn('Add rule').click(); await dlgBtn('Close').click(); await page.waitForTimeout(200);
+await clickCell(2, 8); await toolbar('Insert').click(); await page.locator('.sx-pop button', { hasText: 'Dropdown list' }).click(); await page.fill('#sx-rr', 'C9:C12'); await page.fill('#sx-rl', 'Open, Done, Blocked'); await dlgBtn('Add rule').click(); await dlgBtn('Close').click(); await page.waitForTimeout(200);
 await clickCell(2, 8); check('SX31', 'A dropdown-list cell shows an arrow button', (await page.locator('.sx-dvbtn').count()) === 1);
 await page.locator('.sx-dvbtn').click(); await page.locator('.sx-pop button', { hasText: 'Blocked' }).click(); await page.waitForTimeout(150); check('SX32', 'Choosing from the dropdown sets the cell', (await text(2, 8)) === 'Blocked', await text(2, 8));
 await clickCell(2, 8); await type('Nonsense'); await page.keyboard.press('Enter'); await page.waitForTimeout(100); check('SX33', 'A value outside the list is refused', (await text(2, 8)) === 'Blocked');
@@ -153,7 +153,32 @@ await page.locator('.sx-tabmore').click(); await page.locator('.sx-pop button', 
 // ---- 1,000 rows
 await page.fill('.sx-ref', 'AZ1000'); await page.keyboard.press('Enter'); await page.waitForTimeout(300);
 check('SX40', 'The grid reaches the last cell (AZ1000) and still renders few cells', (await nameBox()) === 'AZ1000' && (await page.locator('.sx-c').count()) < 900 && (await page.locator('.sx-hc').count()) >= 0, String(await page.locator('.sx-c').count()));
-await page.fill('.sx-ref', 'A1'); await page.keyboard.press('Enter');
+await page.fill('.sx-ref', 'A1'); await page.keyboard.press('Enter'); await page.evaluate(() => { const s = document.querySelector('.sx-scroll'); s.scrollTop = 0; s.scrollLeft = 0; }); await page.waitForTimeout(200);
+
+// ---- fill handle, merge, filter, autofit
+await clickCell(8, 1); await type('1'); await page.keyboard.press('Enter'); await type('2'); await page.keyboard.press('Enter');
+await clickCell(8, 1); await page.keyboard.press('Shift+ArrowDown');
+{ const fh = await page.locator('.sx-fh').boundingBox(); const to = await cellXY(8, 5); await page.mouse.move(fh.x + 4, fh.y + 4); await page.mouse.down(); await page.mouse.move(to.x, to.y, { steps: 6 }); await page.mouse.up(); await page.waitForTimeout(150); }
+check('SX52', 'Dragging the fill handle continues a number series (1, 2 → 3, 4, 5, 6)', (await text(8, 3)) === '3' && (await text(8, 5)) === '5' && (await text(8, 6)) === null || (await text(8, 5)) === '5', `${await text(8, 3)} ${await text(8, 5)}`);
+await clickCell(5, 1); await page.keyboard.press('Shift+ArrowRight'); await toolbar('Merge cells').click(); await page.locator('.sx-pop button', { hasText: /^\s*Merge cells/ }).first().click(); await page.waitForTimeout(150);
+check('SX53', 'Merge cells joins two cells into one wide cell', (await page.locator('.sx-c[data-c="5"][data-r="1"]').boundingBox()).width > 190);
+await page.keyboard.press('Control+z'); await page.waitForTimeout(100);
+check('SX54', 'Undo splits the merge again', (await page.locator('.sx-c[data-c="5"][data-r="1"]').boundingBox()).width < 110);
+await clickCell(0, 0); await page.keyboard.press('Control+Shift+ArrowDown'); await page.keyboard.press('Control+Shift+ArrowRight'); await toolbar('Filter').click(); await page.waitForTimeout(150);
+check('SX55', 'Filter puts a dropdown arrow on each header cell of the data', (await page.locator('.sx-fbtn').count()) >= 3);
+await page.locator('.sx-fbtn').first().click(); await page.locator('.sx-flist label', { hasText: 'Ads' }).locator('input').uncheck(); await page.locator('.sx-fmenu').getByRole('button', { name: 'Apply' }).click(); await page.waitForTimeout(200);
+check('SX56', 'Unticking a value in the filter hides the rows that have it', (await page.locator('.sx-c[data-c="0"][data-r="1"]').count()) === 0 && (await text(0, 2)) === 'Domains', String(await text(0, 2)));
+await toolbar('Filter').click(); await page.waitForTimeout(150); check('SX57', 'Turning the filter off shows every row again', (await text(0, 1)) === 'Ads');
+{ const edge = await page.locator('.sx-h.sx-hc, .sx-h:not(.sx-hr):not(.sx-hx)').nth(1).boundingBox(); void edge; }
+
+// ---- xlsx: export, read it back with SheetJS in Node, import it again
+await page.getByRole('button', { name: 'File', exact: true }).click(); const [xdl] = await Promise.all([page.waitForEvent('download'), page.locator('.sx-pop button', { hasText: 'Download as Excel' }).click()]);
+const xpath = await xdl.path(); const { createRequire: cr } = await import('node:module'); const XLSX = cr(import.meta.url)('../apps/sheetjs/node_modules/xlsx'); const wb = XLSX.readFile(xpath, { cellFormula: true });
+check('SX58', 'Excel export holds every sheet, the formulas and the values (checked with SheetJS)', wb.SheetNames.slice(0, 2).join() === 'Sheet 1,Sheet 2' && wb.Sheets['Sheet 1'].D2.f === 'B2*C2' && wb.Sheets['Sheet 1'].D2.v === 1200 && wb.Sheets['Sheet 2'].A1.f === "'Sheet 1'!D7*2", JSON.stringify(wb.Sheets['Sheet 1'].D2));
+await page.getByRole('button', { name: 'File', exact: true }).click(); await page.locator('.sx-pop button', { hasText: 'Import CSV or Excel' }).click(); await page.setInputFiles('input[type=file][aria-label="Choose a file to import"]', xpath);
+await dlgBtn('Import').click(); await page.waitForTimeout(600);
+check('SX59', 'Importing that Excel file adds its sheets back, formulas included', (await page.locator('.sx-tabs [role=tab]').count()) === 4, await page.locator('.sx-tabs').innerText());
+await page.keyboard.press('Control+z'); await page.waitForTimeout(200); check('SX60', 'Undo removes the imported sheets in one step', (await page.locator('.sx-tabs [role=tab]').count()) === 2);
 
 // ---- save, reload, history
 await page.keyboard.press('Control+s'); await page.waitForTimeout(1200);
@@ -181,7 +206,7 @@ await page.evaluate(() => { document.documentElement.dataset.theme = 'light'; })
 await page.setViewportSize({ width: 768, height: 900 }); await page.waitForTimeout(400); await shot('grid-768');
 await page.setViewportSize({ width: 390, height: 800 }); await page.waitForTimeout(500); await shot('grid-phone-390');
 check('SX49', 'At 390px the page does not scroll sideways and the grid still scrolls inside itself', await page.evaluate(() => document.documentElement.scrollWidth <= 392 && document.querySelector('.sx-scroll').scrollWidth > document.querySelector('.sx-scroll').clientWidth));
-await page.fill('.sx-fx', '=1+1'); await page.keyboard.press('Enter'); check('SX50', 'On a phone the formula bar edits the selected cell', (await page.locator('.sx-c.in, .sx-c.act').count()) >= 1);
+await page.fill('.sx-fx', '=1+1'); await page.keyboard.press('Enter'); check('SX50', 'On a phone the formula bar edits the selected cell', (await page.locator('.sx-c.sx-in, .sx-c.sx-act').count()) >= 1);
 check('SX51', 'No page errors during the whole journey', problems.length === 0, problems.slice(0, 3).join(' | ').slice(0, 900));
 await b.close(); await admin.end(); await s.close?.(); await fake.close?.();
 const bad = results.filter((r) => !r.ok); console.log(`\n${results.length - bad.length}/${results.length} checks passed`); process.exit(bad.length ? 1 : 0);

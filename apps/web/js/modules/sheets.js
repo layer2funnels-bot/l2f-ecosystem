@@ -186,7 +186,7 @@ export function sheetView({ api, id, ctx }) {
     function startEdit(initial, opts = {}) {
       if (denied()) return; commitEditing(); const ac = activeCell(); const el = grid.editor;
       editing = { c: ac.c, r: ac.r, typed: initial !== undefined, original: rawAt(ac.c, ac.r) }; el.value = initial ?? editing.original; el.hidden = false;
-      const st = styleOf(book, sheet(), ref(ac.c, ac.r)); el.classList.toggle('wrap', Boolean(st?.wr)); grid.scrollTo(ac.c, ac.r); grid.placeEditor(ac.c, ac.r); el.focus({ preventScroll: true });
+      const st = styleOf(book, sheet(), ref(ac.c, ac.r)); el.classList.toggle('sx-wrap', Boolean(st?.wr)); grid.scrollTo(ac.c, ac.r); grid.placeEditor(ac.c, ac.r); el.focus({ preventScroll: true });
       const n = el.value.length; el.setSelectionRange(n, n); sizeEditor(); fbar.value = el.value; void opts;
     }
     function sizeEditor() {
@@ -242,7 +242,7 @@ export function sheetView({ api, id, ctx }) {
       hint.textContent = FUNCTION_DOCS[name] ? `${FUNCTION_DOCS[name][0]} — ${FUNCTION_DOCS[name][1]}` : '';
     }
     function showAc(input, m) {
-      put(acBox, ...acItems.map((n, i) => h('li', { role: 'option', 'aria-selected': String(i === acIdx), class: i === acIdx ? 'on' : '' }, h('button', { type: 'button', tabindex: '-1', onmousedown: (e) => { e.preventDefault(); acAccept(input, m, n); } }, h('b', {}, n), h('span', { class: 'fine muted' }, ` ${FUNCTION_DOCS[n][1]}`)))));
+      put(acBox, ...acItems.map((n, i) => h('li', { role: 'option', 'aria-selected': String(i === acIdx), class: i === acIdx ? 'sx-on' : '' }, h('button', { type: 'button', tabindex: '-1', onmousedown: (e) => { e.preventDefault(); acAccept(input, m, n); } }, h('b', {}, n), h('span', { class: 'fine muted' }, ` ${FUNCTION_DOCS[n][1]}`)))));
       acBox.hidden = false; acBox._m = m; acBox._input = input;
     }
     function hideAc() { acBox.hidden = true; acIdx = -1; acItems = []; }
@@ -452,7 +452,7 @@ export function sheetView({ api, id, ctx }) {
       return api2;
     })();
     const giveBack = () => setTimeout(() => { if (!popup.open && !editing && !document.querySelector('.ovl') && !findBar.contains(document.activeElement)) focusGrid(); }, 0);
-    const menuList = (items) => (close) => h('div', { class: 'sx-menu' }, ...items.map((it) => it === '-' ? h('hr', {}) : h('button', { type: 'button', role: 'menuitem', class: it.checked ? 'on' : '', disabled: it.disabled, onclick: () => { close(); it.on(); giveBack(); } }, h('span', { class: 'chk', 'aria-hidden': 'true' }, it.checked ? '✓' : ''), h('span', { class: 'lb' }, it.label), it.hint ? h('span', { class: 'fine muted hk' }, it.hint) : null)));
+    const menuList = (items) => (close) => h('div', { class: 'sx-menu' }, ...items.map((it) => it === '-' ? h('hr', {}) : h('button', { type: 'button', role: 'menuitem', class: '', disabled: it.disabled, onclick: () => { close(); it.on(); giveBack(); } }, h('span', { class: 'sx-ck', 'aria-hidden': 'true' }, it.checked ? '✓' : ''), h('span', { class: 'sx-lb' }, it.label), it.hint ? h('span', { class: 'fine muted sx-hk' }, it.hint) : null)));
     const menuBtn = (anchor, items, opts) => popup.show(anchor, menuList(items.filter(Boolean)), opts);
     function colorMenu(anchor, field, label) {
       popup.show(anchor, (close) => {
@@ -492,7 +492,7 @@ export function sheetView({ api, id, ctx }) {
 
     // ------------------------------------------------------------ charts
     const chartEls = new Map(); let chartSi = -1; let selChart = null;
-    function selectChart(id) { if (selChart === id) return; selChart = id; for (const [k, f] of chartEls) f.el.classList.toggle('sel', k === id); if (id) chartEls.get(id)?.el.focus({ preventScroll: true }); }
+    function selectChart(id) { if (selChart === id) return; selChart = id; for (const [k, f] of chartEls) f.el.classList.toggle('sx-sel', k === id); if (id) chartEls.get(id)?.el.focus({ preventScroll: true }); }
     function drawCharts() {
       if (chartSi !== si) { for (const f of chartEls.values()) f.el.remove(); chartEls.clear(); chartSi = si; selChart = null; }
       const z = zoom(); const ids = new Set(sheet().charts.map((c) => c.id));
@@ -500,7 +500,7 @@ export function sheetView({ api, id, ctx }) {
       for (const ch of sheet().charts) {
         let f = chartEls.get(ch.id); if (!f) { f = makeFrame(ch.id); chartEls.set(ch.id, f); grid.chartLayer.append(f.el); }
         const st = f.el.style; st.left = `${ch.x * z}px`; st.top = `${ch.y * z}px`; st.width = `${ch.w * z}px`; st.height = `${ch.h * z}px`; f.el.setAttribute('aria-label', `Chart: ${ch.title || ch.type}`);
-        f.el.classList.toggle('sel', selChart === ch.id); drawChart(f.svg, ch, chartData(book, si, calc, ch), ch.w * z, ch.h * z);
+        f.el.classList.toggle('sx-sel', selChart === ch.id); drawChart(f.svg, ch, chartData(book, si, calc, ch), ch.w * z, ch.h * z);
       }
     }
     function makeFrame(cid) {
@@ -651,13 +651,13 @@ export function sheetView({ api, id, ctx }) {
     const bSort = tb('Sort', svg(ICON.sort), (e) => menuBtn(e.currentTarget, [{ label: 'Sort A→Z by this column', on: () => sortSel('asc') }, { label: 'Sort Z→A by this column', on: () => sortSel('desc') }]));
     const bFilter = tb('Filter', icon('filter'), () => toggleFilter());
     const bFind = tb('Find and replace (Ctrl+F)', icon('search'), () => openFind(), { alwaysOn: true });
-    const bInsert = tb('Insert: chart, link, note', h('span', { class: 'sx-fmtlbl' }, 'Insert ▾'), (e) => menuBtn(e.currentTarget, [{ label: 'Chart…', on: () => chartDialog() }, { label: 'Link…', on: () => linkDialog() }, { label: sheet().notes[ref(activeCell().c, activeCell().r)] ? 'Edit note…' : 'Note…', on: () => noteDialog() }]));
-    const bRules = tb('Rules: conditional formatting and dropdown lists', h('span', { class: 'sx-fmtlbl' }, 'Rules ▾'), (e) => menuBtn(e.currentTarget, [{ label: 'Conditional formatting…', on: () => cfDialog() }, { label: 'Dropdown list (data validation)…', on: () => dvDialog() }]));
+    const bInsert = tb('Insert: chart, link, note, conditional formatting, dropdown list', h('span', { class: 'sx-fmtlbl' }, 'Insert ▾'), (e) => menuBtn(e.currentTarget, [{ label: 'Chart…', on: () => chartDialog() }, { label: 'Link…', on: () => linkDialog() }, { label: sheet().notes[ref(activeCell().c, activeCell().r)] ? 'Edit note…' : 'Note…', on: () => noteDialog() }, '-', { label: 'Conditional formatting…', on: () => cfDialog() }, { label: 'Dropdown list (data validation)…', on: () => dvDialog() }]));
     const bClearFmt = tb('Clear formatting (Ctrl+\\)', svg(ICON.clear), () => clearFormats());
     const bPaint = tb('Paint format: copy the look of this cell, then click where to use it', svg(ICON.paint), () => { painter = painter ? null : { idx: sheet().sty[ref(activeCell().c, activeCell().r)] ?? -1 }; grid.el.classList.toggle('painting', Boolean(painter)); if (painter) toast('Now click the cells to format.'); });
+    const bMore = tb('More: vertical alignment, paint format, clear formatting, format cells', h('span', { class: 'sx-fmtlbl' }, '⋯'), (e) => menuBtn(e.currentTarget, [{ label: 'Align top', checked: activeStyle().va === 't', on: () => applyStyle(() => ({ va: 't' })) }, { label: 'Align middle', checked: activeStyle().va === 'm', on: () => applyStyle(() => ({ va: 'm' })) }, { label: 'Align bottom', checked: !activeStyle().va || activeStyle().va === 'b', on: () => applyStyle(() => ({ va: 'b' })) }, '-', { label: 'Paint format', on: () => bPaint.click() }, { label: 'Clear formatting', hint: 'Ctrl+\\', on: () => clearFormats() }, { label: 'Format cells…', on: () => formatDialog() }]));
     const bUndo = tb('Undo (Ctrl+Z)', icon('undo'), () => doUndo()), bRedo = tb('Redo (Ctrl+Y)', icon('redo'), () => doRedo());
     const sep = () => h('span', { class: 'sx-sep', role: 'separator' });
-    const tools = h('div', { class: 'sx-tools', role: 'toolbar', 'aria-label': 'Formatting' }, bUndo, bRedo, sep(), sizeSel, bBold, bItal, bUnder, bStrike, bFc, bBg, sep(), bBorder, bMerge, hBtns.l, hBtns.c, hBtns.r, vBtn, bWrap, sep(), bFmt, bCur, bPct, bDec1, bDec2, sep(), bFreeze, bSort, bFilter, bFind, bPaint, bClearFmt, sep(), bInsert, bRules);
+    const tools = h('div', { class: 'sx-tools', role: 'toolbar', 'aria-label': 'Formatting' }, bUndo, bRedo, sep(), sizeSel, bBold, bItal, bUnder, bStrike, bFc, bBg, sep(), bBorder, bMerge, hBtns.l, hBtns.c, hBtns.r, bWrap, sep(), bFmt, bCur, bPct, bDec1, bDec2, sep(), bFreeze, bSort, bFilter, bFind, sep(), bInsert, bMore);
     function syncTools() {
       const st = activeStyle(); const press = (b, on) => b.setAttribute('aria-pressed', String(Boolean(on)));
       press(bBold, st.b); press(bItal, st.i); press(bUnder, st.u); press(bStrike, st.st); press(bWrap, st.wr); press(bFilter, sheet().filter); for (const k of ['l', 'c', 'r']) press(hBtns[k], st.ha === k);
@@ -674,7 +674,7 @@ export function sheetView({ api, id, ctx }) {
     }
     const tabStyle = (s, b) => { if (s.tab) { b.style.borderBottom = `4px solid ${s.tab}`; } return b; };
     function drawTabs() {
-      put(tabsEl, ...book.sheets.map((s, i) => tabStyle(s, h('button', { type: 'button', role: 'tab', 'aria-selected': String(i === si), tabindex: i === si ? 0 : -1, class: i === si ? 'on' : '', onclick: () => switchSheet(i), ondblclick: () => renameDialog(i), oncontextmenu: (e) => { e.preventDefault(); tabMenu(e.currentTarget, i, { x: e.clientX, y: e.clientY }); } }, s.lock ? [svg('M7 11V8a5 5 0 0110 0v3M5 11h14v10H5z'), ' ', s.name] : s.name))),
+      put(tabsEl, ...book.sheets.map((s, i) => tabStyle(s, h('button', { type: 'button', role: 'tab', 'aria-selected': String(i === si), tabindex: i === si ? 0 : -1, class: '', onclick: () => switchSheet(i), ondblclick: () => renameDialog(i), oncontextmenu: (e) => { e.preventDefault(); tabMenu(e.currentTarget, i, { x: e.clientX, y: e.clientY }); } }, s.lock ? [svg('M7 11V8a5 5 0 0110 0v3M5 11h14v10H5z'), ' ', s.name] : s.name))),
         !readOnly && book.sheets.length < MAX_SHEETS ? btn('+', addSheet, '', { 'aria-label': 'Add a sheet', title: 'Add a sheet' }) : null,
         h('button', { type: 'button', class: 'sx-tabmore', 'aria-label': 'Sheet options', title: 'Sheet options', onclick: (e) => tabMenu(e.currentTarget, si) }, '⋯'));
     }
@@ -719,7 +719,8 @@ export function sheetView({ api, id, ctx }) {
       inp.addEventListener('change', async () => {
         const f = inp.files?.[0]; inp.remove(); if (!f) return; if (f.size > 8e6) { toast('That file is over 8 MB. Split it first.', false); return; }
         try {
-          if (/\.xlsx$/i.test(f.name)) {
+          const head = new Uint8Array(await f.slice(0, 4).arrayBuffer());                    // an .xlsx file is a zip archive (starts with PK)
+          if (/\.xlsx$/i.test(f.name) || (head[0] === 0x50 && head[1] === 0x4b)) {
             let bridge; try { bridge = await import('/sheetjs/xlsx.js'); } catch { toast('Excel import isn’t available in this build. Save the file as CSV and import that.', false); return; }
             const parts = bridge.readXlsx(await f.arrayBuffer(), { maxRows: ROWS, maxCols: COLS });
             const made = parts.map((p) => ({ name: p.name, rows: p.rows.map((row) => (row ?? []).map((cell) => { if (!cell) return { raw: '' }; let raw; if (cell.f) raw = `=${cell.f}`; else if (typeof cell.v === 'number') raw = String(cell.v); else if (typeof cell.v === 'boolean') raw = cell.v ? 'TRUE' : 'FALSE'; else raw = rawOf(String(cell.v ?? '')); return { raw, nf: nfFromExcel(cell.z, cell.t === 'd' || /^\d{4}-\d\d-\d\d$/.test(String(cell.v))) }; })), merges: p.merges }));
@@ -807,8 +808,8 @@ export function sheetView({ api, id, ctx }) {
     const bar = h('div', { class: 'sx-bar-row' }, nameBox, h('span', { class: 'sx-fxl', 'aria-hidden': 'true' }, 'fx'), h('div', { class: 'sx-fxwrap' }, fbar, acBox));
     put(root, ...banners, h('div', { class: 'docbar' }, crumb, h('div', { class: 'docrow' }, titleIn, h('div', { class: 'docacts' }, statusEl, counter, fileBtn, btn('History', () => sess.openHistory(!readOnly)), saveBtn))), tools, bar, hint, findBar, grid.el, h('div', { class: 'sx-foot' }, tabsEl, stats, zoomBox), live);
     root.removeAttribute('aria-busy'); document.title = `${meta.name} · Sheets`;
-    root.classList.toggle('ro', readOnly);
-    const fit = () => { const top = Math.max(0, root.getBoundingClientRect().top); root.style.height = `${Math.max(460, window.innerHeight - top - 12)}px`; };
+    
+    const fit = () => { const top = Math.max(0, root.getBoundingClientRect().top); const phone = window.innerWidth <= 700 ? 84 : 12; root.style.height = `${Math.max(460, window.innerHeight - top - phone)}px`; };
     fit(); window.addEventListener('resize', fit); setTimeout(fit, 300);
     recalcFilter(); drawTabs(); grid.attach(); syncBar(); syncTools(); paintCount(); focusGrid();
     const leave = () => { if (location.hash.startsWith(`#/sheet/${id}`)) return; window.removeEventListener('hashchange', leave); window.removeEventListener('resize', fit); document.removeEventListener('copy', onCopy); document.removeEventListener('cut', onCopy); document.removeEventListener('paste', onPaste); popup.close(); grid.destroy(); sess.destroy(); };
