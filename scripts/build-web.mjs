@@ -14,16 +14,13 @@ const url = process.env.SUPABASE_URL || 'http://127.0.0.1:54321';
 const key = process.env.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH';
 if (/service_role|sb_secret_/i.test(key) || /^eyJ/.test(key)) { console.error('Refusing: that looks like a privileged or legacy JWT key. Use the publishable key.'); process.exit(1); }
 import { buildWhiteboard } from './build-whiteboard.mjs';
-<<<<<<< HEAD
 import { buildDocsIo } from './build-docs-io.mjs';
-=======
 import { buildSheetjs } from './build-sheetjs.mjs';
->>>>>>> a96dce4
 const out = at('dist/web'); rmSync(out, { recursive: true, force: true }); mkdirSync(out + '/packages/core', { recursive: true });
 // Cloudflare runs only this script: it installs the editors' build-time dependencies itself (like Planner below), so the live site never ships
 // without the whiteboard editor or .xlsx support. Each tree has its own lockfile; `npm ci` installs exactly what was reviewed.
 if (process.env.CF_PAGES) {
-  for (const app of ['whiteboard', 'sheetjs']) {
+  for (const app of ['whiteboard', 'sheetjs', 'docs-io']) {
     if (existsSync(at(`apps/${app}/package-lock.json`)) && !existsSync(at(`apps/${app}/node_modules`))
         && spawnSync('npm', ['ci', '--prefix', at(`apps/${app}`)], { stdio: 'inherit' }).status !== 0) { console.error(`${app}: npm ci failed: stopping the build (the previous deployment stays live).`); process.exit(1); }
   }

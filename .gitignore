@@ -11,12 +11,9 @@ dist/
 apps/web/whiteboard/
 apps/whiteboard/node_modules/
 
-<<<<<<< HEAD
 # built bundle of Word support for the Docs editor (scripts/build-docs-io.mjs)
 apps/web/docs-io/
 apps/docs-io/node_modules/
-=======
 # built .xlsx bridge of the Sheets editor (scripts/build-sheetjs.mjs)
 apps/web/sheetjs/
 apps/sheetjs/node_modules/
->>>>>>> a96dce4
