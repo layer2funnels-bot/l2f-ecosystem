@@ -213,3 +213,9 @@ details.support{margin-top:12px;font-size:13px;color:var(--muted)}
 .hdr{background:var(--bg);-webkit-backdrop-filter:none;backdrop-filter:none}
 .bbar{background:var(--surface);-webkit-backdrop-filter:none;backdrop-filter:none}
 .bbar a{text-decoration:none}
+/* Editor mode (Docs, Sheets, Image, PDF, Slides): an editor's root carries .ed-full; the app sidebar and the phone bottom bar step aside so the
+   document gets the whole window. The header (app switcher, organization, profile) stays. */
+.shell:has(.ed-full){grid-template-columns:minmax(0,1fr)}
+.shell:has(.ed-full) .side{display:none}
+.app:has(.ed-full) .bbar{display:none}
+.main:has(.ed-full) .content{padding:0;max-width:none}
