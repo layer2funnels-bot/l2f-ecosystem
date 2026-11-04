@@ -63,7 +63,7 @@ export function sheetView({ api, id, ctx }) {
       filterOn: () => false, matchAt: (c, r) => matches.size > 0 && matches.has(ref(c, r)), focusGrid: () => { if (pointMode()) return; commitEditing(); focusGrid(); },
       filterBtnAt: (c, r) => { const f = sheet().filter; return f && r === f.r1 && c >= f.c1 && c <= f.c2 ? ((f.hide[c]?.length ?? 0) > 0 ? 'on' : 'off') : null; },
       pointerCell(c, r, { shift, ctrl }) {
-        selectChart(null); { const u = linkOf(sheet(), ref(c, r)); if (ctrl && u) { window.open(u, '_blank', 'noopener,noreferrer'); } }
+        tabOrigin = null; selectChart(null); { const u = linkOf(sheet(), ref(c, r)); if (ctrl && u) { window.open(u, '_blank', 'noopener,noreferrer'); } }
         if (pointMode()) { const t = grid.editor; t.setRangeText(ref(c, r), t.selectionStart, t.selectionEnd, 'end'); t.dispatchEvent(new Event('input')); t.focus(); return; } commitEditing();
         if (painter) painter.active = true;
         if (shift) { sel = { ...sel, f: { c, r }, kind: 'cell' }; selectionChanged({ scroll: false }); } else setSel({ c, r }, { c, r }, 'cell', { scroll: false });
@@ -195,9 +195,14 @@ export function sheetView({ api, id, ctx }) {
     }
     function commitEditing(move) {
       if (!editing) return; const e = editing; editing = null; const el = grid.editor; const val = el.value; el.hidden = true; el.value = ''; hideAc();
-      setCell(e.c, e.r, val); if (move) moveBy(move[0], move[1], {}); else { syncBar(); grid.refresh(); }
+      setCell(e.c, e.r, val);
+      if (move) {                                                     // after a run of Tabs, Enter returns to the column the run began in
+        const tab = move[1] === 0 && move[0] === 1; const origin = tabOrigin; if (tab && tabOrigin === null) tabOrigin = e.c; else if (!tab) tabOrigin = null;
+        moveBy(move[0], move[1], {}); if (!tab && origin !== null && move[1] === 1) setSel({ c: origin, r: activeCell().r });
+      } else { syncBar(); grid.refresh(); }
     }
     function cancelEditing() { if (!editing) return; editing = null; grid.editor.hidden = true; grid.editor.value = ''; hideAc(); syncBar(); grid.refresh(); focusGrid(); }
+    let tabOrigin = null;
     const focusGrid = () => grid.el.focus({ preventScroll: true });
     grid.editor.addEventListener('input', () => { fbar.value = grid.editor.value; sizeEditor(); acUpdate(grid.editor); });
     grid.editor.addEventListener('blur', () => { setTimeout(() => { if (editing && document.activeElement !== grid.editor && !popup.open && !acBox.contains(document.activeElement)) commitEditing(); }, 0); });
@@ -446,7 +451,8 @@ export function sheetView({ api, id, ctx }) {
       };
       return api2;
     })();
-    const menuList = (items) => (close) => h('div', { class: 'sx-menu' }, ...items.map((it) => it === '-' ? h('hr', {}) : h('button', { type: 'button', role: 'menuitem', class: it.checked ? 'on' : '', disabled: it.disabled, onclick: () => { close(); it.on(); } }, h('span', { class: 'chk', 'aria-hidden': 'true' }, it.checked ? '✓' : ''), h('span', { class: 'lb' }, it.label), it.hint ? h('span', { class: 'fine muted hk' }, it.hint) : null)));
+    const giveBack = () => setTimeout(() => { if (!popup.open && !editing && !document.querySelector('.ovl') && !findBar.contains(document.activeElement)) focusGrid(); }, 0);
+    const menuList = (items) => (close) => h('div', { class: 'sx-menu' }, ...items.map((it) => it === '-' ? h('hr', {}) : h('button', { type: 'button', role: 'menuitem', class: it.checked ? 'on' : '', disabled: it.disabled, onclick: () => { close(); it.on(); giveBack(); } }, h('span', { class: 'chk', 'aria-hidden': 'true' }, it.checked ? '✓' : ''), h('span', { class: 'lb' }, it.label), it.hint ? h('span', { class: 'fine muted hk' }, it.hint) : null)));
     const menuBtn = (anchor, items, opts) => popup.show(anchor, menuList(items.filter(Boolean)), opts);
     function colorMenu(anchor, field, label) {
       popup.show(anchor, (close) => {
@@ -589,7 +595,7 @@ export function sheetView({ api, id, ctx }) {
     }
     async function makeCopy() {
       commitEditing(); const r = await api.call('drive.files.create', { space: meta.space, ...(meta.client_id ? { client: meta.client_id } : {}), ...(meta.project_id ? { project: meta.project_id } : {}), ...(meta.folder_id ? { folder: meta.folder_id } : {}), name: `Copy of ${meta.name}`.slice(0, 200), kind: 'document', mime_type: MIME, body: getBody() });
-      if (!r.ok) { toast(r.message ?? 'Couldn’t make a copy.', false); return; } toast('Copy created. Opening it…'); ctx.go?.(`#/sheet/${r.data[0].id}`);
+      if (!r.ok) { toast(r.message ?? 'Couldn’t make a copy.', false); return; } toast('Copy created. Opening it…'); await sess.save({ manual: true }); ctx.go?.(`#/sheet/${r.data[0].id}`);
     }
     const zoomLbl = h('button', { type: 'button', class: 'sx-zlbl', 'aria-label': 'Reset zoom to 100%', title: 'Reset zoom', onclick: () => setZoom(100) }, '100%');
     const zoomBox = h('div', { class: 'sx-zoom', role: 'group', 'aria-label': 'Zoom' }, h('button', { type: 'button', 'aria-label': 'Zoom out', title: 'Zoom out', onclick: () => setZoom(zoomPct - 10) }, '−'), zoomLbl, h('button', { type: 'button', 'aria-label': 'Zoom in', title: 'Zoom in', onclick: () => setZoom(zoomPct + 10) }, '+'));
@@ -612,7 +618,7 @@ export function sheetView({ api, id, ctx }) {
       if (mod && k === 'Home') { e.preventDefault(); setSel({ c: 0, r: 0 }); return; }
       if (mod && k === 'End') { e.preventDefault(); const u = usedRange(sheet()); setSel({ c: u?.c2 ?? 0, r: u?.r2 ?? 0 }); return; }
       const dirs = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] };
-      if (dirs[k]) { e.preventDefault(); moveBy(dirs[k][0], dirs[k][1], { extend: e.shiftKey, jump: mod }); return; }
+      if (dirs[k]) { tabOrigin = null; e.preventDefault(); moveBy(dirs[k][0], dirs[k][1], { extend: e.shiftKey, jump: mod }); return; }
       if (k === 'Enter') { e.preventDefault(); if (isMulti() && sel.kind === 'cell') stepWithin(!e.shiftKey, false); else if (e.shiftKey) moveBy(0, -1); else startEdit(); return; }
       if (k === 'F2') { e.preventDefault(); startEdit(); return; }
       if (k === 'Tab') { e.preventDefault(); if (isMulti() && sel.kind === 'cell') stepWithin(!e.shiftKey, true); else moveBy(e.shiftKey ? -1 : 1, 0); return; }
@@ -625,7 +631,7 @@ export function sheetView({ api, id, ctx }) {
     });
 
     // ------------------------------------------------------------ toolbar
-    const tb = (label, child, on, extra = {}) => h('button', { type: 'button', class: 'sx-tb', 'aria-label': label, title: label, onclick: on, ...(readOnly && !extra.alwaysOn ? { disabled: true } : {}), ...extra.attrs }, child);
+    const tb = (label, child, on, extra = {}) => h('button', { type: 'button', class: 'sx-tb', 'aria-label': label, title: label, onclick: (e) => { on(e); giveBack(); }, ...(readOnly && !extra.alwaysOn ? { disabled: true } : {}), ...extra.attrs }, child);
     const letter = (ch, cls) => h('span', { class: `sx-glyph ${cls ?? ''}`, 'aria-hidden': 'true' }, ch);
     const bBold = tb('Bold (Ctrl+B)', letter('B', 'b'), () => toggle('b')), bItal = tb('Italic (Ctrl+I)', letter('I', 'i'), () => toggle('i')), bUnder = tb('Underline (Ctrl+U)', letter('U', 'u'), () => toggle('u')), bStrike = tb('Strikethrough', letter('S', 's'), () => toggle('st'));
     const barFc = h('i', { class: 'sx-bar' }), barBg = h('i', { class: 'sx-bar' });
@@ -666,8 +672,9 @@ export function sheetView({ api, id, ctx }) {
       if (i === si || !book.sheets[i]) return; commitEditing(); memoSel.set(si, { sel, sx: grid.el.scrollLeft, sy: grid.el.scrollTop }); si = i; recalcFilter(); const m = memoSel.get(i);
       sel = m ? m.sel : { a: { c: 0, r: 0 }, f: { c: 0, r: 0 }, kind: 'cell' }; matches = new Set(); grid.relayout(); grid.el.scrollLeft = m?.sx ?? 0; grid.el.scrollTop = m?.sy ?? 0; drawTabs(); syncBar(); syncTools(); grid.refresh(); paintStats(); paintCount(); if (!findBar.hidden && fq.value) runFind(false);
     }
+    const tabStyle = (s, b) => { if (s.tab) { b.style.borderBottom = `4px solid ${s.tab}`; } return b; };
     function drawTabs() {
-      put(tabsEl, ...book.sheets.map((s, i) => h('button', { type: 'button', role: 'tab', 'aria-selected': String(i === si), tabindex: i === si ? 0 : -1, class: i === si ? 'on' : '', onclick: () => switchSheet(i), ondblclick: () => renameDialog(i), oncontextmenu: (e) => { e.preventDefault(); tabMenu(e.currentTarget, i, { x: e.clientX, y: e.clientY }); } }, s.lock ? [svg('M7 11V8a5 5 0 0110 0v3M5 11h14v10H5z'), ' ', s.name] : s.name)),
+      put(tabsEl, ...book.sheets.map((s, i) => tabStyle(s, h('button', { type: 'button', role: 'tab', 'aria-selected': String(i === si), tabindex: i === si ? 0 : -1, class: i === si ? 'on' : '', onclick: () => switchSheet(i), ondblclick: () => renameDialog(i), oncontextmenu: (e) => { e.preventDefault(); tabMenu(e.currentTarget, i, { x: e.clientX, y: e.clientY }); } }, s.lock ? [svg('M7 11V8a5 5 0 0110 0v3M5 11h14v10H5z'), ' ', s.name] : s.name))),
         !readOnly && book.sheets.length < MAX_SHEETS ? btn('+', addSheet, '', { 'aria-label': 'Add a sheet', title: 'Add a sheet' }) : null,
         h('button', { type: 'button', class: 'sx-tabmore', 'aria-label': 'Sheet options', title: 'Sheet options', onclick: (e) => tabMenu(e.currentTarget, si) }, '⋯'));
     }
