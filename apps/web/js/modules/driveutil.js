@@ -39,6 +39,12 @@ export function matchesType(f, choice) {
 }
 export const isImage = (f) => fileType(f).key === 'image' && f.kind === 'file' && /^image\/(png|jpe?g|gif|webp|avif|bmp)$/i.test(f.mime_type ?? '') && (f.size_bytes ?? 0) <= 15 * 1048576;   // not svg: it could carry script when opened on its own
 
+/** What the preview can show for a stored file: image · pdf · video · audio · text (small) — or null (download only). */
+export function previewKind(f) {
+  if (!f || f.kind !== 'file') return null; const k = fileType(f).key;
+  if (k === 'image' || k === 'pdf' || k === 'video' || k === 'audio') return k;
+  if (k === 'text' && !/json|html|xml/.test(String(f.mime_type ?? '')) && (f.size_bytes ?? 0) <= 1048576) return 'text'; return null;
+}
 export const formatSize = (n) => (n == null ? '' : n < 1024 ? `${n} B` : n < 1048576 ? `${Math.round(n / 1024)} KB` : n < 1073741824 ? `${(n / 1048576).toFixed(1)} MB` : `${(n / 1073741824).toFixed(2)} GB`);
 
 // ---------------------------------------------------------------- upload errors

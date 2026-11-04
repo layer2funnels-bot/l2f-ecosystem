@@ -1,6 +1,6 @@
 // Drive helpers: one kind (icon colour + label) per file, plain-words upload errors, the size check before uploading, sorting.
 import { recorder } from './lib.mjs';
-import { fileType, matchesType, isImage, formatSize, classifyUploadError, precheckUploads, sortRows, CORS_HINT, MAX_FILE_BYTES, DOC_MIME, BOARD_MIME } from '../apps/web/js/modules/driveutil.js';
+import { previewKind, fileType, matchesType, isImage, formatSize, classifyUploadError, precheckUploads, sortRows, CORS_HINT, MAX_FILE_BYTES, DOC_MIME, BOARD_MIME } from '../apps/web/js/modules/driveutil.js';
 import { MIME as SHEET_MIME } from '../apps/web/js/modules/sheetmodel.js';
 const { results, check } = recorder();
 const k = (name, mime_type, kind = 'file') => fileType({ name, mime_type, kind }).key;
@@ -22,5 +22,6 @@ const F = (name, size, updated_at) => ({ file: { name, size_bytes: size, updated
 const rows = [F('b.txt', 5, '2026-01-02'), D('Zeta', '2026-01-01'), F('a10.txt', 50, '2026-01-03'), F('a2.txt', 20, '2026-01-01'), D('Alpha', '2026-01-05')];
 check('DU14', 'Sorting by name keeps folders first and orders numbers naturally (a2 before a10)', sortRows(rows, 'name').map((r) => (r.folder ?? r.file).name).join() === 'Alpha,Zeta,a2.txt,a10.txt,b.txt');
 check('DU15', 'Sorting by modified or size works in both directions, folders still first', sortRows(rows, 'modified', -1).map((r) => (r.folder ?? r.file).name).join() === 'Alpha,Zeta,a10.txt,b.txt,a2.txt' && sortRows(rows, 'size', 1).filter((r) => r.file).map((r) => r.file.name).join() === 'b.txt,a2.txt,a10.txt' && sortRows(rows, 'size', -1)[2].file.name === 'a10.txt');
+check('DU16', 'Preview covers stored images, PDFs, video, audio and small plain text only; documents, big or markup files download', previewKind({ kind: 'file', mime_type: 'image/png' }) === 'image' && previewKind({ kind: 'file', mime_type: 'application/pdf' }) === 'pdf' && previewKind({ kind: 'file', mime_type: 'video/mp4' }) === 'video' && previewKind({ kind: 'file', mime_type: 'audio/mpeg' }) === 'audio' && previewKind({ kind: 'file', mime_type: 'text/plain', size_bytes: 10 }) === 'text' && previewKind({ kind: 'file', mime_type: 'text/plain', size_bytes: 5e6 }) === null && previewKind({ kind: 'file', mime_type: 'text/html' }) === null && previewKind({ kind: 'document', mime_type: 'application/vnd.l2f.doc+json' }) === null && previewKind({ kind: 'file', mime_type: 'application/zip' }) === null);
 for (const x of results) console.log(`${x.ok ? 'PASS' : 'FAIL'}  ${x.id.padEnd(5)} ${x.name}`);
 const pc = results.filter((x) => x.ok).length; console.log(`\n${pc}/${results.length} checks passed`); process.exit(pc === results.length ? 0 : 1);
