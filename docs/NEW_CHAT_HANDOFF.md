@@ -68,3 +68,11 @@ Design V4 leftovers (`docs/DESIGN_AUDIT_V4.md`), Planner follow-ups (`docs/PLANN
 - Lesson: a sign-up with an address that already has an account gets no e-mail from Supabase (by design); the app now says "already has an account, sign in" (PR #40).
 - Owner decision: the Client Portal tile is shown to **every team member**, editors and viewers included (migration `0043_portal_tile_for_all_staff`, live script `scripts/golive-0043.sql`, needs the owner's yes). The Portal stays locked for clients; only an owner switches it on.
 - Fixed: the profile menu on the Launcher opened at the bottom of the page (`.swwrap` had `position:relative` only inside `.hdr`).
+
+## 11. Editors and Drive round (5 Nov 2026) – LIVE
+- PR #42 merged; live database applied `scripts/golive-0043-0046.sql` (now at 0046; data kept; browser roles 0 function rights).
+- New: Word editor (tabs, voice en/ur, exports), Sheets v2, Image and PDF editors, Drive sharing / owner lock / folder passwords, editor full-window mode.
+- Local stack DB port is 54332 (54322 got stuck in the cloud machine). Cloudflare build installs whiteboard, sheetjs, media and docs-io trees itself.
+- OPEN (owner, dashboard only): R2 bucket `l2f-ecosystem-files` CORS must allow https://office.tabishriaz.com (PUT, GET, HEAD; header content-type).
+  Until then uploads, previews and image/PDF editing fail on that domain (they work on l2f-ecosystem.pages.dev).
+- Known limits: free voice cannot tell speakers apart; Word "PDF" download = browser print dialog; xlsx export without colours.
