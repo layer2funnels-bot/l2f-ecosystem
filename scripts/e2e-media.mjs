@@ -11,7 +11,7 @@ const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE ?? 'playwright');
 const { PDFDocument, StandardFonts, rgb } = createRequire(new URL('../apps/media/package.json', import.meta.url))('pdf-lib');
 const SHOTS = process.env.SHOTS || '/tmp/claude-0/-home-user/ab44cf5d-5e81-5a14-b767-4c6a8e5c0226/scratchpad/media'; mkdirSync(SHOTS, { recursive: true });
-const admin = new pg.Client({ connectionString: 'postgresql://supabase_admin:postgres@127.0.0.1:54322/postgres' }); await admin.connect();
+const admin = new pg.Client({ connectionString: 'postgresql://supabase_admin:postgres@127.0.0.1:54332/postgres' }); await admin.connect();
 const q = async (s, a = []) => (await admin.query(s, a)).rows;
 const stamp = Date.now(), PW = 'correct-horse-battery-staple';
 const results = []; const check = (id, name, ok, detail = '') => { results.push({ id, name, ok: !!ok, detail }); console.log(`${ok ? 'PASS' : 'FAIL'}  ${id.padEnd(5)} ${name}${ok ? '' : `  [${detail}]`}`); };
