@@ -16,6 +16,14 @@ if (/service_role|sb_secret_/i.test(key) || /^eyJ/.test(key)) { console.error('R
 import { buildWhiteboard } from './build-whiteboard.mjs';
 import { buildSheetjs } from './build-sheetjs.mjs';
 const out = at('dist/web'); rmSync(out, { recursive: true, force: true }); mkdirSync(out + '/packages/core', { recursive: true });
+// Cloudflare runs only this script: it installs the editors' build-time dependencies itself (like Planner below), so the live site never ships
+// without the whiteboard editor or .xlsx support. Each tree has its own lockfile; `npm ci` installs exactly what was reviewed.
+if (process.env.CF_PAGES) {
+  for (const app of ['whiteboard', 'sheetjs']) {
+    if (existsSync(at(`apps/${app}/package-lock.json`)) && !existsSync(at(`apps/${app}/node_modules`))
+        && spawnSync('npm', ['ci', '--prefix', at(`apps/${app}`)], { stdio: 'inherit' }).status !== 0) { console.error(`${app}: npm ci failed: stopping the build (the previous deployment stays live).`); process.exit(1); }
+  }
+}
 await buildSheetjs({ quiet: true });             // .xlsx import/export for Sheets (skipped when apps/sheetjs dependencies are not installed: CSV still works)
 await buildWhiteboard({ quiet: true });          // the editor bundle (skipped when its build-time dependencies are not installed: the board page then says so)
 cpSync(at('apps/web'), out, { recursive: true });
