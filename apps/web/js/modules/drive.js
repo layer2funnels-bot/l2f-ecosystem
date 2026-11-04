@@ -5,6 +5,7 @@ import { inp, h, put, icon, btn, dialog, drawer, toast, field, notice, skeleton,
 import { emptyDoc, serialize } from './docmodel.js';
 import { emptyBook, serializeBook, MIME as SHEET_MIME } from './sheetmodel.js';
 import { emptyBoard } from './boardmodel.js';
+import { ICONS } from '../icons.js';
 import { DOC_MIME, BOARD_MIME, CORS_HINT, previewKind, fileType, matchesType, isImage, formatSize, classifyUploadError, precheckUploads, sortRows } from './driveutil.js';
 
 export const driveHref = (space, folder) => `#/drive${space === 'personal' ? '/personal' : ''}${folder ? `/f/${folder}` : ''}`;
@@ -12,7 +13,15 @@ const when = (iso) => (iso ? new Date(iso).toLocaleDateString(undefined, { day: 
 const lsGet = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch { /* private mode: the choice lasts for this page only */ } };
 /** The file-type tile (Design v4): the type's short label on its own colour (one colour per kind, see drive.css). */
-const ftile = (f) => { const t = fileType(f); return h('span', { class: `ftile ft-${t.key}`, 'aria-hidden': 'true' }, t.label); };
+// a drawing per kind, in the same line style as the icon set (document, file, picture, video, audio are drawn here; the rest reuse the set)
+Object.assign(ICONS, {
+  'dr-doc': [['path', { d: 'M6 3h8l4 4v14H6z' }], ['path', { d: 'M14 3v4h4M9 12h6M9 15.5h6' }]], 'dr-file': [['path', { d: 'M6 3h8l4 4v14H6z' }], ['path', { d: 'M14 3v4h4' }]],
+  'dr-image': [['rect', { x: '3.5', y: '5', width: '17', height: '14', rx: '2.4' }], ['circle', { cx: '9', cy: '10', r: '1.6' }], ['path', { d: 'M4 17l5-4.5 3.5 3 3-2.5L20 16' }]],
+  'dr-video': [['rect', { x: '3.5', y: '6', width: '12', height: '12', rx: '2.4' }], ['path', { d: 'M15.5 11l5-3v8l-5-3z' }]],
+  'dr-audio': [['path', { d: 'M9 17V6l10-2v11' }], ['circle', { cx: '6.5', cy: '17.5', r: '2.5' }], ['circle', { cx: '16.5', cy: '15.5', r: '2.5' }]],
+});
+const KIND_ICON = { document: 'dr-doc', sheet: 'table', board: 'board', image: 'dr-image', pdf: 'dr-doc', video: 'dr-video', audio: 'dr-audio', zip: 'archive', text: 'list', other: 'dr-file' };
+const ftile = (f) => { const t = fileType(f); return h('span', { class: `ftile ft-${t.key}`, 'aria-hidden': 'true' }, icon(KIND_ICON[t.key])); };
 const folderTile = () => h('span', { class: 'ftile folder', 'aria-hidden': 'true' }, icon('folder'));
 /** The one tag/chip used in Drive: never wider than its box, cut with an ellipsis, full text on hover. */
 const tag = (text, kind = '') => h('span', { class: `drv-tag${kind ? ` ${kind}` : ''}`, title: text }, text);
@@ -106,10 +115,9 @@ export function driveView({ api, ctx, route }) {
   function homeBlocks(files) {
     const latest = [...files].sort((a, b) => String(b.updated_at).localeCompare(String(a.updated_at))).slice(0, 4);
     const card = (f) => { const href = openHref(f); const inner = [art(f, true), h('span', { class: 'dcard-foot' }, h('b', { title: f.name }, f.name), h('small', { class: 'muted' }, `Edited ${when(f.updated_at)}`))];
-      return href ? h('a', { class: 'dcard', href }, ...inner) : h('button', { type: 'button', class: 'dcard', onclick: () => openFile(f) }, ...inner); };
+      return href ? h('a', { class: 'dcard', href, title: f.name }, ...inner) : h('button', { type: 'button', class: 'dcard', title: f.name, onclick: () => openFile(f) }, ...inner); };
     return [latest.length ? h('section', { 'aria-labelledby': 'dh-sg' }, h('h2', { id: 'dh-sg', class: 'over' }, 'Recently edited'), h('div', { class: 'dcards' }, ...latest.map(card))) : null,
-      state.folders.length ? h('section', { 'aria-labelledby': 'dh-fo' }, h('h2', { id: 'dh-fo', class: 'over' }, 'Folders'), h('div', { class: 'dfolders' }, ...state.folders.map((d) => h('a', { class: 'dfolder', href: driveHref(space, d.id), 'data-drop-folder': d.id, title: d.name }, icon('folder'), h('span', {}, d.name))))) : null,
-      latest.length || state.folders.length ? h('h2', { class: 'over' }, 'All files and folders') : null];
+      latest.length ? h('h2', { class: 'over' }, 'All files and folders') : null];
   }
   function paint() {
     const rows = visibleRows(); const atHome = !folderId && !state.q && !state.starOnly && state.type === 'all' && state.mode === 'list'; byId.clear(); for (const r of rows) byId.set((r.folder ?? r.file).id, r);
@@ -124,21 +132,21 @@ export function driveView({ api, ctx, route }) {
     const first = list.querySelector('[data-item]'); if (first) first.tabIndex = 0;
   }
   const byId = new Map();
-  const selectAll = () => { const files = visibleRows().filter((r) => r.file); if (!files.length) return srOnly('Select'); return h('input', { type: 'checkbox', 'aria-label': 'Select all files', onchange: (e) => { for (const r of files) e.target.checked ? state.selected.add(r.file.id) : state.selected.delete(r.file.id); list.querySelectorAll('.drv-pick').forEach((c) => { c.checked = e.target.checked; }); paintSel(); } }); };
+  const selectAll = () => { const files = visibleRows(); if (!files.length) return srOnly('Select'); return h('input', { type: 'checkbox', 'aria-label': 'Select all', onchange: (e) => { for (const r of files) e.target.checked ? state.selected.add((r.file ?? r.folder).id) : state.selected.delete((r.file ?? r.folder).id); list.querySelectorAll('.drv-pick').forEach((c) => { c.checked = e.target.checked; }); paintSel(); } }); };
   const pick = (f) => h('input', { type: 'checkbox', class: 'drv-pick', 'aria-label': `Select ${f.name}`, ...(state.selected.has(f.id) ? { checked: true } : {}), onchange: (e) => { e.target.checked ? state.selected.add(f.id) : state.selected.delete(f.id); paintSel(); } });
   const moreBtn = (item, isFolder) => h('button', { type: 'button', class: 'btn quiet drv-more', 'aria-label': `Actions for ${item.name}`, title: 'Actions (Shift+F10)', 'aria-haspopup': 'true', onclick: (e) => rowMenu(e.currentTarget, item, isFolder) }, icon('more'));
   const nameOf = (f) => { const href = openHref(f); return href ? h('a', { href, title: f.name }, f.name) : h('button', { type: 'button', class: 'linklike', title: f.name, onclick: () => openFile(f) }, f.name); };
   const starMark = (f) => (stars.has(f.id) ? h('span', { class: 'drv-star', title: 'Starred', role: 'img', 'aria-label': 'Starred' }, icon('star')) : null);
   const fileCount = (d) => `${d.files} file${d.files === 1 ? '' : 's'}`;
   function rowEl(r) {
-    if (r.folder) { const d = r.folder; return h('tr', { 'data-drop-folder': d.id, 'data-item': d.id, tabindex: '-1', 'aria-label': `Folder ${d.name}` }, h('td', { class: 'c-sel' }), h('td', { class: 't1' }, h('span', { class: 'fname' }, folderTile(), h('span', { class: 'fn-text' }, h('a', { href: driveHref(space, d.id), title: d.name }, d.name), h('span', { class: 'drv-sub' }, `Folder · ${fileCount(d)} · ${when(d.updated_at)}`)))),
+    if (r.folder) { const d = r.folder; return h('tr', { 'data-drop-folder': d.id, 'data-item': d.id, tabindex: '-1', 'aria-label': `Folder ${d.name}` }, h('td', { class: 'c-sel' }, pick(d)), h('td', { class: 't1' }, h('span', { class: 'fname' }, folderTile(), h('span', { class: 'fn-text' }, h('a', { href: driveHref(space, d.id), title: d.name }, d.name), h('span', { class: 'drv-sub' }, `Folder · ${fileCount(d)} · ${when(d.updated_at)}`)))),
       h('td', { class: 'c-meta' }, 'Folder'), h('td', { class: 'c-meta' }, fileCount(d)), h('td', { class: 'c-meta' }, when(d.updated_at)), h('td', { class: 'c-act' }, moreBtn(d, true))); }
     const f = r.file; const ty = fileType(f);
     return h('tr', { 'data-item': f.id, tabindex: '-1', 'aria-label': `${ty.name} ${f.name}` }, h('td', { class: 'c-sel' }, pick(f)), h('td', { class: 't1' }, h('span', { class: 'fname' }, ftile(f), h('span', { class: 'fn-text' }, h('span', { class: 'fn-line' }, nameOf(f), starMark(f), f.protected_sop ? tag('Approved SOP', 'ok') : null), h('span', { class: 'drv-sub' }, [ty.name, formatSize(f.size_bytes), when(f.updated_at)].filter(Boolean).join(' · '))))),
       h('td', { class: 'c-meta' }, ty.name), h('td', { class: 'c-meta' }, formatSize(f.size_bytes)), h('td', { class: 'c-meta' }, when(f.updated_at)), h('td', { class: 'c-act' }, moreBtn(f, false)));
   }
   function gridCell(r) {
-    if (r.folder) { const d = r.folder; return h('article', { class: 'gcard', role: 'listitem', 'data-drop-folder': d.id, 'data-item': d.id, tabindex: '-1' }, h('a', { class: 'gcard-art', href: driveHref(space, d.id), 'aria-label': `Open folder ${d.name}`, tabindex: '-1' }, h('span', { class: 'drv-art xl', 'aria-hidden': 'true' }, folderTile())), moreBtn(d, true),
+    if (r.folder) { const d = r.folder; return h('article', { class: 'gcard', role: 'listitem', 'data-drop-folder': d.id, 'data-item': d.id, tabindex: '-1' }, h('a', { class: 'gcard-art', href: driveHref(space, d.id), 'aria-label': `Open folder ${d.name}`, tabindex: '-1' }, h('span', { class: 'drv-art xl', 'aria-hidden': 'true' }, folderTile())), pick(d), moreBtn(d, true),
       h('div', { class: 'gcard-foot' }, h('a', { class: 'gname', href: driveHref(space, d.id), title: d.name }, d.name), h('span', { class: 'drv-sub on' }, `Folder · ${fileCount(d)}`))); }
     const f = r.file; const ty = fileType(f); const href = openHref(f);
     const artEl = art(f, true);
@@ -147,7 +155,10 @@ export function driveView({ api, ctx, route }) {
   }
   function paintSel() {
     const n = state.selected.size; bar.hidden = n === 0; if (!n) return;
-    put(bar, h('b', {}, `${n} selected`), btn('Download', async () => { for (const id of state.selected) { const f = state.files.find((x) => x.id === id); if (f?.kind === 'file') await download(f); } }, 'ghost'), btn('Star', () => { const ids = [...state.selected]; const on = !ids.every((id) => stars.has(id)); toggleStar(ids, on); toast(on ? 'Starred.' : 'Stars removed.'); }, 'ghost'), canWrite ? btn('Move', () => moveDialog([...state.selected].map((id) => ({ file: state.files.find((x) => x.id === id) }))), 'ghost') : null, canWrite ? btn('Move to Trash', () => trashMany([...state.selected].map((id) => state.files.find((x) => x.id === id))), 'ghost') : null, btn('Clear', () => { state.selected.clear(); paint(); }, 'quiet'));
+    const recs = () => [...state.selected].map((id) => byId.get(id)).filter(Boolean); const files = () => recs().filter((r) => r.file).map((r) => r.file);
+    put(bar, h('b', {}, `${n} selected`), files().length ? btn('Download', async () => { for (const f of files()) if (f.kind === 'file') await download(f); }, 'ghost') : null,
+      files().length ? btn('Star', () => { const ids = files().map((f) => f.id); const on = !ids.every((id) => stars.has(id)); toggleStar(ids, on); toast(on ? 'Starred.' : 'Stars removed.'); }, 'ghost') : null,
+      canWrite ? btn('Move', () => moveDialog(recs()), 'ghost') : null, canWrite ? btn('Move to Trash', () => trashRecs(recs()), 'ghost') : null, btn('Clear', () => { state.selected.clear(); paint(); }, 'quiet'));
   }
   async function download(f) {
     if (f.kind !== 'file') { const h2 = openHref(f); if (h2) ctx.go(h2); return; }
@@ -241,6 +252,10 @@ export function driveView({ api, ctx, route }) {
         const x = await api.call(it.folder ? 'drive.folders.update' : 'drive.files.update', input); if (!x.ok) { fail(x, 'move that'); return false; } }
       toast('Moved.'); load(); } }, { label: 'Cancel' }] });
     showAt();
+  }
+  async function trashRecs(recs) {
+    for (const r of recs) { const x = await api.call(r.folder ? 'drive.folders.archive' : 'drive.files.archive', { id: (r.folder ?? r.file).id }); if (!x.ok) return fail(x, 'move that to the Trash'); }
+    toast(`${recs.length === 1 ? 'Moved' : `${recs.length} items moved`} to the Trash.`); load();
   }
   async function trashMany(files) {
     for (const f of files) { const r = await api.call('drive.files.archive', { id: f.id }); if (!r.ok) return fail(r, 'move that to the Trash'); }
@@ -391,7 +406,7 @@ export function driveView({ api, ctx, route }) {
     const draw = async () => {
       if (tab.cur === 'details') {
         const canLib = f.space === 'shared' && f.managed_by && ctx.can('drive.file.edit'); const prev = isImage(f) ? art(f, true) : null; const who = await ownerName(f);
-        put(body, prev ? h('div', { class: 'drv-prev' }, prev) : null, h('dl', { class: 'drv-dl' }, ...[['Type', fileType(f).name], ['Size', formatSize(f.size_bytes)], ['Version', String(f.current_version)], ['Location', f.space === 'personal' ? 'Personal' : f.space === 'client' ? 'A client’s own space' : `${ctx.orgName} library`], ['Added by', who], ['Added', when(f.created_at)], ['Updated', when(f.updated_at)], ['Belongs to', f.managed_by ? `the ${f.managed_by.replace(/_/g, ' ')} app` : 'Drive']].flatMap(([k, v]) => [h('dt', {}, k), h('dd', {}, v)])),
+        put(body, prev ? h('div', { class: 'drv-prev' }, prev) : null, h('dl', { class: 'drv-dl' }, ...[['Name', f.name], ['Type', fileType(f).name], ['Size', formatSize(f.size_bytes)], ['Version', String(f.current_version)], ['Location', f.space === 'personal' ? 'Personal' : f.space === 'client' ? 'A client’s own space' : `${ctx.orgName} library`], ['Added by', who], ['Added', when(f.created_at)], ['Updated', when(f.updated_at)], ['Belongs to', f.managed_by ? `the ${f.managed_by.replace(/_/g, ' ')} app` : 'Drive']].flatMap(([k, v]) => [h('dt', {}, k), h('dd', {}, v)])),
           f.protected_sop ? notice('info', 'lock', 'This is an approved SOP. It is protected: only owners change it.') : null,
           f.managed_by && f.space === 'shared' ? h('div', { class: 'fld' }, h('label', {}, h('input', { type: 'checkbox', checked: f.in_library, ...(canLib ? {} : { disabled: true }), onchange: async (e) => { const r = await api.call('drive.files.setLibrary', { id: f.id, in_library: e.target.checked }); if (!r.ok) { e.target.checked = !e.target.checked; fail(r, 'change that'); } else { f = { ...f, in_library: e.target.checked }; toast(e.target.checked ? 'Added to the library.' : 'Removed from the library.'); load(); } } }), ' Show in the library'),
             h('p', { class: 'fine muted' }, 'This file belongs to another app and is stored safely either way. Showing it here does not move it.')) : null);
@@ -444,9 +459,9 @@ export function driveView({ api, ctx, route }) {
     if (k === 'ArrowDown') { e.preventDefault(); go(i + cols); } else if (k === 'ArrowUp') { e.preventDefault(); go(i - cols); } else if (k === 'ArrowRight' && cols > 1) { e.preventDefault(); go(i + 1); } else if (k === 'ArrowLeft' && cols > 1) { e.preventDefault(); go(i - 1); }
     else if (k === 'Home') { e.preventDefault(); go(0); } else if (k === 'End') { e.preventDefault(); go(items.length); }
     else if (k === 'Enter') { e.preventDefault(); folder ? ctx.go(driveHref(space, folder.id)) : openFile(file); }
-    else if (k === ' ' && file) { e.preventDefault(); const c = it.querySelector('.drv-pick'); if (c) { c.checked = !c.checked; c.dispatchEvent(new Event('change')); } }
+    else if (k === ' ') { e.preventDefault(); const c = it.querySelector('.drv-pick'); if (c) { c.checked = !c.checked; c.dispatchEvent(new Event('change')); } }
     else if (k === 'F2' && canWrite && !(folder ?? file).protected_sop) { e.preventDefault(); rename(folder ?? file, !!folder); }
-    else if ((k === 'Delete' || k === 'Backspace') && canWrite && !(folder ?? file).protected_sop) { e.preventDefault(); folder ? trashFolder(folder) : trashMany(state.selected.size > 1 && state.selected.has(file.id) ? [...state.selected].map((id) => state.files.find((x) => x.id === id)) : [file]); }
+    else if ((k === 'Delete' || k === 'Backspace') && canWrite && !(folder ?? file).protected_sop) { e.preventDefault(); state.selected.size > 1 && state.selected.has((folder ?? file).id) ? trashRecs([...state.selected].map((id) => byId.get(id)).filter(Boolean)) : folder ? trashFolder(folder) : trashMany([file]); }
     else if (k === 'ContextMenu' || (k === 'F10' && e.shiftKey)) { e.preventDefault(); menuAt(it); }
   });
   list.addEventListener('contextmenu', (e) => { const it = e.target.closest?.('[data-item]'); if (!it) return; e.preventDefault(); menuAt(it, e.clientX, e.clientY); });
