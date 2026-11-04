@@ -52,12 +52,12 @@ const ownerMail = `media.${stamp}@example.com`, viewMail = `view.${stamp}@exampl
 const op = await newPage(); await signUp(op, 'Mia Media', ownerMail); await op.waitForTimeout(1500);
 const ownerId = (await q('select id from auth.users where email=$1', [ownerMail]))[0].id;
 await q("insert into memberships (workspace_id,user_id,kind,role) values ($1,$2,'staff','owner') on conflict do nothing", [L, ownerId]);
-await op.goto(`${base}/#/drive`); await op.reload(); await op.waitForSelector('.drv', { timeout: 15000 });
+await op.goto(`${base}/#/drive`); await op.reload(); await op.waitForSelector('.drv-main', { timeout: 15000 });
 
 async function upload(p, name, mimeType, buffer) {
-  await p.goto(`${base}/#/drive`); await p.reload(); await p.waitForSelector('.drv', { timeout: 15000 });
-  await p.locator('input[type=file]').first().setInputFiles({ name, mimeType, buffer }); await until(p, `${name} · done`);
-  return (await q("select id from files where name=$1 and workspace_id=$2 order by created_at desc limit 1", [name, L]))[0].id;
+  await p.goto(`${base}/#/drive`); await p.reload(); await p.waitForSelector('.drv-main', { timeout: 15000 });
+  await p.locator('input[type=file]').first().setInputFiles({ name, mimeType, buffer }); for (let i = 0; i < 60; i++) { const r = await q("select id from files where name=$1 and workspace_id=$2 order by created_at desc limit 1", [name, L]); if (r[0]) return r[0].id; await p.waitForTimeout(500); }
+  return null;
 }
 const pngName = `pic-${stamp}.png`, pdfName = `plan-${stamp}.pdf`, pdf2Name = `extra-${stamp}.pdf`;
 const pngId = await upload(op, pngName, 'image/png', png(60, 40));
@@ -66,7 +66,7 @@ const pdf2Id = await upload(op, pdf2Name, 'application/pdf', await pdf(['Appendi
 check('MG0', 'Setup: a PNG and two PDFs are stored through Drive', !!pngId && !!pdfId && !!pdf2Id);
 
 // ---- Drive opens each file in its editor
-await op.goto(`${base}/#/drive`); await op.reload(); await op.waitForSelector('.drv', { timeout: 15000 });
+await op.goto(`${base}/#/drive`); await op.reload(); await op.waitForSelector('.drv-main', { timeout: 15000 });
 await op.waitForSelector(`a:text-is("${pngName}")`, { timeout: 15000 });
 const hrefs = await op.evaluate((names) => Object.fromEntries(names.map((n) => [n, [...document.querySelectorAll('a')].find((a) => a.textContent === n)?.getAttribute('href') ?? null])), [pngName, pdfName]);
 check('MG1', 'In Drive, the PNG links to #/image/<id> and the PDF to #/pdf/<id>', hrefs[pngName] === `#/image/${pngId}` && hrefs[pdfName] === `#/pdf/${pdfId}`, JSON.stringify(hrefs));
@@ -132,7 +132,7 @@ check('MG16', 'At 390 px the image editor has no sideways page scroll', await ph
 
 // ================================================================= PDF editor
 await op.getByRole('button', { name: 'Save', exact: true }).click(); await until(op, 'Saved as a new version'); await op.waitForTimeout(500);
-await op.goto(`${base}/#/drive`); await op.reload(); await op.waitForSelector('.drv', { timeout: 15000 }); await op.click(`a:text-is("${pdfName}")`); await op.waitForSelector('.px-page', { timeout: 20000 });
+await op.goto(`${base}/#/drive`); await op.reload(); await op.waitForSelector('.drv-main', { timeout: 15000 }); await op.click(`a:text-is("${pdfName}")`); await op.waitForSelector('.px-page', { timeout: 20000 });
 await op.waitForFunction(() => document.querySelectorAll('.px-page canvas').length >= 1 && [...document.querySelectorAll('.px-cv')].some((c) => { const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; for (let i = 0; i < d.length; i += 4) if (d[i] < 200) return true; return false; }), null, { timeout: 20000 });
 check('MG17', 'The PDF viewer opens from Drive, shows 2 pages, and the page is really drawn (not blank)', (await op.locator('.px-page').count()) === 2 && (await text(op)).includes('of 2'));
 check('MG18', 'Page thumbnails are listed', (await op.locator('.px-trow').count()) === 2);
