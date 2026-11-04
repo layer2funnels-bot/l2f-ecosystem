@@ -54,9 +54,9 @@ check('WB3', 'Saving again adds version 2; version 1 is kept untouched (history 
 check('WB4', 'The version list shows both saves with their notes', (await J('drive.files.versions', { file: WB }, U.ED)).data.map((v) => v.version).join() === '2,1');
 check('WB5', 'A colleague without access to this client cannot find the board, its versions or its content', (await J('drive.files.get', { id: WB }, U.ED2)).status === 404 && (await J('drive.files.version', { file: WB }, U.ED2)).status === 404 && (await J('drive.files.list', { space: 'client', client: C1 }, U.ED2)).data?.length !== 1);
 check('WB6', 'Another organization cannot read or list it either', (await J('drive.files.get', { id: WB }, U.AOWN, A)).status === 404 && (await J('drive.files.get', { id: WB }, U.AOWN, L)).status === 404);
-const big = scene(); big.elements.push({ id: 'pad', type: 'text', text: 'x'.repeat(200000), isDeleted: false });
+const big = scene(); big.elements.push({ id: 'pad', type: 'text', text: 'x'.repeat(1000000), isDeleted: false });
 r = await J('drive.files.versions.add', { id: WB, body: JSON.stringify(big) }, U.ED);
-check('WB7', 'A scene over the document limit (200,000 characters) is refused with a plain validation error, not stored half-way', r.status === 422 && (await J('drive.files.get', { id: WB }, U.ED)).row.current_version === 2);
+check('WB7', 'A scene over the document limit (1,000,000 characters) is refused with a plain validation error, not stored half-way', r.status === 422 && (await J('drive.files.get', { id: WB }, U.ED)).row.current_version === 2);
 const nearLimit = scene(); nearLimit.elements.push({ id: 'pad', type: 'text', text: 'y'.repeat(200000 - JSON.stringify(nearLimit).length - 60), isDeleted: false });
 const nl = JSON.stringify(nearLimit);
 r = await J('drive.files.versions.add', { id: WB, body: nl, note: 'near the limit' }, U.ED);

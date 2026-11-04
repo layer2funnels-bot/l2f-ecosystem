@@ -23,7 +23,7 @@
 
 ## Cloudflare Pages: exact values for the wizard (use "Pages" > "Connect to Git", not a Worker project: `functions/` and `wrangler.toml` are a Pages setup)
 - Repository `layer2funnels-bot/l2f-ecosystem`, production branch `main`, project name `l2f-ecosystem`. Framework preset **None**. Root directory `/`.
-- Build command `npm ci --prefix apps/whiteboard && node scripts/build-web.mjs`; build output directory `dist/web`.
+- Build command `npm ci --prefix apps/whiteboard && npm ci --prefix apps/sheetjs && node scripts/build-web.mjs`; build output directory `dist/web`.
 - Build variables: `NODE_VERSION=22`, `SUPABASE_URL=https://dfitnxilkezepkhdmzuh.supabase.co`, `SUPABASE_PUBLISHABLE_KEY=sb_publishable_086jMHSlwdsjwrFy5eWjkA_UjuKZrox`, `STORAGE_CONNECT_ORIGIN=https://<your 32-character account id>.r2.cloudflarestorage.com` (the Account ID is on the R2 overview page; this lets the browser reach the bucket, and nothing else).
 - Runtime variables (encrypted; `nodejs_compat` comes from `wrangler.toml`): `SUPABASE_JWKS_URL=https://dfitnxilkezepkhdmzuh.supabase.co/auth/v1/.well-known/jwks.json`, `SUPABASE_JWT_ISSUER=https://dfitnxilkezepkhdmzuh.supabase.co/auth/v1`, `RATE_LIMIT_STORE=postgres`, `DATABASE_URL` (session pooler string, needs the database password only the owner has), `STORAGE_DRIVER=s3`, `S3_ENDPOINT=https://<account id>.r2.cloudflarestorage.com`, `S3_REGION=auto`, `S3_BUCKET=l2f-ecosystem-files`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` (an R2 token limited to that bucket).
 - Connecting the repository starts a build and publishes it to a `*.pages.dev` address. That is a production deployment, so it waits for the owner's approval, and the database must be migrated first or the app shows errors.

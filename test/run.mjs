@@ -11,7 +11,7 @@ for (const d of drivers) for (const s of suites) {
   for (const f of fails) console.log(`        ${f}`);
   if (r.status !== 0) failed++;
 }
-for (const f of ['test/errors.test.mjs', 'test/storage-adapter.test.mjs', 'test/storage-backup.test.mjs', 'test/http.test.mjs', 'test/web.test.mjs', 'test/launcher.test.mjs', 'test/docs.test.mjs', 'test/board.test.mjs', 'test/media.test.mjs', 'test/projectmodel.test.mjs', 'test/sheetmodel.test.mjs', 'test/formmodel.test.mjs', 'test/laddermodel.test.mjs', 'test/socialmodel.test.mjs']) {
+for (const f of ['test/errors.test.mjs', 'test/storage-adapter.test.mjs', 'test/storage-backup.test.mjs', 'test/http.test.mjs', 'test/web.test.mjs', 'test/launcher.test.mjs', 'test/docs.test.mjs', 'test/board.test.mjs', 'test/media.test.mjs', 'test/projectmodel.test.mjs', 'test/sheetmodel.test.mjs', 'test/formmodel.test.mjs', 'test/laddermodel.test.mjs', 'test/socialmodel.test.mjs', 'test/driveutil.test.mjs']) {
   const e = spawnSync(process.execPath, [f], { encoding: 'utf8' });
   console.log(`${e.status === 0 ? 'PASS' : 'FAIL'}  [api   ] ${f.padEnd(26)} ${(e.stdout.match(/\d+\/\d+ checks passed/) || [''])[0]}`);
   for (const l of e.stdout.split('\n').filter(l => l.startsWith('FAIL'))) console.log(`        ${l}`);

@@ -14,3 +14,6 @@ apps/whiteboard/node_modules/
 # built bundles of the PDF viewer/editor libraries (scripts/build-media.mjs)
 apps/web/media/
 apps/media/node_modules/
+# built .xlsx bridge of the Sheets editor (scripts/build-sheetjs.mjs)
+apps/web/sheetjs/
+apps/sheetjs/node_modules/
