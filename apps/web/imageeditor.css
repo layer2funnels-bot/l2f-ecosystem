@@ -111,3 +111,8 @@
 @media (max-width:1180px){.ix-toolbar .ix-tool span{display:none}.ix-toolbar .edx-lbl{display:none}}
 @media (max-width:900px){.ed-full .ix-body{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) minmax(0,42%)}.ed-full .ix-side{border-left:0;border-top:1px solid var(--line2)}}
 @media (max-width:700px){.edx-menubar{display:none}.edx-phone{display:inline-flex}.edx-top .edx-glyph{display:none}.edx-top .edx-lbl{display:none}.edx-menu-phone{left:8px!important;right:8px;top:100px!important;max-height:calc(100dvh - 120px)}}
+.ix-sl output{grid-row:1}
+.ix-sl label{grid-row:1}
+.ix-sl input[type=range]{grid-row:2}
+@media (max-width:700px){.edx-top .edx-title{flex:1 1 40px;min-width:40px}.edx-top>.btn:not(.primary){display:none}.edx-status .ix-info{display:none}.edx-top{gap:4px;padding:4px var(--space-2)}}
+
