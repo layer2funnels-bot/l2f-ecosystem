@@ -2,11 +2,12 @@
 .sheets{display:flex;flex-direction:column;min-width:0;min-height:460px}
 .sheets>*{flex:none}
 .sheets>.sx-scroll{flex:1 1 auto;min-height:240px}
-.sx-tools{display:flex;flex-wrap:wrap;gap:2px;align-items:center;padding:4px;border:1px solid var(--line2);border-radius:var(--radius-md);background:var(--surface);margin:var(--space-3) 0 var(--space-2);scrollbar-width:thin}
+.sx-tools{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:2px;align-items:center;padding:3px 8px;border-bottom:1px solid var(--line2);background:var(--surface);scrollbar-width:thin}
 .sx-tb{display:inline-flex;align-items:center;justify-content:center;flex:none;min-width:32px;height:34px;padding:0 4px;border:0;border-radius:6px;background:transparent;color:var(--text);font:inherit;cursor:pointer}
 .sx-tb:hover:not(:disabled){background:var(--sunk)}
 .sx-tb:disabled{opacity:.4;cursor:default}
-.sx-tb:focus-visible,.sx-fs:focus-visible,.sx-scroll:focus-visible{outline:3px solid var(--action);outline-offset:1px}
+.sx-tb:focus-visible,.sx-fs:focus-visible,.sx-mb:focus-visible{outline:2px solid var(--action);outline-offset:-2px}
+.sx-scroll:focus-visible{outline:0}
 .sx-tb[aria-pressed=true]{background:var(--action-tint);color:var(--text)}
 .sx-tb .i{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .sx-glyph{font-weight:600;font-size:15px;line-height:1}.sx-glyph.b{font-weight:800}.sx-glyph.i{font-style:italic;font-family:Georgia,serif}.sx-glyph.u{text-decoration:underline}.sx-glyph.s{text-decoration:line-through}.sx-glyph.sm{font-size:12px;letter-spacing:-.02em}
@@ -31,7 +32,7 @@
 .sx-find .btn{min-height:36px;padding:0 12px}
 .sx-chk{display:inline-flex;gap:4px;align-items:center;font-size:13px;color:var(--text2)}
 /* grid */
-.sx-scroll{position:relative;overflow:auto;border:1px solid var(--line2);border-radius:var(--radius-md);background:var(--surface);overscroll-behavior:contain;outline-offset:2px}
+.sx-scroll{position:relative;overflow:auto;border-top:1px solid var(--line2);border-bottom:1px solid var(--line2);background:var(--surface);overscroll-behavior:contain;outline:0}
 .sx-scroll.painting{cursor:copy}
 .sx-sizer{position:relative}
 .sx-stage{position:sticky;top:0;left:0;overflow:hidden;user-select:none;-webkit-user-select:none}
@@ -124,4 +125,32 @@
 .sx-rules li{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:2px 8px;border:1px solid var(--line2);border-radius:6px;font-size:13px}
 .sx-tabs [role=tab] .i{width:12px;height:12px;vertical-align:-1px;fill:none;stroke:currentColor;stroke-width:2}
 @media (pointer:coarse){.sx-zoom button{min-width:44px;height:44px}.sx-chbar button{width:36px;height:36px}}
-@media (max-width:900px){.sx-tools{flex-wrap:nowrap;overflow-x:auto}}
+
+/* editor layout: top bar, menu bar, toolbar, formula bar, grid, sheet tabs, status bar */
+.sheets.ed-full{background:var(--bg)}
+.sx-topbar{display:flex;align-items:center;gap:var(--space-2);min-height:48px;padding:0 var(--space-3);background:var(--surface)}
+.sx-back{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:8px;color:var(--text);text-decoration:none}
+.sx-back:hover{background:var(--sunk)}.sx-back .i{width:20px;height:20px;transform:scaleX(-1)}
+.sx-ficon .i{width:22px;height:22px;color:var(--ok)}
+.sx-topbar .doctitle{flex:0 1 340px;min-width:90px;min-height:36px;font:600 16px/1.2 var(--font);letter-spacing:0;padding:0 8px}
+.sx-topbar .btn{min-height:36px;padding:0 14px;font-size:14px}
+.sx-grow{flex:1}
+.sx-burger{display:none;min-width:40px;height:40px;border:1px solid var(--line2);border-radius:8px;background:var(--surface);color:var(--text);font-size:18px;cursor:pointer}
+.sx-menubar{display:flex;gap:2px;padding:0 var(--space-2);background:var(--surface);border-bottom:1px solid var(--line2)}
+.sx-mb{min-height:32px;padding:0 10px;border:0;border-radius:6px;background:transparent;color:var(--text);font:inherit;font-size:14px;cursor:pointer}
+.sx-mb:hover{background:var(--sunk)}
+.sx-menu .sx-mh{padding:8px 10px 2px;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.sx-bar-row{padding:6px var(--space-2) 4px;margin:0;background:var(--surface)}
+.sx-ref,.sx-fx{min-height:34px}
+.sx-hint{margin:0;padding:0 var(--space-3);background:var(--surface)}.sx-hint:empty{display:none}
+.sx-find{margin:0;border-radius:0;border-width:0 0 1px}
+.sx-tabsbar{display:flex;align-items:center;padding:4px var(--space-2) 0;background:var(--bg);border-top:0}
+.sx-tabs [role=tab],.sx-tabs .btn,.sx-tabmore{min-height:32px;padding:0 var(--space-3);font-size:13px}
+.sx-status{display:flex;align-items:center;gap:var(--space-3);min-height:34px;padding:0 var(--space-3);background:var(--surface);border-top:1px solid var(--line2);font-size:13px;color:var(--text2)}
+.sx-status .docstat{font-size:12px}
+.sx-zoom button{min-width:28px;height:26px}
+.sx-keys{border-collapse:collapse;width:100%;font-size:14px}.sx-keys th{text-align:left;padding:4px 12px 4px 0;font-weight:600;white-space:nowrap;vertical-align:top}.sx-keys td{padding:4px 0;color:var(--text2)}
+@media (max-width:700px){
+  .sx-menubar{display:none}.sx-burger{display:inline-flex;align-items:center;justify-content:center}.sx-hist{display:none}.sx-topbar .doctitle{flex:1 1 auto;min-width:60px}.sx-topbar .docstate{font-size:0}.sx-topbar .docstate .dot{width:10px;height:10px}
+  .sx-topbar .docstate button{display:none}.sx-ficon{display:none}.sx-status .sx-stats{display:none}.sx-bar-row{padding:4px var(--space-2)}
+}

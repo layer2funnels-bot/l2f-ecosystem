@@ -22,7 +22,7 @@ export function readXlsx(buf, { maxRows = 1000, maxCols = 52 } = {}) {
 }
 
 /** [{ name, rows: [[value|{f}|null]] }] -> Uint8Array (.xlsx). Cell: string | number | boolean | { f: 'SUM(A1:A2)', v: cachedValue }. */
-export function writeXlsx(sheets) {
+export function writeXlsx(sheets, bookType = 'xlsx') {
   const wb = XLSX.utils.book_new();
   for (const s of sheets) {
     const ws = {}; let maxR = 0, maxC = 0;
@@ -39,5 +39,5 @@ export function writeXlsx(sheets) {
     if (s.merges?.length) ws['!merges'] = s.merges.map((m) => ({ s: { r: m.r1, c: m.c1 }, e: { r: m.r2, c: m.c2 } }));
     XLSX.utils.book_append_sheet(wb, ws, s.name.replace(/[\\/?*[\]:]/g, ' ').slice(0, 31) || 'Sheet');
   }
-  return new Uint8Array(XLSX.write(wb, { type: 'array', bookType: 'xlsx' }));
+  return new Uint8Array(XLSX.write(wb, { type: 'array', bookType: bookType === 'ods' ? 'ods' : 'xlsx' }));
 }
