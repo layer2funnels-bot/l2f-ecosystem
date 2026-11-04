@@ -145,7 +145,7 @@
 @media (max-width:700px){
 
   .dx-w-style{width:104px}
-  .dx-paper{width:100%!important;min-height:0;--dx-ml:16px;--dx-mr:16px;--dx-mt:20px;--dx-mb:20px;zoom:1!important}
+  .dx-paper{width:100%!important;min-height:0;--dx-ml:16px!important;--dx-mr:16px!important;--dx-mt:20px!important;--dx-mb:20px!important;zoom:1!important}
   .dx-hdr,.dx-ftr{position:static;padding-top:6px}
   .docacts{width:100%}.dx-find{gap:var(--space-1)}.dx-four{grid-template-columns:1fr 1fr}.dx-two{grid-template-columns:1fr}
   .dx-statusbar .dx-spacer{display:none}
@@ -229,3 +229,16 @@
 .dx-spk kbd{font:500 11px var(--font-m);color:var(--muted)}.dx-dot{width:10px;height:10px;border-radius:50%;display:inline-block}
 .dx-spkren{min-height:34px;width:30px;border:1px solid var(--line2);border-left:0;border-radius:0 8px 8px 0;background:var(--surface);color:var(--text2);cursor:pointer}
 .dx-addspk{min-height:34px}
+
+/* v4.css has a prototype card rule on .docpage (border, card background, 34px headings, theme text colour). The editing surface is white paper in every theme, so those are undone here. */
+.dx-doc.docpage{max-width:none;margin:0;padding-top:0;padding-bottom:0;border:0;border-radius:0;background:transparent;box-shadow:none;color:inherit}
+.dx-doc.docpage p,.dx-doc.docpage li,.dx-doc.docpage blockquote,.dx-doc.docpage td,.dx-doc.docpage th{font-size:inherit;line-height:inherit;color:inherit}
+.dx-doc.docpage h1{font-size:20pt;line-height:1.2;margin:1em 0 .35em;letter-spacing:-.02em}.dx-doc.docpage h2{font-size:15pt;line-height:1.2;margin:1em 0 .35em}.dx-doc.docpage h3{font-size:12.5pt;margin:1em 0 .35em}
+.dx-doc.docpage p[data-t=title]{font-size:26pt;line-height:1.15}.dx-doc.docpage p[data-t=subtitle]{font-size:14pt;line-height:1.3;color:#555}
+.dx-doc.docpage .dx-code{font-size:10pt;line-height:1.45}.dx-doc.docpage ul{padding-left:1.7em}.dx-doc.docpage .dx-list .dx-list{padding-left:1.7em}
+.dx-doc.docpage .dx-tocb{font-size:10.5pt;color:#1d4ed8}.dx-doc.docpage blockquote{color:#444}.dx-doc.docpage .dx-fn{color:#1d4ed8;font-size:.75em}
+.dx-voice .dx-vmodes .btn[aria-pressed=true]{background:var(--action);color:var(--action-ink);border-color:var(--action)}
+.dx-voice .dx-vmodes .btn[aria-pressed=false]{background:var(--surface);color:var(--text)}
+.dx-voice .dx-vnote,.dx-voice .dx-vtalk .fine{font-size:12px;line-height:1.4}
+.dx-preview .dx-paper{max-width:100%}
+@media (max-width:700px){.dx-statusbar .docstat:nth-last-child(-n+2){display:none}.dx-statusbar{gap:2px 12px;padding:2px var(--space-2)}.dx-voice{max-height:45vh;overflow:auto}}

@@ -98,7 +98,7 @@ export function docView({ api, id, ctx, opts = {} }) {
     let meta = file, version = ver.version, status = 'saved', savedAt = ver.created_at, lastAuto = 0, timer = null, saving = false, readOnly = Boolean(file.archived_at) || !ctx.can('drive.file.upload', file.client_id);
     let doc = parseBody(ver.body ?? ''); let activeTab = doc.tabs[0].id; let savedBody = serialize(doc); let lastBody = savedBody;
     let spell = store.get('dx-spell') !== '0'; let outlineOpen = store.get('dx-outline') !== '0'; let mode = '';
-    let zoom = Number(store.get('dx-zoom')) || 100; let tabsOpen = store.get('dx-tabs') ? store.get('dx-tabs') === '1' : innerWidth >= 900;
+    let zoom = Number(store.get('dx-zoom')) || 100; const narrow = innerWidth < 900; const tabsKey = narrow ? 'dx-tabs-narrow' : 'dx-tabs'; let tabsOpen = store.get(tabsKey) ? store.get(tabsKey) === '1' : !narrow;
     const collapsed = new Set();
     const gone = () => !root.isConnected;
 
@@ -482,7 +482,7 @@ export function docView({ api, id, ctx, opts = {} }) {
     const vPanel = h('section', { class: 'dx-voice', 'aria-label': 'Voice typing', hidden: true },
       h('div', { class: 'dx-vrow' }, vMic, vLang, vModes, h('span', { class: 'dx-spacer' }), h('button', { type: 'button', class: 'iconbtn', 'aria-label': 'Close voice panel', onclick: () => closeVoice() }, icon('cross'))),
       h('div', { class: 'dx-vrow dx-vline', 'aria-live': 'off' }, h('span', { class: 'fine muted' }, 'Hearing: '), vInterim), vTalk, vMsg,
-      h('p', { class: 'fine muted dx-vnote' }, 'Speech recognition runs in your browser. In Chrome and Edge the audio may be sent to the browser maker’s speech service. English commands: “comma”, “full stop”, “question mark”, “new line”, “new paragraph”.'));
+      h('p', { class: 'fine muted dx-vnote' }, 'Runs in your browser; in Chrome and Edge the audio may be sent to the browser maker’s speech service. English commands: “comma”, “full stop”, “question mark”, “new line”, “new paragraph”.'));
     function paintVoice() {
       for (const b of vModes.querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.m === vs.mode));
       vMic.textContent = vs.listening ? '⏹ Stop' : '🎤 Start'; vMic.setAttribute('aria-pressed', String(vs.listening)); vMic.classList.toggle('on', vs.listening);
@@ -496,7 +496,7 @@ export function docView({ api, id, ctx, opts = {} }) {
     vTalk.append(vSpk,
       h('div', { class: 'dx-vrow' }, h('label', { class: 'dx-check' }, h('input', { type: 'checkbox', onchange: (e) => { vs.auto = e.target.checked; } }), ' Switch speaker after a pause of'), h('input', { type: 'number', class: 'dx-num', min: '1', max: '30', value: String(vs.pause), 'aria-label': 'Pause in seconds', onchange: (e) => { vs.pause = Math.max(1, Math.min(30, Number(e.target.value) || 3)); } }), h('span', { class: 'fine' }, 'seconds'),
         h('label', { class: 'dx-check' }, h('input', { type: 'checkbox', onchange: (e) => { vs.record = e.target.checked; } }), ' Also record the audio and save it to Drive')),
-      h('p', { class: 'fine muted' }, 'The free browser mode cannot tell voices apart. Choose who is speaking with the buttons or Alt+1 to Alt+9; “switch after a pause” only alternates the speakers when someone stops talking for that long.'));
+      h('p', { class: 'fine muted' }, 'The free browser mode cannot tell voices apart: choose the speaker with the buttons or Alt+1 to Alt+9. “Switch after a pause” only alternates speakers when talking stops.'));
     function renameSpeaker(i) {
       const f = field({ id: 'dx-sn', label: 'Speaker name', value: vs.speakers[i].name, maxlength: 40 });
       dialog({ title: 'Rename speaker', body: f.el, actions: [{ label: 'Save', cls: 'primary', on: () => { const v = f.input.value.trim(); if (!v) return f.error('Enter a name.'); vs.speakers[i].name = v; paintVoice(); } }, { label: 'Cancel' }] });
@@ -520,7 +520,7 @@ export function docView({ api, id, ctx, opts = {} }) {
         vs.lastAt = now; paintVoice(); const runs = lineRuns(text, vs.speakers[vs.cur], vs.cur); const dir = urdu ? { dir: 'rtl' } : {};
         if (!vs.lastEl || !vs.lastEl.isConnected) {
           const head = [{ x: `Conversation transcript, ${new Date().toLocaleString()}`, b: 1 }, ...(vs.record ? [{ x: ' · audio is being recorded and will be saved in Drive next to this document', i: 1, c: '#737373' }] : [])];
-          if (!ed.blockIsEmpty()) ed.insertBlocks([{ t: 'p', c: [] }, { t: 'p', c: [] }]);
+          if (!ed.blockIsEmpty()) { const here = ed.currentBlockEl(); if (here) ed.appendAfter(here, { t: 'p', c: [] }); }
           ed.insertBlocks([{ t: 'p', c: head }, { t: 'p', ...dir, c: runs }]); vs.headerEl = ed.currentBlockEl()?.previousElementSibling ?? null; vs.lastEl = ed.currentBlockEl();
         } else vs.lastEl = ed.appendAfter(vs.lastEl, { t: 'p', ...dir, c: runs }) ?? vs.lastEl;
         return;
@@ -885,7 +885,7 @@ export function docView({ api, id, ctx, opts = {} }) {
       fillToc(page, (i) => page.children[i]?.scrollIntoView({ block: 'start', behavior: reduced() ? 'auto' : 'smooth' })); fillNotes(page, notesEl);
       const o = outline({ blocks: ed.blocks() }); outlineEl.replaceChildren(o.length ? h('ul', { class: 'dx-ol' }, ...o.map((x) => h('li', { class: `l${x.level}` }, h('button', { type: 'button', class: 'lnk', onclick: () => { const el = page.children[x.index]; el?.scrollIntoView({ block: 'start', behavior: reduced() ? 'auto' : 'smooth' }); } }, x.text)))) : h('p', { class: 'fine muted dx-olnone' }, 'Headings you add appear here.'));
     }
-    function toggleTabs() { tabsOpen = !tabsOpen; store.set('dx-tabs', tabsOpen ? '1' : '0'); body.classList.toggle('no-tabs', !tabsOpen); tabsToggle.setAttribute('aria-expanded', String(tabsOpen)); }
+    function toggleTabs() { tabsOpen = !tabsOpen; store.set(tabsKey, tabsOpen ? '1' : '0'); body.classList.toggle('no-tabs', !tabsOpen); tabsToggle.setAttribute('aria-expanded', String(tabsOpen)); }
     const tabsToggle = h('button', { type: 'button', class: 'dx-mb dx-tabsbtn', 'aria-expanded': String(tabsOpen), 'aria-controls': 'dx-tabs-panel', onclick: toggleTabs }, icon('layers'), ' Tabs');
 
     // ---- title, history, breadcrumb
