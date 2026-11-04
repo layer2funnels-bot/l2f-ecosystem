@@ -8,6 +8,7 @@ import { h, icon, toast, dialog, btn, notice, skeleton, errorState, noAccessStat
 import { dirty } from '../dirty.js';
 import * as M from './mediamodel.js';
 import { readStored, saveVersion, saveCopy, downloadBlob, versionsDrawer } from './mediaio.js';
+import { menuBar, topBar, backFor } from './edchrome.js';
 
 const BASE = '/media/';
 let libs = null, libsP = null, pdfjsP = null;
@@ -16,7 +17,7 @@ const loadLib = () => (libsP ??= import(`${BASE}pdflib.js`).then((m) => (libs = 
 const MAX_BYTES = 80e6;
 const timeOf = (d) => new Date(d).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 const aid = () => `a${Math.random().toString(36).slice(2, 9)}`;
-const TOOL_LIST = [['select', 'cursor', 'Select'], ['text', 'text', 'Text'], ['hl', 'pen', 'Highlight'], ['rect', 'shape', 'Rectangle'], ['pen', 'edit', 'Draw'], ['sign', 'user', 'Signature'], ['img', 'imgI', 'Picture'], ['redact', 'lock', 'Redact']];
+const TOOL_LIST = [['select', 'cursor', 'Select'], ['text', 'text', 'Text'], ['hl', 'sticky', 'Highlight'], ['rect', 'shape', 'Rectangle'], ['pen', 'edit', 'Draw'], ['sign', 'user', 'Signature'], ['img', 'imgI', 'Picture'], ['redact', 'lock', 'Redact']];
 const KEYS = { select: 'V', text: 'T', hl: 'H', rect: 'R', pen: 'D', sign: 'S', img: 'I', redact: 'X' };
 const mk = (w, hh) => { const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(w)); c.height = Math.max(1, Math.round(hh)); return c; };
 const measure = (a) => { const c = mk(1, 1).getContext('2d'); c.font = `${a.bold ? 'bold ' : ''}${a.size}px Helvetica, Arial, sans-serif`; const lines = String(a.text).split('\n'); return { w: Math.max(...lines.map((l) => c.measureText(l).width)), h: lines.length * a.size * 1.2 }; };
@@ -40,7 +41,7 @@ async function paint(out, page, ox, oy, cmds, fonts, embedded) {
 }
 
 export function pdfView({ api, id, ctx }) {
-  const root = h('section', { class: 'px', 'aria-label': 'PDF viewer' }, skeleton(4));
+  const root = h('section', { class: 'px ed-full', 'aria-label': 'PDF viewer' }, skeleton(4));
   const gone = () => !root.isConnected;
   const load = async () => {
     const f = await api.call('drive.files.get', { id });
@@ -521,7 +522,7 @@ export function pdfView({ api, id, ctx }) {
 
     // ---------------------------------------------------------------- toolbar
     const toolRow = h('div', { class: 'px-edit', role: 'toolbar', 'aria-label': 'Edit tools' });
-    const optRow = h('div', { class: 'px-opts' });
+    const optRow = h('div', { class: 'px-opts' }); const hintEl = h('span', { class: 'px-hint' });
     const docRow = h('div', { class: 'px-doc', role: 'toolbar', 'aria-label': 'Document tools' }, btn('Add pages…', () => mergeDialog(), '', { title: 'Add pages from another PDF' }), btn('Blank page', () => blankPage(), '', { title: 'Insert a blank page after this one' }), btn('Extract…', () => extractDialog(), '', { title: 'Save some pages as a new PDF' }), btn('Page numbers…', () => numbersDialog(), ''), btn('Watermark…', () => watermarkDialog(), ''), btn('File size…', () => compressDialog(), '', { title: 'Check and reduce the file size' }));
     function setTool(t) { st.tool = t; if (t !== 'sign' && t !== 'img') st.pending = null; scroller.dataset.tool = t; paintTools(); if (t === 'sign') signDialog(); else if (t === 'img') pickImage(); }
     function paintTools() {
@@ -539,7 +540,7 @@ export function pdfView({ api, id, ctx }) {
       else if (st.tool === 'hl') bits.push(color('Colour', st.hlColor, (v) => { st.hlColor = v; }));
       else if (st.tool === 'rect' || st.tool === 'pen') bits.push(color('Colour', st.drawColor, (v) => { st.drawColor = v; }), num('Line (pt)', st.line, 1, 24, (v) => { st.line = v; }));
       const hint = { select: 'Click an item to move, resize or delete it. Double-click text to change it.', redact: 'Drag over what must be hidden. When you save, that page is written as a flat picture with the area blacked out, so the covered text and images are gone for good. Text on that page can then no longer be selected or searched.', text: 'Click the page, type, then press Ctrl+Enter or click away.', hl: 'Drag across the text to highlight it.', rect: 'Drag to draw a rectangle.', pen: 'Draw freehand on the page.', sign: 'Make a signature, then click the page to place it.', img: 'Choose a picture, then click the page to place it.' }[st.tool];
-      optRow.replaceChildren(...bits, h('span', { class: 'fine muted px-hint' }, hint));
+      optRow.replaceChildren(...bits); optRow.hidden = !bits.length; hintEl.textContent = hint ?? '';
     }
     function nudge(k, d) { const rec = pageEls.find((r) => annOf(r).some((a) => a.id === st.sel)); if (!rec) return; const dx = k === 'arrowleft' ? -d : k === 'arrowright' ? d : 0, dy = k === 'arrowup' ? -d : k === 'arrowdown' ? d : 0; setAnn(rec, annOf(rec).map((a) => (a.id !== st.sel ? a : a.pts ? { ...a, pts: a.pts.map((p) => [p[0] + dx, p[1] + dy]) } : { ...a, x: a.x + dx, y: a.y + dy })), true); }
     function deleteSel() { const rec = pageEls.find((r) => annOf(r).some((a) => a.id === st.sel)); if (!rec) return; const id0 = st.sel; st.sel = null; setAnn(rec, annOf(rec).filter((a) => a.id !== id0), true); paintTools(); }
@@ -580,16 +581,32 @@ export function pdfView({ api, id, ctx }) {
     const banners = [];
     if (meta.archived_at) banners.push(notice('info', 'eye', [h('b', {}, 'Archived.'), ' This PDF is read only.']));
     else if (readOnly) banners.push(readOnlyNotice('You can read this PDF but not change it'));
-    const bar = h('div', { class: 'ix-bar' }, h('div', { class: 'ix-title' }, crumb, h('h1', { 'data-page-title': true, class: 'ix-name' }, meta.name)),
-      h('div', { class: 'docacts' }, statusEl, sizeEl, readOnly ? null : undoB, readOnly ? null : redoB, btn('History', () => versionsDrawer({ api, file: meta, current: () => version, readOnly, canRestore: !readOnly && !dirtyNow(), onRestored: async (blob, v) => { version = v; savedAt = new Date().toISOString(); await reloadFrom(blob, false); status = 'saved'; changed(); } }), ''), btn('Download', () => download(), ''), readOnly ? null : btn('Save as copy', () => saveCopyNow(), ''), saveBtn));
-    const sideToggle = btn([icon('layers'), h('span', { class: 'sr' }, 'Pages')], () => { st.sidebar = !st.sidebar; side.hidden = !st.sidebar; sideToggle.setAttribute('aria-pressed', String(st.sidebar)); if (typeof st.zoom === 'string') setTimeout(buildPages, 50); }, 'ix-ic', { 'aria-pressed': String(st.sidebar), title: 'Page thumbnails' });
-    const viewBar = h('div', { class: 'px-view', role: 'toolbar', 'aria-label': 'View' }, sideToggle, btn('‹', () => goTo(st.cur - 1), 'ix-ic', { 'aria-label': 'Previous page', title: 'Previous page' }), pageNum, total, btn('›', () => goTo(st.cur + 1), 'ix-ic', { 'aria-label': 'Next page', title: 'Next page' }),
-      btn([icon('zout'), h('span', { class: 'sr' }, 'Zoom out')], () => zoomBy(1 / 1.2), 'ix-ic'), zoomSel, btn([icon('zin'), h('span', { class: 'sr' }, 'Zoom in')], () => zoomBy(1.2), 'ix-ic'),
-      btn([icon('rotate'), h('span', {}, 'Rotate view')], () => { st.viewRot = (st.viewRot + 90) % 360; buildPages(); }, '', { title: 'Turn the view (does not change the file)' }), btn([icon('doc'), h('span', {}, 'Print')], () => printNow(), '', { title: 'Print' }),
-      h('span', { class: 'px-sp' }), h('label', { class: 'px-find' }, icon('search'), searchIn), btn('‹', () => step(-1), 'ix-ic', { 'aria-label': 'Previous match' }), btn('›', () => step(1), 'ix-ic', { 'aria-label': 'Next match' }), hitInfo, btn('?', () => shortcutsDialog(), 'ix-ic', { title: 'Keyboard shortcuts (?)', 'aria-label': 'Keyboard shortcuts' }));
+    const histBtn = btn('History', () => versionsDrawer({ api, file: meta, current: () => version, readOnly, canRestore: !readOnly && !dirtyNow(), onRestored: async (blob, v) => { version = v; savedAt = new Date().toISOString(); await reloadFrom(blob, false); status = 'saved'; changed(); } }), '', { title: 'Version history' });
+    const dlBtn = btn([icon('download'), h('span', { class: 'edx-lbl' }, 'Download')], () => download(), '', { title: 'Download' });
+    const top = topBar({ backHref: backFor(meta), glyph: 'doc', name: meta.name, readOnly, onRename: async (name) => { const r = await api.call('drive.files.update', { id: meta.id, name }); if (r.ok) { meta = { ...meta, name }; document.title = `${name} · PDF`; toast('Renamed.'); return true; } toast(r.message ?? 'Couldn’t rename.', false); return false; }, right: [statusEl, histBtn, dlBtn, saveBtn] });
+    const turnView = () => { st.viewRot = (st.viewRot + 90) % 360; buildPages(); };
+    const toggleSide = () => { st.sidebar = !st.sidebar; side.hidden = !st.sidebar; sideToggle.setAttribute('aria-pressed', String(st.sidebar)); if (typeof st.zoom === 'string') setTimeout(buildPages, 50); };
+    const sideToggle = btn([icon('layers'), h('span', { class: 'sr' }, 'Pages')], toggleSide, 'ix-ic', { 'aria-pressed': String(st.sidebar), title: 'Page thumbnails and bookmarks' });
+    const sep = () => h('span', { class: 'edx-sep', 'aria-hidden': 'true' });
+    const toolbar = h('div', { class: 'px-view', role: 'toolbar', 'aria-label': 'Tools' }, sideToggle, btn('‹', () => goTo(st.cur - 1), 'ix-ic', { 'aria-label': 'Previous page', title: 'Previous page (Page Up)' }), pageNum, total, btn('›', () => goTo(st.cur + 1), 'ix-ic', { 'aria-label': 'Next page', title: 'Next page (Page Down)' }), sep(),
+      btn([icon('zout'), h('span', { class: 'sr' }, 'Zoom out')], () => zoomBy(1 / 1.2), 'ix-ic', { title: 'Zoom out (-)' }), zoomSel, btn([icon('zin'), h('span', { class: 'sr' }, 'Zoom in')], () => zoomBy(1.2), 'ix-ic', { title: 'Zoom in (+)' }),
+      btn([icon('rotate'), h('span', { class: 'sr' }, 'Rotate view')], turnView, 'ix-ic', { title: 'Turn the view (does not change the file)' }), btn([icon('doc'), h('span', { class: 'sr' }, 'Print')], () => printNow(), 'ix-ic', { title: 'Print' }), sep(),
+      h('label', { class: 'px-find' }, icon('search'), searchIn), btn('‹', () => step(-1), 'ix-ic', { 'aria-label': 'Previous match', title: 'Previous match (Shift+Enter)' }), btn('›', () => step(1), 'ix-ic', { 'aria-label': 'Next match', title: 'Next match (Enter)' }), hitInfo,
+      ...(readOnly ? [] : [sep(), toolRow, sep(), undoB, redoB]));
+    const ro2 = readOnly; const tg = (t) => () => setTool(t);
+    const cur = () => targets();
+    const menus = menuBar([
+      { label: 'File', items: [{ label: 'Save', key: 'Ctrl+S', on: () => save(), disabled: () => ro2 || status === 'saved' }, { label: 'Save as copy', on: () => saveCopyNow(), disabled: ro2 }, { label: 'Download', on: () => download() }, { label: 'Print…', on: () => printNow() }, 'sep', { label: 'Version history', on: () => histBtn.click() }, 'sep', { label: 'Back to Drive', on: () => { location.hash = backFor(meta); } }] },
+      { label: 'Edit', items: [{ label: 'Undo', key: 'Ctrl+Z', on: undo, disabled: () => ro2 || !hist.canUndo() }, { label: 'Redo', key: 'Ctrl+Shift+Z', on: redo, disabled: () => ro2 || !hist.canRedo() }, 'sep', { label: 'Delete selected item', key: 'Del', on: deleteSel, disabled: () => ro2 || !st.sel }, 'sep', { label: 'Find…', key: 'Ctrl+F', on: () => { searchIn.focus(); searchIn.select(); } }] },
+      { label: 'View', items: [{ label: 'Zoom in', key: '+', on: () => zoomBy(1.2) }, { label: 'Zoom out', key: '-', on: () => zoomBy(1 / 1.2) }, { label: 'Fit width', on: () => applyZoom('width') }, { label: 'Fit page', on: () => applyZoom('page') }, { label: 'Actual size (100%)', on: () => applyZoom(1) }, 'sep', { label: 'Rotate view', on: turnView }, { label: 'Show pages and bookmarks', checked: () => st.sidebar, on: toggleSide }, 'sep', { label: 'Keyboard shortcuts', key: '?', on: shortcutsDialog }] },
+      { label: 'Insert', items: [{ label: 'Text', key: 'T', on: tg('text'), disabled: ro2 }, { label: 'Highlight', key: 'H', on: tg('hl'), disabled: ro2 }, { label: 'Rectangle', key: 'R', on: tg('rect'), disabled: ro2 }, { label: 'Draw', key: 'D', on: tg('pen'), disabled: ro2 }, { label: 'Signature…', key: 'S', on: tg('sign'), disabled: ro2 }, { label: 'Picture…', key: 'I', on: tg('img'), disabled: ro2 }, 'sep', { label: 'Redact (cover for good)', key: 'X', on: tg('redact'), disabled: ro2 }, 'sep', { label: 'Blank page after this one', on: () => blankPage(), disabled: ro2 }, { label: 'Pages from another PDF…', on: () => mergeDialog(), disabled: ro2 }] },
+      { label: 'Page', items: [{ label: 'Rotate right', on: () => rotatePage(cur(), 90), disabled: ro2 }, { label: 'Rotate left', on: () => rotatePage(cur(), -90), disabled: ro2 }, { label: 'Delete page', on: () => pageOp((p) => M.deletePages(p, cur())), disabled: () => ro2 || S.pages.length < 2 }, { label: 'Move up', on: () => pageOp((p) => M.movePage(p, st.cur, st.cur - 1)), disabled: () => ro2 || st.cur === 0 }, { label: 'Move down', on: () => pageOp((p) => M.movePage(p, st.cur, st.cur + 1)), disabled: () => ro2 || st.cur >= S.pages.length - 1 }, 'sep', { label: 'Extract pages…', on: () => extractDialog(), disabled: ro2 }, 'sep', { label: 'Page numbers…', on: () => numbersDialog(), disabled: ro2 }, { label: 'Watermark…', on: () => watermarkDialog(), disabled: ro2 }] },
+      { label: 'Tools', items: [{ label: 'File size…', on: () => compressDialog(), disabled: ro2 }, { label: 'Find…', key: 'Ctrl+F', on: () => { searchIn.focus(); searchIn.select(); } }] },
+    ], { isLive: () => !gone() });
     side.hidden = !st.sidebar;
     pagesPane.append(sideInfo, thumbs); side.append(h('h2', { class: 'px-h3' }, 'Pages'), tabs, pagesPane, outlinePane);
-    root.replaceChildren(...banners, bar, viewBar, readOnly ? null : h('div', { class: 'px-editbar' }, toolRow, optRow, docRow), h('div', { class: 'px-body' }, side, scroller));
+    const statusBar = h('footer', { class: 'edx-status' }, sizeEl, hintEl);
+    root.replaceChildren(top.el, menus.el, ...banners, toolbar, readOnly ? null : optRow, h('div', { class: 'px-body' }, side, scroller), statusBar);
     document.title = `${meta.name} · PDF`;
     scroller.dataset.tool = st.tool; changed(); paintTools(); buildThumbs(); buildPages();
     void hex;

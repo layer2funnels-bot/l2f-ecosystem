@@ -42,6 +42,7 @@ const newPage = async (viewport = { width: 1366, height: 860 }) => { const c = a
 const text = (p) => p.locator('body').innerText();
 const until = (p, t, ms = 15000) => p.waitForSelector(`text=${t}`, { timeout: ms });
 async function signUp(p, name, email) { await p.goto(`${base}/#/signup`); await p.reload(); await p.waitForSelector('#nm', { timeout: 9000 }); await p.fill('#nm', name); await p.fill('#em', email); await p.fill('#pw', PW); await p.click('button[type=submit]'); }
+const menu = async (p, top, item) => { await p.locator('.edx-mb', { hasText: top }).first().click(); await p.getByRole('menuitem', { name: item }).first().click(); };
 const shot = async (p, name) => { await p.screenshot({ path: `${SHOTS}/${name}.png` }); };
 
 // ---- setup: an owner and a viewer of Layer2Funnels with Drive on
@@ -72,7 +73,7 @@ check('MG1', 'In Drive, the PNG links to #/image/<id> and the PDF to #/pdf/<id>'
 
 // ================================================================= image editor
 await op.click(`a:text-is("${pngName}")`); await op.waitForTimeout(4000); if (process.env.DEBUG_MEDIA)  await op.waitForSelector('.ix-cv', { timeout: 15000 }); await op.waitForTimeout(500);
-check('MG2', 'The image editor opens from Drive and shows the size of the picture', (await op.locator('.ix-info').innerText()).includes('60 × 40') && (await text(op)).includes(pngName));
+check('MG2', 'The image editor opens from Drive and shows the size of the picture', (await op.locator('.ix-info').innerText()).includes('60 × 40') && (await op.locator('.edx-title').inputValue()) === pngName);
 const pixel = () => op.evaluate(() => { const c = document.querySelector('.ix-cv'); const d = c.getContext('2d').getImageData(Math.floor(c.width / 2), Math.floor(c.height / 2), 1, 1).data; return [...d]; });
 const before = await pixel();
 await shot(op, 'image-1366-open');
@@ -119,7 +120,7 @@ await op.getByRole('button', { name: 'Restore as new' }).first().click(); await 
 check('MG13', 'Restore as new makes version 3 from version 1 (60 × 40 again) without deleting anything', (await q('select current_version from files where id=$1', [pngId]))[0].current_version === 3 && (await op.locator('.ix-info').innerText()).includes('60 × 40'));
 // save as copy + download
 await op.click('.ix-tool[title^="Filters"]'); await op.getByRole('button', { name: 'Sepia' }).click(); await op.waitForTimeout(300);
-await op.getByRole('button', { name: 'Save as copy' }).click(); await op.getByRole('button', { name: 'Save copy' }).click(); await until(op, 'Saved a copy'); await op.waitForTimeout(400);
+await menu(op, 'File', 'Save as copy'); await op.getByRole('button', { name: 'Save copy' }).click(); await until(op, 'Saved a copy'); await op.waitForTimeout(400);
 const copies = await q("select name, mime_type from files where workspace_id=$1 and name like $2", [L, `pic-${stamp} (copy)%`]);
 check('MG14', 'Save as copy creates a new Drive file next to it, and the original keeps version 3', copies.length === 1 && copies[0].mime_type === 'image/png' && (await q('select current_version from files where id=$1', [pngId]))[0].current_version === 3, JSON.stringify(copies));
 const dl = op.waitForEvent('download'); await op.getByRole('button', { name: 'Download' }).click(); await op.getByRole('dialog').getByRole('button', { name: 'Download' }).click(); const d1 = await dl;
@@ -149,28 +150,28 @@ check('MG21', 'Rotate view turns the pages sideways (landscape) without changing
 await op.getByRole('button', { name: 'Rotate view' }).click(); await op.getByRole('button', { name: 'Rotate view' }).click(); await op.getByRole('button', { name: 'Rotate view' }).click(); await op.waitForTimeout(700);
 // edit: text, rectangle, draw, highlight on page 1
 const pgEl = op.locator('.px-page').first(); await op.locator('.px-scroll').evaluate((e) => { e.scrollTop = 0; }); const pb = await pgEl.boundingBox(); const sb = await op.locator('.px-scroll').boundingBox(); const X = (f) => pb.x + pb.width * f; const Y = (d) => sb.y + 12 + d;
-await op.getByRole('button', { name: 'Text', exact: true }).click(); await op.mouse.click(X(0.15), Y(150)); await op.waitForSelector('.px-entry', { timeout: 3000 }); await op.fill('.px-entry', 'E2E note'); await op.keyboard.press('Control+Enter'); await op.waitForTimeout(300);
-await op.getByRole('button', { name: 'Rectangle' }).click(); await op.mouse.move(X(0.2), Y(230)); await op.mouse.down(); await op.mouse.move(X(0.6), Y(300), { steps: 5 }); await op.mouse.up();
-await op.getByRole('button', { name: 'Highlight' }).click(); await op.mouse.move(X(0.1), Y(100)); await op.mouse.down(); await op.mouse.move(X(0.7), Y(135), { steps: 5 }); await op.mouse.up();
-await op.getByRole('button', { name: 'Draw', exact: true }).click(); await op.mouse.move(X(0.2), Y(330)); await op.mouse.down(); await op.mouse.move(X(0.5), Y(380), { steps: 6 }); await op.mouse.up();
-await op.getByRole('button', { name: 'Select', exact: true }).click();
+await op.locator('.px-tool[title^="Text"]').click(); await op.mouse.click(X(0.15), Y(150)); await op.waitForSelector('.px-entry', { timeout: 3000 }); await op.fill('.px-entry', 'E2E note'); await op.keyboard.press('Control+Enter'); await op.waitForTimeout(300);
+await op.locator('.px-tool[title^="Rectangle"]').click(); await op.mouse.move(X(0.2), Y(230)); await op.mouse.down(); await op.mouse.move(X(0.6), Y(300), { steps: 5 }); await op.mouse.up();
+await op.locator('.px-tool[title^="Highlight"]').click(); await op.mouse.move(X(0.1), Y(100)); await op.mouse.down(); await op.mouse.move(X(0.7), Y(135), { steps: 5 }); await op.mouse.up();
+await op.locator('.px-tool[title^="Draw"]').click(); await op.mouse.move(X(0.2), Y(330)); await op.mouse.down(); await op.mouse.move(X(0.5), Y(380), { steps: 6 }); await op.mouse.up();
+await op.locator('.px-tool[title^="Select"]').click();
 check('MG22', 'A text box, a rectangle, a highlight and a drawing were added to page 1', (await op.locator('.px-page').first().locator('.px-a').count()) === 4, String(await op.locator('.px-page').first().locator('.px-a').count()));
 // signature (typed)
-await op.getByRole('button', { name: 'Signature' }).click(); await op.getByRole('dialog').getByRole('button', { name: 'Type' }).click(); await op.fill('#px-typed', 'Mia Media'); await op.getByRole('button', { name: 'Place on page' }).click();
+await op.locator('.px-tool[title^="Signature"]').click(); await op.getByRole('dialog').getByRole('button', { name: 'Type' }).click(); await op.fill('#px-typed', 'Mia Media'); await op.getByRole('button', { name: 'Place on page' }).click();
 await op.mouse.click(X(0.55), Y(420)); await op.waitForTimeout(300);
 check('MG23', 'A typed signature can be placed on the page', (await op.locator('.px-page').first().locator('.px-a').count()) === 5);
 // page ops: rotate page 2, add pages from the other PDF
 await op.getByRole('button', { name: 'Rotate right (page 2)' }).click(); await op.waitForTimeout(700);
 const p2 = await op.locator('.px-page').nth(1).evaluate((e) => [e.offsetWidth, e.offsetHeight]);
 check('MG24', 'Rotate page 2 makes it landscape', p2[0] > p2[1], JSON.stringify(p2));
-await op.getByRole('button', { name: 'Add pages…' }).click(); await until(op, pdf2Name); await op.locator('li', { hasText: pdf2Name }).getByRole('button', { name: 'Add pages' }).click(); await until(op, 'Added 1 page'); await op.waitForTimeout(800);
+await menu(op, 'Insert', 'Pages from another PDF'); await until(op, pdf2Name); await op.locator('li', { hasText: pdf2Name }).getByRole('button', { name: 'Add pages' }).click(); await until(op, 'Added 1 page'); await op.waitForTimeout(800);
 check('MG25', 'Pages from another Drive PDF are added at the end (3 pages)', (await op.locator('.px-page').count()) === 3 && (await text(op)).includes('of 3'));
 await op.getByRole('button', { name: 'Move up (page 3)' }).click(); await op.waitForTimeout(500);
 check('MG26', 'Reordering pages works (page 3 moved up)', (await op.locator('.px-trow').count()) === 3);
 await op.getByRole('button', { name: 'Undo' }).first().click(); await op.waitForTimeout(500); await op.getByRole('button', { name: 'Redo' }).first().click(); await op.waitForTimeout(500);
 await shot(op, 'pdf-1366-edited');
 // extract page 1 to a new file
-await op.getByRole('button', { name: 'Extract…' }).click(); await op.fill('#px-range', '1'); await op.getByRole('dialog').getByRole('button', { name: 'Save as new file' }).click(); await op.waitForTimeout(2500); if (process.env.DEBUG_MEDIA) console.log('TOAST', await op.locator('.toast').innerText()); await until(op, 'Saved plan-', 5000); await op.waitForTimeout(500);
+await menu(op, 'Page', 'Extract pages'); await op.fill('#px-range', '1'); await op.getByRole('dialog').getByRole('button', { name: 'Save as new file' }).click(); await op.waitForTimeout(2500); if (process.env.DEBUG_MEDIA) console.log('TOAST', await op.locator('.toast').innerText()); await until(op, 'Saved plan-', 5000); await op.waitForTimeout(500);
 const ex = await q("select id, name from files where workspace_id=$1 and name like $2", [L, `plan-${stamp} (pages 1)%`]);
 check('MG27', 'Extract pages saves a new PDF file in the same place', ex.length === 1);
 // save the edited PDF

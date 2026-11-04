@@ -94,3 +94,20 @@ input[type=checkbox].px-fi,input[type=radio].px-fi{padding:0;accent-color:var(--
 .px-outline .lnk{min-height:44px;width:100%;padding:0 var(--space-2);border:0;background:none;border-radius:var(--radius-md);color:var(--text);font:500 14px var(--font);text-align:left;cursor:pointer}.px-outline .lnk:hover{background:var(--action-tint)}
 .px-otitle{display:block;padding:10px var(--space-2);font:600 13px var(--font);color:var(--text2)}
 .px-size{align-self:center;white-space:nowrap}
+/* ed-full layout of the PDF editor */
+.ed-full .px-body{flex:1;min-height:0;display:flex;gap:0;align-items:stretch}
+.ed-full .px-side{flex:none;max-height:none;height:auto;border:0;border-right:1px solid var(--line2);border-radius:0}
+.ed-full .px-scroll{flex:1;min-width:0;height:auto;min-height:0;border:0;border-radius:0}
+.ed-full .px-opts{display:flex;flex-wrap:wrap;gap:var(--space-3);align-items:center;padding:4px var(--space-3);background:var(--surface);border-bottom:1px solid var(--line2);flex:none}
+.ed-full .px-opts[hidden]{display:none}
+.px-view .px-edit{display:flex;gap:2px;flex-wrap:nowrap}
+.px-view .px-tool{min-width:44px;padding:0 10px}
+.px-view .px-tool span{display:none}
+.px-view .btn{box-shadow:none;background:transparent}.px-view .btn:hover:not(:disabled){background:var(--action-tint)}
+.px-view .tbsel{min-height:44px;border:1px solid var(--control);border-radius:var(--radius-md);background:var(--surface);color:var(--text);padding:0 var(--space-2)}
+.px-view .px-find{flex:none}
+.edx-status .px-hint{color:var(--muted)}
+@media (min-width:1500px){.px-view .px-tool span{display:inline}}
+@media (max-width:900px){.ed-full .px-side{position:fixed;z-index:var(--z-menu);left:0;top:150px;bottom:0;width:min(260px,82vw);border:0;box-shadow:var(--sh3)}}
+@media (max-width:700px){.px-search{width:120px}.edx-status .px-hint{display:none}}
+

@@ -7,6 +7,7 @@ import { h, icon, toast, dialog, btn, notice, skeleton, errorState, noAccessStat
 import { dirty } from '../dirty.js';
 import * as M from './mediamodel.js';
 import { readStored, saveVersion, saveCopy, downloadBlob, versionsDrawer } from './mediaio.js';
+import { menuBar, topBar, backFor } from './edchrome.js';
 
 const PREVIEW = 2400;          // longest side of the working preview (the saved picture always uses the full size)
 const MAX_PIXELS = 64e6;
@@ -69,7 +70,7 @@ const measureText = (a) => { const c = mkCanvas(1, 1).getContext('2d'); c.font =
 const clone = (v) => JSON.parse(JSON.stringify(v));
 
 export function imageView({ api, id, ctx }) {
-  const root = h('section', { class: 'ix', 'aria-label': 'Image editor' }, skeleton(4));
+  const root = h('section', { class: 'ix ed-full', 'aria-label': 'Image editor' }, skeleton(4));
   const gone = () => !root.isConnected;
   const load = async () => {
     const f = await api.call('drive.files.get', { id });
@@ -472,10 +473,22 @@ export function imageView({ api, id, ctx }) {
     if (meta.archived_at) banners.push(notice('info', 'eye', [h('b', {}, 'Archived.'), ' This picture is read only.']));
     else if (readOnly) banners.push(readOnlyNotice('You can look at this picture but not change it'));
     if (!readOnly && !M.saveFormat(meta.mime_type)) banners.push(notice('info', 'info', [h('b', {}, 'GIF picture.'), ' The first frame is shown. Use Save as copy to keep your edits as a PNG; Save is only for PNG, JPEG and WebP.']));
-    const bar = h('div', { class: 'ix-bar' },
-      h('div', { class: 'ix-title' }, crumb, h('h1', { 'data-page-title': true, class: 'ix-name' }, meta.name)),
-      h('div', { class: 'docacts' }, statusEl, undoB, redoB, cmpB, btn('History', () => versionsDrawer({ api, file: meta, current: () => version, readOnly, canRestore: !readOnly && status !== 'dirty', onRestored: restoredFrom }), ''), btn('Download', () => downloadDialog(), ''), btn('?', () => shortcutsDialog(), 'ix-ic', { title: 'Keyboard shortcuts (?)', 'aria-label': 'Keyboard shortcuts' }), readOnly ? null : btn('Save as copy', () => saveAsCopy(), ''), saveBtn));
-    root.replaceChildren(...banners, bar, h('div', { class: 'ix-body' }, tools, h('div', { class: 'ix-center' }, stage, h('div', { class: 'ix-foot' }, info, zbar)), h('aside', { class: 'ix-side', 'aria-label': 'Tool options' }, panel)));
+    const histBtn = btn('History', () => versionsDrawer({ api, file: meta, current: () => version, readOnly, canRestore: !readOnly && status !== 'dirty', onRestored: restoredFrom }), '', { title: 'Version history' });
+    const dlBtn = btn([icon('download'), h('span', { class: 'edx-lbl' }, 'Download')], () => downloadDialog(), '', { title: 'Download…' });
+    const top = topBar({ backHref: backFor(meta), glyph: 'imgI', name: meta.name, readOnly, onRename: async (name) => { const r = await api.call('drive.files.update', { id: meta.id, name }); if (r.ok) { meta = { ...meta, name }; document.title = `${name} · Image editor`; toast('Renamed.'); return true; } toast(r.message ?? 'Couldn’t rename.', false); return false; }, right: [statusEl, histBtn, dlBtn, saveBtn] });
+    const dis = (f) => () => readOnly || f();
+    const goTool = (t, subKey, v) => () => { if (subKey) { sub[subKey] = v; } setTool(t); };
+    const menus = menuBar([
+      { label: 'File', items: [{ label: 'Save', key: 'Ctrl+S', on: () => save(), disabled: () => readOnly || status === 'saved' || !M.saveFormat(meta.mime_type) }, { label: 'Save as copy…', on: () => saveAsCopy(), disabled: readOnly }, { label: 'Download…', on: () => downloadDialog() }, 'sep', { label: 'Version history', on: () => histBtn.click() }, 'sep', { label: 'Back to Drive', on: () => { location.hash = backFor(meta); } }] },
+      { label: 'Edit', items: [{ label: 'Undo', key: 'Ctrl+Z', on: undo, disabled: () => readOnly || !hist.canUndo() }, { label: 'Redo', key: 'Ctrl+Shift+Z', on: redo, disabled: () => readOnly || !hist.canRedo() }, 'sep', { label: 'Duplicate selected', key: 'Ctrl+D', on: dupSel, disabled: dis(() => sel == null) }, { label: 'Delete selected', key: 'Del', on: deleteSel, disabled: dis(() => sel == null) }, 'sep', { label: 'Copy picture', on: copyToClipboard }, { label: 'Reset to the original', on: reset, disabled: dis(() => S.base === orig && M.isNeutral(S.adj) && S.filter === 'none' && !S.anns.length && !S.mark && !S.frame.width && !S.frame.radius) }] },
+      { label: 'View', items: [{ label: 'Zoom in', key: '+', on: () => setZoom(zoomValue() * 1.25) }, { label: 'Zoom out', key: '-', on: () => setZoom(zoomValue() / 1.25) }, { label: 'Fit to window', key: '0', on: () => setZoom('fit') }, { label: 'Actual size (100%)', on: () => setZoom(1) }, 'sep', { label: 'Show original (before / after)', checked: () => cmpToggle, on: () => { cmpToggle = !cmpToggle; holdCompare(cmpToggle); } }, 'sep', { label: 'Keyboard shortcuts', key: '?', on: shortcutsDialog }] },
+      { label: 'Image', items: [{ label: 'Crop', key: 'C', on: goTool('crop'), disabled: readOnly }, { label: 'Turn left', on: () => turn(false), disabled: readOnly }, { label: 'Turn right', on: () => turn(true), disabled: readOnly }, { label: 'Flip horizontal', on: () => flip(true), disabled: readOnly }, { label: 'Flip vertical', on: () => flip(false), disabled: readOnly }, { label: 'Resize and any angle…', key: 'O', on: goTool('transform'), disabled: readOnly }, 'sep', { label: 'Adjust colours…', key: 'A', on: goTool('adjust'), disabled: readOnly }, { label: 'Filters…', key: 'F', on: goTool('filters'), disabled: readOnly }, { label: 'Border, corners and extra space…', key: 'B', on: goTool('frame'), disabled: readOnly }] },
+      { label: 'Insert', items: [{ label: 'Text', key: 'T', on: goTool('text'), disabled: readOnly }, { label: 'Draw (pen, highlighter, eraser)', key: 'P', on: goTool('draw'), disabled: readOnly }, { label: 'Shape or arrow', key: 'S', on: goTool('shape', 'shape', 'rect'), disabled: readOnly }, 'sep', { label: 'Blur an area', on: goTool('shape', 'shape', 'blur'), disabled: readOnly }, { label: 'Pixelate an area', on: goTool('shape', 'shape', 'pixel'), disabled: readOnly }, { label: 'Black box (cover completely)', on: goTool('shape', 'shape', 'box'), disabled: readOnly }, 'sep', { label: 'Text watermark…', on: goTool('frame'), disabled: readOnly }] },
+    ], { isLive: () => !gone() });
+    cmpB.replaceChildren(h('span', {}, 'Before / after'));
+    const toolbar = h('div', { class: 'ix-toolbar', role: 'toolbar', 'aria-label': 'Picture tools' }, tools, h('span', { class: 'edx-sep', 'aria-hidden': 'true' }), undoB, redoB, h('span', { class: 'edx-sep', 'aria-hidden': 'true' }), cmpB);
+    const statusBar = h('footer', { class: 'edx-status' }, info, h('span', { class: 'edx-sp' }), zbar);
+    root.replaceChildren(top.el, menus.el, ...banners, toolbar, h('div', { class: 'ix-body' }, h('div', { class: 'ix-center' }, stage), h('aside', { class: 'ix-side', 'aria-label': 'Tool options' }, panel)), statusBar);
     document.title = `${meta.name} · Image editor`;
     paintTools(); paintPanel(); changed(); setZoom('fit'); render();
     cmpB.hidden = false;
