@@ -245,7 +245,9 @@ const appApi = {
 };
 
 // ---- unsaved work: ask before leaving the page or switching organization (nothing is ever lost silently)
-function askUnsaved(next) {
+async function askUnsaved(next) {
+  const e = dirty.get();                       // save first and leave; the dialog only appears when that save does not work
+  if (e) { let ok = false; try { ok = await e.save(); } catch { ok = false; } if (ok) { dirty.clear(); next(); return; } }
   dialog({ title: 'You have unsaved changes', body: h('p', {}, 'Save them before you leave, or they’ll be lost.'), role: 'alertdialog',
     actions: [{ label: 'Save and leave', cls: 'primary', keep: true, on: async (close) => { const ok = await dirty.get()?.save(); if (!ok) return false; close(); dirty.clear(); next(); } },
       { label: 'Discard and leave', on: () => { dirty.clear(); next(); } }, { label: 'Keep editing', focus: true }] });

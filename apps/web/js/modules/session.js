@@ -1,14 +1,15 @@
 // A saved-document session: the same save, conflict, history and unsaved-work behaviour for every Drive document the app edits in place
 // (whiteboards now; Docs and Sheets use it as they are brought onto it). Every save is a new version checked against the version the editor
-// started from, so two people never overwrite each other silently. Autosave is slow on purpose (each save is a stored version): idle for
-// `idleMs`, at most once per `minMs`; Save is immediate; there is no save on blur, so the unsaved-changes guard in the app can ask first.
+// started from, so two people never overwrite each other silently. Autosave: a save about `idleMs` after the last change (never later than 10 s
+// after the first unsaved change), one more when the tab is hidden, saves never overlap (an edit made while one is in flight is saved right after),
+// network errors retry with a growing delay, and the app saves before it navigates away (the unsaved-changes dialog only appears if that fails).
 import { h, toast, dialog, drawer, btn } from '../ui.js';
 import { dirty } from '../dirty.js';
 
-export function createSession({ api, id, ctx, version, savedBody, savedAt, readOnly, getBody, setBody, label, onStatus = () => {}, idleMs = 8000, minMs = 30000, maxChars = 200000, restoreNote = (n) => `Restored version ${n}` }) {
-  let status = readOnly ? 'readonly' : 'saved', timer = null, saving = false, lastAuto = 0, ro = readOnly, at = savedAt, ver = version, base = savedBody;
+export function createSession({ api, id, ctx, version, savedBody, savedAt, readOnly, getBody, setBody, label, onStatus = () => {}, idleMs = 1500, minMs = 0, maxChars = 200000, restoreNote = (n) => `Restored version ${n}` }) {
+  let status = readOnly ? 'readonly' : 'saved', timer = null, retryTimer = null, retryN = 0, firstDirty = 0, chain = Promise.resolve(), saving = false, lastAuto = 0, ro = readOnly, at = savedAt, ver = version, base = savedBody;
   const gone = () => !ctx.live();
-  const warn = (e) => { if (status === 'dirty' || status === 'failed') { e.preventDefault(); e.returnValue = ''; } };
+  const warn = (e) => { if (status === 'dirty' || status === 'failed' || status === 'retrying' || status === 'saving') { e.preventDefault(); e.returnValue = ''; } };
   const paint = () => onStatus({ status, savedAt: at, version: ver, readOnly: ro, saving });
   const clean = () => { dirty.clear(); window.removeEventListener('beforeunload', warn); };
   const self = {
@@ -16,26 +17,13 @@ export function createSession({ api, id, ctx, version, savedBody, savedAt, readO
     isDirty: () => !ro && getBody() !== base,
     markChanged() {
       if (ro) return;
-      if (getBody() !== base) { if (status !== 'dirty') { status = 'dirty'; dirty.set(label(), () => self.save({ manual: true })); window.addEventListener('beforeunload', warn); } schedule(idleMs); }
+      if (getBody() !== base) { if (status !== 'dirty') { status = 'dirty'; dirty.set(label(), () => self.save({ manual: true })); window.addEventListener('beforeunload', warn); } firstDirty ||= Date.now(); schedule(Date.now() - firstDirty > 10000 ? 0 : idleMs); }
       else if (status === 'dirty') { status = 'saved'; clean(); }
       paint();
     },
-    async save({ manual }) {
-      if (ro || saving) return false;
-      const body = getBody();
-      if (body === base) { status = 'saved'; paint(); return true; }
-      if (body.length > maxChars) { status = 'failed'; paint(); toast('This is too big to save. Remove some content first.', false); return false; }
-      saving = true; status = 'saving'; paint();
-      const r = await api.call('drive.files.versions.add', { id, body, expected: ver, ...(manual ? {} : { note: 'Autosave' }) });
-      saving = false;
-      if (r.ok) {
-        ver = r.data[0].current_version; base = body; at = new Date().toISOString(); if (!manual) lastAuto = Date.now();
-        status = getBody() !== base ? 'dirty' : 'saved'; if (status === 'saved') clean(); paint(); ctx.announce('Saved.'); return true;
-      }
-      if (r.status === 409) { status = 'failed'; paint(); conflict(); return false; }
-      if (r.status === 404) { ro = true; status = 'readonly'; paint(); toast('You can read this but not change it, so your last edit was not saved.', false); return false; }
-      status = 'failed'; paint(); toast(r.message ?? 'Couldn’t save. Try again.', false); return false;
-    },
+    /** Saves never overlap: a call made while one is running waits for it and then saves whatever changed meanwhile. */
+    save(o = {}) { chain = chain.then(() => run(o), () => run(o)); return chain; },
+    destroy() { clearTimeout(timer); clearTimeout(retryTimer); document.removeEventListener('visibilitychange', onHide); clean(); },
     async openHistory(canRestore = true) {
       const r = await api.call('drive.files.versions', { file: id });
       if (!r.ok) return toast('Couldn’t load the history.', false);
@@ -46,13 +34,35 @@ export function createSession({ api, id, ctx, version, savedBody, savedAt, readO
     },
     // the editor normalised what it opened (it may add fields) before the person did anything: that is not a change
     rebase() { if (status !== 'dirty' && !saving) base = getBody(); },
-    destroy() { clearTimeout(timer); clean(); },
     // the content on screen (just replaced by the caller) is the new saved baseline; it may differ from the stored text only in how it is written
     reset({ version: v, savedAt: s }) { ver = v; base = getBody(); at = s ?? new Date().toISOString(); status = ro ? 'readonly' : 'saved'; clean(); paint(); },
   };
   function schedule(ms) {
     clearTimeout(timer);
-    timer = setTimeout(() => { if (gone()) return; const wait = lastAuto + minMs - Date.now(); if (wait > 0) schedule(wait); else self.save({ manual: false }); }, ms);
+    timer = setTimeout(() => { const wait = lastAuto + minMs - Date.now(); if (wait > 0) schedule(wait); else self.save({ manual: false }); }, ms);
+  }
+  const onHide = () => { if (document.hidden && !ro && (status === 'dirty' || status === 'retrying' || status === 'failed')) self.save({ manual: false }); };
+  document.addEventListener('visibilitychange', onHide);
+  async function run({ manual }) {
+    if (ro) return false;
+    clearTimeout(timer); clearTimeout(retryTimer);
+    const body = getBody();
+    if (body === base) { status = 'saved'; clean(); paint(); return true; }
+    if (body.length > maxChars) { status = 'failed'; paint(); toast('This is too big to save. Remove some content first.', false); return false; }
+    saving = true; firstDirty = 0; status = 'saving'; paint();
+    const r = await api.call('drive.files.versions.add', { id, body, expected: ver, ...(manual ? {} : { note: 'Autosave' }) });
+    saving = false;
+    if (r.ok) {
+      ver = r.data[0].current_version; base = body; at = new Date().toISOString(); retryN = 0; if (!manual) lastAuto = Date.now();
+      status = getBody() !== base ? 'dirty' : 'saved'; if (status === 'saved') clean(); else { firstDirty = Date.now(); schedule(idleMs); }
+      paint(); ctx.announce('Saved.'); return true;
+    }
+    if (r.status === 409) { status = 'failed'; paint(); conflict(); return false; }
+    if (r.status === 404) { ro = true; status = 'readonly'; paint(); toast('You can read this but not change it, so your last edit was not saved.', false); return false; }
+    if (r.status === 0 || r.status === 429 || r.status >= 500) {            // network or server trouble: keep the work, try again with a growing delay
+      status = 'retrying'; retryN += 1; paint(); retryTimer = setTimeout(() => self.save({ manual: false }), Math.min(30000, 2000 * 2 ** (retryN - 1))); return false;
+    }
+    status = 'failed'; paint(); toast(r.message ?? 'Couldn’t save. Try again.', false); return false;
   }
   async function restore(n, close) {
     if (self.isDirty()) { toast('Save or discard your current changes first.', false); return; }

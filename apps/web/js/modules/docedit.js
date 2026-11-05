@@ -16,9 +16,9 @@ function mapC(b, from, to, f) {
   return b.c ? { ...b, c: hit(b.c) } : b;
 }
 /** Applies f(runs, localOffset) to the one container holding character offset `at`. */
-function atC(b, at, f) {
-  let off = 0; let done = false;
-  const hit = (rs) => { const len = rlen(rs); const mine = !done && at >= off && at <= off + len; const out = mine ? f(rs, at - off) : rs; if (mine) done = true; off += len; return out; };
+function atC(b, at, f, ci = -1) {
+  let off = 0; let done = false; let n = 0;       // ci: the index of the container the caret is really in (offsets alone are ambiguous where an item is empty)
+  const hit = (rs) => { const len = rlen(rs); const mine = !done && (ci >= 0 ? n === ci : at >= off && at <= off + len); n += 1; const out = mine ? f(rs, at - off) : rs; if (mine) done = true; off += len; return out; };
   if (b.t === 'list') return { ...b, items: b.items.map((it) => ({ ...it, c: hit(it.c) })) };
   if (b.t === 'table') return { ...b, rows: b.rows.map((r) => r.map((c) => ({ ...c, c: hit(c.c) }))) };
   return b.c ? { ...b, c: hit(b.c) } : b;
@@ -58,6 +58,7 @@ export function createEditor(o) {
     const r = range();
     const ranges = models.map((m, i) => {
       const x = { from: i === 0 ? pos.s.o : 0, to: i === models.length - 1 ? pos.e.o : Infinity };
+      if ((olds[i].tagName === 'UL' || olds[i].tagName === 'TABLE') && r && i === 0 && olds[i].contains(r.startContainer)) { const el = r.startContainer.nodeType === 1 ? r.startContainer : r.startContainer.parentElement; const cs = containersOf(olds[i]); let k = -1; cs.forEach((c, j) => { if (c === el || c.contains(el)) k = j; }); x.ci = k; }
       if (olds[i].tagName === 'UL' && r) {
         const lis = [...olds[i].querySelectorAll('li')]; const idx = (n) => lis.indexOf((n?.nodeType === 1 ? n : n?.parentElement)?.closest('li'));
         const a = i === 0 && olds[i].contains(r.startContainer) ? idx(r.startContainer) : -1; const z = i === models.length - 1 && olds[i].contains(r.endContainer) ? idx(r.endContainer) : -1;
@@ -254,8 +255,10 @@ export function createEditor(o) {
   function insertBlocks(list) {
     if (!edit() || !list.length) return false;
     deleteSel();
+    // pasting blocks while the caret sits in an empty list item: that empty item is replaced, not left behind
+    let emptyItem = -1; { const r0 = inside(); const li0 = r0 && (r0.startContainer.nodeType === 1 ? r0.startContainer : r0.startContainer.parentElement)?.closest('li'); const top = li0 && blockOfNode(page, li0); if (li0 && top && !li0.textContent.replace(/\u200b/g, '').trim() && !li0.querySelector('ul')) emptyItem = [...top.querySelectorAll('li')].indexOf(li0); }
     return mutate((models, _r, pos) => {
-      const b = models[0]; const ins = normBlocks(list);
+      const b = models[0]; const ins = normBlocks(list); const ci = _r[0]?.ci ?? -1;
       const inline = ins.every((x) => x.t === 'p');
       if (TEXTY.has(b.t)) {
         const res = pasteBlocks(b, pos.s.o, ins); const last = res[res.length - 1]; const right = Math.max(0, rlen(b.c) - pos.s.o);
@@ -265,11 +268,13 @@ export function createEditor(o) {
       }
       if ((b.t === 'list' || b.t === 'table') && inline) {
         const rs = ins.flatMap((x, i) => (i ? [{ x: '\n' }, ...x.c] : x.c)); let end = 0;
-        const nb = atC(b, pos.s.o, (c, at) => { end = at + rlen(rs); const [l, r] = splitRuns(c, at); return [...l, ...rs, ...r]; });
+        const nb = atC(b, pos.s.o, (c, at) => { end = at + rlen(rs); const [l, r] = splitRuns(c, at); return [...l, ...rs, ...r]; }, ci);
         return { blocks: [nb], sel: { s: { b: pos.b0, o: pos.s.o + rlen(rs) }, e: { b: pos.b0, o: pos.s.o + rlen(rs) } }, end };
       }
       const tail = ins[ins.length - 1].t === 'p' || ins[ins.length - 1].t === 'h1' ? [] : [{ t: 'p', c: [] }];
-      return { blocks: [b, ...ins, ...tail], sel: { s: { b: pos.b0 + ins.length + (tail.length ? 1 : 0), o: 0 }, e: { b: pos.b0 + ins.length + (tail.length ? 1 : 0), o: 0 } } };
+      const lead = b.t === 'list' && emptyItem >= 0 ? (b.items.length > 1 ? [{ ...b, items: b.items.filter((_, i) => i !== emptyItem) }] : []) : [b];
+      const at = pos.b0 + lead.length + ins.length - 1 + (tail.length ? 1 : 0);
+      return { blocks: [...lead, ...ins, ...tail], sel: { s: { b: at, o: 0 }, e: { b: at, o: 0 } } };
     }, { start: true });
   }
   const insertRuns = (rs) => insertBlocks([{ t: 'p', c: rs }]);
@@ -458,6 +463,7 @@ export function createEditor(o) {
     insertBlocks, insertRuns, insertText, pasteContent, deleteSel, selectedImage, selectFig, setImage, removeFig,
     findRanges, highlight, reveal, replaceRange, currentMarks, getPos: () => getPos(page), setPos: (p) => setPos(page, p), lastPos: () => lastPos,
     charBefore: () => { const r = inside() ?? null; if (!r || !r.collapsed) return ''; const n = r.startContainer; if (n.nodeType === 3 && r.startOffset > 0) return n.data[r.startOffset - 1]; const p = getPos(page); return p && p.s.o > 0 ? 'x' : ''; },
+    currentBlock: () => { const p = getPos(page) ?? lastPos; const el = p ? kids()[Math.min(p.s.b, kids().length - 1)] : null; return el ? readBlock(el) : null; },
     currentBlockEl: () => { const p = getPos(page) ?? lastPos; return p ? kids()[Math.min(p.s.b, kids().length - 1)] ?? null : null; },
     blockIsEmpty: () => { const p = getPos(page) ?? lastPos; const el = p ? kids()[p.s.b] : null; return Boolean(el && !el.textContent.replace(/\u200b/g, '').trim() && el.tagName === 'P'); },
     selectedText: () => { const r = inside(); return r && !r.collapsed ? r.toString() : ''; }, hasSelection: () => { const r = inside(); return Boolean(r && !r.collapsed); } };

@@ -249,3 +249,16 @@
 /* Editor density (decision DOC-2): with a mouse, editor menus/toolbars stay compact (36px) like any office editor; on touch screens every
    editor control is at least 44px. Applies to all editors (Docs dx-, Sheets sx-, Image/PDF edx-). */
 @media (pointer:coarse){.dx-tabs button,.dx-toolbar button,.dx-toolbar select,.dx-imgtools button,.dx-menurow button,.dx-tbar button,.dx-tbar select,.dx-statusbar button,.dx-statusbar select,.sx-mb,.sx-tools button,.sx-tools select,.edx-mb,.edx-tools button,.edx-tools select,.dx-cbar button{min-height:44px;min-width:44px}}
+
+/* compact one-row context strips (table tools, picture tools) under the main toolbar: they never cover the page */
+.dx-ctx{display:flex;flex-wrap:nowrap;align-items:center;gap:2px;padding:2px var(--space-2);border-top:1px solid var(--line2);background:var(--surface2);overflow-x:auto;min-height:36px;scrollbar-width:thin}.dx-ctx[hidden]{display:none}
+.dx-ctx .dx-tbb,.dx-ctx .dx-tb{flex:none;min-width:30px;min-height:30px;height:30px;padding:0 6px;display:inline-grid;place-items:center;border-radius:6px}.dx-ctx .dx-tb.dx-txt{font:600 12px var(--font)}
+.dx-ctxl{font:700 11px var(--font);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-right:6px;flex:none}
+.dx-ico{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
+.dx-tb.dx-sz{min-width:28px;font:600 16px var(--font)}
+.docs.ed-full .dx-canvas{padding:var(--space-4) 24px var(--space-6)}
+.dx-space.warn{color:var(--warn);font-weight:600}.dx-space[hidden]{display:none}
+.docstate .dot.retrying{background:var(--warn)}
+
+.dx-spk{border-radius:8px}.dx-vbeta{margin:0}.dx-vspk .dx-spk:hover{border-color:var(--action)}
+.dx-tbar.dx-ctx{position:static;z-index:auto;max-width:none;border:0;border-top:1px solid var(--line2);border-radius:0;box-shadow:none;background:var(--surface2);flex-wrap:nowrap;padding:2px var(--space-2)}

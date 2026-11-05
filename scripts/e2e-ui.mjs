@@ -215,10 +215,9 @@ await page.goBack(); await page.reload(); await wait('The sky follows your time 
   // leaving with unsaved changes asks first
   await editor().click(); await page.keyboard.press('Control+End'); await page.keyboard.type(' unsaved');
   await page.locator('#app-switcher:visible, #app-switcher-m:visible').first().click(); await page.locator('#apps-menu .back:visible, #apps-menu-m .back:visible').first().click();
-  await wait('You have unsaved changes');
-  check('D14', 'Leaving with unsaved changes opens the unsaved-changes dialog instead of losing the work', (await page.getByRole('button', { name: 'Keep editing' }).count()) === 1);
-  await page.getByRole('button', { name: 'Keep editing' }).click();
-  await page.getByRole('button', { name: 'Save', exact: true }).click(); await page.waitForFunction(() => /Saved/.test(document.querySelector('.docstate')?.innerText ?? ''));
+  await page.waitForFunction(() => !location.hash.startsWith('#/doc/'), null, { timeout: 12000 });
+  check('D14', 'Leaving with unsaved changes saves them first and leaves (no dialog: it only appears when that save fails)', (await page.getByRole('button', { name: 'Keep editing' }).count()) === 0 && (await admin.query('select v.body from files f join file_versions v on v.file_id = f.id and v.version = f.current_version where f.id = $1', [docId])).rows[0].body.includes(' unsaved'));
+  await page.goto(`${base}/#/doc/${docId}`); await wait('Quarterly plan');
   // archived: read only with a restore link
   await admin.query('update files set archived_at = now() where id = $1', [docId]); await page.reload(); await wait('This document is read only');
   check('D15', 'An archived document opens read only (no editing, Save disabled) with a Restore link', (await editor().getAttribute('contenteditable')) === 'false' && (await page.getByRole('button', { name: 'Save', exact: true }).isDisabled()));
