@@ -76,3 +76,16 @@ Design V4 leftovers (`docs/DESIGN_AUDIT_V4.md`), Planner follow-ups (`docs/PLANN
 - OPEN (owner, dashboard only): R2 bucket `l2f-ecosystem-files` CORS must allow https://office.tabishriaz.com (PUT, GET, HEAD; header content-type).
   Until then uploads, previews and image/PDF editing fail on that domain (they work on l2f-ecosystem.pages.dev).
 - Known limits: free voice cannot tell speakers apart; Word "PDF" download = browser print dialog; xlsx export without colours.
+
+## 12. Owner feedback round (5 Nov 2026) – in progress at the time of writing
+Agents working (worktrees under .claude/worktrees, merge into `claude/exciting-dirac-kjybj0`, then PR → owner merges; the owner has authorised
+the assistant to take decisions and run rehearsed live SQL itself – still never without rehearsal):
+- Docs (branch editors/docs-2): compact table toolbar that never covers the table; robust autosave (≈1.5 s, on blur/leave/tab switch, retry)
+  so the "unsaved changes" dialog practically never shows; page uses the width well + fit-width zoom; font size − / + buttons; "space left"
+  only shown above 80 %; voice: automatic speaker detection in the browser (beta, free), no manual speaker picking.
+- Drive (branch drive/public-links): public share links for anyone on the internet (view-only, expiry, revoke; public viewer page; migration
+  0047 + scripts/golive-0047.sql); BUG: Trash "Delete for good" fails with "Some details need fixing" (422).
+- Both agents were told to do their own critical user pass and fix more bugs.
+- Still owner-only: R2 CORS for https://office.tabishriaz.com (uploads fail until done; verified 403 on 5 Nov 07:30 UTC).
+- Design brief for Claude Design: `docs/design/EDITORS_DESIGN_BRIEF.md`.
+- Next feature after this round: Slides editor.
