@@ -68,7 +68,15 @@ const folderOps = [
   }),
   defineOperation({ name: 'drive.folders.archive', class: 'write', single: true, input: id, run: (q, _c, i) => q('update drive_folders set archived_at = now() where id = $1 and archived_at is null returning id, archived_at', [i.id]) }),
   defineOperation({ name: 'drive.folders.restore', class: 'write', single: true, input: id, run: (q, _c, i) => q('update drive_folders set archived_at = null where id = $1 and archived_at is not null returning id, archived_at', [i.id]) }),
-  defineOperation({ name: 'drive.folders.delete', class: 'write', single: true, input: id, run: (q, _c, i) => q('delete from drive_folders where id = $1 returning id', [i.id]) }),
+  // Deleting a folder for good: what is still inside (files, sub-folders, trashed or not) moves up to the folder's parent first, so nothing is lost and the database's
+  // "only an empty folder can be deleted" rule is met. Something that cannot be moved (locked, hidden) keeps the folder and says so.
+  defineOperation({ name: 'drive.folders.delete', class: 'write', single: true, input: id,
+    run: async (q, _c, i) => {
+      const [d] = await q('select id, parent_id from drive_folders where id = $1', [i.id]); if (!d) return [];
+      await q('update files set folder_id = $2 where folder_id = $1', [i.id, d.parent_id]);
+      await q('update drive_folders set parent_id = $2 where parent_id = $1', [i.id, d.parent_id]);
+      return q('delete from drive_folders where id = $1 returning id', [i.id]);
+    } }),
 ];
 
 const fileOps = [
@@ -148,7 +156,8 @@ const fileOps = [
   }),
   defineOperation({ name: 'drive.files.archive', class: 'write', single: true, input: id, run: (q, _c, i) => q('update files set archived_at = now() where id = $1 and archived_at is null returning id, archived_at', [i.id]) }),
   defineOperation({ name: 'drive.files.restore', class: 'write', single: true, input: id, run: (q, _c, i) => q('update files set archived_at = null where id = $1 and archived_at is not null returning id, archived_at', [i.id]) }),
-  defineOperation({ name: 'drive.files.delete', class: 'write', single: true, input: id, run: (q, _c, i) => q('delete from files where id = $1 returning id', [i.id]) }),
+  defineOperation({ name: 'drive.files.delete', class: 'write', single: true, input: id,
+    run: async (q, _c, i) => { try { return await q('delete from files where id = $1 returning id', [i.id]); } catch (e) { if (e?.code === '23503') throw { code: 'DRIVE_IN_USE' }; throw e; } } }),
   defineOperation({ name: 'drive.files.share', class: 'write', single: true, input: { ...id, visible: { type: 'bool', required: true } }, run: (q, _c, i) => q('update files set client_visible = $2 where id = $1 returning id, client_visible', [i.id, i.visible]) }),
 ];
 
