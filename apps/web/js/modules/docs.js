@@ -60,7 +60,9 @@ function pop(anchor, content, { role = 'menu', label, at, onClose } = {}) {
   document.addEventListener('pointerdown', outside, true); document.addEventListener('keydown', key, true); el.addEventListener('keydown', nav); addEventListener('resize', close);
   function close(refocus) { if (openPop !== self) return; el.remove(); document.removeEventListener('pointerdown', outside, true); document.removeEventListener('keydown', key, true); removeEventListener('resize', close); openPop = null; if (refocus === true) anchor?.focus?.(); onClose?.(); }
   const self = { close, el, place }; openPop = self;
-  (el.querySelector('[role^=menuitem]:not(:disabled), button, input, select') ?? el).focus?.({ preventScroll: true });
+  // never a <select>: on phones focusing one opens its picker at once (the font list popped up over the ⋯ panel)
+  if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '-1');
+  (el.querySelector('[role^=menuitem]:not(:disabled), button:not(:disabled), input:not([type=hidden])') ?? el).focus?.({ preventScroll: true });
   return self;
 }
 function menuItems(items, close, place) {

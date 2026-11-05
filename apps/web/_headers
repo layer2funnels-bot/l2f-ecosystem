@@ -1,7 +1,9 @@
 # Cloudflare Pages response headers (static files). The API function sets its own.
+# Cache-Control no-cache: browsers keep files but check for a newer version on every load (cheap ETag answer), so phones never run a stale app after a deploy.
 /*
   Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' http://127.0.0.1:54321 https://*.supabase.co; frame-ancestors 'none'; base-uri 'none'; form-action 'self'
   X-Content-Type-Options: nosniff
   Referrer-Policy: no-referrer
   Permissions-Policy: camera=(), microphone=(self), geolocation=(self)
   Strict-Transport-Security: max-age=63072000; includeSubDomains
+  Cache-Control: no-cache

@@ -7,7 +7,8 @@ import { h, icon, toast } from '../ui.js';
 export function menuBar(menus, { isLive = () => true } = {}) {
   let openIdx = -1, pop = null; const buttons = [];
   const bar = h('div', { class: 'edx-menubar', role: 'menubar', 'aria-label': 'Menus' });
-  const closeAll = (refocus) => { pop?.remove(); pop = null; document.removeEventListener('pointerdown', outside, true); if (openIdx >= 0 && refocus) buttons[openIdx]?.focus(); buttons.forEach((b) => b.setAttribute('aria-expanded', 'false')); openIdx = -1; };
+  const closeAll = (refocus) => { pop?.remove(); pop = null; document.removeEventListener('pointerdown', outside, true); document.removeEventListener('keydown', esc, true); if (openIdx >= 0 && refocus) buttons[openIdx]?.focus(); buttons.forEach((b) => b.setAttribute('aria-expanded', 'false')); openIdx = -1; };
+  const esc = (e) => { if (e.key === 'Escape' && pop) { e.preventDefault(); e.stopPropagation(); closeAll(true); } };   // Escape closes the menu wherever the focus is (the phone menu does not take focus)
   const outside = (e) => { if (pop && !pop.contains(e.target) && !bar.contains(e.target) && !phoneBtn.contains(e.target)) closeAll(false); };
   const itemEl = (it) => {
     if (it === 'sep') return h('hr', { role: 'separator' });
@@ -25,7 +26,7 @@ export function menuBar(menus, { isLive = () => true } = {}) {
       else if (e.key === 'Escape') { e.preventDefault(); closeAll(true); } else if (e.key === 'ArrowLeft' && openIdx >= 0) { e.preventDefault(); openMenu((openIdx - 1 + menus.length) % menus.length, true); } else if (e.key === 'ArrowRight' && openIdx >= 0) { e.preventDefault(); openMenu((openIdx + 1) % menus.length, true); }
       else if (e.key === 'Tab') closeAll(false);
     });
-    document.addEventListener('pointerdown', outside, true); return pop;
+    document.addEventListener('pointerdown', outside, true); document.addEventListener('keydown', esc, true); return pop;
   };
   function openMenu(i, focusFirst) { closeAll(false); openIdx = i; buttons.forEach((b, n) => b.setAttribute('aria-expanded', String(n === i))); const p = place(buttons[i], menus[i].items); if (focusFirst) p.querySelector('button:not(:disabled)')?.focus(); }
   menus.forEach((m, i) => {
