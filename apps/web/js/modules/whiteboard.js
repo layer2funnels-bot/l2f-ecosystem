@@ -56,7 +56,7 @@ export function boardView({ api, id, ctx }) {
     const crumb = h('nav', { class: 'fpath fine', 'aria-label': 'Where this board lives' });
     let board = null;
     const paint = ({ status, savedAt, readOnly: ro, saving }) => {
-      const t = { saved: `Saved ${timeOf(savedAt)}`, dirty: 'Unsaved changes', saving: 'Saving…', failed: 'Couldn’t save. Your changes are still here.', readonly: 'Read only' }[status];
+      const t = { saved: `Saved ${timeOf(savedAt)}`, dirty: 'Unsaved changes', saving: 'Saving…', retrying: 'Not saved, retrying…', failed: 'Couldn’t save. Your changes are still here.', readonly: 'Read only' }[status];
       statusEl.replaceChildren(...[h('span', { class: `dot ${status}` }), t, status === 'failed' ? btn('Retry', () => sess.save({ manual: true }), 'link') : null].filter(Boolean));
       saveBtn.disabled = ro || status === 'saved' || saving;
     };

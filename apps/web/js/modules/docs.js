@@ -16,7 +16,7 @@ import { download, safeName, loadIo, printBlocks } from './docexport.js';
 import { LANGS, SPEAKER_COLOURS, MAX_SPEAKERS, isUrdu, fmtClock, nextSpeaker, turnChanged, applyVoiceCommands, withSpacing, createRecognizer, voiceSupported, ERRORS } from './docvoice.js';
 
 export const BOARD_MIME = 'application/vnd.excalidraw+json';
-const AUTOSAVE_IDLE_MS = 8000, AUTOSAVE_MIN_MS = 30000;      // every save is a version, so autosave is slow on purpose; Save and leaving are immediate
+const AUTOSAVE_IDLE_MS = 1500, AUTOSAVE_MAX_WAIT_MS = 10000;   // a save about 1.5 s after typing stops, never later than 10 s after the first unsaved change
 const CHECK_IDLE_MS = 700, CHECK_MAX_MS = 5000;               // the model is read from the page when typing pauses, not on every key
 const reduced = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 const timeOf = (d) => new Date(d).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -190,11 +190,11 @@ export function docView({ api, id, ctx, opts = {} }) {
       checkFirst ||= Date.now(); clearTimeout(checkTimer);
       checkTimer = setTimeout(checkpoint, Math.max(0, Math.min(CHECK_IDLE_MS, checkFirst + CHECK_MAX_MS - Date.now())));
     }
-    const warn = (e) => { if (status === 'dirty' || status === 'failed') { e.preventDefault(); e.returnValue = ''; } };
+    const warn = (e) => { if (status === 'dirty' || status === 'failed' || status === 'retrying' || status === 'saving') { e.preventDefault(); e.returnValue = ''; } };
 
     // ---- saving
     const paintStatus = () => {
-      const t = { saved: `Saved ${timeOf(savedAt)}`, dirty: 'Unsaved changes', saving: 'Saving…', failed: 'Couldn’t save. Your changes are still here.', readonly: 'Read only' }[status];
+      const t = { saved: `Saved ${timeOf(savedAt)}`, dirty: 'Unsaved changes', saving: 'Saving…', retrying: 'Not saved, retrying…', failed: 'Couldn’t save. Your changes are still here.', readonly: 'Read only' }[status];
       statusEl.replaceChildren(...[h('span', { class: `dot ${status}` }), t, status === 'failed' ? btn('Retry', () => save({ manual: true }), 'link') : null].filter(Boolean));
       saveBtn.disabled = readOnly || status === 'saved' || saving;
     };
@@ -204,26 +204,35 @@ export function docView({ api, id, ctx, opts = {} }) {
       const left = spaceLeft(size); const used = size / MAX_CHARS;
       spaceEl.textContent = `Space left: ${left.toLocaleString()} of ${MAX_CHARS.toLocaleString()} characters`; spaceEl.classList.toggle('warn', used > 0.9); spaceEl.title = `${Math.round(used * 100)}% of this document’s space is used. Every save is also kept in History.`;
     }
-    const schedule = () => { clearTimeout(timer); if (readOnly) return; timer = setTimeout(() => { if (gone()) return; const wait = lastAuto + AUTOSAVE_MIN_MS - Date.now(); if (wait > 0) { schedule2(wait); return; } save({ manual: false }); }, AUTOSAVE_IDLE_MS); };
-    const schedule2 = (ms) => { clearTimeout(timer); timer = setTimeout(() => { if (!gone()) save({ manual: false }); }, ms); };
-    async function save({ manual, note }) {
-      if (readOnly || saving) return false;
+    let chain = Promise.resolve(), retryN = 0, retryTimer = null, firstDirty = 0;
+    const schedule = () => { clearTimeout(timer); if (readOnly) return; firstDirty ||= Date.now(); timer = setTimeout(() => save({ manual: false }), Date.now() - firstDirty > AUTOSAVE_MAX_WAIT_MS ? 0 : AUTOSAVE_IDLE_MS); };
+    /** Saves never overlap: a call made while one runs waits for it, then saves whatever changed in the meantime. */
+    function save(o = {}) { chain = chain.then(() => doSave(o), () => doSave(o)); return chain; }
+    async function doSave({ manual, note }) {
+      if (readOnly) return false;
+      clearTimeout(timer); clearTimeout(retryTimer);
       const body = currentBody();
-      if (body === savedBody) { status = 'saved'; paintStatus(); return true; }
+      if (body === savedBody) { if (status !== 'readonly') { status = 'saved'; dirty.clear(); removeEventListener('beforeunload', warn); } paintStatus(); return true; }
       if (body.length > MAX_CHARS) { status = 'failed'; paintStatus(); toast(`This document is ${(body.length - MAX_CHARS).toLocaleString()} characters over the ${MAX_CHARS.toLocaleString()} limit. Shorten it or move part of it into a new document.`, false); return false; }
-      saving = true; status = 'saving'; paintStatus();
+      saving = true; firstDirty = 0; status = 'saving'; paintStatus();
       const r = await api.call('drive.files.versions.add', { id, body, expected: version, ...(note ? { note } : manual ? {} : { note: 'Autosave' }) });
       saving = false;
-      if (gone()) return false;
       if (r.ok) {
-        version = r.data[0].current_version; savedBody = body; savedAt = new Date().toISOString(); if (!manual) lastAuto = Date.now();
-        status = currentBody() !== savedBody ? 'dirty' : 'saved'; if (status === 'saved') { dirty.clear(); removeEventListener('beforeunload', warn); }
-        paintStatus(); ctx.announce('Saved.'); return true;
+        version = r.data[0].current_version; savedBody = body; savedAt = new Date().toISOString(); retryN = 0;
+        status = currentBody() !== savedBody ? 'dirty' : 'saved';
+        if (status === 'saved') { dirty.clear(); removeEventListener('beforeunload', warn); } else { firstDirty = Date.now(); timer = setTimeout(() => save({ manual: false }), AUTOSAVE_IDLE_MS); }
+        paintStatus(); if (!gone()) ctx.announce('Saved.'); return true;
       }
       if (r.status === 409) { status = 'failed'; paintStatus(); conflict(); return false; }
       if (r.status === 404) { status = 'readonly'; readOnly = true; page.setAttribute('contenteditable', 'false'); paintStatus(); toast('You can read this document but not change it, so your last edit was not saved.', false); lockTools(); return false; }
+      if (r.status === 0 || r.status === 429 || r.status >= 500) {          // network or server trouble: the work stays, the save is tried again with a growing delay
+        status = 'retrying'; retryN += 1; paintStatus(); retryTimer = setTimeout(() => save({ manual: false }), Math.min(30000, 2000 * 2 ** (retryN - 1))); return false;
+      }
       status = 'failed'; paintStatus(); toast(r.message ?? 'Couldn’t save. Try again.', false); return false;
     }
+    const onHide = () => { if (document.hidden && !readOnly && ['dirty', 'retrying', 'failed'].includes(status) && root.isConnected) save({ manual: false }); };
+    document.addEventListener('visibilitychange', onHide); addEventListener('pagehide', onHide);
+    window.addEventListener('blur', () => { if (!readOnly && status === 'dirty' && root.isConnected) save({ manual: false }); });
     function useBody(text, savedAtIso) {
       doc = parseBody(text); activeTab = doc.tabs[0].id; savedBody = serialize(doc); lastBody = savedBody; ed.load(doc.tabs[0].blocks); stack.length = 0; at = -1; checkpoint();
       status = 'saved'; savedAt = savedAtIso; dirty.clear(); removeEventListener('beforeunload', warn); applyPage(); paintStatus(); paintStats(savedBody.length);
