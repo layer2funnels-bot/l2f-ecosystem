@@ -519,7 +519,7 @@ export function docView({ api, id, ctx, opts = {} }) {
       }));
     }
     vTalk.append(h('p', { class: 'fine dx-vbeta' }, h('b', {}, 'Automatic speaker detection (beta)'), ' works best with one person speaking at a time. It tells voices apart by sound, so it can mix up similar voices; use “Change speaker” in the right-click menu on a line to fix one.'), vSpk,
-      h('div', { class: 'dx-vrow' }, h('label', { class: 'dx-check' }, h('input', { type: 'checkbox', onchange: (e) => { vs.record = e.target.checked; } }), ' Also record the audio and save it to Drive')));
+      h('div', { class: 'dx-vrow' }, h('label', { class: 'dx-check' }, h('input', { type: 'checkbox', disabled: oneMicOnly(), title: oneMicOnly() ? 'Recording while writing needs a computer: a phone lets only one of them use the microphone' : false, onchange: (e) => { vs.record = e.target.checked; } }), ' Also record the audio and save it to Drive')));
     const lineRename = (blocks, oldName, colour, newName) => blocks.map((b) => (isTranscriptLine(b) && b.c[0].x === oldName && b.c[0].c === colour ? { ...b, c: [{ ...b.c[0], x: newName }, ...b.c.slice(1)] } : b));
     function renameSpeaker(i) {
       const f = field({ id: 'dx-sn', label: 'Speaker name', value: vs.speakers[i].name, maxlength: 40, hint: 'Every line by this speaker is renamed.' });
@@ -576,10 +576,18 @@ export function docView({ api, id, ctx, opts = {} }) {
     async function voiceStart() {
       if (readOnly) return; if (!voiceSupported()) return;
       vMsg.textContent = ''; ed.focus();
-      if (!vs.rec) vs.rec = createRecognizer({ lang: vs.lang, onFinal: (t) => onFinal(t), onInterim: (t) => { vInterim.textContent = t; vLine.hidden = !t; }, onState: (st) => { vs.listening = st === 'listening' || (st !== 'stopped' && vs.listening); if (st === 'stopped' && !vs.rec?.active) { vs.listening = false; } paintVoice(); }, onError: (c) => { voiceErr(c); } });
-      vs.start = Date.now(); if (vs.mode === 'talk') { vs.lastEl = null; vs.clusters = new SpeakerClusters(); vs.speakers = []; await startMic(); }
+      if (!vs.rec) vs.rec = createRecognizer({ lang: vs.lang, onFinal: (t) => { vs.heard = true; onFinal(t); }, onInterim: (t) => { if (t) vs.heard = true; vInterim.textContent = t; vLine.hidden = !t; }, onState: (st) => { vs.listening = st === 'listening' || (st !== 'stopped' && vs.listening); if (st === 'stopped' && !vs.rec?.active) { vs.listening = false; } paintVoice(); }, onError: (c) => { voiceErr(c); } });
+      // Speech-to-text starts FIRST, inside the tap: on phones (iPhone Safari, Android Chrome) the microphone can serve only one listener, and a second one
+      // (the voice analysis for speakers, or a recording) left the words unwritten. So on phones the conversation mode writes every turn without the voice
+      // analysis; on a computer the analysis runs alongside, and is switched off by itself if no words arrive while it runs.
+      vs.start = Date.now(); vs.heard = false; if (vs.mode === 'talk') { vs.lastEl = null; vs.clusters = new SpeakerClusters(); vs.speakers = []; }
       vs.rec.setLang?.(vs.lang); vs.rec.start(); vs.listening = true; paintVoice();
+      if (vs.mode === 'talk' && !oneMicOnly()) {
+        await startMic();
+        clearTimeout(vs.watch); vs.watch = setTimeout(() => { if (vs.listening && !vs.heard && vs.stream) { stopMic(); vs.rec.stop(); setTimeout(() => { if (vs.listening) vs.rec.start(); }, 300); vMsg.textContent = 'Speaker detection was switched off because this browser could not share the microphone. Your words are written now.'; } }, 9000);
+      } else if (vs.mode === 'talk') vMsg.textContent = 'On a phone, each new turn starts a new line; telling speakers apart by voice needs a computer.';
     }
+    function oneMicOnly() { return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1) || matchMedia('(pointer: coarse)').matches; }
     function voiceStop() { vs.rec?.stop(); vs.listening = false; vInterim.textContent = ''; paintVoice(); stopMic(); }
     /** One microphone stream feeds the voice analysis (speaker detection) and, when asked, the audio recording. */
     async function startMic() {
