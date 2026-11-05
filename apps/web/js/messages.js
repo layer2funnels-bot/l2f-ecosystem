@@ -9,6 +9,8 @@ export const MESSAGES = {
   org_required: 'Choose an organization first.',
   session_expired: 'Your session has ended. Sign in again.',
   bad_request: 'That request could not be read.',
+  in_use: 'This is still used somewhere else (for example attached to a task, a post or a brand kit), so it can’t be deleted. Remove it from there first.',
+  not_empty: 'Something inside this folder could not be moved out (it may be locked or hidden). Ask an owner, then try again.',
   storage_limit: 'The storage limit has been reached, so this file was not saved. Delete files you no longer need, or ask an admin.',
   storage_unavailable: 'File storage is not available right now.',
   weather_unavailable: 'Weather is not available right now. The Launcher shows the time of day instead.',

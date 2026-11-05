@@ -13,6 +13,7 @@ import { boardView } from './modules/whiteboard.js';
 import { projectsView } from './modules/projects.js';
 import { clientsView } from './modules/clients.js';
 import { driveView } from './modules/drive.js';
+import { publicView } from './modules/publicview.js';
 import { portalView } from './modules/portal.js';
 import { formsView } from './modules/forms.js';
 import { ladderView } from './modules/ladder.js';
@@ -104,6 +105,7 @@ async function boot() {
   }
   const r0 = parseRoute(location.hash);
   if (r0.name === 'invite' && r0.query.token) { inviteStore.set(r0.query.token); history.replaceState(null, '', `${location.pathname}#/invite`); }
+  if (r0.name === 'public') { ctx = null; ready = true; render(); return; }     // a public share link needs neither sign-in nor organizations
   if (!session.signedIn()) { ctx = null; ready = true; render(); return; }
   if (session.expired() && !(await refreshNow())) { ready = true; goExpired(); return; }
 
@@ -354,6 +356,7 @@ async function render(opts = {}) {
   if (!ready) { put(root, centered(skeleton(3))); return; }
   if (opts.bootError) { put(root, centered(h('h1', { 'data-page-title': true }, 'We couldn’t load this'), h('p', { class: 'sub' }, 'Your work is safe. Check your connection and try again.'), bootFailure ? h('p', { class: 'fine muted' }, `Reference: ${bootFailure}`) : null, btn('Try again', () => boot(), 'primary'))); return focusTitle(root); }
 
+  if (route.name === 'public') { document.body.classList.remove('hasb'); put(root, publicView({ token: route.params.token })); return; }
   // signed-out and account screens
   if (!session.signedIn()) {
     const inv = inviteStore.get();

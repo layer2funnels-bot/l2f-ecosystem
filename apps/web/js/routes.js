@@ -30,6 +30,7 @@ export function parseRoute(hash) {
   if (!seg.length) return r('home');
   const [a, b, c, d] = seg;
   if (['signin', 'signup', 'check-email', 'forgot', 'reset', 'invite', 'no-org', 'expired', 'launcher', 'profile'].includes(a) && seg.length === 1) return r(a);
+  if (a === 's' && b && seg.length === 2) return r('public', { token: b });     // public share link: no sign-in
   if (a === 'app' && b === 'clients' && seg.length === 2) return r('clients', { view: 'list' });
   // Planner (apps/planner, mounted by modules/planner.js) routes its own pages: #/planner/<page>?plan=…&goal=…
   if (a === 'planner' && seg.length <= 2) return r('planner', { page: b ?? 'overview' });
