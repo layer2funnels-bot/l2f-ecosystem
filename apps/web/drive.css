@@ -172,3 +172,5 @@
 .drv-tbl td a[href]{min-height:44px;box-sizing:border-box}
 .drv-main a[href][title]{min-height:44px;display:inline-flex;align-items:center;box-sizing:border-box}
 .drv-main button.linklike{min-height:44px;box-sizing:border-box}
+.ovl:has(.drv-share){grid-template-columns:minmax(0,1fr)}.dlg:has(.drv-share){width:min(620px,100%);min-width:0;box-sizing:border-box}.drv-share,.drv-share section{min-width:0}.drv-share-add select{min-width:0}.drv-share-add .btn{flex:0 0 auto}
+@media (max-width:620px){.dlg:has(.drv-share){padding:20px 16px}}

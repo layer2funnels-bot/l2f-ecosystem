@@ -39,7 +39,7 @@ export function appNav(appId, route, { isAdmin = false } = {}) {
         current: ['requests', 'sops', 'tools', 'settings'].includes(route.params?.view) ? route.params.view : 'list' };
     case 'drive': {
       const v = route.params?.view; const space = route.params?.space;
-      return { items: [it('files', '#/drive', 'Library', 'drive'), it('personal', '#/drive/personal', 'Personal', 'user'), it('recent', '#/drive/recent', 'Recent', 'clock'), it('shared', '#/drive/shared', 'Shared with me', 'team'), it('trash', '#/drive/trash', 'Trash', 'trash')],
+      return { items: [it('files', '#/drive', 'Library', 'drive'), it('personal', '#/drive/personal', 'Personal', 'user'), it('recent', '#/drive/recent', 'Recent', 'clock'), it('shared', '#/drive/shared', 'Shared', 'team'), it('trash', '#/drive/trash', 'Trash', 'trash')],
         current: v === 'recent' ? 'recent' : v === 'shared' ? 'shared' : v === 'trash' ? 'trash' : space === 'personal' ? 'personal' : 'files' };
     }
     case 'forms':

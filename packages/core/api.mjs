@@ -28,6 +28,28 @@ export function createApi({ executor, logger, limiter = createRateLimiter(), ope
     });
 
   return {
+    /**
+     * The public share-link endpoint: no sign-in. { token, ip } -> { status, body }. Everything that is not a live public link answers the same 404.
+     * Returns only what a viewer page needs: name, kind, type, size, brand, and the text (documents, sheets) or short-lived addresses (everything else).
+     */
+    async publicLink({ token, ip }) {
+      const requestId = `req_${randomBytes(8).toString('hex')}`, t0 = now();
+      const gate = await limiter.take(`pub:${ip || 'unknown'}`, 'read');
+      if (!gate.allowed) return fail(requestId, 'public.link', t0, { ...RATE_LIMITED, retryAfterSeconds: gate.retryAfterSeconds });
+      if (typeof token !== 'string' || !/^[A-Za-z0-9_-]{32,200}$/.test(token)) return fail(requestId, 'public.link', t0, NOT_FOUND);
+      try {
+        const rows = await executor.withPublic((q) => q('select * from private.drive_public_resolve($1)', [token]));
+        if (!rows.length) return fail(requestId, 'public.link', t0, NOT_FOUND);
+        const r = rows[0]; const out = { name: r.name, kind: r.kind, mime_type: r.mime_type, size_bytes: r.size_bytes == null ? null : Number(r.size_bytes), brand: r.brand };
+        if (r.body != null) out.body = r.body;
+        else if (r.storage_path) {
+          if (!storage) return fail(requestId, 'public.link', t0, { status: 503, code: 'storage_unavailable', message: 'File storage is not available right now.' });
+          out.url = (await storage.signDownload({ path: r.storage_path, seconds: 300 })).url;                         // for showing in the page
+          out.download_url = (await storage.signDownload({ path: r.storage_path, seconds: 300, fileName: r.name })).url; // forces a save-as
+        }
+        return done(requestId, 'public.link', t0, 200, 'ok', null, false, { ok: true, data: [out] });
+      } catch (err) { return fail(requestId, 'public.link', t0, toPublicError(err), err?.code ?? null); }
+    },
     // request: { operation, input, auth: { userId, email } | null, headers }
     // -> { status, body: { requestId, ok: true, data } | { requestId, ok: false, error } }; limited requests carry error.retryAfterSeconds
     async handle(request) {

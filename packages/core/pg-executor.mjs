@@ -8,6 +8,18 @@ const ROLES = new Set(['app_user']);   // fixed allowlist: `set role` cannot tak
 export function createPgExecutor({ acquire, role = 'app_user' }) {
   if (!ROLES.has(role)) throw new Error('unsupported database role');
   return {
+    // For the public share-link endpoint: no person, no organization. Same role, no claims, so only the one security-definer function it calls can read anything.
+    async withPublic(fn) {
+      const c = await acquire();
+      try {
+        await c.query('begin'); await c.query(`set local role ${role}`);
+        const out = await fn(async (sql, params = []) => (await c.query(sql, params)).rows);
+        await c.query('commit'); return out;
+      } catch (e) {
+        try { await c.query('rollback'); } catch { /* connection already gone */ }
+        throw e;
+      } finally { c.release(); }
+    },
     async withRequest({ userId, email = null, emailVerified = false, orgId }, fn) {
       const c = await acquire();
       try {

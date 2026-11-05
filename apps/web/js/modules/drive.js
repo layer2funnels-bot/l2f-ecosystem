@@ -134,7 +134,7 @@ export function driveView({ api, ctx, route }) {
     else body = h('div', { class: 'drv-home' }, ...(atHome ? homeBlocks(state.files) : []), h('div', { class: 'tblwrap' }, h('table', { class: 'tbl drv-tbl' }, h('caption', { class: 'sr' }, 'Folders and files'),
       h('thead', {}, h('tr', {}, h('th', { scope: 'col', class: 'c-sel' }, selectAll()), h('th', { scope: 'col' }, 'Name'), h('th', { scope: 'col', class: 'c-meta' }, 'Type'), h('th', { scope: 'col', class: 'c-meta' }, 'Size'), h('th', { scope: 'col', class: 'c-meta' }, 'Updated'), h('th', { scope: 'col', class: 'c-act' }, srOnly('Actions')))),
       h('tbody', {}, ...rows.map(rowEl)))));
-    put(list, body); paintSel();
+    put(list, body, state.files.length >= 500 || state.folders.length >= 500 ? notice('info', 'info', 'Showing the first 500 items. Use search to find the rest.') : null); paintSel();
     const first = list.querySelector('[data-item]'); if (first) first.tabIndex = 0;
   }
   const byId = new Map();
@@ -251,7 +251,7 @@ export function driveView({ api, ctx, route }) {
     toast(lock ? 'Locked. Only owners can see it now.' : 'Unlocked.'); load();
   }
   const when2 = (iso) => (iso ? `until ${when(iso)}` : 'no expiry');
-  const linkUrl = (token) => `${location.origin}${location.pathname}#/drive/open/${token}`;
+  const linkUrl = (token, pub) => `${location.origin}${location.pathname}#/${pub ? 's' : 'drive/open'}/${token}`;
   async function copyText(text) { try { await navigator.clipboard.writeText(text); return true; } catch { return false; } }
   /** Share with people of the organization (view or edit) and, for a file, by link. Everything is checked by the database; a refusal reads as "not allowed". */
   async function shareDialog(item, isFolder) {
@@ -274,14 +274,14 @@ export function driveView({ api, ctx, route }) {
       const parts = [people$];
       if (!isFolder) {
         const live = lk.ok ? lk.data.filter((l) => !l.revoked_at && (!l.expires_at || new Date(l.expires_at) > new Date())) : [];
-        const lrole = h('select', { id: 'lk-role', 'aria-label': 'Link rights' }, h('option', { value: 'viewer' }, 'Anyone with the link can view'), h('option', { value: 'editor' }, 'Anyone with the link can edit'));
+        const lrole = h('select', { id: 'lk-role', 'aria-label': 'Link rights' }, h('option', { value: 'public' }, 'Anyone with the link can view'), h('option', { value: 'viewer' }, `${ctx.orgName} members with the link can view`), h('option', { value: 'editor' }, `${ctx.orgName} members with the link can edit`));
         const lexp = h('select', { id: 'lk-exp', 'aria-label': 'Link expires' }, ...[['7', 'Expires in 7 days'], ['1', 'Expires in 1 day'], ['30', 'Expires in 30 days'], ['90', 'Expires in 90 days'], ['365', 'Expires in 1 year'], ['never', 'Never expires']].map(([k, l]) => h('option', { value: k }, l)));
-        const make = btn('Create link', async () => { const r = await api.call('drive.links.create', { file: item.id, role: lrole.value, ...(lexp.value === 'never' ? { never: true } : { days: Number(lexp.value) }) }); if (!r.ok) return fail(r, 'make a link for that'); fresh = linkUrl(r.data[0].token); await copyText(fresh); toast('Link created and copied.'); draw(); }, '');
+        const make = btn('Create link', async () => { const isPub = lrole.value === 'public'; const r = await api.call('drive.links.create', { file: item.id, ...(isPub ? { audience: 'public' } : { role: lrole.value }), ...(lexp.value === 'never' ? { never: true } : { days: Number(lexp.value) }) }); if (!r.ok) return fail(r, 'make a link for that'); fresh = linkUrl(r.data[0].token, isPub); await copyText(fresh); toast('Link created and copied.'); draw(); }, '');
         const freshBox = fresh ? h('div', { class: 'drv-newlink', role: 'status' }, h('input', { readonly: true, value: fresh, 'aria-label': 'The new link', onfocus: (e) => e.target.select() }), btn('Copy', async () => toast((await copyText(fresh)) ? 'Copied.' : 'Select the link and copy it.', true), 'ghost'), h('p', { class: 'fine muted' }, 'Copy it now: for safety it is shown only once.')) : null;
         parts.push(h('section', { 'aria-labelledby': 'sh-h2' }, h('h3', { id: 'sh-h2' }, 'Link'),
-          h('p', { class: 'fine muted' }, `Only signed-in members of ${ctx.orgName} can open it. Clients and people outside the organization never can.`),
+          h('p', { class: 'fine muted' }, 'Choose who can open the link. A public link can be posted anywhere: anyone who has it can look at the file (not change it) until you revoke it or it expires. Team links need a sign-in; clients never get one.'),
           h('div', { class: 'drv-share-add' }, lrole, lexp, make), freshBox,
-          live.length ? h('ul', { class: 'drv-share-list' }, ...live.map((l) => h('li', {}, h('span', { class: 'sh-name' }, `${l.role === 'editor' ? 'Can edit' : 'Can view'} · ${when2(l.expires_at)} · opened ${l.use_count}×`), h('button', { type: 'button', class: 'btn quiet', 'aria-label': 'Revoke this link', onclick: async () => { const r = await api.call('drive.links.revoke', { id: l.id }); if (!r.ok) fail(r, 'change that'); else { toast('Link revoked.'); fresh = null; draw(); } } }, 'Revoke'))))
+          live.length ? h('ul', { class: 'drv-share-list' }, ...live.map((l) => h('li', {}, h('span', { class: 'sh-name' }, `${l.audience === 'public' ? 'Anyone · can view' : l.role === 'editor' ? 'Team · can edit' : 'Team · can view'} · ${when2(l.expires_at)} · opened ${l.use_count}×`), h('button', { type: 'button', class: 'btn quiet', 'aria-label': 'Revoke this link', onclick: async () => { const r = await api.call('drive.links.revoke', { id: l.id }); if (!r.ok) fail(r, 'change that'); else { toast('Link revoked.'); fresh = null; draw(); } } }, 'Revoke'))))
             : h('p', { class: 'fine muted' }, 'No active links.')));
       }
       put(body, ...parts);

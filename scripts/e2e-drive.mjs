@@ -264,9 +264,50 @@ check('SX14', 'The right password opens the folder and shows its contents', true
 await tgo('#/drive'); await t.locator('[aria-label="Search files"]').fill('Inside'); await t.waitForTimeout(900);
 check('SX15', 'Searching finds the file once the folder is unlocked (and, before, found nothing: covered by the database test)', (await t.locator('main').innerText()).includes(`Inside-${stamp}`));
 await ctx2.close();
+// ---- public links: the owner creates one, a fresh signed-out browser opens it; revoking ends it
+const PUBD = `Public-${stamp}`;
+await q("insert into files (workspace_id,space,uploaded_by,name,kind,mime_type,in_library) values ($1,'shared',$2,$3,'document','application/vnd.l2f.doc+json',true)", [L, uid, PUBD]);
+const PUBID = (await q('select id from files where name = $1 and workspace_id = $2', [PUBD, L]))[0].id;
+await q("insert into file_versions (workspace_id, file_id, body, version) values ($1,$2,$3,1)", [L, PUBID, JSON.stringify({ v: 2, tabs: [{ id: 't1', title: 'Main', blocks: [{ t: 'h1', c: [{ x: `Hello public ${stamp}` }] }, { t: 'p', c: [{ x: 'Visible to anyone with the link.' }] }], children: [] }] })]);
+await go('#/drive'); await find(PUBD); await rowOf(PUBD).click({ button: 'right' }); await p.getByRole('button', { name: 'Share…' }).click(); await p.waitForSelector('#lk-role');
+await p.selectOption('#lk-role', 'public'); await p.locator('.dlg').getByRole('button', { name: 'Create link' }).click(); await p.waitForSelector('.drv-newlink input');
+const pubLink = (await p.locator('.drv-newlink input').inputValue()).replace(/^https?:\/\/[^/]+/, base);
+check('PB1', 'The Share dialog offers "Anyone on the internet can view" and makes a link of the form #/s/<token>', /#\/s\/[A-Za-z0-9_-]{40,}$/.test(pubLink) && (await q("select audience, role from drive_share_links where file_id = $1", [PUBID]))[0]?.audience === 'public');
+const anon = await (await b.newContext({ viewport: { width: 390, height: 844 } })).newPage(); const anonErr = []; anon.on('pageerror', (e) => anonErr.push(e.message.slice(0, 160)));
+await anon.goto(pubLink); await anon.waitForSelector('.pv-docpage', { timeout: 15000 });
+check('PB2', 'A fresh signed-out browser (phone size) opens the link and reads the document, with a "Shared via" footer and no app navigation or sign-in', (await anon.locator('.pv-docpage').innerText()).includes(`Hello public ${stamp}`) && (await anon.locator('.pv-foot').innerText()).includes('Shared via Layer2Funnels') && (await anon.locator('.side, .hdr, .bbar').count()) === 0 && (await anon.locator('input[type=password]').count()) === 0);
+check('PB3', 'The page is read-only and fits the phone (no sideways scroll), with the file name as its title', (await anon.locator('.pv-docpage').getAttribute('contenteditable')) !== 'true' && (await anon.evaluate(() => document.documentElement.scrollWidth - innerWidth)) <= 1 && (await anon.title()).includes(PUBD));
+if (SHOTS) await anon.screenshot({ path: `${SHOTS}/public-doc-phone.png` });
+// a public image
+await go('#/drive'); await find(IMG); await rowOf(IMG).click({ button: 'right' }); await p.getByRole('button', { name: 'Share…' }).click(); await p.waitForSelector('#lk-role'); await p.selectOption('#lk-role', 'public'); await p.locator('.dlg').getByRole('button', { name: 'Create link' }).click(); await p.waitForSelector('.drv-newlink input');
+const imgLink = (await p.locator('.drv-newlink input').inputValue()).replace(/^https?:\/\/[^/]+/, base);
+await anon.goto(imgLink); await anon.reload(); await anon.waitForFunction(() => { const i = document.querySelector('.pv-img'); return i && i.complete && i.naturalWidth > 0; }, null, { timeout: 15000 });
+check('PB4', 'A public link to a picture shows the picture', true);
+if (SHOTS) await anon.screenshot({ path: `${SHOTS}/public-image-phone.png` });
+await p.locator('.dlg').getByRole('button', { name: 'Revoke this link' }).click(); await p.waitForTimeout(600); await p.locator('.dlg').getByRole('button', { name: 'Done' }).click();
+await anon.reload(); await anon.waitForSelector('.pv-card', { timeout: 12000 });
+check('PB5', 'After the owner revokes the link, the same address shows "This link doesn’t work" (and reveals nothing about the file)', (await anon.locator('main').innerText()).includes('doesn’t work') && !(await anon.locator('body').innerText()).includes(IMG));
+await anon.goto(`${base}/api/public/link?t=${'a'.repeat(43)}`); const rawBad = await anon.locator('body').innerText();
+check('PB6', 'The public endpoint itself answers a wrong token with a plain 404 JSON, no details', /not_found/.test(rawBad) && !/pg|sql|workspace/i.test(rawBad));
+check('PB7', 'No script errors on the public pages', anonErr.length === 0, anonErr.join(' | '));
+// ---- Trash > Delete for good, for a folder that still holds a file (this used to fail with "Some details need fixing")
+const DELF = `Doomed-${stamp}`; const DELI = `Survivor-${stamp}`;
+await q("insert into drive_folders (workspace_id,space,name,created_by) values ($1,'shared',$2,$3)", [L, DELF, uid]); const DELFID = (await q('select id from drive_folders where name = $1 and workspace_id = $2', [DELF, L]))[0].id;
+await q("insert into files (workspace_id,space,uploaded_by,name,kind,mime_type,in_library,folder_id) values ($1,'shared',$2,$3,'document','application/vnd.l2f.doc+json',true,$4)", [L, uid, DELI, DELFID]);
+await go('#/drive'); await p.locator('tr[data-item]', { hasText: DELF }).click({ button: 'right' }); await p.getByRole('button', { name: 'Move to Trash' }).click(); await p.getByRole('button', { name: 'Move to Trash', exact: true }).last().click();
+await p.waitForFunction((n) => !document.querySelector('.drv-tbl')?.innerText.includes(n), DELF, { timeout: 9000 });
+await p.goto(`${base}/#/drive/trash`); await p.reload(); await p.waitForSelector('.drv-items'); await p.getByRole('button', { name: `Delete ${DELF} for good` }).click(); await p.locator('.dlg').getByRole('button', { name: 'Delete for good' }).click(); await p.waitForFunction((n) => !document.body.innerText.includes(n), DELF, { timeout: 9000 });
+check('DD5', 'Trash › Delete for good removes a folder that still held a file; the file is kept (moved up), and no "Some details need fixing" appears', (await q('select count(*)::int n from drive_folders where id = $1', [DELFID]))[0].n === 0 && (await q('select folder_id from files where name = $1 and workspace_id = $2', [DELI, L]))[0]?.folder_id === null && !(await p.locator('.toast').innerText()).includes('Some details'));
+// ---- phone check of the new dialogs and pages (screenshots only when SHOTS is set; layout is asserted either way)
+await p.setViewportSize({ width: 390, height: 844 }); await go('#/drive'); await p.getByRole('button', { name: 'List view' }).click().catch(() => {}); await find(PUBD); await rowOf(PUBD).locator('.drv-more').click(); await p.getByRole('button', { name: 'Share…' }).click(); await p.waitForSelector('#lk-role'); await p.waitForTimeout(300);
+const dlgFit = await p.evaluate(() => { const d = document.querySelector('.dlg').getBoundingClientRect(); return { over: document.documentElement.scrollWidth - innerWidth, right: d.right, left: d.left, small: [...document.querySelectorAll('.dlg select, .dlg button, .dlg input')].filter((e) => { const r = e.getBoundingClientRect(); return r.width && (r.height < 43.5) && !e.matches('input[type=checkbox]'); }).length }; });
+check('PB8', 'On a phone the Share dialog fits the screen and its controls are at least 44px', dlgFit.over <= 1 && dlgFit.left >= 0 && dlgFit.right <= 390 && dlgFit.small === 0, JSON.stringify(dlgFit));
+await shot('share-dialog-phone'); await p.keyboard.press('Escape');
+await p.goto(`${base}/#/drive/shared`); await p.reload(); await p.waitForSelector('.drv-items, .empty'); await shot('shared-with-me-phone');
+await p.setViewportSize({ width: 1366, height: 900 });
 check('DR24', 'No script or page errors', problems.length === 0, problems.slice(0, 3).join(' | '));
 
 // clean up what this run made
-await admin.query('set session_replication_role = replica'); await admin.query('delete from drive_shares where created_by = $1 or file_id in (select id from files where uploaded_by = $1)', [uid]); await admin.query('delete from file_versions where file_id in (select id from files where uploaded_by = $1)', [uid]); await admin.query('delete from files where uploaded_by = $1', [uid]); for (const t_ of ['drive_folder_passwords', 'drive_unlocks', 'drive_unlock_attempts']) await admin.query(`delete from ${t_} where folder_id in (select id from drive_folders where created_by = $1)`, [uid]); await admin.query('delete from drive_folders where created_by = $1', [uid]); await admin.query('set session_replication_role = origin');
+await admin.query('set session_replication_role = replica'); await admin.query('delete from drive_share_links where created_by = $1 or file_id in (select id from files where uploaded_by = $1)', [uid]); await admin.query('delete from drive_shares where created_by = $1 or file_id in (select id from files where uploaded_by = $1)', [uid]); await admin.query('delete from file_versions where file_id in (select id from files where uploaded_by = $1)', [uid]); await admin.query('delete from files where uploaded_by = $1', [uid]); for (const t_ of ['drive_folder_passwords', 'drive_unlocks', 'drive_unlock_attempts']) await admin.query(`delete from ${t_} where folder_id in (select id from drive_folders where created_by = $1)`, [uid]); await admin.query('delete from drive_folders where created_by = $1', [uid]); await admin.query('set session_replication_role = origin');
 const pass = results.filter((r) => r.ok).length; console.log(`\n${pass}/${results.length} checks passed`);
 await b.close(); await s.close?.(); await fake.close(); await admin.end(); process.exit(pass === results.length ? 0 : 1);
