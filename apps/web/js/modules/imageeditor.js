@@ -148,7 +148,7 @@ export function imageView({ api, id, ctx }) {
     const changed = () => { undoB.disabled = !hist.canUndo(); redoB.disabled = !hist.canRedo(); paintStatus(); };
     function paintStatus() {
       const isDirty = !readOnly && S.rev !== savedRev;
-      if (!readOnly && !saving && status !== 'failed') { const was = status; status = isDirty ? 'dirty' : 'saved'; if (status === 'dirty' && was !== 'dirty') { dirty.set(meta.name, () => save()); window.addEventListener('beforeunload', warn); } if (status === 'saved') { dirty.clear(); window.removeEventListener('beforeunload', warn); } }
+      if (!readOnly && !saving && status !== 'failed') { const was = status; status = isDirty ? 'dirty' : 'saved'; if (status === 'dirty' && was !== 'dirty') { dirty.set(meta.name, () => save(), { auto: true }); window.addEventListener('beforeunload', warn); } if (status === 'saved') { dirty.clear(); window.removeEventListener('beforeunload', warn); } }
       const t = { saved: `Saved ${timeOf(savedAt)}`, dirty: 'Unsaved changes', saving: 'Saving…', failed: 'Couldn’t save. Your changes are still here.', readonly: 'Read only' }[status];
       statusEl.replaceChildren(...[h('span', { class: `dot ${status}` }), t, status === 'failed' ? btn('Retry', () => save(), 'link') : null].filter(Boolean));
       saveBtn.disabled = readOnly || status === 'saved' || saving || !M.saveFormat(meta.mime_type);

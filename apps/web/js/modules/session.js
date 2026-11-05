@@ -17,7 +17,7 @@ export function createSession({ api, id, ctx, version, savedBody, savedAt, readO
     isDirty: () => !ro && getBody() !== base,
     markChanged() {
       if (ro) return;
-      if (getBody() !== base) { if (status !== 'dirty') { status = 'dirty'; dirty.set(label(), () => self.save({ manual: true })); window.addEventListener('beforeunload', warn); } firstDirty ||= Date.now(); schedule(Date.now() - firstDirty > 10000 ? 0 : idleMs); }
+      if (getBody() !== base) { if (status !== 'dirty') { status = 'dirty'; dirty.set(label(), () => self.save({ manual: true }), { auto: true }); window.addEventListener('beforeunload', warn); } firstDirty ||= Date.now(); schedule(Date.now() - firstDirty > 10000 ? 0 : idleMs); }
       else if (status === 'dirty') { status = 'saved'; clean(); }
       paint();
     },

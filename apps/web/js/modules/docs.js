@@ -169,7 +169,7 @@ export function docView({ api, id, ctx, opts = {} }) {
         lastBody = body;
       }
       if (!readOnly) {
-        if (body !== savedBody && status === 'saved') { status = 'dirty'; dirty.set(meta.name, () => save({ manual: true })); addEventListener('beforeunload', warn); paintStatus(); }
+        if (body !== savedBody && status === 'saved') { status = 'dirty'; dirty.set(meta.name, () => save({ manual: true }), { auto: true }); addEventListener('beforeunload', warn); paintStatus(); }
         else if (body === savedBody && status === 'dirty') { status = 'saved'; dirty.clear(); removeEventListener('beforeunload', warn); paintStatus(); }
       }
       paintStats(body.length); paintOutline(); paintTabs();
@@ -177,7 +177,7 @@ export function docView({ api, id, ctx, opts = {} }) {
     function restore(e) {
       doc = normalize(JSON.parse(e.body)); activeTab = findTab(doc, e.tab) ? e.tab : doc.tabs[0].id; lastBody = e.body;
       ed.load(findTab(doc, activeTab).tab.blocks); ed.setPos(e.pos);
-      const body = e.body; if (body !== savedBody && status !== 'dirty') { status = 'dirty'; dirty.set(meta.name, () => save({ manual: true })); addEventListener('beforeunload', warn); } else if (body === savedBody && status === 'dirty') { status = 'saved'; dirty.clear(); }
+      const body = e.body; if (body !== savedBody && status !== 'dirty') { status = 'dirty'; dirty.set(meta.name, () => save({ manual: true }), { auto: true }); addEventListener('beforeunload', warn); } else if (body === savedBody && status === 'dirty') { status = 'saved'; dirty.clear(); }
       paintStatus(); paintStats(body.length); paintOutline(); paintTabs(); schedule();
     }
     function undo() { if (readOnly) return; checkpoint(); if (at > 0) { at -= 1; restore(stack[at]); } }
@@ -185,7 +185,7 @@ export function docView({ api, id, ctx, opts = {} }) {
     function onChange(kind) {
       if (gone() || readOnly) { if (kind === 'state') paintTools(); return; }
       if (kind === 'state') { paintTools(); return; }
-      if (status === 'saved') { status = 'dirty'; dirty.set(meta.name, () => save({ manual: true })); addEventListener('beforeunload', warn); paintStatus(); }
+      if (status === 'saved') { status = 'dirty'; dirty.set(meta.name, () => save({ manual: true }), { auto: true }); addEventListener('beforeunload', warn); paintStatus(); }
       schedule();
       if (kind === 'edit') { checkpoint(); paintTools(); return; }
       checkFirst ||= Date.now(); clearTimeout(checkTimer);
