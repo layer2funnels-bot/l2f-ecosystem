@@ -192,3 +192,6 @@ The owner approved `l2f-design-v4.zip` as the final design and said all future p
 - Named versions reuse the version note (no new operation): "Save a named version" saves now with the note "★ name". Labelling an older version would need a new server operation and is not included.
 
 | DOC-2 | Editor menus and toolbars (Docs, Sheets, Image, PDF) are compact (36px) with a mouse and at least 44px on touch screens (`pointer:coarse`); every other control keeps the 44px rule everywhere | owner: "complete, professional editors", design rule 10 | 5 Nov 2026 |
+
+## CI-1 · GitHub Actions inside the free 2,000 minutes (Nov 2026, owner approved)
+GitHub ran out of free minutes (private repository). Owner rule: $0, slower is fine. Pull requests get the full checks once per commit (no duplicate push run; newer pushes cancel older runs; documentation-only changes skip CI). A push to main runs only a one-minute guard (secrets, licences, tokens, FMP integrity). The full checks plus the mutation tests run every Sunday and on demand. The fmp-copy job runs only when a pull request touches apps/funnel-mapper. The Funnel Mapper Pro browser suite runs on the 1st of each month and on demand (it was nightly). The full local suite runs in the working session before every push. Estimate: ~6,900 minutes a month → about 1,000–1,400. Cloudflare Pages deploys are separate and unchanged.
