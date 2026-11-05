@@ -40,7 +40,8 @@ const v1 = JSON.stringify({ v: 1, blocks: [{ t: 'h1', c: [{ x: 'Quarterly plan' 
 const mkDoc = async (name, body) => { const id = (await q("insert into files (workspace_id, space, uploaded_by, name, kind, mime_type, size_bytes) values ($1,'shared',$2,$3,'document','application/vnd.l2f.doc+json',100) returning id", [L, uid, name]))[0].id; await q('insert into file_versions (workspace_id, file_id, body, note) values ($1,$2,$3,$4)', [L, id, body, 'first']); return id; };
 const docId = await mkDoc('Quarterly plan', v1);
 page.setDefaultTimeout(9000);
-await page.addInitScript(() => { window.SpeechRecognition = window.webkitSpeechRecognition = class { constructor() { window.__sr = this; } start() { this.onstart?.(); } stop() { this.onend?.(); } abort() {} emit(text, final = true) { const r = [{ transcript: text, confidence: 1 }]; const res = [Object.assign(r, { isFinal: final })]; this.onresult?.({ resultIndex: 0, results: res }); } }; });
+const INIT = () => { window.SpeechRecognition = window.webkitSpeechRecognition = class { constructor() { window.__sr = this; } start() { this.onstart?.(); } stop() { this.onend?.(); } abort() {} emit(text, final = true) { const r = [{ transcript: text, confidence: 1 }]; const res = [Object.assign(r, { isFinal: final })]; this.onresult?.({ resultIndex: 0, results: res }); } }; };
+await page.addInitScript(INIT);
 await page.addInitScript(() => { window.__csp = []; document.addEventListener('securitypolicyviolation', (e) => window.__csp.push(`${e.violatedDirective} ${e.sourceFile?.split('/').pop()}:${e.lineNumber}:${e.columnNumber} sample=${e.sample}`)); });
 process.on('uncaughtException', async (e) => { console.log('FATAL', String(e.message).split('\n')[0], problems.slice(0, 2), await page.evaluate(() => window.__csp?.slice(0, 5)).catch(() => 'n/a')); try { await page.screenshot({ path: `${SHOTS}/fail.png` }); } catch {} process.exit(1); });
 const ed = page.locator('.docpage'); const wait = (t, ms = 12000) => page.waitForSelector(`text=${t}`, { timeout: ms }).catch(async (e) => { console.log('WAIT FAILED', t, problems.slice(0, 5)); await page.screenshot({ path: `${SHOTS}/fail.png` }); throw e; });
@@ -298,6 +299,18 @@ await page.evaluate(() => window.__sr.emit('thanks for joining', true)); await p
 check('W72', 'Conversation mode: each utterance becomes a line "Speaker N (hh:mm:ss): text" with the speaker found automatically (no microphone in this test: all one speaker)', /Speaker 1 \(00:00:\d\d\): Good morning everyone/.test(await ed.innerText()) && /Speaker 1 \(00:00:\d\d\): Thanks for joining/.test(await ed.innerText()) && (await page.locator('.dx-voice button[aria-label^="Rename Speaker"]').count()) === 1 && (await page.locator('.dx-voice button:has-text("Person")').count()) === 0);
 await ed.locator('p', { hasText: 'Thanks for joining' }).click({ button: 'right' }); await page.getByRole('menuitem', { name: 'Change speaker of this line…' }).click(); await page.selectOption('#dx-cs', 'new'); await page.getByRole('button', { name: 'Change', exact: true }).click();
 check('W72b', 'Change speaker (right-click on a line) moves one line to a new speaker', /Speaker 2 \(00:00:\d\d\): Thanks for joining/.test(await ed.innerText()) && /Speaker 1 \(00:00:\d\d\): Good morning/.test(await ed.innerText()));
+{ // phone: Conversation mode must not open the microphone a second time (iPhone/Android then write nothing)
+  const pc = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1', storageState: await ctx.storageState() });
+  const pp = await pc.newPage(); await pp.addInitScript(INIT);
+  await pp.addInitScript(() => { window.__gum = 0; navigator.mediaDevices.getUserMedia = async () => { window.__gum += 1; window.__sr && (window.__sr.deaf = true); throw new Error('busy'); }; });
+  await pp.goto(`${base}/#/doc/${docId}`); await pp.waitForSelector('.dx-page', { timeout: 20000 }).catch(() => {}); await pp.waitForTimeout(1200);
+  await pp.evaluate(() => document.querySelector('.dx-page, [contenteditable=true]')?.focus());
+  await pp.getByRole('button', { name: 'Voice typing' }).first().click().catch(async () => { await pp.locator('button[aria-label="More formatting tools"]').tap(); await pp.getByRole('button', { name: 'Voice typing' }).first().tap(); });
+  await pp.locator('.dx-voice button[data-m=talk]').tap(); await pp.getByRole('button', { name: /Start/ }).tap(); await pp.waitForTimeout(300);
+  await pp.evaluate(() => { if (!window.__sr.deaf) window.__sr.emit('hello from the phone', true); }); await pp.waitForTimeout(300);
+  check('W72p', 'Phone, Conversation mode: words are written (speech-to-text starts first and the microphone is not opened a second time)', (await pp.evaluate(() => window.__gum)) === 0 && /Hello from the phone/.test(await pp.locator('.dx-page, [contenteditable]').first().innerText()), String(await pp.evaluate(() => window.__gum)));
+  await pc.close();
+}
 await page.getByRole('button', { name: /Rename Speaker 1/ }).click(); await page.fill('#dx-sn', 'Ann'); await page.getByRole('button', { name: 'Save', exact: true }).last().click();
 check('W72c', 'Renaming a speaker renames every line of that speaker', /Ann \(00:00:\d\d\): Good morning everyone/.test(await ed.innerText()) && /Speaker 2 \(/.test(await ed.innerText()));
 check('W73', 'The panel says automatic speaker detection is beta and warns about the browser vendor’s speech service', /Automatic speaker detection \(beta\)/.test(await page.locator('.dx-voice').innerText()) && /may be sent to the browser maker/.test(await page.locator('.dx-voice').innerText()));

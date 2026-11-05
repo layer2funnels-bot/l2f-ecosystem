@@ -95,7 +95,7 @@ export function imageView({ api, id, ctx }) {
     let S = { base: firstBase, adj: { ...DEF }, filter: 'none', anns: [], frame: { width: 0, color: '#ffffff', radius: 0 }, mark: null };
     let rev = 0, savedRev = 0; S.rev = 0;
     const hist = M.createHistory(S);
-    let tool = readOnly ? 'view' : 'select', sub = { draw: 'pen', shape: 'rect' }, draft = null, sel = null, compare = false, zoom = 'fit', crop = null, cropRatio = null, textEd = null;
+    let tool = readOnly ? 'view' : 'select', sub = { draw: 'pen', shape: 'rect' }, draft = null, sel = null, compare = false, zoom = 'fit', crop = null, cropRatio = null, textEd = null, cropReady = false;
     const opts = { color: '#e5484d', size: Math.max(3, Math.round(Math.max(firstBase.width, firstBase.height) / 220)), hlColor: '#fde047', level: Math.max(8, Math.round(firstBase.width / 50)), textSize: Math.max(18, Math.round(firstBase.width / 24)), font: 'sans', textBg: false, textBgColor: '#ffffff', fill: false, lock: true };
 
     // ---------------------------------------------------------------- pieces of the page
@@ -143,7 +143,7 @@ export function imageView({ api, id, ctx }) {
       const { W, H } = dims(); const z = zoomValue();
       wrap.style.width = `${Math.round(W * z)}px`; wrap.style.height = `${Math.round(H * z)}px`;
       info.textContent = `${W} × ${H} px · ${Math.round(z * 100)}%`;
-      if (crop) placeCrop();
+      if (cropReady) placeCrop();                    // also hides the box once the crop is applied, cancelled or undone
     }
     const changed = () => { undoB.disabled = !hist.canUndo(); redoB.disabled = !hist.canRedo(); paintStatus(); };
     function paintStatus() {
@@ -266,7 +266,7 @@ export function imageView({ api, id, ctx }) {
       if (tool === 'crop' && t !== 'crop') crop = null;
       tool = t; sel = t === 'select' ? sel : null;
       if (t === 'crop') { const { W, H } = dims(); crop = M.cropForRatio(W, H, cropRatio); }
-      closeTextEditor(); paintTools(); paintPanel(); render();
+      closeTextEditor(); paintTools(); paintPanel(); render(); if (cropReady) placeCrop();
     }
     function paintTools() {
       tools.replaceChildren(...TOOLS.filter(([k]) => !readOnly || k === 'select').map(([k, ic, label]) => h('button', { type: 'button', class: 'ix-tool', 'aria-pressed': String(tool === k), title: `${label} (${IKEYS[k]})`, onclick: () => setTool(k) }, icon(ic), h('span', {}, label))));
@@ -369,7 +369,7 @@ export function imageView({ api, id, ctx }) {
 
     // ---------------------------------------------------------------- crop box
     const cropBox = h('div', { class: 'ix-crop', hidden: true }, ...['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'].map((hd) => h('span', { class: `ix-h ${hd}`, 'data-h': hd })));
-    wrap.append(cropBox);
+    wrap.append(cropBox); cropReady = true;
     function placeCrop() {
       cropBox.hidden = !crop; if (!crop) return; const z = zoomValue();
       cropBox.style.left = `${crop.x * z}px`; cropBox.style.top = `${crop.y * z}px`; cropBox.style.width = `${crop.w * z}px`; cropBox.style.height = `${crop.h * z}px`;
