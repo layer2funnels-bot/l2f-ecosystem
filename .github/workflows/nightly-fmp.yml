@@ -2,9 +2,10 @@
 # so any difference between the two shows up the morning after. Everything runs on the runner against a local Supabase stack: no live project,
 # no deploy. The original is only READ, with a read-only token the owner adds as the secret FMP_READ_TOKEN (fine-grained token, "Contents: read"
 # on layer2funnels-bot/Funnel-Mapper only). Without the secret the "original" job skips cleanly and the copy still runs.
+# Schedule: once a month (the 1st) and on demand from the Actions tab, to stay inside GitHub's free minutes (owner decision, Nov 2026).
 name: nightly-fmp
 on:
-  schedule: [{ cron: '17 2 * * *' }]
+  schedule: [{ cron: '17 2 1 * *' }]
   workflow_dispatch:
     inputs:
       specs: { description: 'Optional spec filter, e.g. "canvas exports" (empty = all)', required: false, default: '' }

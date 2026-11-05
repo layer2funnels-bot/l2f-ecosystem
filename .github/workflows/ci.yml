@@ -1,10 +1,42 @@
-# Runs on every push and pull request once the repository has a GitHub remote. $0 (free Actions quota).
+# Kept inside GitHub's free 2,000 minutes a month (private repository; owner decision, Nov 2026: $0, slower is fine).
+#  - pull requests: the full checks, ONCE per commit (no second "push" run of the same commit); a newer push cancels the older run.
+#    Changes that touch only documentation (*.md, docs/) do not start CI.
+#  - push to main: only the quick guard (secrets, licences, tokens, files); the merged code was already tested in its pull request.
+#  - every Sunday, and on demand: the full checks on main, including the mutation tests (they test the tests, not the app).
+# Cloudflare Pages deploys through its own GitHub connection, not through these jobs, so deployment is unaffected.
 name: ci
-on: [push, pull_request]
+on:
+  pull_request:
+    paths-ignore: ['**/*.md', 'docs/**']
+  push:
+    branches: [main]
+  schedule: [{ cron: '41 22 * * 0' }]   # Sunday night (Monday 03:41 Pakistan time)
+  workflow_dispatch: {}
 permissions: { contents: read }
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
-  test:
+  # push to main: the quick guard only (about 1 minute)
+  guard:
+    if: github.event_name == 'push'
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }   # the FMP integrity check needs the fmp-copy-pristine tag
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run check:secrets
+      - run: npm run check:licences
+      - run: npm run check:tokens
+      - run: npm run check:fmp-copy
+
+  test:
+    if: github.event_name != 'push'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
     services:
       postgres:
         image: postgres:17
@@ -33,10 +65,13 @@ jobs:
       - run: DRIVERS=pglite,pg npm test
       - run: npm run drill:restore
       - run: npm run dryrun:fmp
-      - run: npm run test:mutation
+      - name: Mutation tests (weekly and on demand; they check that the tests catch broken code)
+        if: github.event_name != 'pull_request'
+        run: npm run test:mutation
 
   # Real browser + real Supabase Auth + our routes + Postgres, all on the runner (Supabase CLI local stack, Docker). No live project.
   e2e:
+    if: github.event_name != 'push'
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
@@ -93,17 +128,33 @@ jobs:
 
   # The unedited Funnel Mapper Pro code copy must keep building and passing its own checks (its database and browser suites
   # need their own Supabase stack and run on demand: see docs/FMP_COPY_REPORT.md). No environment files, no live project.
+  # On a pull request it runs only when the pull request changes apps/funnel-mapper (otherwise it ends after the check, under a minute).
   fmp-copy:
+    if: github.event_name != 'push'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     defaults: { run: { working-directory: apps/funnel-mapper } }
     steps:
       - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Does this change touch Funnel Mapper Pro?
+        id: fmp
+        working-directory: .
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then echo "run=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          if git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}" | grep -q '^apps/funnel-mapper/'; then echo "run=true" >> "$GITHUB_OUTPUT"; else echo "run=false" >> "$GITHUB_OUTPUT"; echo "::notice::No Funnel Mapper Pro files changed: its checks are skipped for this pull request."; fi
       - uses: actions/setup-node@v4
+        if: steps.fmp.outputs.run == 'true'
         with: { node-version: 24, cache: npm, cache-dependency-path: apps/funnel-mapper/package-lock.json }
-      - run: npm ci
-      - run: npm run check:files
-      - run: npm run lint
-      - run: npm test
-      - run: npm run build
-      - run: npm run typecheck
+      - if: steps.fmp.outputs.run == 'true'
+        run: npm ci
+      - if: steps.fmp.outputs.run == 'true'
+        run: npm run check:files
+      - if: steps.fmp.outputs.run == 'true'
+        run: npm run lint
+      - if: steps.fmp.outputs.run == 'true'
+        run: npm test
+      - if: steps.fmp.outputs.run == 'true'
+        run: npm run build
+      - if: steps.fmp.outputs.run == 'true'
+        run: npm run typecheck
