@@ -74,10 +74,18 @@ const fontKey = (css) => {
   const hit = Object.entries(FONTS).find(([, v]) => v.label.toLowerCase() === first || v.css.split(',')[0].replace(/"/g, '').toLowerCase() === first); return hit ? hit[0] : null;
 };
 const sizePt = (v) => { const m = /^([\d.]+)(pt|px)$/.exec(String(v ?? '').trim()); if (!m) return null; const n = m[2] === 'px' ? Number(m[1]) * 0.75 : Number(m[1]); return Math.round(n * 2) / 2; };
+/** The style attribute as an object with camelCase keys. Read from the attribute text (not el.style): pasted HTML is parsed in a document where the page policy
+ *  refuses to apply inline styles, so el.style would be empty there; the text of the attribute is still available. */
+export function styleOf(el) {
+  const t = el?.getAttribute?.('style') ?? el?.getAttribute?.('data-st'); const o = {}; if (!t) return o;
+  for (const d of t.split(/;(?![^(]*\))/)) { const i = d.indexOf(':'); if (i < 1) continue; o[d.slice(0, i).trim().toLowerCase().replace(/-([a-z])/g, (_m, c) => c.toUpperCase())] = d.slice(i + 1).trim().replace(/\s*!important$/i, ''); }
+  return o;
+}
+const NEAR_BLACK = (c) => { const n = parseInt(c.slice(1), 16); return ((n >> 16) & 255) + ((n >> 8) & 255) + (n & 255) < 150; };
 function enter(el, st, paste) {
   const tag = el.tagName; let n = null; const set = (k, v) => { n ??= { ...st }; n[k] = v; };
-  const css = el.style;
-  const fw = css?.fontWeight;
+  const css = styleOf(el);
+  const fw = css.fontWeight;
   if (tag === 'B' || tag === 'STRONG') { if (!(fw === 'normal' || fw === '400')) set('b', 1); }
   else if (tag === 'I' || tag === 'EM') set('i', 1);
   else if (tag === 'U') set('u', 1);
@@ -91,9 +99,9 @@ function enter(el, st, paste) {
     if (css.fontStyle === 'italic') set('i', 1);
     const td = css.textDecorationLine || css.textDecoration || ''; if (/underline/.test(td)) set('u', 1); if (/line-through/.test(td)) set('s', 1);
     if (css.verticalAlign === 'super') set('sup', 1); else if (css.verticalAlign === 'sub') set('sub', 1);
-    const f = el.dataset?.f && Object.hasOwn(FONTS, el.dataset.f) ? el.dataset.f : fontKey(css.fontFamily); if (f) set('f', f);
-    const z = sizePt(css.fontSize); if (z && (!paste || z !== DEFAULT_SIZE)) set('z', z);
-    const c = safeColor(css.color); if (c && !(paste && (c === '#000000' || c === '#ffffff'))) set('c', c);
+    const f = el.dataset?.f && Object.hasOwn(FONTS, el.dataset.f) ? el.dataset.f : fontKey(css.fontFamily); if (f && !(paste && f === 'geist')) set('f', f);
+    const z = sizePt(css.fontSize); if (z && (!paste || Math.abs(z - DEFAULT_SIZE) > 0.6)) set('z', z);
+    const c = safeColor(css.color); if (c && !(paste && (c === '#ffffff' || NEAR_BLACK(c)))) set('c', c);
     const bg = safeColor(css.backgroundColor); if (bg && !(paste && bg === '#ffffff')) set('hl', bg);
   }
   return n ?? st;
@@ -128,16 +136,16 @@ function runsOf(container, { skipLists = false, paste = false } = {}) {
   scan(container, {}, cx);
   return normRuns(out);
 }
-const alignOf = (el) => { const a = el.dataset?.al ?? ({ center: 'c', right: 'r', justify: 'j' })[el.style?.textAlign] ?? ({ center: 'c', right: 'r', justify: 'j' })[el.getAttribute?.('align')]; return a; };
+const alignOf = (el) => { const a = el.dataset?.al ?? ({ center: 'c', right: 'r', justify: 'j' })[styleOf(el).textAlign] ?? ({ center: 'c', right: 'r', justify: 'j' })[el.getAttribute?.('align')]; return a; };
 const num = (v) => { const n = parseFloat(v); return Number.isFinite(n) ? n : undefined; };
 function textAttrs(el, paste) {
   const o = {}; const al = alignOf(el); if (al) o.al = al;
   if (el.getAttribute?.('dir') === 'rtl') o.dir = 'rtl';
   if (!paste) {
-    const ls = num(el.style.lineHeight); if (ls) o.ls = ls;
+    const sty = styleOf(el); const ls = num(sty.lineHeight); if (ls) o.ls = ls;
     const pt = (v) => (String(v).endsWith('pt') ? num(v) : String(v).endsWith('px') ? num(v) * 0.75 : undefined);
-    const sb = pt(el.style.marginTop); if (sb) o.sb = sb; const sa = pt(el.style.marginBottom); if (sa) o.sa = sa;
-    const ind = pt(el.style.marginLeft); if (ind) o.ind = Math.round(ind / 36);
+    const sb = pt(sty.marginTop); if (sb) o.sb = sb; const sa = pt(sty.marginBottom); if (sa) o.sa = sa;
+    const ind = pt(sty.marginLeft); if (ind) o.ind = Math.round(ind / 36);
   }
   return o;
 }
@@ -162,7 +170,7 @@ export function readBlock(el, paste = false) {
   if (tag === 'FIGURE' && el.dataset?.f) return { t: 'img', f: el.dataset.f, alt: el.dataset.alt, w: num(el.dataset.w), al: el.dataset.al, wr: el.dataset.wr };
   if (tag === 'UL' || tag === 'OL') return { t: 'list', items: readList(el, 0, [], paste) };
   if (tag === 'TABLE') {
-    const rows = [...el.rows].map((tr) => [...tr.cells].map((c) => { const o = { c: runsOf(c, { paste }) }; const al = alignOf(c); if (al === 'c' || al === 'r') o.al = al; const bg = safeColor(c.style?.backgroundColor); if (bg && !(paste && bg === '#ffffff')) o.bg = bg; return o; }));
+    const rows = [...el.rows].map((tr) => [...tr.cells].map((c) => { const o = { c: runsOf(c, { paste }) }; const al = alignOf(c); if (al === 'c' || al === 'r') o.al = al; const bg = safeColor(styleOf(c).backgroundColor); if (bg && !(paste && bg === '#ffffff')) o.bg = bg; return o; }));
     const hdr = el.rows[0] && [...el.rows[0].cells].every((c) => c.tagName === 'TH');
     return { t: 'table', ...(hdr ? { hdr: 1 } : {}), ...(el.dataset?.nb ? { nb: 1 } : {}), rows };
   }
@@ -269,7 +277,9 @@ export const posCompare = (a, b) => (a.b - b.b) || (a.o - b.o);
 const BLOCKY = /^(P|DIV|H[1-6]|BLOCKQUOTE|PRE|UL|OL|TABLE|HR|SECTION|ARTICLE|HEADER|FOOTER|MAIN|FIGURE|FIGCAPTION|ADDRESS|DL|FORM)$/;
 const IMG_SRC = /^data:image\/(png|jpe?g|gif|webp);base64,/i;
 export function blocksFromHtml(html) {
-  const doc = new DOMParser().parseFromString(String(html ?? ''), 'text/html');
+  // style attributes are renamed before parsing (the page policy would refuse them and log an error); styleOf() reads the renamed copy. <style> blocks are dropped.
+  const safe = String(html ?? '').replace(/<style[\s\S]*?<\/style>/gi, '').replace(/(\s)style\s*=\s*("[^"]*"|'[^']*')/gi, '$1data-st=$2');
+  const doc = new DOMParser().parseFromString(safe, 'text/html');
   const blocks = []; let loose = null;
   const flush = () => { if (loose) { const b = readBlock(loose, true); if (b.c.length) blocks.push(b); loose = null; } };
   const images = (el) => { for (const im of el.querySelectorAll('img')) { const src = im.getAttribute('src') ?? ''; if (IMG_SRC.test(src)) { flush(); blocks.push({ t: 'img', f: null, src, alt: im.getAttribute('alt') ?? '' }); } } };

@@ -13,7 +13,8 @@ import { blocksFromHtml, fillToc, fillNotes, dataUrlToBlob } from './docdom.js';
 import { blocksFromMarkdown, blocksFromText } from './docmd.js';
 import { createEditor } from './docedit.js';
 import { download, safeName, loadIo, printBlocks } from './docexport.js';
-import { LANGS, SPEAKER_COLOURS, MAX_SPEAKERS, isUrdu, fmtClock, nextSpeaker, turnChanged, applyVoiceCommands, withSpacing, createRecognizer, voiceSupported, ERRORS } from './docvoice.js';
+import { LANGS, SPEAKER_COLOURS, isUrdu, fmtClock, applyVoiceCommands, withSpacing, createRecognizer, voiceSupported, ERRORS, isTranscriptLine } from './docvoice.js';
+import { SpeakerClusters, fingerprint, frameFeatures } from './docspeaker.js';
 
 export const BOARD_MIME = 'application/vnd.excalidraw+json';
 const AUTOSAVE_IDLE_MS = 1500, AUTOSAVE_MAX_WAIT_MS = 10000;   // a save about 1.5 s after typing stops, never later than 10 s after the first unsaved change
@@ -31,7 +32,7 @@ const recent = (k) => { try { const v = JSON.parse(store.get(`dx-recent-${k}`) ?
 const pushRecent = (k, v) => store.set(`dx-recent-${k}`, JSON.stringify([v, ...recent(k).filter((x) => x !== v)].slice(0, 8)));
 const SHORTCUTS = [['Bold, italic, underline', `${MOD}B · ${MOD}I · ${MOD}U`], ['Link', `${MOD}K`], ['Undo · redo', `${MOD}Z · ${MOD}Y or ${MOD}Shift+Z`], ['Find · find and replace', `${MOD}F · ${MOD}H`], ['Save', `${MOD}S`], ['Print', `${MOD}P`],
   ['Clear formatting', `${MOD}\\`], ['Normal text · heading 1, 2, 3', `${MOD}Alt+0 · ${MOD}Alt+1, 2, 3`], ['Numbered · bulleted · checklist', `${MOD}Shift+7 · 8 · 9`], ['Align left · centre · right · justify', `${MOD}Shift+L · E · R · J`],
-  ['Indent · outdent (lists and at the start of a line)', 'Tab · Shift+Tab'], ['Next · previous table cell (a new row at the end)', 'Tab · Shift+Tab'], ['Leave the page with the keyboard', 'Esc, then Tab'], ['Open a link in the text', `${MOD}Click`], ['Line break inside a paragraph', 'Shift+Enter'], ['Select all', `${MOD}A`], ['Zoom in · out · 100%', `${MOD}+ · ${MOD}- · ${MOD}0`]];
+  ['Indent · outdent (lists and at the start of a line)', 'Tab · Shift+Tab'], ['Next · previous table cell (a new row at the end)', 'Tab · Shift+Tab'], ['Leave the page with the keyboard', 'Esc, then Tab'], ['Open a link in the text', `${MOD}Click`], ['Line break inside a paragraph', 'Shift+Enter'], ['Select all', `${MOD}A`], ['Bigger · smaller text', `${MOD}Shift+> · ${MOD}Shift+<`], ['Zoom in · out · 100%', `${MOD}+ · ${MOD}- · ${MOD}0`]];
 
 // ---- small floating panels: menus, colour pickers, the context menu
 let openPop = null;
@@ -98,7 +99,7 @@ export function docView({ api, id, ctx, opts = {} }) {
     let meta = file, version = ver.version, status = 'saved', savedAt = ver.created_at, lastAuto = 0, timer = null, saving = false, readOnly = Boolean(file.archived_at) || !(ctx.can('drive.file.upload', file.client_id) || file.my_role === 'editor');
     let doc = parseBody(ver.body ?? ''); let activeTab = doc.tabs[0].id; let savedBody = serialize(doc); let lastBody = savedBody;
     let spell = store.get('dx-spell') !== '0'; let outlineOpen = store.get('dx-outline') !== '0'; let mode = '';
-    let zoom = Number(store.get('dx-zoom')) || 100; const narrow = innerWidth < 900; const tabsKey = narrow ? 'dx-tabs-narrow' : 'dx-tabs'; let tabsOpen = store.get(tabsKey) ? store.get(tabsKey) === '1' : !narrow;
+    let zoomMode = store.get('dx-zoom') || 'auto'; let zoom = 100; let canvasEl = null; const narrow = innerWidth < 900; const tabsKey = narrow ? 'dx-tabs-narrow' : 'dx-tabs'; let tabsOpen = store.get(tabsKey) ? store.get(tabsKey) === '1' : !narrow;
     const collapsed = new Set();
     const gone = () => !root.isConnected;
 
@@ -201,8 +202,8 @@ export function docView({ api, id, ctx, opts = {} }) {
     function paintStats(size) {
       const words = wordCount(doc, activeTab), total = wordCount(doc);
       counter.textContent = tabCount(doc) > 1 ? `${words.toLocaleString()} word${words === 1 ? '' : 's'} here · ${total.toLocaleString()} in all` : `${words.toLocaleString()} word${words === 1 ? '' : 's'}`;
-      const left = spaceLeft(size); const used = size / MAX_CHARS;
-      spaceEl.textContent = `Space left: ${left.toLocaleString()} of ${MAX_CHARS.toLocaleString()} characters`; spaceEl.classList.toggle('warn', used > 0.9); spaceEl.title = `${Math.round(used * 100)}% of this document’s space is used. Every save is also kept in History.`;
+      const used = size / MAX_CHARS; spaceEl.hidden = used <= 0.8; spaceEl.classList.toggle('warn', used > 0.8);
+      if (used > 0.8) spaceEl.textContent = `This document is ${Math.round(used * 100)}% of its size limit: move part of it to another tab or document soon.`;
     }
     let chain = Promise.resolve(), retryN = 0, retryTimer = null, firstDirty = 0;
     const schedule = () => { clearTimeout(timer); if (readOnly) return; firstDirty ||= Date.now(); timer = setTimeout(() => save({ manual: false }), Date.now() - firstDirty > AUTOSAVE_MAX_WAIT_MS ? 0 : AUTOSAVE_IDLE_MS); };
@@ -322,7 +323,7 @@ export function docView({ api, id, ctx, opts = {} }) {
       const pg = doc.page; const sz = pageSize(pg); const [mt, mr, mb, ml] = marginsOf(pg);
       paper.style.setProperty('--dx-w', `${sz.w}mm`); paper.style.setProperty('--dx-h', `${sz.h}mm`);
       for (const [k, v] of [['mt', mt], ['mr', mr], ['mb', mb], ['ml', ml]]) paper.style.setProperty(`--dx-${k}`, `${v}mm`);
-      paper.style.zoom = zoom === 100 ? '' : String(zoom / 100); zoomSel.value = String(zoom);
+      applyZoom();
       hdrEl.textContent = pg.hdr ?? ''; hdrEl.hidden = !pg.hdr;
       ftrEl.replaceChildren(...(pg.ftr ? [h('span', { class: 'dx-ftxt' }, pg.ftr)] : []), ...(pg.pn ? [h('span', { class: `dx-pn dx-pn-${pg.pn}`, title: 'The page number is added when you print or download' }, '1')] : [])); ftrEl.hidden = !pg.ftr && !pg.pn;
       pageInfo.textContent = `${PAGES[pg.size].label}${pg.orient === 'l' ? ' landscape' : ''}`;
@@ -421,6 +422,7 @@ export function docView({ api, id, ctx, opts = {} }) {
     }
     fillFonts(); tools.push(fontSel);
     const sizeSel = sel('Font size', SIZES.map((n) => [String(n), String(n)]), C((v) => ed.setMark('z', Number(v) === DEFAULT_SIZE ? null : Number(v))), 'dx-w-size', 2);
+    const bumpSize = C((dir) => { const cur = ed.state().marks.z ?? DEFAULT_SIZE; const next = dir > 0 ? (SIZES.find((x) => x > cur) ?? cur + 4) : ([...SIZES].reverse().find((x) => x < cur) ?? Math.max(6, cur - 1)); ed.setMark('z', next === DEFAULT_SIZE ? null : Math.min(200, next)); });
     const markBtn = (label, content, key, cls = '', pri = 1) => tbtn(label, content, C(() => ed.toggleMark(key)), { key, cls, pri });
     const colourBtn = (label, glyph, markKey, palette, pri = 2) => {
       const swatch = h('span', { class: 'dx-cbar', 'aria-hidden': 'true' }); const b = tbtn(label, [h('span', { class: 'dx-cg', 'aria-hidden': 'true' }, glyph), swatch], () => {
@@ -440,15 +442,25 @@ export function docView({ api, id, ctx, opts = {} }) {
     };
     const alignBtn = (al, label, glyph) => tbtn(label, glyph, C(() => (ed.state().table && !ed.state().collapsed === false && ed.state().type === 'p' && false ? 0 : ed.setAlign(al))), { key: `al-${al}`, pri: 2 });
     const undoBtn = tbtn('Undo', icon('undo'), () => { ed.focus(); undo(); }, { key: 'undo' }); const redoBtn = tbtn('Redo', icon('redo'), () => { ed.focus(); redo(); }, { key: 'redo' });
-    const imgBar = h('div', { class: 'dx-imgtools', hidden: true, role: 'toolbar', 'aria-label': 'Picture' },
-      ...[['l', 'Align picture left', '◧'], ['c', 'Centre picture', '▣'], ['r', 'Align picture right', '◨']].map(([a, lab, g]) => tbtn(lab, g, () => ed.setImage({ al: a }))),
-      ...[[25, '25%'], [50, '50%'], [100, '100%']].map(([p, t]) => tbtn(`Picture width ${t} of the page`, t, () => ed.setImage({ w: Math.round((page.clientWidth * p) / 100) }))),
-      ...[['', 'In line with text', 'In line'], ['l', 'Wrap text around, picture on the left', 'Wrap L'], ['r', 'Wrap text around, picture on the right', 'Wrap R'], ['b', 'Break text above and below', 'Break']].map(([w, lab, t]) => tbtn(lab, t, () => ed.setImage({ wr: w || null }), { cls: 'dx-txt' })),
-      tbtn('Picture description and width', 'Alt text', imageDetails), tbtn('Remove picture', icon('trash'), () => ed.removeFig()));
+    const ICO = { rowAbove: [['rect', { x: 2, y: 8, width: 12, height: 6, rx: 1 }], ['path', { d: 'M8 1.5v5M5.5 4h5' }]], rowBelow: [['rect', { x: 2, y: 2, width: 12, height: 6, rx: 1 }], ['path', { d: 'M8 9.5v5M5.5 12h5' }]],
+      colLeft: [['rect', { x: 8, y: 2, width: 6, height: 12, rx: 1 }], ['path', { d: 'M1.5 8h5M4 5.5v5' }]], colRight: [['rect', { x: 2, y: 2, width: 6, height: 12, rx: 1 }], ['path', { d: 'M9.5 8h5M12 5.5v5' }]],
+      delRow: [['rect', { x: 2, y: 3, width: 12, height: 10, rx: 1 }], ['path', { d: 'M2 8h12M6.5 9.6l3 2M9.5 9.6l-3 2' }]], delCol: [['rect', { x: 2, y: 3, width: 12, height: 10, rx: 1 }], ['path', { d: 'M8 3v10M10 5.5l2 3M12 5.5l-2 3' }]],
+      header: [['rect', { x: 2, y: 3, width: 12, height: 10, rx: 1 }], ['rect', { x: 2, y: 3, width: 12, height: 3.5, fill: 'currentColor' }]],
+      alL: [['path', { d: 'M2 3.5h12M2 6.5h8M2 9.5h12M2 12.5h7' }]], alC: [['path', { d: 'M2 3.5h12M4 6.5h8M2 9.5h12M5 12.5h6' }]], alR: [['path', { d: 'M2 3.5h12M6 6.5h8M2 9.5h12M7 12.5h7' }]],
+      colour: [['path', { d: 'M8 2.5c2.5 3 4 4.8 4 7a4 4 0 0 1-8 0c0-2.2 1.5-4 4-7z' }]], borders: [['rect', { x: 2, y: 2, width: 12, height: 12, rx: 1 }], ['path', { d: 'M8 2v12M2 8h12' }]],
+      trash: [['path', { d: 'M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8.5h5.8l.6-8.5' }]],
+      wrapIn: [['rect', { x: 4, y: 6, width: 8, height: 4, rx: 1 }], ['path', { d: 'M2 2.5h12M2 13.5h12' }]], wrapL: [['rect', { x: 2, y: 3, width: 5, height: 6, rx: 1 }], ['path', { d: 'M9 3.5h5M9 6.5h5M2 12h12' }]],
+      wrapR: [['rect', { x: 9, y: 3, width: 5, height: 6, rx: 1 }], ['path', { d: 'M2 3.5h5M2 6.5h5M2 12h12' }]], wrapB: [['rect', { x: 4, y: 6, width: 8, height: 4, rx: 1 }], ['path', { d: 'M2 3h12M2 13h12' }]] };
+    const ico = (n) => { const NS = 'http://www.w3.org/2000/svg'; const v = document.createElementNS(NS, 'svg'); v.setAttribute('viewBox', '0 0 16 16'); v.setAttribute('class', 'dx-ico'); v.setAttribute('aria-hidden', 'true'); for (const [t, a] of ICO[n]) { const e = document.createElementNS(NS, t); for (const [k, x] of Object.entries(a)) e.setAttribute(k, String(x)); v.append(e); } return v; };
+    const imgBar = h('div', { class: 'dx-imgtools dx-ctx', hidden: true, role: 'toolbar', 'aria-label': 'Picture tools' }, h('span', { class: 'dx-ctxl' }, 'Picture'),
+      ...[['l', 'Align picture left', 'alL'], ['c', 'Centre picture', 'alC'], ['r', 'Align picture right', 'alR']].map(([a, lab, g]) => tbtn(lab, ico(g), () => ed.setImage({ al: a }))), h('span', { class: 'dx-tsep', 'aria-hidden': 'true' }),
+      ...[['', 'In line with text', 'wrapIn'], ['l', 'Wrap text around, picture on the left', 'wrapL'], ['r', 'Wrap text around, picture on the right', 'wrapR'], ['b', 'Break text above and below', 'wrapB']].map(([w, lab, g]) => tbtn(lab, ico(g), () => ed.setImage({ wr: w || null }))), h('span', { class: 'dx-tsep', 'aria-hidden': 'true' }),
+      ...[[25, '25%'], [50, '50%'], [100, '100%']].map(([p, t]) => tbtn(`Picture width ${t} of the page`, t, () => ed.setImage({ w: Math.round((page.clientWidth * p) / 100) }), { cls: 'dx-txt' })), h('span', { class: 'dx-tsep', 'aria-hidden': 'true' }),
+      tbtn('Picture description and width', 'Alt', imageDetails, { cls: 'dx-txt' }), tbtn('Remove picture', ico('trash'), () => ed.removeFig()));
     const ovf = h('div', { class: 'dx-ovf' });
     const moreBtn = h('button', { type: 'button', class: 'dx-tb dx-more', 'aria-label': 'More formatting tools', 'aria-haspopup': 'dialog', title: 'More tools', hidden: true, onclick: () => pop(moreBtn, ovf, { role: 'dialog', label: 'More formatting tools' }) }, icon('more'));
     const toolbar = h('div', { class: 'dx-toolbar doctools', role: 'toolbar', 'aria-label': 'Formatting' },
-      undoBtn, redoBtn, sep(), styleSel, fontSel, sizeSel, sep(),
+      undoBtn, redoBtn, sep(), styleSel, fontSel, tbtn('Decrease font size', '−', () => bumpSize(-1), { cls: 'dx-sz' }), sizeSel, tbtn('Increase font size', '+', () => bumpSize(1), { cls: 'dx-sz' }), sep(),
       markBtn('Bold', icon('bold'), 'b'), markBtn('Italic', icon('italic'), 'i'), markBtn('Underline', icon('under'), 'u'),
       colourBtn('Text colour', 'A', 'c', TEXT_COLOURS), colourBtn('Highlight colour', '▮', 'hl', HIGHLIGHTS), sep(),
       tbtn('Bulleted list', icon('ul'), C(() => ed.toggleList('ul')), { key: 'list-ul' }), tbtn('Numbered list', '1.', C(() => ed.toggleList('ol')), { key: 'list-ol' }), tbtn('Checklist', '☑', C(() => ed.toggleList('cl')), { key: 'list-cl' }), sep(),
@@ -479,36 +491,48 @@ export function docView({ api, id, ctx, opts = {} }) {
       if (![...sizeSel.options].some((o) => o.value === z)) sizeSel.append(h('option', { value: z }, z)); sizeSel.value = z;
       imgBar.hidden = !st.fig; fitHeight(); paintTableBar(); undoBtn.disabled = readOnly || at <= 0; redoBtn.disabled = readOnly || at >= stack.length - 1;
     }
-    // ---- voice typing and conversation transcripts
-    const vs = { open: false, mode: 'dictate', lang: store.get('dx-vlang') || 'en-US', rec: null, listening: false, speakers: [{ name: 'Person 1' }, { name: 'Person 2' }], cur: 0, auto: false, pause: 3, record: false, start: 0, lastAt: 0, lastEl: null, mr: null, chunks: [], stream: null, headerEl: null };
+    // ---- voice typing and conversation transcripts (speakers are detected automatically from the voice; beta)
+    const vs = { open: false, mode: 'dictate', lang: store.get('dx-vlang') || 'en-US', rec: null, listening: false, speakers: [], clusters: new SpeakerClusters(), start: 0, lastEl: null, record: false, mr: null, chunks: [], stream: null, headerEl: null, mic: null };
     const vInterim = h('span', { class: 'dx-vint' }); const vMsg = h('p', { class: 'fine dx-vmsg', role: 'status', 'aria-live': 'polite' });
     const vMic = h('button', { type: 'button', class: 'btn primary dx-vmic', 'aria-pressed': 'false', onmousedown: (e) => e.preventDefault(), onclick: () => (vs.listening ? voiceStop() : voiceStart()) }, '🎤 Start');
     const vLang = h('select', { class: 'dx-sel', 'aria-label': 'Speech language', onchange: () => { vs.lang = vLang.value; store.set('dx-vlang', vs.lang); vs.rec?.setLang(vs.lang); } }, ...LANGS.map(([v, t]) => h('option', { value: v }, t)));
     vLang.value = vs.lang;
     const vModes = h('div', { class: 'dx-vmodes', role: 'group', 'aria-label': 'Mode' }, ...[['dictate', 'Dictation'], ['talk', 'Conversation']].map(([m, t]) => h('button', { type: 'button', class: 'btn', 'data-m': m, 'aria-pressed': String(m === vs.mode), onmousedown: (e) => e.preventDefault(), onclick: () => { vs.mode = m; paintVoice(); } }, t)));
-    const vSpk = h('div', { class: 'dx-vspk', role: 'group', 'aria-label': 'Speakers' });
+    const vLine = h('div', { class: 'dx-vrow dx-vline', 'aria-live': 'off', hidden: true }, h('span', { class: 'fine muted' }, 'Hearing: '), vInterim);
+    const vSpk = h('div', { class: 'dx-vspk', role: 'group', 'aria-label': 'Speakers found so far' });
     const vTalk = h('div', { class: 'dx-vtalk' });
     const vPanel = h('section', { class: 'dx-voice', 'aria-label': 'Voice typing', hidden: true },
       h('div', { class: 'dx-vrow' }, vMic, vLang, vModes, h('span', { class: 'dx-spacer' }), h('button', { type: 'button', class: 'iconbtn', 'aria-label': 'Close voice panel', onclick: () => closeVoice() }, icon('cross'))),
-      h('div', { class: 'dx-vrow dx-vline', 'aria-live': 'off' }, h('span', { class: 'fine muted' }, 'Hearing: '), vInterim), vTalk, vMsg,
+      vLine, vTalk, vMsg,
       h('p', { class: 'fine muted dx-vnote' }, 'Runs in your browser; in Chrome and Edge the audio may be sent to the browser maker’s speech service. English commands: “comma”, “full stop”, “question mark”, “new line”, “new paragraph”.'));
+    const spkName = (i) => vs.speakers[i]?.name ?? `Speaker ${i + 1}`;
     function paintVoice() {
-      for (const b of vModes.querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.m === vs.mode));
+      for (const b of vModes.querySelectorAll('button')) { const on = b.dataset.m === vs.mode; b.setAttribute('aria-pressed', String(on)); b.classList.toggle('primary', on); }
       vMic.textContent = vs.listening ? '⏹ Stop' : '🎤 Start'; vMic.setAttribute('aria-pressed', String(vs.listening)); vMic.classList.toggle('on', vs.listening);
-      vTalk.hidden = vs.mode !== 'talk'; vSpk.replaceChildren(...vs.speakers.map((sp, i) => {
-        const col = SPEAKER_COLOURS[i % SPEAKER_COLOURS.length];
-        const b = h('button', { type: 'button', class: 'dx-spk', 'aria-pressed': String(i === vs.cur), title: `Speaker ${i + 1}: press Alt+${i + 1}`, onmousedown: (e) => e.preventDefault(), onclick: () => { vs.cur = i; paintVoice(); } }, h('span', { class: 'dx-dot', 'aria-hidden': 'true' }), `${sp.name} `, h('kbd', {}, String(i + 1)));
-        b.firstChild.style.background = col;
-        return h('span', { class: 'dx-spkw' }, b, h('button', { type: 'button', class: 'dx-spkren', 'aria-label': `Rename ${sp.name}`, title: 'Rename', onmousedown: (e) => e.preventDefault(), onclick: () => renameSpeaker(i) }, '✎'));
-      }), ...(vs.speakers.length < MAX_SPEAKERS ? [h('button', { type: 'button', class: 'btn dx-addspk', onmousedown: (e) => e.preventDefault(), onclick: () => { vs.speakers.push({ name: `Person ${vs.speakers.length + 1}` }); paintVoice(); } }, '+ Speaker')] : []));
+      vTalk.hidden = vs.mode !== 'talk';
+      vSpk.replaceChildren(h('span', { class: 'fine muted' }, vs.speakers.length ? 'Found:' : 'Speakers appear here as people talk.'), ...vs.speakers.map((sp, i) => {
+        const dot = h('span', { class: 'dx-dot', 'aria-hidden': 'true' }); dot.style.background = SPEAKER_COLOURS[i % SPEAKER_COLOURS.length];
+        return h('button', { type: 'button', class: 'dx-spk', title: `Rename ${sp.name}`, 'aria-label': `Rename ${sp.name}`, onmousedown: (e) => e.preventDefault(), onclick: () => renameSpeaker(i) }, dot, `${sp.name} `, h('span', { 'aria-hidden': 'true' }, '✎'));
+      }));
     }
-    vTalk.append(vSpk,
-      h('div', { class: 'dx-vrow' },
-        h('label', { class: 'dx-check' }, h('input', { type: 'checkbox', onchange: (e) => { vs.record = e.target.checked; } }), ' Also record the audio and save it to Drive')),
-      h('p', { class: 'fine muted' }, 'The free browser mode cannot tell voices apart: choose the speaker with the buttons or Alt+1 to Alt+9.'));
+    vTalk.append(h('p', { class: 'fine dx-vbeta' }, h('b', {}, 'Automatic speaker detection (beta)'), ' works best with one person speaking at a time. It tells voices apart by sound, so it can mix up similar voices; use “Change speaker” in the right-click menu on a line to fix one.'), vSpk,
+      h('div', { class: 'dx-vrow' }, h('label', { class: 'dx-check' }, h('input', { type: 'checkbox', onchange: (e) => { vs.record = e.target.checked; } }), ' Also record the audio and save it to Drive')));
+    const lineRename = (blocks, oldName, colour, newName) => blocks.map((b) => (isTranscriptLine(b) && b.c[0].x === oldName && b.c[0].c === colour ? { ...b, c: [{ ...b.c[0], x: newName }, ...b.c.slice(1)] } : b));
     function renameSpeaker(i) {
-      const f = field({ id: 'dx-sn', label: 'Speaker name', value: vs.speakers[i].name, maxlength: 40 });
-      dialog({ title: 'Rename speaker', body: f.el, actions: [{ label: 'Save', cls: 'primary', on: () => { const v = f.input.value.trim(); if (!v) return f.error('Enter a name.'); vs.speakers[i].name = v; paintVoice(); } }, { label: 'Cancel' }] });
+      const f = field({ id: 'dx-sn', label: 'Speaker name', value: vs.speakers[i].name, maxlength: 40, hint: 'Every line by this speaker is renamed.' });
+      dialog({ title: 'Rename speaker', body: f.el, actions: [{ label: 'Save', cls: 'primary', on: () => {
+        const v = f.input.value.trim(); if (!v) return f.error('Enter a name.');
+        const old = vs.speakers[i].name; checkpoint(); commit(); const colour = SPEAKER_COLOURS[i % SPEAKER_COLOURS.length];
+        for (const x of flatTabs(doc)) { const nb = lineRename(x.tab.blocks, old, colour, v); if (nb.some((b, k) => b !== x.tab.blocks[k])) doc = updateTab(doc, x.tab.id, { blocks: nb }); }
+        vs.speakers[i].name = v; ed.load(findTab(doc, activeTab).tab.blocks); onChange('edit'); paintVoice(); } }, { label: 'Cancel' }] });
+    }
+    /** Right-click on a transcript line: move that one line to another (or a new) speaker. */
+    function changeLineSpeaker() {
+      keepSel(); const blk = ed.currentBlock(); if (!isTranscriptLine(blk)) return;
+      const opts = [...vs.speakers.map((sp, i) => [String(i), sp.name]), ['new', 'A new speaker']]; const f = field({ id: 'dx-cs', label: 'Who said this?', value: String(vs.speakers.findIndex((sp, i) => SPEAKER_COLOURS[i % SPEAKER_COLOURS.length] === blk.c[0].c)), options: opts });
+      dialog({ title: 'Change speaker', body: f.el, actions: [{ label: 'Change', cls: 'primary', on: () => {
+        let i = f.input.value === 'new' ? vs.speakers.length : Number(f.input.value); if (f.input.value === 'new') { vs.speakers.push({ name: `Speaker ${vs.speakers.length + 1}` }); }
+        back(); ed.mutate((models, _r, pos) => ({ blocks: [{ ...models[0], c: [{ ...models[0].c[0], x: spkName(i), c: SPEAKER_COLOURS[i % SPEAKER_COLOURS.length] }, ...models[0].c.slice(1)] }], sel: { s: { b: pos.b0, o: 1e9 }, e: { b: pos.b0, o: 1e9 } } }), { start: true }); paintVoice(); } }, { label: 'Cancel' }] });
     }
     function openVoice() {
       if (vs.open) { vPanel.hidden = false; return; }
@@ -518,14 +542,20 @@ export function docView({ api, id, ctx, opts = {} }) {
     }
     function closeVoice() { voiceStop(); vs.open = false; vPanel.hidden = true; fitHeight(); ed.focus(); }
     function voiceErr(code) { vMsg.textContent = ERRORS[code] ?? `Speech recognition stopped (${code}).`; }
-    function lineRuns(text, sp, idx) {
+    function lineRuns(text, idx) {
       const urdu = isUrdu(vs.lang); const t = applyVoiceCommands(text, vs.lang).replace(/\u0001/g, '\n');
-      return [{ x: sp.name, b: 1, c: SPEAKER_COLOURS[idx % SPEAKER_COLOURS.length] }, { x: ` (${fmtClock(Date.now() - vs.start)}): `, c: '#737373' }, { x: t, ...(urdu ? { f: 'nastaliq' } : {}) }];
+      return [{ x: spkName(idx), b: 1, c: SPEAKER_COLOURS[idx % SPEAKER_COLOURS.length] }, { x: ` (${fmtClock(Date.now() - vs.start)}): `, c: '#737373' }, { x: t, ...(urdu ? { f: 'nastaliq' } : {}) }];
+    }
+    /** The speaker of the utterance that just ended: the voiced frames heard since the last one, compared with the voices already found. */
+    function speakerOfUtterance() {
+      const frames = vs.mic ? vs.mic.frames.splice(0) : []; const r = vs.clusters.assign(fingerprint(frames));
+      while (vs.speakers.length <= r.id) vs.speakers.push({ name: `Speaker ${vs.speakers.length + 1}` });
+      return r.id;
     }
     function onFinal(text) {
-      if (readOnly) return; const now = Date.now(); const urdu = isUrdu(vs.lang);
+      if (readOnly) return; const urdu = isUrdu(vs.lang);
       if (vs.mode === 'talk') {
-        vs.lastAt = now; paintVoice(); const runs = lineRuns(text, vs.speakers[vs.cur], vs.cur); const dir = urdu ? { dir: 'rtl' } : {};
+        const idx = speakerOfUtterance(); paintVoice(); const runs = lineRuns(text, idx); const dir = urdu ? { dir: 'rtl' } : {};
         if (!vs.lastEl || !vs.lastEl.isConnected) {
           const head = [{ x: `Conversation transcript, ${new Date().toLocaleString()}`, b: 1 }, ...(vs.record ? [{ x: ' · audio is being recorded and will be saved in Drive next to this document', i: 1, c: '#737373' }] : [])];
           if (!ed.blockIsEmpty()) { const here = ed.currentBlockEl(); if (here) ed.appendAfter(here, { t: 'p', c: [] }); }
@@ -543,28 +573,31 @@ export function docView({ api, id, ctx, opts = {} }) {
     async function voiceStart() {
       if (readOnly) return; if (!voiceSupported()) return;
       vMsg.textContent = ''; ed.focus();
-      if (!vs.rec) vs.rec = createRecognizer({ lang: vs.lang, onFinal: (t) => onFinal(t), onInterim: (t) => { vInterim.textContent = t; }, onState: (s) => { vs.listening = s === 'listening' || (s !== 'stopped' && vs.listening); if (s === 'stopped' && !vs.rec?.active) { vs.listening = false; } paintVoice(); }, onError: (c) => { voiceErr(c); } });
-      vs.start = Date.now(); vs.lastAt = 0; if (vs.mode === 'talk') vs.lastEl = null;
-      if (vs.mode === 'talk' && vs.record) await startAudio();
+      if (!vs.rec) vs.rec = createRecognizer({ lang: vs.lang, onFinal: (t) => onFinal(t), onInterim: (t) => { vInterim.textContent = t; vLine.hidden = !t; }, onState: (st) => { vs.listening = st === 'listening' || (st !== 'stopped' && vs.listening); if (st === 'stopped' && !vs.rec?.active) { vs.listening = false; } paintVoice(); }, onError: (c) => { voiceErr(c); } });
+      vs.start = Date.now(); if (vs.mode === 'talk') { vs.lastEl = null; vs.clusters = new SpeakerClusters(); vs.speakers = []; await startMic(); }
       vs.rec.setLang?.(vs.lang); vs.rec.start(); vs.listening = true; paintVoice();
     }
-    function voiceStop() { vs.rec?.stop(); vs.listening = false; vInterim.textContent = ''; paintVoice(); stopAudio(); }
-    async function startAudio() {
+    function voiceStop() { vs.rec?.stop(); vs.listening = false; vInterim.textContent = ''; paintVoice(); stopMic(); }
+    /** One microphone stream feeds the voice analysis (speaker detection) and, when asked, the audio recording. */
+    async function startMic() {
       try {
-        vs.stream = await navigator.mediaDevices.getUserMedia({ audio: true }); vs.chunks = [];
-        vs.mr = new MediaRecorder(vs.stream, MediaRecorder.isTypeSupported?.('audio/webm;codecs=opus') ? { mimeType: 'audio/webm;codecs=opus' } : undefined);
-        vs.mr.ondataavailable = (e) => { if (e.data?.size) vs.chunks.push(e.data); };
-        vs.mr.onstop = async () => {
-          const blob = new Blob(vs.chunks, { type: 'audio/webm' }); vs.stream?.getTracks().forEach((t) => t.stop()); vs.stream = null; vs.mr = null; if (!blob.size) return;
-          const fid = await uploadBlob(blob, `Recording of ${meta.name}`, 'audio/webm', 'webm');
-          if (fid && vs.headerEl?.isConnected) { checkpoint(); vs.headerEl.append(document.createTextNode(' — audio saved in Drive next to this document as “Recording of ' + meta.name + '”')); onChange('edit'); }
-          vMsg.textContent = fid ? 'The audio was saved in Drive next to this document.' : 'The audio could not be saved.';
-        };
-        vs.mr.start(1000);
-      } catch { vMsg.textContent = ERRORS['not-allowed']; vs.mr = null; }
+        vs.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const AC = window.AudioContext || window.webkitAudioContext; const ac = new AC(); const src = ac.createMediaStreamSource(vs.stream); const an = ac.createAnalyser(); an.fftSize = 2048; src.connect(an);
+        const buf = new Float32Array(an.fftSize); const mic = { ac, frames: [], timer: setInterval(() => { an.getFloatTimeDomainData(buf); const f = frameFeatures(buf, ac.sampleRate); if (f.voiced) { mic.frames.push(f); if (mic.frames.length > 600) mic.frames.shift(); } }, 60) }; vs.mic = mic;
+        if (vs.record) {
+          vs.chunks = []; vs.mr = new MediaRecorder(vs.stream, MediaRecorder.isTypeSupported?.('audio/webm;codecs=opus') ? { mimeType: 'audio/webm;codecs=opus' } : undefined);
+          vs.mr.ondataavailable = (e) => { if (e.data?.size) vs.chunks.push(e.data); };
+          vs.mr.onstop = async () => {
+            const blob = new Blob(vs.chunks, { type: 'audio/webm' }); vs.mr = null; if (!blob.size) return;
+            const fid = await uploadBlob(blob, `Recording of ${meta.name}`, 'audio/webm', 'webm');
+            if (fid && vs.headerEl?.isConnected) { checkpoint(); vs.headerEl.append(document.createTextNode(' — audio saved in Drive next to this document as “Recording of ' + meta.name + '”')); onChange('edit'); }
+            vMsg.textContent = fid ? 'The audio was saved in Drive next to this document.' : 'The audio could not be saved.';
+          };
+          vs.mr.start(1000);
+        }
+      } catch { vMsg.textContent = `${ERRORS['not-allowed']} Without the microphone, every line is labelled Speaker 1.`; vs.mic = null; }
     }
-    function stopAudio() { if (vs.mr && vs.mr.state !== 'inactive') vs.mr.stop(); }
-    root.addEventListener('keydown', (e) => { if (vs.open && vs.mode === 'talk' && e.altKey && !e.ctrlKey && !e.metaKey && /^Digit[1-9]$/.test(e.code)) { const i = Number(e.code.slice(5)) - 1; if (i < vs.speakers.length) { e.preventDefault(); vs.cur = i; paintVoice(); } } });
+    function stopMic() { if (vs.mr && vs.mr.state !== 'inactive') vs.mr.stop(); if (vs.mic) { clearInterval(vs.mic.timer); vs.mic.ac.close?.(); vs.mic = null; } vs.stream?.getTracks().forEach((t) => t.stop()); vs.stream = null; }
     document.addEventListener('visibilitychange', () => { if (gone()) voiceStop(); });
 
     // ---- the "/" menu: type / at the start of an empty line to insert a block
@@ -601,17 +634,15 @@ export function docView({ api, id, ctx, opts = {} }) {
     // ---- floating toolbar while the caret is in a table
     const tbarBtn = (label, text, run) => h('button', { type: 'button', class: 'dx-tbb', title: label, 'aria-label': label, onmousedown: (e) => e.preventDefault(), onclick: (e) => run(e.currentTarget) }, text);
     const cellColours = ['#fef9c3', '#dcfce7', '#cffafe', '#dbeafe', '#ede9fe', '#fce7f3', '#ffedd5', '#fee2e2', '#e5e5e5', '#ffffff'];
-    const tbar = h('div', { class: 'dx-tbar', role: 'toolbar', 'aria-label': 'Table tools', contenteditable: 'false', hidden: true },
-      tbarBtn('Insert row above', 'Row ↑', () => ed.tableOp('rowAbove')), tbarBtn('Insert row below', 'Row ↓', () => ed.tableOp('rowBelow')), tbarBtn('Insert column left', 'Col ←', () => ed.tableOp('colLeft')), tbarBtn('Insert column right', 'Col →', () => ed.tableOp('colRight')),
-      tbarBtn('Delete row', 'Del row', () => ed.tableOp('delRow')), tbarBtn('Delete column', 'Del col', () => ed.tableOp('delCol')), h('span', { class: 'dx-tsep', 'aria-hidden': 'true' }),
-      tbarBtn('Header row on or off', 'Header', () => ed.tableOp('header')), tbarBtn('Align cell left', '⇤', () => ed.setCellAlign('l')), tbarBtn('Centre cell', '↔', () => ed.setCellAlign('c')), tbarBtn('Align cell right', '⇥', () => ed.setCellAlign('r')),
-      tbarBtn('Cell colour', 'Colour', (b) => { keepSel(); const sw = (c) => { const s = h('button', { type: 'button', class: 'dx-sw', 'aria-label': c, title: c, onclick: () => { closePop(); back(); ed.tableOp('bg', c === '#ffffff' ? null : c); } }); s.style.background = c; return s; }; pop(b, h('div', { class: 'dx-palwrap' }, h('div', { class: 'dx-pal' }, ...cellColours.map(sw))), { role: 'dialog', label: 'Cell colour' }); }),
-      tbarBtn('Borders on or off', 'Borders', () => ed.tableOp('nb')), tbarBtn('Delete table', 'Delete', () => ed.tableOp('delTable')));
-    paper.append(tbar);
-    function paintTableBar() {
-      const c = readOnly || mode === 'read' ? null : ed.tableCell(); if (!c) { tbar.hidden = true; return; }
-      tbar.hidden = false; tbar.style.top = `${Math.max(2, c.table.offsetTop - 34)}px`; tbar.style.left = `${Math.max(2, c.table.offsetLeft)}px`;
-    }
+    const tsep = () => h('span', { class: 'dx-tsep', 'aria-hidden': 'true' });
+    const tbar = h('div', { class: 'dx-tbar dx-ctx', role: 'toolbar', 'aria-label': 'Table tools', hidden: true }, h('span', { class: 'dx-ctxl' }, 'Table'),
+      tbarBtn('Insert row above', ico('rowAbove'), () => ed.tableOp('rowAbove')), tbarBtn('Insert row below', ico('rowBelow'), () => ed.tableOp('rowBelow')), tbarBtn('Delete row', ico('delRow'), () => ed.tableOp('delRow')), tsep(),
+      tbarBtn('Insert column left', ico('colLeft'), () => ed.tableOp('colLeft')), tbarBtn('Insert column right', ico('colRight'), () => ed.tableOp('colRight')), tbarBtn('Delete column', ico('delCol'), () => ed.tableOp('delCol')), tsep(),
+      tbarBtn('Header row on or off', ico('header'), () => ed.tableOp('header')), tsep(),
+      tbarBtn('Align cell left', ico('alL'), () => ed.setCellAlign('l')), tbarBtn('Centre cell', ico('alC'), () => ed.setCellAlign('c')), tbarBtn('Align cell right', ico('alR'), () => ed.setCellAlign('r')), tsep(),
+      tbarBtn('Cell colour', ico('colour'), (b) => { keepSel(); const sw = (c) => { const s = h('button', { type: 'button', class: 'dx-sw', 'aria-label': c, title: c, onclick: () => { closePop(); back(); ed.tableOp('bg', c === '#ffffff' ? null : c); } }); s.style.background = c; return s; }; pop(b, h('div', { class: 'dx-palwrap' }, h('div', { class: 'dx-pal' }, ...cellColours.map(sw))), { role: 'dialog', label: 'Cell colour' }); }),
+      tbarBtn('Borders on or off', ico('borders'), () => ed.tableOp('nb')), tsep(), tbarBtn('Delete table', ico('trash'), () => ed.tableOp('delTable')));
+    function paintTableBar() { const c = readOnly || mode === 'read' ? null : ed.tableCell(); const on = Boolean(c); if (tbar.hidden === on) tbar.hidden = !on; }
     let toolRaf = 0; document.addEventListener('selectionchange', function f() { if (gone()) { document.removeEventListener('selectionchange', f); return; } if (toolRaf) return; toolRaf = requestAnimationFrame(() => { toolRaf = 0; if (page.contains(getSelection()?.anchorNode)) paintTools(); }); });
     if (readOnly) lockTools();
 
@@ -725,7 +756,7 @@ export function docView({ api, id, ctx, opts = {} }) {
         Edit: [{ label: 'Undo', shortcut: `${MOD}Z`, disabled: E || at <= 0, run: () => { ed.focus(); undo(); } }, { label: 'Redo', shortcut: `${MOD}Y`, disabled: E || at >= stack.length - 1, run: () => { ed.focus(); redo(); } }, { sep: true },
           { label: 'Cut', shortcut: `${MOD}X`, disabled: E, run: () => clip('cut') }, { label: 'Copy', shortcut: `${MOD}C`, run: () => clip('copy') }, { label: 'Paste', shortcut: `${MOD}V`, disabled: E, run: () => pasteFromClipboard(false) }, { label: 'Paste as plain text', shortcut: `${MOD}Shift+V`, disabled: E, run: () => pasteFromClipboard(true) },
           { label: 'Select all', shortcut: `${MOD}A`, run: () => { ed.focus(); document.execCommand('selectAll'); } }, { sep: true }, { label: 'Find…', shortcut: `${MOD}F`, run: () => openFind(false) }, { label: 'Find and replace…', shortcut: `${MOD}H`, disabled: E, run: () => openFind(true) }],
-        View: [{ label: 'Document tabs', checked: tabsOpen, run: () => toggleTabs() }, { label: 'Outline of headings', checked: outlineOpen, run: () => toggleOutline() }, { label: 'Focus mode', run: () => setMode('focus') }, { label: 'Reading mode', run: () => setMode('read') }, { sep: true }, { label: 'Zoom in', shortcut: `${MOD}+`, run: () => setZoom(zoom + 10) }, { label: 'Zoom out', shortcut: `${MOD}-`, run: () => setZoom(zoom - 10) }, { label: 'Zoom 100%', shortcut: `${MOD}0`, run: () => setZoom(100) }, { sep: true }, { label: 'Page setup…', run: () => pageSetup() }],
+        View: [{ label: 'Document tabs', checked: tabsOpen, run: () => toggleTabs() }, { label: 'Outline of headings', checked: outlineOpen, run: () => toggleOutline() }, { label: 'Focus mode', run: () => setMode('focus') }, { label: 'Reading mode', run: () => setMode('read') }, { sep: true }, { label: 'Zoom in', shortcut: `${MOD}+`, run: () => setZoom(zoom + 10) }, { label: 'Zoom out', shortcut: `${MOD}-`, run: () => setZoom(zoom - 10) }, { label: 'Zoom 100%', shortcut: `${MOD}0`, run: () => setZoom(100) }, { label: 'Fit page width', checked: zoomMode === 'fit', run: () => setZoomMode('fit') }, { label: 'Automatic (fills the window)', checked: zoomMode === 'auto', run: () => setZoomMode('auto') }, { sep: true }, { label: 'Page setup…', run: () => pageSetup() }],
         Insert: [{ label: 'Picture…', disabled: E, run: pickImage }, { label: 'Table…', disabled: E, run: insertTable }, { label: 'Convert selected text to table', disabled: E, run: convertToTable }, { label: 'Link…', shortcut: `${MOD}K`, disabled: E, run: link }, { label: 'Horizontal line', disabled: E, run: C(() => ed.insertBlocks([{ t: 'hr' }])) }, { label: 'Page break', disabled: E, run: C(() => ed.insertBlocks([{ t: 'pb' }])) }, { sep: true },
           { label: 'Table of contents', disabled: E, run: C(() => { ed.insertBlocks([{ t: 'toc' }]); paintOutline(); }) }, { label: 'Footnote…', disabled: E, run: addNote }, { label: 'Special characters…', disabled: E, run: specials }, { label: 'Today’s date', disabled: E, run: insertDate }, { sep: true }, { label: 'New tab', disabled: E, run: () => newTab(null) }, { label: 'New sub-tab', disabled: E || findTab(doc, activeTab).depth + 1 >= MAX_TAB_DEPTH, run: () => newTab(activeTab) }],
         Format: [{ heading: 'Text' }, { label: 'Bold', shortcut: `${MOD}B`, checked: Boolean(st.marks.b), disabled: E, run: C(() => ed.toggleMark('b')) }, { label: 'Italic', shortcut: `${MOD}I`, checked: Boolean(st.marks.i), disabled: E, run: C(() => ed.toggleMark('i')) }, { label: 'Underline', shortcut: `${MOD}U`, checked: Boolean(st.marks.u), disabled: E, run: C(() => ed.toggleMark('u')) },
@@ -779,6 +810,7 @@ export function docView({ api, id, ctx, opts = {} }) {
         { label: 'Select all', shortcut: `${MOD}A`, run: () => { ed.focus(); document.execCommand('selectAll'); } }, { sep: true },
         { label: st.link ? 'Edit link…' : 'Link…', shortcut: `${MOD}K`, disabled: readOnly, run: link }, st.link ? { label: 'Open link', run: () => { const h2 = safeHref(st.link); if (h2) open(h2, '_blank', 'noopener,noreferrer'); } } : null,
         { label: 'Clear formatting', disabled: readOnly, run: C(() => ed.clearFormat()) },
+        ...(isTranscriptLine(ed.currentBlock()) ? [{ label: 'Change speaker of this line…', disabled: readOnly, run: changeLineSpeaker }] : []),
         ...(st.table ? [{ sep: true }, { heading: 'Table' }, { label: 'Insert row above', disabled: readOnly, run: () => ed.tableOp('rowAbove') }, { label: 'Insert row below', disabled: readOnly, run: () => ed.tableOp('rowBelow') }, { label: 'Insert column left', disabled: readOnly, run: () => ed.tableOp('colLeft') }, { label: 'Insert column right', disabled: readOnly, run: () => ed.tableOp('colRight') },
           { label: 'Header row', checked: Boolean(ed.tableCell()?.table.rows[0]?.cells[0]?.tagName === 'TH'), disabled: readOnly, run: () => ed.tableOp('header') }, { label: 'Align cell left', disabled: readOnly, run: () => ed.setCellAlign('l') }, { label: 'Centre cell', disabled: readOnly, run: () => ed.setCellAlign('c') }, { label: 'Align cell right', disabled: readOnly, run: () => ed.setCellAlign('r') },
           { label: 'Delete row', disabled: readOnly, run: () => ed.tableOp('delRow') }, { label: 'Delete column', disabled: readOnly, run: () => ed.tableOp('delCol') }, { label: 'Delete table', disabled: readOnly, run: () => ed.tableOp('delTable') }] : []),
@@ -793,6 +825,7 @@ export function docView({ api, id, ctx, opts = {} }) {
       const mod = e.ctrlKey || e.metaKey; if (!mod || e.target.closest?.('.dlg, .dx-pop')) return;
       const k = e.key.toLowerCase(); const inPage = page.contains(e.target);
       const go = (fn) => { e.preventDefault(); fn(); };
+      if (e.shiftKey && !e.altKey && (e.key === '>' || e.key === '<') && inPage && !readOnly) return go(() => bumpSize(e.key === '>' ? 1 : -1));
       if (k === '=' || k === '+') return go(() => setZoom(zoom + 10)); if (k === '-') return go(() => setZoom(zoom - 10)); if (k === '0' && !e.altKey) return go(() => setZoom(100));
       if (k === 's' && !e.shiftKey) return go(() => save({ manual: true }));
       if (k === 'p' && !e.shiftKey) return go(() => exporters.print('tab'));
@@ -811,8 +844,22 @@ export function docView({ api, id, ctx, opts = {} }) {
 
     // ---- zoom
     const pageInfo = h('span', { class: 'docstat' });
-    const zoomSel = h('select', { class: 'dx-sel', 'aria-label': 'Zoom', onchange: () => setZoom(Number(zoomSel.value)) }, ...[50, 75, 90, 100, 110, 125, 150, 200].map((n) => h('option', { value: String(n) }, `${n}%`)));
-    function setZoom(n) { zoom = Math.max(50, Math.min(200, Math.round(n))); if (![...zoomSel.options].some((o) => o.value === String(zoom))) zoomSel.append(h('option', { value: String(zoom) }, `${zoom}%`)); store.set('dx-zoom', String(zoom)); applyPage(); }
+    const zoomSel = h('select', { class: 'dx-sel', 'aria-label': 'Zoom', title: `Zoom (${MOD}+ and ${MOD}-)`, onchange: () => { zoomMode = zoomSel.value; store.set('dx-zoom', zoomMode); applyZoom(); } },
+      h('option', { value: 'auto' }, 'Auto'), h('option', { value: 'fit' }, 'Fit width'), ...[50, 75, 90, 100, 110, 125, 150, 200].map((n) => h('option', { value: String(n) }, `${n}%`)));
+    /** Auto: the page fills the width (24 px gutters) up to 130%, and shrinks when the window is narrower than the page. Fit width: exactly the width. A number: that percentage. */
+    function computeZoom() {
+      if (zoomMode !== 'auto' && zoomMode !== 'fit') return Math.max(25, Math.min(300, Number(zoomMode) || 100));
+      if (matchMedia('(max-width: 700px)').matches) return 100;      // phones: the page is always the width of the screen
+      const pxW = pageSize(doc.page).w * 3.7795; const avail = (canvasEl?.clientWidth || 900) - 48; const fit = Math.floor((avail / pxW) * 100);
+      return Math.max(30, zoomMode === 'fit' ? Math.min(300, fit) : Math.min(130, fit));
+    }
+    function applyZoom() {
+      zoom = computeZoom(); paper.style.zoom = zoom === 100 ? '' : String(zoom / 100);
+      if (!/^(auto|fit)$/.test(zoomMode) && ![...zoomSel.options].some((o) => o.value === zoomMode)) zoomSel.append(h('option', { value: zoomMode }, `${zoomMode}%`));
+      zoomSel.options[0].textContent = zoomMode === 'auto' ? `Auto · ${zoom}%` : 'Auto'; zoomSel.options[1].textContent = zoomMode === 'fit' ? `Fit width · ${zoom}%` : 'Fit width'; zoomSel.value = zoomMode;
+    }
+    function setZoom(n) { zoomMode = String(Math.max(30, Math.min(300, Math.round(n)))); store.set('dx-zoom', zoomMode); applyZoom(); }
+    const setZoomMode = (m) => { zoomMode = m; store.set('dx-zoom', m); applyZoom(); };
 
     // ---- tabs (pages and sub-pages) and the outline of the open tab
     const parentIdOf = (tid) => { const f = findTab(doc, tid); return flatTabs(doc).find((x) => x.tab.children === f.parent)?.tab.id ?? null; };
@@ -938,8 +985,8 @@ export function docView({ api, id, ctx, opts = {} }) {
     const addTabBtn = readOnly ? null : h('button', { type: 'button', class: 'btn dx-addtab', onclick: () => newTab(null) }, icon('plus'), ' New tab');
     const tabsPanel = h('aside', { class: 'dx-tabs', id: 'dx-tabs-panel', 'aria-label': 'Document tabs' }, h('div', { class: 'dx-tabshead' }, h('h2', {}, 'Tabs'), addTabBtn), tabsEl);
     const bar = h('div', { class: 'docbar dx-top' }, backA, h('span', { class: 'dx-docico', 'aria-hidden': 'true' }, icon('doc')), titleIn, h('span', { class: 'dx-spacer' }), statusEl, btn('History', openHistory), saveBtn);
-    const chrome = h('div', { class: 'dx-chrome' }, h('div', { class: 'dx-menurow' }, menubar, tabsToggle), toolbar, imgBar, findBar);
-    const workspace = h('div', { class: 'dx-work' }, h('div', { class: 'dx-canvas' }, paper));
+    const chrome = h('div', { class: 'dx-chrome' }, h('div', { class: 'dx-menurow' }, menubar, tabsToggle), toolbar, tbar, imgBar, findBar);
+    canvasEl = h('div', { class: 'dx-canvas' }, paper); const workspace = h('div', { class: 'dx-work' }, canvasEl);
     const body = h('div', { class: `docbody dx-body${opts.side ? ' has-side' : ''}${tabsOpen ? '' : ' no-tabs'}` }, tabsPanel, workspace, opts.side ? opts.side(meta) : null);
     const statusbar = h('div', { class: 'dx-statusbar' }, counter, spaceEl, h('span', { class: 'dx-spacer' }), h('span', { class: 'docstat' }, pageInfo), h('span', { class: 'dx-zoom', role: 'group', 'aria-label': 'Zoom' }, h('button', { type: 'button', class: 'dx-zb', 'aria-label': 'Zoom out', title: `Zoom out (${MOD}-)`, onclick: () => setZoom(zoom - 10) }, '−'), zoomSel, h('button', { type: 'button', class: 'dx-zb', 'aria-label': 'Zoom in', title: `Zoom in (${MOD}+)`, onclick: () => setZoom(zoom + 10) }, '+')));
     const banners = [];
@@ -947,7 +994,7 @@ export function docView({ api, id, ctx, opts = {} }) {
     else if (readOnly) banners.push(readOnlyNotice('You can read this document but not change it'));
     root.replaceChildren(...banners, bar, chrome, body, vPanel, statusbar, exitBtn);
     page.spellcheck = spell; outlineEl.hidden = !outlineOpen;
-    const ro = new ResizeObserver(() => { fitToolbar(); fitHeight(); }); ro.observe(chrome); addEventListener('resize', fitHeight); document.fonts?.ready.then(() => { fitToolbar(); fitHeight(); });
+    const ro = new ResizeObserver(() => { fitToolbar(); fitHeight(); if (zoomMode === 'auto' || zoomMode === 'fit') { const z = computeZoom(); if (Math.abs(z - zoom) >= 2) applyZoom(); } }); ro.observe(chrome); ro.observe(canvasEl); addEventListener('resize', fitHeight); document.fonts?.ready.then(() => { fitToolbar(); fitHeight(); });
     hdrEl.addEventListener('click', () => pageSetup('hdr')); ftrEl.addEventListener('click', () => pageSetup('ftr'));
     document.title = `${meta.name} · Docs`;
     ed.load(findTab(doc, activeTab).tab.blocks); applyPage(); checkpoint(); paintStatus(); paintTools(); if (readOnly) { status = 'readonly'; paintStatus(); }

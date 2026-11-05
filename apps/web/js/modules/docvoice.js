@@ -47,3 +47,6 @@ export function createRecognizer({ lang, onFinal, onInterim, onState, onError })
 }
 export const voiceSupported = () => typeof window !== 'undefined' && Boolean(window.SpeechRecognition || window.webkitSpeechRecognition);
 export const ERRORS = { 'not-allowed': 'The microphone is blocked. Allow it for this site in the browser’s address bar, then start again.', 'service-not-allowed': 'The browser’s speech service is not allowed here.', network: 'The speech service could not be reached. Check your connection.', 'audio-capture': 'No microphone was found.', 'language-not-supported': 'This browser does not support that language for speech.', 'start-failed': 'Could not start listening. Try again.' };
+
+/** A transcript line made by conversation mode: bold coloured speaker name, then " (hh:mm:ss): ", then the words. */
+export const isTranscriptLine = (b) => Boolean(b && b.t === 'p' && b.c?.length >= 2 && b.c[0].b && SPEAKER_COLOURS.includes(b.c[0].c) && /^ \(\d\d:\d\d:\d\d\): $/.test(b.c[1].x));
