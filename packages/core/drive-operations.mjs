@@ -68,7 +68,15 @@ const folderOps = [
   }),
   defineOperation({ name: 'drive.folders.archive', class: 'write', single: true, input: id, run: (q, _c, i) => q('update drive_folders set archived_at = now() where id = $1 and archived_at is null returning id, archived_at', [i.id]) }),
   defineOperation({ name: 'drive.folders.restore', class: 'write', single: true, input: id, run: (q, _c, i) => q('update drive_folders set archived_at = null where id = $1 and archived_at is not null returning id, archived_at', [i.id]) }),
-  defineOperation({ name: 'drive.folders.delete', class: 'write', single: true, input: id, run: (q, _c, i) => q('delete from drive_folders where id = $1 returning id', [i.id]) }),
+  // Deleting a folder for good: what is still inside (files, sub-folders, trashed or not) moves up to the folder's parent first, so nothing is lost and the database's
+  // "only an empty folder can be deleted" rule is met. Something that cannot be moved (locked, hidden) keeps the folder and says so.
+  defineOperation({ name: 'drive.folders.delete', class: 'write', single: true, input: id,
+    run: async (q, _c, i) => {
+      const [d] = await q('select id, parent_id from drive_folders where id = $1', [i.id]); if (!d) return [];
+      await q('update files set folder_id = $2 where folder_id = $1', [i.id, d.parent_id]);
+      await q('update drive_folders set parent_id = $2 where parent_id = $1', [i.id, d.parent_id]);
+      return q('delete from drive_folders where id = $1 returning id', [i.id]);
+    } }),
 ];
 
 const fileOps = [
@@ -148,7 +156,8 @@ const fileOps = [
   }),
   defineOperation({ name: 'drive.files.archive', class: 'write', single: true, input: id, run: (q, _c, i) => q('update files set archived_at = now() where id = $1 and archived_at is null returning id, archived_at', [i.id]) }),
   defineOperation({ name: 'drive.files.restore', class: 'write', single: true, input: id, run: (q, _c, i) => q('update files set archived_at = null where id = $1 and archived_at is not null returning id, archived_at', [i.id]) }),
-  defineOperation({ name: 'drive.files.delete', class: 'write', single: true, input: id, run: (q, _c, i) => q('delete from files where id = $1 returning id', [i.id]) }),
+  defineOperation({ name: 'drive.files.delete', class: 'write', single: true, input: id,
+    run: async (q, _c, i) => { try { return await q('delete from files where id = $1 returning id', [i.id]); } catch (e) { if (e?.code === '23503') throw { code: 'DRIVE_IN_USE' }; throw e; } } }),
   defineOperation({ name: 'drive.files.share', class: 'write', single: true, input: { ...id, visible: { type: 'bool', required: true } }, run: (q, _c, i) => q('update files set client_visible = $2 where id = $1 returning id, client_visible', [i.id, i.visible]) }),
 ];
 
@@ -165,15 +174,15 @@ const ROLE = { type: 'enum', values: ['viewer', 'editor'], required: true };
 const linkOps = [
   defineOperation({
     // the secret is returned ONCE; only its hash is stored. A link carries a right (viewer / editor) and an expiry (default 7 days; days up to 365, or never: true).
-    name: 'drive.links.create', class: 'sensitive', single: true, input: { file: { type: 'uuid', required: true }, days: { type: 'int', min: 1, max: 365 }, never: { type: 'bool' }, role: { type: 'enum', values: ['viewer', 'editor'] } },
+    name: 'drive.links.create', class: 'sensitive', single: true, input: { file: { type: 'uuid', required: true }, days: { type: 'int', min: 1, max: 365 }, never: { type: 'bool' }, role: { type: 'enum', values: ['viewer', 'editor'] }, audience: { type: 'enum', values: ['team', 'public'] } },
     run: async (q, ctx, i) => {
-      const token = newLinkToken();
-      const rows = await q(`insert into drive_share_links (workspace_id, file_id, token_hash, role, expires_at) values ($1, $2, encode(sha256(convert_to($3, 'UTF8')), 'hex'), $5, case when $6::boolean then null else now() + make_interval(days => $4::int) end) returning id, file_id, role, expires_at`,
-        [ctx.orgId, i.file, token, i.days ?? 7, i.role ?? 'viewer', i.never ?? false]);
+      const token = newLinkToken(); const pub = i.audience === 'public';
+      const rows = await q(`insert into drive_share_links (workspace_id, file_id, token_hash, role, audience, expires_at) values ($1, $2, encode(sha256(convert_to($3, 'UTF8')), 'hex'), $5, $7, case when $6::boolean then null else now() + make_interval(days => $4::int) end) returning id, file_id, role, audience, expires_at`,
+        [ctx.orgId, i.file, token, i.days ?? 7, pub ? 'viewer' : (i.role ?? 'viewer'), i.never ?? false, pub ? 'public' : 'team']);
       return rows.map((r) => ({ ...r, token }));
     },
   }),
-  defineOperation({ name: 'drive.links.list', class: 'read', input: { file: { type: 'uuid', required: true } }, run: (q, _c, i) => q('select id, file_id, role, expires_at, revoked_at, use_count, last_used_at, created_by, created_at from drive_share_links where file_id = $1 order by created_at desc', [i.file]) }),
+  defineOperation({ name: 'drive.links.list', class: 'read', input: { file: { type: 'uuid', required: true } }, run: (q, _c, i) => q('select id, file_id, role, audience, expires_at, revoked_at, use_count, last_used_at, created_by, created_at from drive_share_links where file_id = $1 order by created_at desc', [i.file]) }),
   defineOperation({ name: 'drive.links.revoke', class: 'write', single: true, input: id, run: (q, _c, i) => q('update drive_share_links set revoked_at = now() where id = $1 and revoked_at is null returning id, revoked_at', [i.id]) }),
   // Opening a link: a signed-in team member of the organization gets the link's right on that file (a normal share from then on). Anyone else: nothing ("not found").
   defineOperation({

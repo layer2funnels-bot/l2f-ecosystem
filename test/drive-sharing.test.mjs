@@ -153,5 +153,20 @@ check('XO1', 'Nothing here is visible across organizations: the other organizati
 const h1 = await hashPassword('same-password'); const h2 = await hashPassword('same-password');
 check('XO2', 'The password hash is salted (the same password gives different hashes) and verifies only the right password', h1 !== h2 && await verifyPassword('same-password', h1) && !(await verifyPassword('same-passwor', h1)) && !(await verifyPassword('same-password', 'garbage')));
 
+// ---------------------------------------------------------------- Trash > Delete for good (a folder that still holds things used to fail with "Some details need fixing")
+const DF = (await J('drive.folders.create', { space: 'shared', name: 'To delete' }, U.OWN)).row.id; const DS = (await J('drive.folders.create', { space: 'shared', name: 'Inner', parent: DF }, U.OWN)).row.id;
+const dFile = await mk(U.OWN, 'Kept file', { folder: DF }); const dFile2 = await mk(U.OWN, 'Gone file');
+await J('drive.folders.archive', { id: DF }, U.OWN); r = await J('drive.folders.delete', { id: DF }, U.OWN);
+check('DD1', 'Deleting a trashed folder for good works even when files and folders are still inside: they move up and nothing is lost', r.status === 200 && (await rows('select folder_id from files where id = $1', [dFile.id]))[0].folder_id === null
+  && (await rows('select parent_id from drive_folders where id = $1', [DS]))[0].parent_id === null && (await rows('select count(*)::int n from drive_folders where id = $1', [DF]))[0].n === 0);
+await J('drive.files.archive', { id: dFile2.id }, U.OWN); r = await J('drive.files.delete', { id: dFile2.id }, U.OWN);
+check('DD2', 'Deleting a trashed file for good works; an active file cannot be deleted (trash comes first)', r.status === 200 && (await J('drive.files.delete', { id: dFile.id }, U.OWN)).status !== 200);
+const DF2 = (await J('drive.folders.create', { space: 'shared', name: 'Has a locked file' }, U.OWN)).row.id; const lockedIn = await mk(U.OWN, 'Locked inside', { folder: DF2 });
+await J('drive.items.lock', { kind: 'file', id: lockedIn.id, locked: true }, U.OWN); await J('drive.folders.archive', { id: DF2 }, U.OWN);
+r = await J('drive.folders.delete', { id: DF2 }, U.ADM);
+check('DD3', 'If something inside cannot be moved out (locked), the folder stays and the answer says why (409, not a vague validation error)', r.status === 409 && r.body?.error?.code === 'not_empty' && (await rows('select count(*)::int n from drive_folders where id = $1', [DF2]))[0].n === 1);
+const { toPublicError } = await import('../packages/core/errors.mjs');
+check('DD4', 'A file that something else still uses is refused with a plain "in use" answer', toPublicError({ code: 'DRIVE_IN_USE' }).status === 409 && toPublicError({ code: 'DRIVE_IN_USE' }).code === 'in_use');
+
 for (const x of results) console.log(`${x.ok ? 'PASS' : 'FAIL'}  ${x.id.padEnd(5)} ${x.name}${x.ok ? '' : `  [${x.detail}]`}`);
 const pc = results.filter((x) => x.ok).length; console.log(`\n${pc}/${results.length} checks passed`); await db.close(); process.exit(pc === results.length ? 0 : 1);

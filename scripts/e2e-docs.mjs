@@ -182,8 +182,8 @@ check('W34', 'Page setup: Letter landscape is wider than tall-portrait, the head
 await shot('06-landscape-1366');
 await menu('Tools', 'Word count…');
 const wc = await page.locator('.dlg').innerText();
-check('W35', 'Word count dialog shows words, characters and the space left of 1,000,000', /Words/.test(wc) && /Space left/.test(wc) && /1,000,000/.test(wc)); await page.getByRole('button', { name: 'Close' }).click();
-check('W36', 'The status bar shows the space left', /Space left: \d[\d,]+ of 1,000,000/.test(await page.locator('.dx-space').innerText()));
+check('W35', 'Word count dialog shows words, characters and the space used of 1,000,000', /Words/.test(wc) && /Space left/.test(wc) && /1,000,000/.test(wc)); await page.getByRole('button', { name: 'Close' }).click();
+check('W36', 'The status bar does not show the space left while the document is small', !/Space left/.test(await page.locator('.dx-statusbar').innerText()) && (await page.locator('.dx-space').isHidden()));
 await menu('Tools', 'Keyboard shortcuts…'); check('W37', 'Keyboard shortcuts dialog lists the shortcuts', (await page.locator('.dlg kbd').count()) >= 10); await page.getByRole('button', { name: 'Close' }).click();
 
 // ---- downloads
@@ -229,7 +229,7 @@ await ed.click(); await page.keyboard.press('Control+End'); const t0 = Date.now(
 check('W50', `A 60,000-word document opens and typing in it stays responsive (${typing} ms for 18 keys)`, typing < 4000, String(typing));
 await page.keyboard.press('Control+s'); await saved();
 const bigSaved = await stored(bigDoc);
-check('W51', 'A document of about 400,000 characters saves (the old 200,000 limit is gone) and the status bar shows the space left', bigSaved.v === 2 && JSON.stringify(bigSaved.doc).length > 300000 && /Space left/.test(await page.locator('.dx-space').innerText()), String(JSON.stringify(bigSaved.doc).length));
+check('W51', 'A document of about 400,000 characters saves (the old 200,000 limit is gone) and the status bar stays quiet (under 80% of the limit)', bigSaved.v === 2 && JSON.stringify(bigSaved.doc).length > 300000 && (await page.locator('.dx-space').isHidden()), String(JSON.stringify(bigSaved.doc).length));
 await page.goto(`${base}/#/doc/${docId}`); await wait('Budget');
 
 // ---- easy blocks: slash menu, markdown shortcuts, table grid, table toolbar, convert text to table
@@ -292,13 +292,15 @@ await page.evaluate(() => window.__sr.emit('یہ ایک آزمائش ہے', true
 check('W71', 'Urdu is inserted as a right-to-left paragraph in the Nastaliq font', (await ed.locator('[dir=rtl] [data-f=nastaliq]').count()) >= 1);
 await page.locator('.dx-voice button[data-m=talk]').click(); await page.locator('.dx-voice select[aria-label="Speech language"]').selectOption('en-US');
 await page.keyboard.press('Control+End'); await ed.click(); await page.keyboard.press('Control+End'); await page.keyboard.press('Enter'); await page.keyboard.press('Enter');
-await page.getByRole('button', { name: /Rename Person 1/ }).click(); await page.fill('#dx-sn', 'Ann'); await page.getByRole('button', { name: 'Save', exact: true }).last().click();
 await page.getByRole('button', { name: /Stop/ }).click().catch(() => {}); await page.getByRole('button', { name: /Start/ }).click();
 await page.evaluate(() => window.__sr.emit('good morning everyone', true)); await page.waitForTimeout(200);
-await page.keyboard.press('Alt+2'); await page.evaluate(() => window.__sr.emit('thanks for joining', true)); await page.waitForTimeout(200);
-const tr = await ed.innerText();
-check('W72', 'Conversation mode: each utterance becomes a line "Name (hh:mm:ss): text" with the chosen speaker; speakers are renamable and Alt+2 switches', /Ann \(00:00:\d\d\): Good morning everyone/.test(tr) && /Person 2 \(00:00:\d\d\): Thanks for joining/.test(tr) && /Conversation transcript/.test(tr), tr.slice(-260));
-check('W73', 'The panel is honest that voices cannot be recognised automatically and warns about the browser vendor’s speech service', /cannot tell voices apart/.test(await page.locator('.dx-voice').innerText()) && /may be sent to the browser maker/.test(await page.locator('.dx-voice').innerText()));
+await page.evaluate(() => window.__sr.emit('thanks for joining', true)); await page.waitForTimeout(200);
+check('W72', 'Conversation mode: each utterance becomes a line "Speaker N (hh:mm:ss): text" with the speaker found automatically (no microphone in this test: all one speaker)', /Speaker 1 \(00:00:\d\d\): Good morning everyone/.test(await ed.innerText()) && /Speaker 1 \(00:00:\d\d\): Thanks for joining/.test(await ed.innerText()) && (await page.locator('.dx-voice button[aria-label^="Rename Speaker"]').count()) === 1 && (await page.locator('.dx-voice button:has-text("Person")').count()) === 0);
+await ed.locator('p', { hasText: 'Thanks for joining' }).click({ button: 'right' }); await page.getByRole('menuitem', { name: 'Change speaker of this line…' }).click(); await page.selectOption('#dx-cs', 'new'); await page.getByRole('button', { name: 'Change', exact: true }).click();
+check('W72b', 'Change speaker (right-click on a line) moves one line to a new speaker', /Speaker 2 \(00:00:\d\d\): Thanks for joining/.test(await ed.innerText()) && /Speaker 1 \(00:00:\d\d\): Good morning/.test(await ed.innerText()));
+await page.getByRole('button', { name: /Rename Speaker 1/ }).click(); await page.fill('#dx-sn', 'Ann'); await page.getByRole('button', { name: 'Save', exact: true }).last().click();
+check('W72c', 'Renaming a speaker renames every line of that speaker', /Ann \(00:00:\d\d\): Good morning everyone/.test(await ed.innerText()) && /Speaker 2 \(/.test(await ed.innerText()));
+check('W73', 'The panel says automatic speaker detection is beta and warns about the browser vendor’s speech service', /Automatic speaker detection \(beta\)/.test(await page.locator('.dx-voice').innerText()) && /may be sent to the browser maker/.test(await page.locator('.dx-voice').innerText()));
 await shot('15-voice-transcript-1366');
 await page.getByRole('button', { name: /Stop/ }).click(); await page.getByRole('button', { name: 'Close voice panel' }).click();
 
@@ -315,6 +317,57 @@ await page.waitForTimeout(500); const rep2 = page.getByRole('button', { name: 'R
 check('W78', 'Open a Markdown file: heading, bold text, link and list arrive', (await ed.locator('h1').innerText()) === 'Imported' && (await ed.locator('strong').innerText()) === 'world' && (await ed.locator('a[href="https://example.com/"]').count()) === 1 && (await ed.locator('li').count()) === 2);
 await page.keyboard.press('Control+s'); await saved();
 
+// ---- autosave: three documents created at once, typed in and left without pressing Save
+const blank = JSON.stringify({ v: 2, tabs: [{ id: 'a1', title: 'Main', blocks: [{ t: 'p', c: [] }], children: [] }] });
+const three = []; for (const n of ['Auto A', 'Auto B', 'Auto C']) three.push([n, await mkDoc(n, blank)]);
+for (const [i, [n, id]] of three.entries()) {
+  await page.goto(`${base}/#/doc/${id}`); await page.waitForFunction((t) => document.querySelector('.doctitle')?.value === t, n, { timeout: 15000 }); await page.waitForTimeout(300);
+  await ed.click(); await page.keyboard.type(`autosaved text number ${i}`);
+}
+await page.waitForFunction(() => /^Saved/.test(document.querySelector('.docstate')?.innerText ?? ''), null, { timeout: 8000 });
+const gotAll = []; for (const [i, [, id]] of three.entries()) gotAll.push(JSON.stringify((await stored(id)).doc).includes(`autosaved text number ${i}`));
+check('W79', 'Three documents typed in one after the other and navigated away from without pressing Save all hold their text in the database (the app saves before leaving, and the last one autosaves by itself)', gotAll.every(Boolean), gotAll.join());
+await page.goto(`${base}/#/doc/${three[0][1]}`); await page.reload(); await page.waitForFunction(() => document.querySelector('.docpage')?.innerText.includes('autosaved text number 0'), null, { timeout: 15000 });
+check('W80', 'After a reload the text is there', true);
+check('W81', 'Typing and pausing saves within a few seconds on its own: status goes Unsaved changes, then Saved (no Save click)', await (async () => { await ed.click(); await page.keyboard.press('Control+End'); await page.keyboard.type(' more'); const dirtyNow = /Unsaved|Saving/.test(await state()); await page.waitForFunction(() => /^Saved/.test(document.querySelector('.docstate')?.innerText ?? ''), null, { timeout: 6000 }); return dirtyNow; })());
+// a failing network: the status says so, the work is kept, and the save is retried
+let dropped = 0; await page.route('**/api/**', (r) => { const rq = r.request(); if (dropped < 2 && (rq.url().includes('versions.add') || (rq.postData() ?? '').includes('versions.add'))) { dropped += 1; return r.abort(); } return r.continue(); });
+await page.keyboard.type(' offline edit'); await page.waitForFunction(() => /retrying/.test(document.querySelector('.docstate')?.innerText ?? ''), null, { timeout: 8000 });
+check('W82', 'When saving fails on the network the status reads "Not saved, retrying…" and the editor keeps the text', /retrying/.test(await state()) && (await ed.innerText()).includes('offline edit'));
+await page.waitForFunction(() => /^Saved/.test(document.querySelector('.docstate')?.innerText ?? ''), null, { timeout: 20000 }); await page.unroute('**/api/**');
+check('W83', 'The save is retried with a delay and succeeds when the network returns: the text is stored', JSON.stringify((await stored(three[0][1])).doc).includes('offline edit') && dropped === 2);
+await page.keyboard.type(' x'); await page.getByRole('menuitem', { name: 'File', exact: true }).focus(); await page.locator('#app-switcher, #app-switcher-m').first().click().catch(() => {});
+await page.keyboard.press('Escape');
+
+// ---- zoom, font size, compact table strip, size warning
+const canvasBox = await page.locator('.dx-canvas').boundingBox(); const paperBox = await page.locator('.dx-paper').boundingBox();
+check('W84', 'Auto zoom: the page fills the window width with a modest gutter (not tiny in a wide grey area, not wider than the window)', paperBox.width <= canvasBox.width - 40 && paperBox.width >= Math.min(canvasBox.width - 60, 790) && /Auto/.test(await page.locator('select[aria-label="Zoom"] option:checked').innerText()), `${paperBox.width} in ${canvasBox.width}`);
+await ed.click(); await page.keyboard.press('Control+='); const z1 = await page.locator('select[aria-label="Zoom"]').inputValue(); await page.keyboard.press('Control+-'); await page.keyboard.press('Control+-');
+const z2 = await page.locator('select[aria-label="Zoom"]').inputValue();
+check('W85', 'Ctrl+= and Ctrl+- change the zoom in steps and the status bar buttons and View menu show it', Number(z1) > 0 && Number(z2) < Number(z1) && (await page.getByRole('button', { name: 'Zoom in' }).count()) === 1 && (await page.getByRole('button', { name: 'Zoom out' }).count()) === 1, `${z1} ${z2}`);
+await page.locator('select[aria-label="Zoom"]').selectOption('fit'); await page.waitForTimeout(200);
+const fitBox = await page.locator('.dx-paper').boundingBox();
+check('W86', 'Fit width makes the page exactly as wide as the window allows, with no horizontal scrollbar', Math.abs(fitBox.width - (canvasBox.width - 48)) < 40 && !(await page.locator('.dx-canvas').evaluate((c) => c.scrollWidth > c.clientWidth + 1)));
+await page.locator('select[aria-label="Zoom"]').selectOption('auto');
+await ed.click(); await page.keyboard.press('Control+a'); await page.getByRole('button', { name: 'Increase font size' }).click();
+const sz1 = await page.locator('select[aria-label="Font size"]').inputValue(); await page.keyboard.press('Control+Shift+>'); const sz2 = await page.locator('select[aria-label="Font size"]').inputValue(); await page.getByRole('button', { name: 'Decrease font size' }).click(); const sz3 = await page.locator('select[aria-label="Font size"]').inputValue();
+check('W87', 'Font size − / + buttons and Ctrl+Shift+> / < change the size one step at a time', sz1 === '12' && sz2 === '14' && sz3 === '12', `${sz1} ${sz2} ${sz3}`);
+await page.keyboard.press('Control+End'); await page.keyboard.press('Enter'); await menu('Insert', 'Table…'); await page.getByRole('button', { name: 'Insert', exact: true }).click(); await page.keyboard.type('cell text');
+const strip = await page.locator('.dx-tbar').boundingBox(); const cellBox = await ed.locator('table td, table th').first().boundingBox(); const edBox = await page.locator('.dx-canvas').boundingBox();
+check('W88', 'The table tools are one compact row of small icon buttons (≈36 px high) above the page area: they never cover a cell and do not move while typing', strip && strip.height <= 42 && strip.y + strip.height <= edBox.y + 1 && (await page.locator('.dx-tbar button').count()) >= 12 && (await page.locator('.dx-tbar').innerText()).trim() === 'TABLE');
+const stripBefore = JSON.stringify(await page.locator('.dx-tbar').boundingBox()); await page.keyboard.type(' more typing in the cell'); const stripAfter = JSON.stringify(await page.locator('.dx-tbar').boundingBox());
+check('W89', 'The strip stays put while typing in the table and disappears when the caret leaves the table', stripBefore === stripAfter && await (async () => { await page.keyboard.press('Control+End'); await page.waitForTimeout(150); return page.locator('.dx-tbar').isHidden(); })());
+const eight = await mkDoc('Nearly full', JSON.stringify({ v: 2, tabs: [{ id: 'f1', title: 'Big', blocks: Array.from({ length: 840 }, (_, i) => ({ t: 'p', c: [{ x: `${i} ${'lorem ipsum '.repeat(82)}` }] })), children: [] }] }));
+await page.goto(`${base}/#/doc/${eight}`); await page.waitForFunction(() => document.querySelector('.doctitle')?.value === 'Nearly full', null, { timeout: 20000 }); await page.waitForTimeout(800);
+check('W90', 'A document above 80% of the size limit shows a warning in the status bar; smaller ones show nothing', (await page.locator('.dx-space').isVisible()) && /8\d% of its size limit/.test(await page.locator('.dx-space').innerText()));
+await page.goto(`${base}/#/doc/${docId}`); await wait('Budget');
+// ---- found in the owner-style review: pasted formatting from inline styles, paste inside a list
+await page.goto(`${base}/#/doc/${play}`); await page.waitForFunction(() => document.querySelector('.doctitle')?.value === 'Playground', null, { timeout: 15000 }); await page.waitForTimeout(400);
+await ed.click(); await page.keyboard.press('Control+End'); await page.keyboard.press('Enter');
+await page.evaluate(() => { const el = document.querySelector('.docpage'); el.focus(); const dt = new DataTransfer(); dt.setData('text/html', '<p><span style="font-weight: 700; color: rgb(185, 28, 28); font-family: Georgia, serif">Styled</span><span style="font-size: 11pt; color: rgb(27, 27, 27); font-family: Geist"> plain</span></p>'); dt.setData('text/plain', 'Styled plain'); el.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true })); });
+await page.waitForTimeout(300);
+check('W91', 'Pasting HTML whose formatting is in style attributes (Google Docs, Word, web pages) keeps bold, colour and font; the editor’s own default colour/font/size are not copied as noise', (await ed.locator('strong, [style*="font-weight"]').count()) >= 0 && JSON.stringify((await (async () => { await page.keyboard.press('Control+s'); await page.waitForTimeout(700); return (await stored(play)).doc.tabs[0].blocks.at(-1); })())).replace(/\s/g, '') .includes('"b":1') , '');
+check('W92', 'The pasted run has bold, red and serif; the second run is plain (no colour, font or size marks)', await (async () => { const bl = (await stored(play)).doc.tabs[0].blocks; const last = bl.find((b) => JSON.stringify(b).includes('Styled')); const r = last?.c ?? last?.items?.find((i) => JSON.stringify(i).includes('Styled'))?.c ?? []; const ok = r[0]?.b === 1 && r[0]?.c === '#b91c1c' && r[0]?.f === 'serif' && !('c' in (r[1] ?? {})) && !('f' in (r[1] ?? {})) && !('z' in (r[1] ?? {})); if (!ok) console.log('RUNS', JSON.stringify(bl.slice(-3))); return ok; })(), '');
 await page.goto(`${base}/#/doc/${docId}`); await wait('Budget');
 // ---- responsive + themes screenshots
 for (const [w2, h2, n] of [[1366, 900, '1366'], [768, 1000, '768'], [390, 844, '390']]) {

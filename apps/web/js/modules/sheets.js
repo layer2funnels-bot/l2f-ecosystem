@@ -4,6 +4,7 @@
 // evaluated by sheetformula.js, never by eval. Cell colours and sizes are set through the CSSOM, because the page policy forbids inline style attributes.
 import { h, put, icon, btn, dialog, toast, field, notice, skeleton, errorState, noAccessState, readOnlyNotice } from '../ui.js';
 import { createSession } from './session.js';
+import { fromDrive } from './driveutil.js';
 import { createGrid } from './sheetgrid.js';
 import { drawChart } from './sheetchart.js';
 import { MIME, COLS, ROWS, MAX_CHARS, MAX_SHEETS, MAX_CELLS, DEFAULT_COL_W, DEFAULT_ROW_H, MIN_COL_W, MAX_COL_W, MIN_ROW_H, MAX_ROW_H, colName, ref, parseRef, parseRange, rangeLabel, parseBook, serializeBook, emptySheet, createCalc, cellText, formatValue, impliedFormat, parseLiteral, patchStyle, internStyle, styleOf, Tx, insertLines, deleteLines, renameSheet, removeSheet, duplicateSheet, uniqueName, mergeAt, mergeRange, unmergeRange, sortRange, fillRange, filteredRows, dataRegion, usedRange, countCells, chartData, cfStyle, dvList, linkOf, safeLink, parseCSV, toCSV, toTSV, parseTSV, csvCell, translateFormula, FUNCTION_NAMES, FUNCTION_DOCS, isError } from './sheetmodel.js';
@@ -48,7 +49,7 @@ export function sheetView({ api, id, ctx }) {
     const saveBtn = btn('Save', () => sess.save({ manual: true }), 'primary');
     const titleIn = h('input', { class: 'doctitle', value: meta.name, 'aria-label': 'Spreadsheet name', maxlength: '200', ...(readOnly ? { readonly: true } : {}) });
     const paintStatus = ({ status, savedAt, readOnly: ro, saving }) => {
-      const t = { saved: `Saved ${timeOf(savedAt)}`, dirty: 'Unsaved changes', saving: 'Saving…', failed: 'Couldn’t save. Your changes are still here.', readonly: 'Read only' }[status];
+      const t = { saved: `Saved ${timeOf(savedAt)}`, dirty: 'Unsaved changes', saving: 'Saving…', retrying: 'Not saved, retrying…', failed: 'Couldn’t save. Your changes are still here.', readonly: 'Read only' }[status];
       put(statusEl, h('span', { class: `dot ${status}` }), t, status === 'failed' ? btn('Retry', () => sess.save({ manual: true }), 'link') : null); saveBtn.disabled = ro || status === 'saved' || saving;
     };
     const sess = createSession({ api, id, ctx, version: ver.version, savedBody: null, savedAt: ver.created_at, readOnly, getBody, label: () => meta.name, onStatus: paintStatus, maxChars: MAX_CHARS,
@@ -723,18 +724,19 @@ export function sheetView({ api, id, ctx }) {
     }
     function importFile() {
       const inp = h('input', { type: 'file', accept: '.csv,.tsv,.txt,.xlsx,text/csv', hidden: true, 'aria-label': 'Choose a file to import' }); document.body.append(inp);
-      inp.addEventListener('change', async () => {
-        const f = inp.files?.[0]; inp.remove(); if (!f) return; if (f.size > 8e6) { toast('That file is over 8 MB. Split it first.', false); return; }
+      inp.addEventListener('change', () => { const f = inp.files?.[0]; inp.remove(); if (f) readFile(f, (n, parts) => confirmImport(n, parts)); }); inp.click();
+    }
+    async function readFile(f, done) {
+        if (f.size > 8e6) { toast('That file is over 8 MB. Split it first.', false); return; }
         try {
           const head = new Uint8Array(await f.slice(0, 4).arrayBuffer());                    // an .xlsx file is a zip archive (starts with PK)
           if (/\.xlsx$/i.test(f.name) || (head[0] === 0x50 && head[1] === 0x4b)) {
             let bridge; try { bridge = await import('/sheetjs/xlsx.js'); } catch { toast('Excel import isn’t available in this build. Save the file as CSV and import that.', false); return; }
             const parts = bridge.readXlsx(await f.arrayBuffer(), { maxRows: ROWS, maxCols: COLS });
             const made = parts.map((p) => ({ name: p.name, rows: p.rows.map((row) => (row ?? []).map((cell) => { if (!cell) return { raw: '' }; let raw; if (cell.f) raw = `=${cell.f}`; else if (typeof cell.v === 'number') raw = String(cell.v); else if (typeof cell.v === 'boolean') raw = cell.v ? 'TRUE' : 'FALSE'; else raw = rawOf(String(cell.v ?? '')); return { raw, nf: nfFromExcel(cell.z, cell.t === 'd' || /^\d{4}-\d\d-\d\d$/.test(String(cell.v))) }; })), merges: p.merges }));
-            confirmImport(f.name, made);
-          } else confirmImport(f.name, [{ name: f.name.replace(/\.[^.]+$/, '').slice(0, 40) || 'Imported', rows: parseCSV(await f.text()).map((row) => row.map((raw) => ({ raw }))), merges: [] }]);
+            done(f.name, made);
+          } else done(f.name, [{ name: f.name.replace(/\.[^.]+$/, '').slice(0, 40) || 'Imported', rows: parseCSV(await f.text()).map((row) => row.map((raw) => ({ raw }))), merges: [] }]);
         } catch { toast('Couldn’t read that file.', false); }
-      }); inp.click();
     }
     function confirmImport(name, parts) {
       const total = parts.reduce((n, p) => n + p.rows.reduce((m, r) => m + r.length, 0), 0);
@@ -865,6 +867,8 @@ export function sheetView({ api, id, ctx }) {
     recalcFilter(); drawTabs(); grid.attach(); syncBar(); syncTools(); paintCount(); focusGrid();
     const leave = () => { if (location.hash.startsWith(`#/sheet/${id}`)) return; window.removeEventListener('hashchange', leave); window.removeEventListener('resize', fit); document.removeEventListener('keydown', menuKeys, true); document.removeEventListener('keyup', menuKeyUp, true); document.removeEventListener('copy', onCopy); document.removeEventListener('cut', onCopy); document.removeEventListener('paste', onPaste); popup.close(); grid.destroy(); sess.destroy(); };
     window.addEventListener('hashchange', leave);
+    { const src = new URLSearchParams(location.hash.split('?')[1] ?? '').get('import');   // opened from Drive: "Open in Sheets" on an uploaded Excel/CSV file
+      if (src) { history.replaceState(null, '', location.hash.split('?')[0]); if (!readOnly) fromDrive(api, src).then((f) => { if (!f) return toast('Couldn’t read the original file. Use File › Import to try again.', false); readFile(f, async (n, parts) => { runImport(parts, 'replace'); await sess.save({ manual: true }); }); }); } }
     root.sxTest = { book, get calc() { return calc; }, get sel() { return sel; }, select: (c, r) => setSel({ c, r }), setCell, doUndo, doRedo, grid };
   }
   load();

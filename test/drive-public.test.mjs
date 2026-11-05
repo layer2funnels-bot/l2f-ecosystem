@@ -1,0 +1,88 @@
+// Public share links (migration 0047): anyone with the link can VIEW, no sign-in. Judged through the real API layer and the HTTP handler, as an anonymous visitor:
+// what a live link shows, and that every other case (revoked, expired, locked, password folder, archived, SOP, whiteboard, personal, client, wrong token) shows nothing.
+import { randomUUID as id } from 'node:crypto';
+import { openDb, migrate, session, recorder } from './lib.mjs';
+import { createApi } from '../packages/core/api.mjs';
+import { createHttpHandler } from '../packages/core/http.mjs';
+import { createPgExecutor } from '../packages/core/pg-executor.mjs';
+import { createRateLimiter } from '../packages/core/rate-limit.mjs';
+import { createSafeLogger } from '../packages/core/safe-log.mjs';
+import { createMemoryStorage } from '../packages/core/storage-adapter.mjs';
+
+const db = await openDb(); await migrate(db);
+const { asSuper } = session(db); const { results, check } = recorder();
+const rows = async (s, p = []) => (await db.query(s, p)).rows;
+let chain = Promise.resolve();
+const acquire = () => { const prev = chain; let release; chain = new Promise((r) => { release = r; }); return prev.then(() => ({ query: (s, p) => db.query(s, p), release })); };
+const BIG = { read: { max: 1e6, windowMs: 6e4 }, write: { max: 1e6, windowMs: 6e4 }, sensitive: { max: 1e6, windowMs: 6e4 } };
+const storage = createMemoryStorage();
+const mkApi = (limits = BIG) => createApi({ executor: createPgExecutor({ acquire, role: 'app_user' }), logger: createSafeLogger(() => {}), limiter: createRateLimiter({ limits }), storage });
+const api = mkApi();
+const J = async (op, input, u, org) => { const r = await api.handle({ operation: op, input, auth: u ? { userId: u, email: 'x@example.com' } : undefined, headers: { 'x-org-id': org } }); return { ...r, row: r.body?.data?.[0], data: r.body?.data ?? [] }; };
+const pub = async (tok, ip = '1.1.1.1', a = api) => { const r = await a.publicLink({ token: tok, ip }); return { ...r, row: r.body?.data?.[0] }; };
+
+await asSuper();
+const L = id(), A = id(); await db.query("insert into workspaces (id,slug,name) values ($1,'layer2funnels','Layer2Funnels'),($2,'aurj','Aurj')", [L, A]);
+const U = { OWN: id(), ADM: id(), ED: id(), OA: id(), CL: id() };
+await db.query("insert into memberships (workspace_id,user_id,kind,role) values ($1,$2,'staff','owner'),($1,$3,'staff','admin'),($1,$4,'staff','editor'),($5,$6,'staff','owner')", [L, U.OWN, U.ADM, U.ED, A, U.OA]);
+const C1 = id(); await db.query("insert into clients (id,workspace_id,name) values ($1,$2,'A client')", [C1, L]);
+await db.query("insert into memberships (workspace_id,user_id,kind,client_id) values ($1,$2,'client',$3)", [L, U.CL, C1]);
+await db.query("insert into app_grants (workspace_id,user_id,app_key) values ($1,$2,'drive'),($1,$3,'drive')", [L, U.ADM, U.ED]);
+const DOC = 'application/vnd.l2f.doc+json';
+const mk = async (u, org, name, extra = {}) => (await J('drive.files.create', { space: 'shared', name, kind: 'document', mime_type: DOC, body: `{"v":2,"tabs":[{"id":"t1","title":"T","blocks":[{"t":"p","c":[{"x":"hello ${name}"}]}],"children":[]}]}`, ...extra }, u, org)).row;
+const link = async (file, o = {}, u = U.OWN, org = L) => (await J('drive.links.create', { file: file.id, audience: 'public', ...o }, u, org)).row;
+
+const d1 = await mk(U.OWN, L, 'Public doc'); const l1 = await link(d1);
+let r = await pub(l1?.token);
+check('PL1', 'An owner makes a public link (view only); an anonymous visitor gets the name, kind, type, brand and the document text', l1?.audience === 'public' && l1.role === 'viewer' && r.status === 200 && r.row.name === 'Public doc' && r.row.kind === 'document' && r.row.mime_type === DOC && r.row.brand === 'l2f' && r.row.body.includes('hello Public doc'));
+check('PL2', 'Nothing else leaks: the answer has exactly name, kind, mime_type, size_bytes, brand and the text: no ids, no organization, no people, no paths', JSON.stringify(Object.keys(r.row).sort()) === JSON.stringify(['body', 'brand', 'kind', 'mime_type', 'name', 'size_bytes']) && !JSON.stringify(r.body).includes(L) && !JSON.stringify(r.body).includes(U.OWN) && !JSON.stringify(r.body).includes(d1.id));
+check('PL3', 'The token is stored hashed only, and each opening is counted', (await rows('select token_hash, use_count from drive_share_links where id = $1', [l1.id]))[0].use_count === 1 && (await rows('select token_hash from drive_share_links')).every((x) => x.token_hash !== l1.token));
+const lEd = await link(d1, { role: 'editor' });
+check('PL4', 'A public link can never grant editing: asking for an editor right still gives a viewer link', lEd?.role === 'viewer' && lEd.audience === 'public');
+const team = (await J('drive.links.create', { file: d1.id, role: 'viewer' }, U.OWN, L)).row;
+check('PL5', 'A team link (signed-in members only) does not work for the public', team?.audience === 'team' && (await pub(team.token)).status === 404);
+check('PL6', 'Wrong, short, malformed or empty tokens all answer the same 404', (await Promise.all([pub('x'.repeat(43)), pub('short'), pub(''), pub('../../etc/passwd' + 'a'.repeat(30)), pub(undefined)])).every((x) => x.status === 404 && x.body.error.code === 'not_found'));
+const lx = await link(d1, { days: 1 }); await db.exec('set session_replication_role = replica');
+await db.query("update drive_share_links set created_at = now() - interval '3 days', expires_at = now() - interval '1 day' where id = $1", [lx.id]); await db.exec('set session_replication_role = origin');
+check('PL7', 'An expired link shows nothing', (await pub(lx.token)).status === 404);
+const ln = await link(d1, { never: true });
+check('PL8', 'A link without expiry works', (await pub(ln.token)).status === 200);
+await J('drive.links.revoke', { id: l1.id }, U.OWN, L);
+check('PL9', 'A revoked link shows nothing at once', (await pub(l1.token)).status === 404 && (await pub(ln.token)).status === 200);
+// refused kinds
+const dl = await mk(U.OWN, L, 'Locked doc'); const tl = (await link(dl)).token; await J('drive.items.lock', { kind: 'file', id: dl.id, locked: true }, U.OWN, L);
+check('PL10', 'A locked file shows nothing, even though the link exists', (await pub(tl)).status === 404);
+await J('drive.items.lock', { kind: 'file', id: dl.id, locked: false }, U.OWN, L); const lockedFolder = (await J('drive.folders.create', { space: 'shared', name: 'Vault' }, U.OWN, L)).row.id;
+const inVault = await mk(U.OWN, L, 'In vault', { folder: lockedFolder }); const tv = (await link(inVault)).token; await J('drive.items.lock', { kind: 'folder', id: lockedFolder, locked: true }, U.OWN, L);
+check('PL11', 'A file inside a locked folder shows nothing', (await pub(tv)).status === 404);
+await J('drive.items.lock', { kind: 'folder', id: lockedFolder, locked: false }, U.OWN, L);
+const pf = (await J('drive.folders.create', { space: 'shared', name: 'Payroll' }, U.OWN, L)).row.id; const inPw = await mk(U.OWN, L, 'In password folder', { folder: pf }); const tp = (await link(inPw)).token;
+check('PL12', 'Before the folder gets a password the file is public', (await pub(tp)).status === 200);
+await J('drive.folders.setPassword', { id: pf, password: 'A good password 1' }, U.OWN, L);
+check('PL13', 'Inside a password-protected folder nothing is public, not even for the person who just set the password (a visitor can never unlock)', (await pub(tp)).status === 404);
+const da = await mk(U.OWN, L, 'To trash'); const ta = (await link(da)).token; await J('drive.files.archive', { id: da.id }, U.OWN, L);
+check('PL14', 'A file in the Trash shows nothing; restoring brings the link back', (await pub(ta)).status === 404 && (await J('drive.files.restore', { id: da.id }, U.OWN, L)).status === 200 && (await pub(ta)).status === 200);
+const sop = await mk(U.OWN, L, 'An SOP'); await J('drive.sops.protect', { id: sop.id, protected: true, sop_key: 'a_sop' }, U.OWN, L);
+check('PL15', 'A protected SOP cannot be shared by link at all', (await J('drive.links.create', { file: sop.id, audience: 'public' }, U.OWN, L)).status !== 200);
+const pers = (await J('drive.files.create', { space: 'personal', name: 'Mine', kind: 'document', body: 'x' }, U.OWN, L)).row;
+const cf = (await J('drive.files.create', { space: 'client', client: C1, name: 'Client contract', kind: 'document', body: 'x' }, U.OWN, L)).row;
+check('PL16', 'Personal and client files cannot be shared by link at all', (await J('drive.links.create', { file: pers.id, audience: 'public' }, U.OWN, L)).status !== 200 && (await J('drive.links.create', { file: cf.id, audience: 'public' }, U.OWN, L)).status !== 200);
+const board = await mk(U.OWN, L, 'A board', { mime_type: 'application/vnd.excalidraw+json', body: '{}' }); const tb = (await link(board)).token;
+check('PL17', 'Whiteboards are not shown publicly', (await pub(tb)).status === 404);
+check('PL18', 'Only people who may share can make a public link: a viewer-level member, a client and the other organization’s owner cannot', (await J('drive.links.create', { file: d1.id, audience: 'public' }, U.CL, L)).status === 404 && (await J('drive.links.create', { file: d1.id, audience: 'public' }, U.OA, L)).status === 404 && (await J('drive.links.create', { file: d1.id, audience: 'public' }, U.OA, A)).status === 404);
+const aDoc = await mk(U.OA, A, 'Aurj doc'); const ta2 = (await link(aDoc, {}, U.OA, A)).token; r = await pub(ta2);
+check('PL19', 'The brand follows the organization (Aurj shows Aurj, Layer2Funnels shows Layer2Funnels) and that is all it reveals', r.row.brand === 'aurj' && r.row.name === 'Aurj doc');
+const path = `${L}/shared/${id()}/scan.pdf`; await storage.put(path, Buffer.from('%PDF bytes'));
+const pdf = (await J('drive.files.create', { space: 'shared', name: 'scan.pdf', kind: 'file', mime_type: 'application/pdf', storage_path: path, size_bytes: 10 }, U.OWN, L)).row; const tf = (await link(pdf)).token; r = await pub(tf);
+check('PL20', 'A stored file (image, PDF, anything) returns two short-lived addresses (one to show, one to save) and no text', r.status === 200 && typeof r.row.url === 'string' && typeof r.row.download_url === 'string' && r.row.body === undefined && !('storage_path' in r.row));
+const tight = mkApi({ read: { max: 3, windowMs: 6e4 }, write: BIG.write, sensitive: BIG.sensitive }); const outs = []; for (let k = 0; k < 5; k += 1) outs.push((await pub(tf, '9.9.9.9', tight)).status);
+check('PL21', 'Requests are limited per address: after the limit that address gets 429 with a retry time, while another address is fine', outs.join() === '200,200,200,429,429' && (await pub(tf, '8.8.8.8', tight)).status === 200 && (await tight.publicLink({ token: tf, ip: '9.9.9.9' })).body.error.retryAfterSeconds > 0);
+const http = createHttpHandler({ api, verifyToken: async () => ({ ok: false }) });
+const g = await http(new Request(`http://x.test/api/public/link?t=${tf}`, { headers: { 'x-forwarded-for': '7.7.7.7' } })); const gb = await g.json();
+const post = await http(new Request(`http://x.test/api/public/link?t=${tf}`, { method: 'POST' })); const bad = await http(new Request('http://x.test/api/public/link?t=nope'));
+check('PL22', 'Over HTTP: GET works without any sign-in, is not cached or indexed; POST is refused; a bad token is 404', g.status === 200 && gb.data[0].name === 'scan.pdf' && g.headers.get('cache-control') === 'no-store' && g.headers.get('x-robots-tag') === 'noindex' && post.status === 405 && bad.status === 404);
+check('PL23', 'The authenticated API still refuses visitors: every drive operation without a sign-in is 404', (await J('drive.files.get', { id: d1.id }, null, L)).status === 404 && (await J('drive.links.list', { file: d1.id }, null, L)).status === 404);
+check('PL24', 'Public links cannot be turned into team links or changed once made (only revoked)', await (async () => { await asSuper(); try { await db.query("update drive_share_links set audience = 'team' where id = $1", [ln.id]); return false; } catch { return true; } })());
+
+for (const x of results) console.log(`${x.ok ? 'PASS' : 'FAIL'}  ${x.id.padEnd(5)} ${x.name}${x.ok ? '' : `  [${x.detail}]`}`);
+const pc = results.filter((x) => x.ok).length; console.log(`\n${pc}/${results.length} checks passed`); await db.close(); process.exit(pc === results.length ? 0 : 1);

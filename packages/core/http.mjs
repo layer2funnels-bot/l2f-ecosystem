@@ -30,6 +30,13 @@ export function createHttpHandler({ api, verifyToken, extraOrigins = [] }) {
       const url = new URL(request.url);
       if (!url.pathname.startsWith('/api/')) return reply(404, errorBody(NOT_FOUND));
       if (url.pathname === '/api/health') return request.method === 'GET' ? reply(200, { ok: true }) : reply(405, errorBody(NOT_FOUND), { allow: 'GET' });
+      // Public share links: no sign-in, GET only, nothing but the one resolve function behind it, limited per address.
+      if (url.pathname === '/api/public/link') {
+        if (request.method !== 'GET') return reply(405, errorBody(NOT_FOUND), { allow: 'GET' });
+        const ip = request.headers.get('cf-connecting-ip') ?? (request.headers.get('x-forwarded-for') ?? '').split(',')[0].trim();
+        const out = await api.publicLink({ token: url.searchParams.get('t') ?? '', ip });
+        return reply(out.status, out.body, { 'x-robots-tag': 'noindex' });
+      }
       if (request.method !== 'POST') return reply(405, errorBody(NOT_FOUND), { allow: 'POST' });
 
       const origin = request.headers.get('origin');

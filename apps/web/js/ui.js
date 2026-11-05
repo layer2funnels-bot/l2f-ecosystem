@@ -41,6 +41,9 @@ export function dialog({ title, body, actions = [], wide = false, role = 'dialog
   });
   overlay.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') { e.stopPropagation(); close(); return; }
+    if (e.key === 'Enter' && e.target?.tagName === 'INPUT' && !e.isComposing && /^(text|password|email|search|number|url|tel)$/.test(e.target.type)) {   // Enter in a field does the main thing, like a form
+      const go = bar.querySelector('.btn.primary:not([disabled])'); if (go) { e.preventDefault(); go.click(); } return;
+    }
     if (e.key !== 'Tab') return;
     const f = focusables(overlay); if (!f.length) return;
     const i = f.indexOf(document.activeElement);
@@ -49,6 +52,7 @@ export function dialog({ title, body, actions = [], wide = false, role = 'dialog
   document.body.append(overlay);
   const first = overlay.querySelector('[autofocus]') ?? (actions.findIndex((a) => a.focus) >= 0 ? buttons[actions.findIndex((a) => a.focus)] : null) ?? focusables(overlay)[0];
   first?.focus();
+  if (first?.tagName === 'INPUT' && first.value && /^(text|search)$/.test(first.type)) first.select();     // a name field opens with its text selected, ready to type over
   return close;
 }
 

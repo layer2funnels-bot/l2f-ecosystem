@@ -7,7 +7,7 @@ import { emptyBook, serializeBook, MIME as SHEET_MIME } from './sheetmodel.js';
 import { mediaHref } from './mediamodel.js';
 import { emptyBoard } from './boardmodel.js';
 import { ICONS } from '../icons.js';
-import { DOC_MIME, BOARD_MIME, CORS_HINT, previewKind, fileType, matchesType, isImage, formatSize, classifyUploadError, precheckUploads, sortRows } from './driveutil.js';
+import { DOC_MIME, BOARD_MIME, CORS_HINT, previewKind, convertTarget, opensInEditor, fileType, matchesType, isImage, formatSize, classifyUploadError, precheckUploads, sortRows } from './driveutil.js';
 
 export const driveHref = (space, folder) => `#/drive${space === 'personal' ? '/personal' : ''}${folder ? `/f/${folder}` : ''}`;
 const when = (iso) => (iso ? new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '');
@@ -134,7 +134,7 @@ export function driveView({ api, ctx, route }) {
     else body = h('div', { class: 'drv-home' }, ...(atHome ? homeBlocks(state.files) : []), h('div', { class: 'tblwrap' }, h('table', { class: 'tbl drv-tbl' }, h('caption', { class: 'sr' }, 'Folders and files'),
       h('thead', {}, h('tr', {}, h('th', { scope: 'col', class: 'c-sel' }, selectAll()), h('th', { scope: 'col' }, 'Name'), h('th', { scope: 'col', class: 'c-meta' }, 'Type'), h('th', { scope: 'col', class: 'c-meta' }, 'Size'), h('th', { scope: 'col', class: 'c-meta' }, 'Updated'), h('th', { scope: 'col', class: 'c-act' }, srOnly('Actions')))),
       h('tbody', {}, ...rows.map(rowEl)))));
-    put(list, body); paintSel();
+    put(list, body, state.files.length >= 500 || state.folders.length >= 500 ? notice('info', 'info', 'Showing the first 500 items. Use search to find the rest.') : null); paintSel();
     const first = list.querySelector('[data-item]'); if (first) first.tabIndex = 0;
   }
   const byId = new Map();
@@ -158,7 +158,7 @@ export function driveView({ api, ctx, route }) {
       h('div', { class: 'gcard-foot' }, h('span', { class: 'gname-line' }, h('a', { class: 'gname', href: driveHref(space, d.id), title: d.name }, d.name), lockMark(d), pwMark(d)), h('span', { class: 'drv-sub on' }, `Folder · ${fileCount(d)}`))); }
     const f = r.file; const ty = fileType(f); const href = openHref(f);
     const artEl = art(f, true);
-    return h('article', { class: 'gcard', role: 'listitem', 'data-item': f.id, tabindex: '-1' }, href ? h('a', { class: 'gcard-art', href, 'aria-label': `Open ${f.name}`, tabindex: '-1' }, artEl) : h('button', { type: 'button', class: 'gcard-art', 'aria-label': `${previewKind(f) ? 'Preview' : 'Download'} ${f.name}`, tabindex: '-1', onclick: () => openFile(f) }, artEl),
+    return h('article', { class: 'gcard', role: 'listitem', 'data-item': f.id, tabindex: '-1' }, href ? h('a', { class: 'gcard-art', href, 'aria-label': `Open ${f.name}`, tabindex: '-1' }, artEl) : h('button', { type: 'button', class: 'gcard-art', 'aria-label': `${opensInEditor(f) && canWrite ? 'Open' : previewKind(f) ? 'Preview' : 'Download'} ${f.name}`, tabindex: '-1', onclick: () => openFile(f) }, artEl),
       pick(f), moreBtn(f, false), h('div', { class: 'gcard-foot' }, h('span', { class: 'gname-line' }, nameOf(f), starMark(f), lockMark(f), f.protected_sop ? tag('SOP', 'ok') : null), h('span', { class: 'drv-sub on' }, [ty.name, formatSize(f.size_bytes)].filter(Boolean).join(' · '))));
   }
   function paintSel() {
@@ -178,8 +178,10 @@ export function driveView({ api, ctx, route }) {
   function rowMenu(anchor, item, isFolder) {
     const mutable = canWrite && !item.protected_sop; const href = isFolder ? null : openHref(item); const pv = !isFolder && !href && previewKind(item);
     popMenu(anchor, [
-      isFolder ? { label: 'Open', ic: 'folder', on: () => ctx.go(driveHref(space, item.id)) } : { label: href ? 'Open' : pv ? 'Preview' : 'Download', ic: href || pv ? 'eye' : 'download', on: () => openFile(item) },
+      isFolder ? { label: 'Open', ic: 'folder', on: () => ctx.go(driveHref(space, item.id)) } : { label: href || (opensInEditor(item) && canWrite) ? 'Open' : pv ? 'Preview' : 'Download', ic: href || pv || opensInEditor(item) ? 'eye' : 'download', on: () => openFile(item) },
       ...(!isFolder && href && previewKind(item) ? [{ label: 'Preview', ic: 'eye', on: () => preview(item) }] : []),
+      ...(!isFolder && convertTarget(item) && !opensInEditor(item) && canWrite ? [{ label: convertTarget(item) === 'doc' ? 'Open in Docs' : 'Open in Sheets', ic: convertTarget(item) === 'doc' ? 'doc' : 'table', on: () => openInEditor(item) }] : []),
+      ...(!isFolder && opensInEditor(item) && previewKind(item) ? [{ label: 'Preview', ic: 'eye', on: () => preview(item) }] : []),
       !isFolder && !href ? { label: 'Download', ic: 'download', on: () => download(item) } : null,
       isFolder ? null : { label: stars.has(item.id) ? 'Remove star' : 'Star', ic: 'star', on: () => toggleStar([item.id]) },
       isFolder ? null : { label: 'Details', ic: 'info', on: () => details(item) },
@@ -190,7 +192,15 @@ export function driveView({ api, ctx, route }) {
       canWrite && !isFolder ? { label: 'Make a copy', ic: 'copy', on: () => copyItem(item) } : null,
       mutable ? { label: 'Move to Trash', ic: 'trash', danger: true, on: () => (isFolder ? trashFolder(item) : trashMany([item])) } : null], `Actions for ${item.name}`);
   }
-  const openFile = (f) => { const href = openHref(f); if (href) ctx.go(href); else if (previewKind(f)) preview(f); else download(f); };
+  const openFile = (f) => { const href = openHref(f); if (href) ctx.go(href); else if (opensInEditor(f) && canWrite) openInEditor(f); else if (previewKind(f)) preview(f); else download(f); };
+  /** "Open in Docs / Sheets": an editable copy next to the uploaded file (the original stays as it is), filled from the file by the editor. */
+  async function openInEditor(f) {
+    const t = convertTarget(f); if (!t) return; if (!canWrite) return toast('You can view this file but not add files here, so it can’t be opened in the editor. Download it instead.', false);
+    const name = (f.name.replace(/\.[^.]+$/, '') || f.name).slice(0, 200); toast(`Opening ${f.name} in ${t === 'doc' ? 'Docs' : 'Sheets'}…`);
+    const r = await api.call('drive.files.create', { space, name, kind: 'document', mime_type: t === 'doc' ? DOC_MIME : SHEET_MIME, body: t === 'doc' ? serialize(emptyDoc()) : serializeBook(emptyBook()), ...(f.folder_id ? { folder: f.folder_id } : {}) });
+    if (!r.ok) return fail(r, 'open that file in the editor');
+    ctx.go(`${openHref(r.data[0])}?import=${f.id}`);
+  }
   /** Opens the menu where the pointer is (right-click) or under the item (menu key). */
   function menuAt(itemEl, x, y) {
     const rec = byId.get(itemEl.dataset.item); if (!rec) return;
@@ -251,7 +261,7 @@ export function driveView({ api, ctx, route }) {
     toast(lock ? 'Locked. Only owners can see it now.' : 'Unlocked.'); load();
   }
   const when2 = (iso) => (iso ? `until ${when(iso)}` : 'no expiry');
-  const linkUrl = (token) => `${location.origin}${location.pathname}#/drive/open/${token}`;
+  const linkUrl = (token, pub) => `${location.origin}${location.pathname}#/${pub ? 's' : 'drive/open'}/${token}`;
   async function copyText(text) { try { await navigator.clipboard.writeText(text); return true; } catch { return false; } }
   /** Share with people of the organization (view or edit) and, for a file, by link. Everything is checked by the database; a refusal reads as "not allowed". */
   async function shareDialog(item, isFolder) {
@@ -274,14 +284,14 @@ export function driveView({ api, ctx, route }) {
       const parts = [people$];
       if (!isFolder) {
         const live = lk.ok ? lk.data.filter((l) => !l.revoked_at && (!l.expires_at || new Date(l.expires_at) > new Date())) : [];
-        const lrole = h('select', { id: 'lk-role', 'aria-label': 'Link rights' }, h('option', { value: 'viewer' }, 'Anyone with the link can view'), h('option', { value: 'editor' }, 'Anyone with the link can edit'));
+        const lrole = h('select', { id: 'lk-role', 'aria-label': 'Link rights' }, h('option', { value: 'public' }, 'Anyone with the link can view'), h('option', { value: 'viewer' }, `${ctx.orgName} members with the link can view`), h('option', { value: 'editor' }, `${ctx.orgName} members with the link can edit`));
         const lexp = h('select', { id: 'lk-exp', 'aria-label': 'Link expires' }, ...[['7', 'Expires in 7 days'], ['1', 'Expires in 1 day'], ['30', 'Expires in 30 days'], ['90', 'Expires in 90 days'], ['365', 'Expires in 1 year'], ['never', 'Never expires']].map(([k, l]) => h('option', { value: k }, l)));
-        const make = btn('Create link', async () => { const r = await api.call('drive.links.create', { file: item.id, role: lrole.value, ...(lexp.value === 'never' ? { never: true } : { days: Number(lexp.value) }) }); if (!r.ok) return fail(r, 'make a link for that'); fresh = linkUrl(r.data[0].token); await copyText(fresh); toast('Link created and copied.'); draw(); }, '');
+        const make = btn('Create link', async () => { const isPub = lrole.value === 'public'; const r = await api.call('drive.links.create', { file: item.id, ...(isPub ? { audience: 'public' } : { role: lrole.value }), ...(lexp.value === 'never' ? { never: true } : { days: Number(lexp.value) }) }); if (!r.ok) return fail(r, 'make a link for that'); fresh = linkUrl(r.data[0].token, isPub); await copyText(fresh); toast('Link created and copied.'); draw(); }, '');
         const freshBox = fresh ? h('div', { class: 'drv-newlink', role: 'status' }, h('input', { readonly: true, value: fresh, 'aria-label': 'The new link', onfocus: (e) => e.target.select() }), btn('Copy', async () => toast((await copyText(fresh)) ? 'Copied.' : 'Select the link and copy it.', true), 'ghost'), h('p', { class: 'fine muted' }, 'Copy it now: for safety it is shown only once.')) : null;
         parts.push(h('section', { 'aria-labelledby': 'sh-h2' }, h('h3', { id: 'sh-h2' }, 'Link'),
-          h('p', { class: 'fine muted' }, `Only signed-in members of ${ctx.orgName} can open it. Clients and people outside the organization never can.`),
+          h('p', { class: 'fine muted' }, 'Choose who can open the link. A public link can be posted anywhere: anyone who has it can look at the file (not change it) until you revoke it or it expires. Team links need a sign-in; clients never get one.'),
           h('div', { class: 'drv-share-add' }, lrole, lexp, make), freshBox,
-          live.length ? h('ul', { class: 'drv-share-list' }, ...live.map((l) => h('li', {}, h('span', { class: 'sh-name' }, `${l.role === 'editor' ? 'Can edit' : 'Can view'} · ${when2(l.expires_at)} · opened ${l.use_count}×`), h('button', { type: 'button', class: 'btn quiet', 'aria-label': 'Revoke this link', onclick: async () => { const r = await api.call('drive.links.revoke', { id: l.id }); if (!r.ok) fail(r, 'change that'); else { toast('Link revoked.'); fresh = null; draw(); } } }, 'Revoke'))))
+          live.length ? h('ul', { class: 'drv-share-list' }, ...live.map((l) => h('li', {}, h('span', { class: 'sh-name' }, `${l.audience === 'public' ? 'Anyone · can view' : l.role === 'editor' ? 'Team · can edit' : 'Team · can view'} · ${when2(l.expires_at)} · opened ${l.use_count}×`), h('button', { type: 'button', class: 'btn quiet', 'aria-label': 'Revoke this link', onclick: async () => { const r = await api.call('drive.links.revoke', { id: l.id }); if (!r.ok) fail(r, 'change that'); else { toast('Link revoked.'); fresh = null; draw(); } } }, 'Revoke'))))
             : h('p', { class: 'fine muted' }, 'No active links.')));
       }
       put(body, ...parts);
@@ -554,7 +564,7 @@ export function driveView({ api, ctx, route }) {
       rows.length ? h('ul', { class: 'drv-items card' }, ...rows.map((r) => { const it = r.folder ?? r.file;
         return itemRow(it, !!r.folder, `${r.folder ? 'Folder' : fileType(it).name} · deleted ${when(it.archived_at)}`,
           canWrite ? h('button', { type: 'button', class: 'btn ghost', 'aria-label': `Restore ${it.name}`, onclick: async () => { const x = await api.call(r.folder ? 'drive.folders.restore' : 'drive.files.restore', { id: it.id }); if (x.ok) { toast('Restored.'); trash(); } else fail(x, 'restore that'); } }, 'Restore') : null,
-          canDelete ? h('button', { type: 'button', class: 'btn quiet drv-del', 'aria-label': `Delete ${it.name} for good`, onclick: () => dialog({ title: `Delete “${it.name}” for good?`, body: notice('err', 'warn', [h('b', {}, 'This can’t be undone.'), ' The item and all its versions are removed.']), actions: [{ label: 'Delete for good', cls: 'dng', on: async () => { const x = await api.call(r.folder ? 'drive.folders.delete' : 'drive.files.delete', { id: it.id }); if (!x.ok) { fail(x, 'delete that'); return false; } toast('Deleted for good.', false); trash(); } }, { label: 'Cancel', focus: true }] }) }, 'Delete for good') : null); })) : emptyState({ title: 'The Trash is empty', body: 'Things you move to the Trash wait here until someone deletes them for good.', ic: 'trash' }));
+          canDelete ? h('button', { type: 'button', class: 'btn quiet drv-del', 'aria-label': `Delete ${it.name} for good`, onclick: () => dialog({ title: `Delete “${it.name}” for good?`, body: notice('err', 'warn', [h('b', {}, 'This can’t be undone.'), r.folder ? ' The folder is removed; anything still inside it moves up one level.' : ' The file and all its versions are removed.']), actions: [{ label: 'Delete for good', cls: 'dng', on: async () => { const x = await api.call(r.folder ? 'drive.folders.delete' : 'drive.files.delete', { id: it.id }); if (!x.ok) { fail(x, 'delete that'); return false; } toast('Deleted for good.', false); trash(); } }, { label: 'Cancel', focus: true }] }) }, 'Delete for good') : null); })) : emptyState({ title: 'The Trash is empty', body: 'Things you move to the Trash wait here until someone deletes them for good.', ic: 'trash' }));
   }
   const head = (title, sub, ...acts) => h('div', { class: 'pj-head' }, h('div', {}, h('div', { class: 'crumbs fine' }, 'Drive'), h('h1', { 'data-page-title': true }, title), sub ? h('p', { class: 'sub' }, sub) : null), acts.filter(Boolean).length ? h('div', { class: 'pj-actions' }, ...acts) : null);
 
