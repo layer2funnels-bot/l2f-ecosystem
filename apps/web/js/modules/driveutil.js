@@ -102,3 +102,22 @@ export function sortRows(rows, key = 'name', dir = 1) {
     : key === 'size' ? (a, b) => (a.file && b.file ? (a.file.size_bytes ?? -1) - (b.file.size_bytes ?? -1) || byName(a, b) : byName(a, b)) : byName;
   return [...rows].sort((a, b) => ((a.folder ? 0 : 1) - (b.folder ? 0 : 1)) || dir * cmp(a, b));
 }
+
+// ---------------------------------------------------------------- open uploaded office files in the editors
+/** 'doc' or 'sheet' when an uploaded file can be opened as an editable copy in Docs or Sheets; otherwise null. */
+export function convertTarget(f) {
+  if (!f || f.kind !== 'file') return null; const ext = (/\.([a-z0-9]+)$/i.exec(f.name ?? '')?.[1] ?? '').toLowerCase(); const m = String(f.mime_type ?? '');
+  if (ext === 'docx' || /wordprocessingml/.test(m) || ['md', 'markdown', 'txt', 'html', 'htm'].includes(ext)) return 'doc';
+  if (['xlsx', 'xlsm', 'xls', 'ods', 'csv', 'tsv'].includes(ext) || /spreadsheetml|ms-excel|opendocument\.spreadsheet|text\/csv/.test(m)) return 'sheet';
+  return null;
+}
+/** Word and Excel files open in the editors by default; text, web pages and CSV keep their preview and get "Open in Docs/Sheets" in the menu. */
+export const opensInEditor = (f) => convertTarget(f) && /\.(docx|xlsx|xlsm|xls|ods)$/i.test(f.name ?? '');
+/** The bytes of a stored Drive file as a File (name kept), or null. */
+export async function fromDrive(api, id) {
+  try {
+    const [m, d] = await Promise.all([api.call('drive.files.get', { id }), api.call('drive.files.download', { id })]);
+    const url = d.ok && d.data?.[0]?.url; if (!url) return null; const r = await fetch(url); if (!r.ok) return null;
+    const name = (m.ok && m.data?.[0]?.name) || 'file'; const b = await r.blob(); return new File([b], name, { type: b.type || (m.data?.[0]?.mime_type ?? '') });
+  } catch { return null; }
+}

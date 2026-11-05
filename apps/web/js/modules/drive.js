@@ -7,7 +7,7 @@ import { emptyBook, serializeBook, MIME as SHEET_MIME } from './sheetmodel.js';
 import { mediaHref } from './mediamodel.js';
 import { emptyBoard } from './boardmodel.js';
 import { ICONS } from '../icons.js';
-import { DOC_MIME, BOARD_MIME, CORS_HINT, previewKind, fileType, matchesType, isImage, formatSize, classifyUploadError, precheckUploads, sortRows } from './driveutil.js';
+import { DOC_MIME, BOARD_MIME, CORS_HINT, previewKind, convertTarget, opensInEditor, fileType, matchesType, isImage, formatSize, classifyUploadError, precheckUploads, sortRows } from './driveutil.js';
 
 export const driveHref = (space, folder) => `#/drive${space === 'personal' ? '/personal' : ''}${folder ? `/f/${folder}` : ''}`;
 const when = (iso) => (iso ? new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '');
@@ -158,7 +158,7 @@ export function driveView({ api, ctx, route }) {
       h('div', { class: 'gcard-foot' }, h('span', { class: 'gname-line' }, h('a', { class: 'gname', href: driveHref(space, d.id), title: d.name }, d.name), lockMark(d), pwMark(d)), h('span', { class: 'drv-sub on' }, `Folder · ${fileCount(d)}`))); }
     const f = r.file; const ty = fileType(f); const href = openHref(f);
     const artEl = art(f, true);
-    return h('article', { class: 'gcard', role: 'listitem', 'data-item': f.id, tabindex: '-1' }, href ? h('a', { class: 'gcard-art', href, 'aria-label': `Open ${f.name}`, tabindex: '-1' }, artEl) : h('button', { type: 'button', class: 'gcard-art', 'aria-label': `${previewKind(f) ? 'Preview' : 'Download'} ${f.name}`, tabindex: '-1', onclick: () => openFile(f) }, artEl),
+    return h('article', { class: 'gcard', role: 'listitem', 'data-item': f.id, tabindex: '-1' }, href ? h('a', { class: 'gcard-art', href, 'aria-label': `Open ${f.name}`, tabindex: '-1' }, artEl) : h('button', { type: 'button', class: 'gcard-art', 'aria-label': `${opensInEditor(f) && canWrite ? 'Open' : previewKind(f) ? 'Preview' : 'Download'} ${f.name}`, tabindex: '-1', onclick: () => openFile(f) }, artEl),
       pick(f), moreBtn(f, false), h('div', { class: 'gcard-foot' }, h('span', { class: 'gname-line' }, nameOf(f), starMark(f), lockMark(f), f.protected_sop ? tag('SOP', 'ok') : null), h('span', { class: 'drv-sub on' }, [ty.name, formatSize(f.size_bytes)].filter(Boolean).join(' · '))));
   }
   function paintSel() {
@@ -178,8 +178,10 @@ export function driveView({ api, ctx, route }) {
   function rowMenu(anchor, item, isFolder) {
     const mutable = canWrite && !item.protected_sop; const href = isFolder ? null : openHref(item); const pv = !isFolder && !href && previewKind(item);
     popMenu(anchor, [
-      isFolder ? { label: 'Open', ic: 'folder', on: () => ctx.go(driveHref(space, item.id)) } : { label: href ? 'Open' : pv ? 'Preview' : 'Download', ic: href || pv ? 'eye' : 'download', on: () => openFile(item) },
+      isFolder ? { label: 'Open', ic: 'folder', on: () => ctx.go(driveHref(space, item.id)) } : { label: href || (opensInEditor(item) && canWrite) ? 'Open' : pv ? 'Preview' : 'Download', ic: href || pv || opensInEditor(item) ? 'eye' : 'download', on: () => openFile(item) },
       ...(!isFolder && href && previewKind(item) ? [{ label: 'Preview', ic: 'eye', on: () => preview(item) }] : []),
+      ...(!isFolder && convertTarget(item) && !opensInEditor(item) && canWrite ? [{ label: convertTarget(item) === 'doc' ? 'Open in Docs' : 'Open in Sheets', ic: convertTarget(item) === 'doc' ? 'doc' : 'table', on: () => openInEditor(item) }] : []),
+      ...(!isFolder && opensInEditor(item) && previewKind(item) ? [{ label: 'Preview', ic: 'eye', on: () => preview(item) }] : []),
       !isFolder && !href ? { label: 'Download', ic: 'download', on: () => download(item) } : null,
       isFolder ? null : { label: stars.has(item.id) ? 'Remove star' : 'Star', ic: 'star', on: () => toggleStar([item.id]) },
       isFolder ? null : { label: 'Details', ic: 'info', on: () => details(item) },
@@ -190,7 +192,15 @@ export function driveView({ api, ctx, route }) {
       canWrite && !isFolder ? { label: 'Make a copy', ic: 'copy', on: () => copyItem(item) } : null,
       mutable ? { label: 'Move to Trash', ic: 'trash', danger: true, on: () => (isFolder ? trashFolder(item) : trashMany([item])) } : null], `Actions for ${item.name}`);
   }
-  const openFile = (f) => { const href = openHref(f); if (href) ctx.go(href); else if (previewKind(f)) preview(f); else download(f); };
+  const openFile = (f) => { const href = openHref(f); if (href) ctx.go(href); else if (opensInEditor(f) && canWrite) openInEditor(f); else if (previewKind(f)) preview(f); else download(f); };
+  /** "Open in Docs / Sheets": an editable copy next to the uploaded file (the original stays as it is), filled from the file by the editor. */
+  async function openInEditor(f) {
+    const t = convertTarget(f); if (!t) return; if (!canWrite) return toast('You can view this file but not add files here, so it can’t be opened in the editor. Download it instead.', false);
+    const name = (f.name.replace(/\.[^.]+$/, '') || f.name).slice(0, 200); toast(`Opening ${f.name} in ${t === 'doc' ? 'Docs' : 'Sheets'}…`);
+    const r = await api.call('drive.files.create', { space, name, kind: 'document', mime_type: t === 'doc' ? DOC_MIME : SHEET_MIME, body: t === 'doc' ? serialize(emptyDoc()) : serializeBook(emptyBook()), ...(f.folder_id ? { folder: f.folder_id } : {}) });
+    if (!r.ok) return fail(r, 'open that file in the editor');
+    ctx.go(`${openHref(r.data[0])}?import=${f.id}`);
+  }
   /** Opens the menu where the pointer is (right-click) or under the item (menu key). */
   function menuAt(itemEl, x, y) {
     const rec = byId.get(itemEl.dataset.item); if (!rec) return;

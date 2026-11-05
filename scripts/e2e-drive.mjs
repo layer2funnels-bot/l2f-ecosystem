@@ -178,6 +178,25 @@ await shot('preview-image');
 await p.keyboard.press('ArrowRight'); await p.waitForTimeout(300); await p.keyboard.press('Escape');
 await rowOf(PDF).click({ button: 'right' }); await p.getByRole('button', { name: 'Preview', exact: true }).click(); await p.waitForSelector('.drv-lb .lb-frame', { timeout: 9000 }); const frameSrc = await p.locator('.lb-frame').getAttribute('src'); await p.keyboard.press('Escape');
 check('DR28', 'A PDF opens in a frame served from the storage address (without the forced-download parameter)', !!frameSrc && !frameSrc.includes('download='), frameSrc);
+// uploaded Word / Excel / CSV files open as editable copies in Docs and Sheets; the original stays as it was
+{
+  const D = require(new URL('../apps/docs-io/node_modules/docx/dist/index.cjs', import.meta.url).pathname);
+  const docxBuf = await D.Packer.toBuffer(new D.Document({ sections: [{ children: [new D.Paragraph({ text: 'Imported heading', heading: D.HeadingLevel.HEADING_1 }), new D.Paragraph('Body from Word')] }] }));
+  const WD = `${U('brief')}.docx`, CS = `${U('nums')}.csv`;
+  await pick([{ name: WD, mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', buffer: docxBuf }, { name: CS, mimeType: 'text/csv', buffer: Buffer.from('Item,Qty\nApples,3\nPears,4\n') }]);
+  for (const n of [WD, CS]) await p.locator('.up-row', { hasText: n }).locator('.up-state', { hasText: 'done' }).waitFor({ timeout: 15000 });
+  await p.locator(`button.linklike:text-is("${WD}")`).first().click(); await p.waitForURL(/#\/doc\/[0-9a-f-]+$/, { timeout: 15000 });
+  const did = p.url().split('#/doc/')[1];
+  let body = '';
+  for (let t = 0; t < 40 && !body.includes('Body from Word'); t++) { await p.waitForTimeout(300); body = (await q('select v.body from files f join file_versions v on v.file_id = f.id and v.version = f.current_version where f.id = $1', [did]))[0]?.body ?? ''; }
+  check('DR27b', 'Clicking an uploaded Word file opens an editable copy in Docs with its text, saved; the .docx stays in Drive', body.includes('Imported heading') && body.includes('Body from Word') && !!(await dbFile(WD)), body.slice(0, 120));
+  await go('#/drive'); await rowOf(CS).click({ button: 'right' });
+  const hasOpen = (await p.getByRole('button', { name: 'Open in Sheets', exact: true }).count()) === 1; await p.getByRole('button', { name: 'Open in Sheets', exact: true }).click();
+  await p.waitForURL(/#\/sheet\/[0-9a-f-]+$/, { timeout: 15000 }); const sid = p.url().split('#/sheet/')[1]; body = '';
+  for (let t = 0; t < 40 && !body.includes('Pears'); t++) { await p.waitForTimeout(300); body = (await q('select v.body from files f join file_versions v on v.file_id = f.id and v.version = f.current_version where f.id = $1', [sid]))[0]?.body ?? ''; }
+  check('DR27c', 'A CSV keeps its preview and offers "Open in Sheets", which makes a saved spreadsheet with its cells', hasOpen && body.includes('Apples') && body.includes('Pears'), body.slice(0, 120));
+  await go('#/drive');
+}
 await rowOf(A1).click({ button: 'right' }); await p.getByRole('button', { name: 'Star', exact: true }).click();
 check('DR29', 'Starring marks the file, and "Starred" shows only starred files (remembered after reload)', (await rowOf(A1).locator('.drv-star').count()) === 1);
 await p.getByRole('button', { name: 'Starred', exact: true }).click(); await p.waitForFunction((n) => document.querySelectorAll('.drv-tbl tbody tr').length === 1 && document.querySelector('.drv-tbl tbody tr').innerText.includes(n), A1, { timeout: 9000 });

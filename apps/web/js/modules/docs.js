@@ -13,6 +13,7 @@ import { blocksFromHtml, fillToc, fillNotes, dataUrlToBlob } from './docdom.js';
 import { blocksFromMarkdown, blocksFromText } from './docmd.js';
 import { createEditor } from './docedit.js';
 import { download, safeName, loadIo, printBlocks } from './docexport.js';
+import { fromDrive } from './driveutil.js';
 import { LANGS, SPEAKER_COLOURS, isUrdu, fmtClock, applyVoiceCommands, withSpacing, createRecognizer, voiceSupported, ERRORS, isTranscriptLine } from './docvoice.js';
 import { SpeakerClusters, fingerprint, frameFeatures } from './docspeaker.js';
 
@@ -645,6 +646,8 @@ export function docView({ api, id, ctx, opts = {} }) {
     function paintTableBar() { const c = readOnly || mode === 'read' ? null : ed.tableCell(); const on = Boolean(c); if (tbar.hidden === on) tbar.hidden = !on; }
     let toolRaf = 0; document.addEventListener('selectionchange', function f() { if (gone()) { document.removeEventListener('selectionchange', f); return; } if (toolRaf) return; toolRaf = requestAnimationFrame(() => { toolRaf = 0; if (page.contains(getSelection()?.anchorNode)) paintTools(); }); });
     if (readOnly) lockTools();
+    { const src = new URLSearchParams(location.hash.split('?')[1] ?? '').get('import');   // opened from Drive: "Open in Docs" on an uploaded Word/text file
+      if (src) { history.replaceState(null, '', location.hash.split('?')[0]); if (!readOnly) fromDrive(api, src).then(async (f) => { if (!f) return toast('Couldn’t read the original file. Use File › Open to try again.', false); await importFile(f, { direct: true }); await save({ manual: true }); }); } }
 
     // ---- footnotes, copies, folders, named versions, preview, modes
     function addNote() {
@@ -723,8 +726,11 @@ export function docView({ api, id, ctx, opts = {} }) {
     async function openFile() {
       if (readOnly) return;
       const inp = h('input', { type: 'file', accept: '.docx,.md,.markdown,.txt,.html,.htm,text/plain,text/markdown,text/html,application/vnd.openxmlformats-officedocument.wordprocessingml.document', class: 'sr', tabindex: '-1', 'aria-hidden': 'true' });
-      inp.addEventListener('change', async () => {
-        const f = inp.files[0]; inp.remove(); if (!f) return;
+      inp.addEventListener('change', () => { const f = inp.files[0]; inp.remove(); if (f) importFile(f); });
+      document.body.append(inp); inp.click();
+    }
+    /** Brings a file's content into the open tab. `direct`: no "replace?" question (a fresh copy made from a Drive file). */
+    async function importFile(f, { direct = false } = {}) {
         if (f.size > 25 * 1024 * 1024) { toast('That file is over 25 MB.', false); return; }
         const ext = (/\.([a-z0-9]+)$/i.exec(f.name)?.[1] ?? '').toLowerCase(); toast(`Opening ${f.name}…`);
         try {
@@ -738,10 +744,8 @@ export function docView({ api, id, ctx, opts = {} }) {
           for (const b of list) { if (b.t === 'img' && !b.f) { const blob = dataUrlToBlob(b.src); const fid = blob ? await uploadImage(blob, 'imported-image') : null; if (fid) out.push({ t: 'img', f: fid, alt: b.alt }); } else out.push(b); }
           if (!out.length) { toast('That file has no text to import.', false); return; }
           const apply = () => { checkpoint(); ed.load(normBlocks(out)); onChange('edit'); toast('Imported. Check the layout, then save.'); };
-          if (isEmpty({ blocks: ed.blocks() })) apply(); else dialog({ title: 'Replace this tab with the file?', body: h('p', {}, `The content of “${f.name}” will replace what is in this tab. You can undo it, and the earlier version stays in History.`), actions: [{ label: 'Replace', cls: 'primary', on: apply }, { label: 'Cancel' }] });
+          if (direct || isEmpty({ blocks: ed.blocks() })) apply(); else dialog({ title: 'Replace this tab with the file?', body: h('p', {}, `The content of “${f.name}” will replace what is in this tab. You can undo it, and the earlier version stays in History.`), actions: [{ label: 'Replace', cls: 'primary', on: apply }, { label: 'Cancel' }] });
         } catch { toast('Couldn’t read that file.', false); }
-      });
-      document.body.append(inp); inp.click();
     }
     const multi = () => tabCount(doc) > 1;
     const FORMATS = [['docx', 'Word (.docx)'], ['pdf', 'PDF (.pdf, via Save as PDF)'], ['odt', 'OpenDocument text (.odt)'], ['rtf', 'Rich Text (.rtf)'], ['txt', 'Plain text (.txt)'], ['html', 'Web page (.html)'], ['zip', 'Web page with pictures (.zip)'], ['epub', 'EPUB book (.epub)'], ['md', 'Markdown (.md)']];
