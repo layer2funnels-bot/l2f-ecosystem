@@ -15,7 +15,7 @@ alter table public.follows drop constraint follows_entity_type_check,
 alter table public.notifications drop constraint notifications_entity_type_check,
   add constraint notifications_entity_type_check check (entity_type in ('project_task', 'pm_task'));
 alter table public.notifications drop constraint notifications_kind_check,
-  add constraint notifications_kind_check check (kind in ('assigned', 'mentioned', 'commented', 'completed', 'due_changed'));
+  add constraint notifications_kind_check check (kind in ('assigned', 'mentioned', 'commented', 'completed', 'unblocked', 'due_changed'));   -- keeps 0036's 'unblocked'
 
 create or replace function private.collab_scope(p_ws uuid, p_type text, p_id uuid, out client_id uuid, out project_id uuid, out view_perm text)
 language plpgsql stable security definer set search_path = '' as $$
