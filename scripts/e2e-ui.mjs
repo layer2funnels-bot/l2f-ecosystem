@@ -313,13 +313,15 @@ await page.goBack(); await page.reload(); await wait('The sky follows your time 
   await page.getByRole('button', { name: T1, exact: true }).click(); await page.getByLabel('Add a comment').waitFor({ timeout: 9000 });
   await page.getByLabel('Add a comment').fill('Draft is in Drive'); await page.keyboard.press('Control+Enter');
   await page.getByText('Draft is in Drive', { exact: true }).last().waitFor({ timeout: 9000 });
-  check('P4', 'A comment on a task is saved in the shared comments service', (await admin.query("select count(*)::int n from comments c join pm_tasks t on t.id = c.entity_id where c.entity_type = 'pm_task' and t.title = $1", [T1])).rows[0].n === 1);
+  const saved = async () => (await admin.query("select count(*)::int n from comments c join pm_tasks t on t.id = c.entity_id where c.entity_type = 'pm_task' and t.title = $1", [T1])).rows[0].n;
+  let nC = await saved(); for (let n = 0; n < 30 && nC !== 1; n++) { await page.waitForTimeout(100); nC = await saved(); }
+  check('P4', 'A comment on a task is saved in the shared comments service', nC === 1, `${nC} saved; recent API calls: ${net.slice(-4).join(' | ')}`);
   check('P5', 'The task panel opens below the shell header (the organization switcher stays reachable)', await page.evaluate(() => {
     const host = document.querySelector('.projects-mount'); const panel = host?.shadowRoot?.querySelector('.pm-task'); const top = host?.getBoundingClientRect().top ?? 0;
     return !!panel && panel.getBoundingClientRect().top >= top - 1;
   }));
   await page.keyboard.press('Escape');
-  await page.goto(`${base}/#/projects/p/00000000-0000-0000-0000-000000000000`); await page.getByText(/not found|no longer have access/i).first().waitFor({ timeout: 9000 });
+  await page.goto(`${base}/#/projects/p/00000000-0000-0000-0000-000000000000`); await page.getByText("That project doesn't exist").first().waitFor({ timeout: 9000 });
   check('P6', 'A project id that does not exist (or is not yours) shows a plain not-found state', true);
   await page.goto(`${base}/#/launcher`); await wait('The sky follows your time of day');
 }

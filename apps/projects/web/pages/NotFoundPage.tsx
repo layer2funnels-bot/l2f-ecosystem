@@ -5,7 +5,7 @@ import { EmptyState } from '../ui/Feedback.tsx';
 export function NotFoundPage({ kind = 'page' }: { kind?: 'page' | 'project' | 'forbidden' }) {
   const copy = {
     page: { icon: 'search' as const, title: "We can't find that page", text: 'The link may be mistyped or the page may have moved.' },
-    project: { icon: 'folder' as const, title: "That project doesn't exist", text: 'It may have been deleted, or it belongs to a different organization. Try switching organization from the sidebar.' },
+    project: { icon: 'folder' as const, title: "That project doesn't exist", text: 'It may have been deleted, or it belongs to a different organization. Try switching organization at the top of the page.' },
     forbidden: { icon: 'lock' as const, title: "You don't have access to this", text: 'Ask a project manager or an organization admin to add you.' },
   }[kind];
   return (
