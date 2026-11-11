@@ -82,6 +82,14 @@ const other = await P('comments.remove', { id: cm.r.id }, U.LED, ORG.L);
 check('PA24', 'Only the author removes a comment', other.status !== 200 && (await P('comments.remove', { id: cm.r.id }, U.LO, ORG.L)).status === 200);
 await P('tasks.update', { id: t1.r.id, patch: { status: 'done' } }, U.LO, ORG.L);
 check('PA25', 'Completing a task tells its followers (not the person who completed it)', (await rows("select count(*)::int n from notifications where kind = 'completed' and entity_id = $1 and user_id = $2", [t1.r.id, U.LO]))[0].n === 0);
+// emergency access (0050): the ecosystem's one owner-only, reasoned, logged, notified route; read-only
+const open = (u, owner, reason) => api.handle({ operation: 'pm.personal.open', input: { owner, reason }, auth: { userId: u, email: 'x@example.com' }, headers: { 'x-org-id': ORG.L } });
+const bg = await open(U.LO, U.LED, 'Eddie is away and the client needs the draft today');
+check('PA26', 'The organization owner can open a person’s personal projects only through emergency access, and sees them read-only', bg.status === 200 && bg.body.data.some((r) => r.project_name === 'My notes' && r.task_title === 'Private thought'));
+check('PA27', 'It is logged with the reason and the person is told', (await rows("select count(*)::int n from drive_break_glass where scope = 'projects' and owner_id = $1 and reason like 'Eddie is away%'", [U.LED]))[0].n === 1 && (await rows("select count(*)::int n from drive_notices where user_id = $1 and kind = 'personal_projects_opened'", [U.LED]))[0].n === 1);
+check('PA28', 'Without a real reason it is refused', (await open(U.LO, U.LED, 'because')).status !== 200);
+check('PA29', 'An editor cannot use it (nothing returned, nothing logged)', ((await open(U.LED, U.LO, 'I want to look at the owner projects')).body?.data?.length ?? 0) === 0 && (await rows("select count(*)::int n from drive_break_glass where accessed_by = $1", [U.LED]))[0].n === 0);
+check('PA30', 'Opening changes nothing: the project is still private to its owner', (await P('projects.get', { id: mine.r.id }, U.LO, ORG.L)).status === 404);
 check('PA17', 'No database text in any log line', logs.length > 0 && !logs.some((l) => /select |insert |update |delete |constraint|relation|column/i.test(JSON.stringify(l))));
 
 const failed = results.filter((r) => !r.ok);

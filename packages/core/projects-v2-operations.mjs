@@ -19,7 +19,15 @@ function publicOf(e) {
   return { code: `pm_${e.code}`, publicError: { status: STATUS[e.code], code: e.code, message: e.message, ...(e.field ? { fields: [e.field] } : {}) } };
 }
 
-export const projectsV2Operations = Object.keys(registry).map((name) => defineOperation({
+// Emergency access to someone's personal projects (migration 0050): the same owner-only power, log and notice as Drive's
+// personal space. Read-only snapshot; a reason is required; the person is told.
+const personalOpen = defineOperation({
+  name: 'pm.personal.open', class: 'sensitive',
+  input: { owner: { type: 'uuid', required: true }, reason: { type: 'text', required: true, min: 10, max: 500 } },
+  run: (q, _c, i) => q('select * from pm_break_glass_open($1, $2)', [i.owner, i.reason]),
+});
+
+export const projectsV2Operations = [personalOpen, ...Object.keys(registry).map((name) => defineOperation({
   name: `pm.${name}`,
   class: SENSITIVE.has(name) ? 'sensitive' : READ.test(name) || name === 'session.me' ? 'read' : 'write',
   input: { args: { type: 'json', max: 120000 } },
@@ -29,4 +37,4 @@ export const projectsV2Operations = Object.keys(registry).map((name) => defineOp
       return [{ r: out === undefined ? null : out }];
     } catch (e) { throw publicOf(e); }
   },
-}));
+}))];
