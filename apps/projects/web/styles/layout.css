@@ -236,3 +236,12 @@ li.pm-prow + li.pm-prow { border-top: 1px solid var(--pm-border); }
   .pm-menu__item { min-height: 40px; }
   .pm-phead__members, .pm-phead__namebtn { min-height: 36px; }
 }
+
+/* Inside the ecosystem shell: full-window layers (dialogs, the task panel, the mobile menu, pickers, the media viewer)
+   start below the shell's own header, so its organization switcher, bell and menus stay visible and reachable.
+   --pm-shell-top is measured by embed.tsx where the shell places Projects. */
+.pm-overlay, .pm-scrim, .pp-sheet, .pm-lb, .pm-app.is-mobile .pm-sidebar-wrap { top: var(--pm-shell-top, 0px); }
+.pm-dialog.pm-task.is-wide { top: var(--pm-shell-top, 0px); height: calc(100dvh - var(--pm-shell-top, 0px)); }
+@media (max-width: 767px) {
+  .pm-dialog.pm-task, .pm-dialog.pm-task.is-wide { top: var(--pm-shell-top, 0px); height: calc(100dvh - var(--pm-shell-top, 0px)); }
+}

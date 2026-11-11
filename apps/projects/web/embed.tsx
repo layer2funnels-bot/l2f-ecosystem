@@ -27,7 +27,8 @@ export async function mount(el: HTMLElement, host: Host): Promise<() => void> {
     const dark = html.dataset.theme === 'dark' || (html.dataset.theme !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
     box.dataset.theme = dark ? 'dark' : 'light'; if (layerRef) layerRef.dataset.theme = box.dataset.theme;
     box.dataset.org = host.orgs.find((o) => o.org_id === host.org)?.slug === 'aurj' ? 'aurj' : 'l2f'; if (layerRef) layerRef.dataset.org = box.dataset.org;
-    box.style.setProperty('--pm-shell-top', `${Math.max(0, Math.round(el.getBoundingClientRect().top + window.scrollY))}px`);
+    const top = `${Math.max(0, Math.round(el.getBoundingClientRect().top + window.scrollY))}px`;
+    box.style.setProperty('--pm-shell-top', top); layerRef?.style.setProperty('--pm-shell-top', top);
   };
   sync();
   const mo = new MutationObserver(sync); mo.observe(html, { attributes: true, attributeFilter: ['data-theme'] });
