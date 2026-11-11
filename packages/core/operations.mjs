@@ -10,7 +10,7 @@ export { defineOperation };
 
 import { funnelOperations } from './funnel-operations.mjs';
 import { clientsOperations } from './client-operations.mjs';
-import { projectsOperations } from './project-operations.mjs';
+import { projectsCompatOperations } from './projects-compat-operations.mjs';   // the old Projects app retired with migration 0051
 import { collabOperations } from './collab-operations.mjs';
 import { driveOperations } from './drive-operations.mjs';
 import { plannerOperations } from './planner-operations.mjs';
@@ -25,7 +25,7 @@ import { projectsV2Operations } from './projects-v2-operations.mjs';
 export const operations = Object.freeze(Object.fromEntries([
   ...funnelOperations,
   ...clientsOperations,
-  ...projectsOperations,
+  ...projectsCompatOperations,
   ...collabOperations,
   ...driveOperations,
   ...plannerOperations,

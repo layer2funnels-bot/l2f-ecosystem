@@ -36,8 +36,8 @@ await db.query("insert into access_assignments (workspace_id,access_level_id,pri
 
 // ---- seed: shared and internal items for client one, shared items for client two, an internal item in every sensitive table
 const P = { v: id(), i: id(), v2: id() }, T = { v: id(), i: id(), v2: id() };
-await db.query("insert into projects (id,workspace_id,client_id,name,description,status,client_visible) values ($1,$4,$5,'Visible project','INTERNAL-PROJECT-NOTES','active',true),($2,$4,$5,'Internal project','x','active',false),($3,$4,$6,'Client two project','y','active',true)", [P.v, P.i, P.v2, L, C1, C2]);
-await db.query("insert into project_tasks (id,workspace_id,project_id,title,notes,client_visible) values ($1,$4,$5,'Visible task','INTERNAL-TASK-NOTES',true),($2,$4,$5,'Internal task','x',false),($3,$4,$6,'Client two task','y',true)", [T.v, T.i, T.v2, L, P.v, P.v2]);
+await db.query("insert into pm_projects (id,workspace_id,client_id,name,description,status,client_visible) values ($1,$4,$5,'Visible project','INTERNAL-PROJECT-NOTES','on_track',true),($2,$4,$5,'Internal project','x','on_track',false),($3,$4,$6,'Client two project','y','on_track',true)", [P.v, P.i, P.v2, L, C1, C2]);
+await db.query("insert into pm_tasks (id,workspace_id,project_id,title,description,client_visible,number) values ($1,$4,$5,'Visible task','INTERNAL-TASK-NOTES',true,0),($2,$4,$5,'Internal task','x',false,0),($3,$4,$6,'Client two task','y',true,0)", [T.v, T.i, T.v2, L, P.v, P.v2]);
 const mkfile = (id_, ws, client, name, visible, kind = 'file') => db.query("insert into files (id,workspace_id,client_id,space,name,kind,mime_type,size_bytes,storage_path,uploaded_by,client_visible) values ($1,$2,$3,'client',$4,$7,'application/pdf',10,$5,$6,$8)", [id_, ws, client, name, `${ws}/clients/${client}/${name}`, U.ED, kind, visible]);
 const F = { v: id(), i: id(), v2: id(), a: id() };
 await mkfile(F.v, L, C1, 'shared.pdf', true); await mkfile(F.i, L, C1, 'internal-pricing.pdf', false); await mkfile(F.v2, L, C2, 'two.pdf', true); await mkfile(F.a, L, C1, 'old.pdf', true);
@@ -171,10 +171,10 @@ await asUser(U.CL1);
 const tables = (await rows("select tablename t from pg_tables where schemaname = 'public' order by 1")).map((x) => x.t);
 const visible = {};
 for (const t of tables) { try { const n = (await rows(`select count(*)::int n from public.${t}`))[0].n; if (n > 0) visible[t] = n; } catch { /* no privilege = invisible */ } }
-const EXPECT = new Set(['profiles', 'app_pages', 'approval_events', 'approvals', 'clients', 'client_requests', 'client_updates', 'files', 'memberships', 'portal_messages', 'project_tasks', 'projects', 'workspaces']);
+const EXPECT = new Set(['profiles', 'app_pages', 'approval_events', 'approvals', 'clients', 'client_requests', 'client_updates', 'files', 'memberships', 'portal_messages', 'pm_tasks', 'pm_projects', 'workspaces']);
 const extra = Object.keys(visible).filter((t) => !EXPECT.has(t));
 check('G38', `The table sweep: of ${tables.length} tables a client can read rows in ${Object.keys(visible).length}, all expected (${extra.length ? 'UNEXPECTED: ' + extra.join(',') : 'none unexpected'})`, extra.length === 0, JSON.stringify(visible));
-check('G39', 'Of the tables a client may read, they see exactly the shared rows of their own client (1 approval, 1 project, 1 task, 1 file) and their own organization row, client, membership and profile', visible.clients === 1 && visible.memberships === 1 && visible.workspaces === 1 && visible.profiles === 1 && visible.approvals === 1 && visible.approval_events === 2 && visible.projects === 1 && visible.project_tasks === 1 && visible.files === 1, JSON.stringify(visible));
+check('G39', 'Of the tables a client may read, they see exactly the shared rows of their own client (1 approval, 1 project, 1 task, 1 file) and their own organization row, client, membership and profile', visible.clients === 1 && visible.memberships === 1 && visible.workspaces === 1 && visible.profiles === 1 && visible.approvals === 1 && visible.approval_events === 2 && visible.pm_projects === 1 && visible.pm_tasks === 1 && visible.files === 1, JSON.stringify(visible));
 const wrote = [];
 for (const t of tables.filter((x) => !['portal_messages', 'approvals', 'client_requests'].includes(x))) { // a client has no write path anywhere except messages, approval decisions and request answers
   const cols = (await rows("select column_name c from information_schema.columns where table_schema='public' and table_name=$1 and column_name in ('workspace_id')", [t]));
@@ -185,11 +185,11 @@ for (const t of tables.filter((x) => !['portal_messages', 'approvals', 'client_r
   wrote.push([t, del, upd, after]);
 }
 await asSuper();
-const stillThere = await rows('select (select count(*)::int from clients) c, (select count(*)::int from projects) p, (select count(*)::int from files) f, (select count(*)::int from project_tasks) t, (select count(*)::int from memberships) m');
+const stillThere = await rows('select (select count(*)::int from clients) c, (select count(*)::int from pm_projects) p, (select count(*)::int from files) f, (select count(*)::int from pm_tasks) t, (select count(*)::int from memberships) m');
 check('G40', 'A client account cannot delete or update rows in any other table: nothing was removed', stillThere[0].c === 3 && stillThere[0].p === 3 && stillThere[0].f === 4 && stillThere[0].t === 3 && stillThere[0].m >= 7, JSON.stringify(stillThere[0]));
 await asUser(U.CL1);
 check('G41', 'A client cannot create a project, file, client, task or approval request, or add a member', (await Promise.all([
-  errCode(() => db.query("insert into projects (workspace_id,client_id,name) values ($1,$2,'x')", [L, C1])),
+  errCode(() => db.query("insert into pm_projects (workspace_id,client_id,name) values ($1,$2,'x')", [L, C1])),
   errCode(() => db.query("insert into clients (workspace_id,name) values ($1,'x')", [L])),
   errCode(() => db.query("insert into approvals (workspace_id,subject_type,subject_id,requested_by) values ($1,'other',$2,$3)", [L, id(), U.CL1])),
   errCode(() => db.query("insert into memberships (workspace_id,user_id,kind,role) values ($1,$2,'staff','owner')", [L, U.CL1])),

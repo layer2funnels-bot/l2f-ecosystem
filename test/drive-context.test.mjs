@@ -15,7 +15,7 @@ let chain = Promise.resolve();
 const acquire = () => { const prev = chain; let release; chain = new Promise((r) => { release = r; }); return prev.then(() => ({ query: (s, p) => db.query(s, p), release })); };
 const BIG = { read: { max: 1e6, windowMs: 6e4 }, write: { max: 1e6, windowMs: 6e4 }, sensitive: { max: 1e6, windowMs: 6e4 } };
 const api = createApi({ executor: createPgExecutor({ acquire, role: 'app_user' }), logger: createSafeLogger(() => {}), limiter: createRateLimiter({ limits: BIG }) });
-const J = async (op, input, u, org = L) => { const r = await api.handle({ operation: op, input, auth: { userId: u, email: 'x@example.com' }, headers: { 'x-org-id': org } }); return { ...r, row: r.body?.data?.[0], rows: r.body?.data }; };
+const J = async (op, input, u, org = L) => { const r = await api.handle({ operation: op, input, auth: { userId: u, email: 'x@example.com' }, headers: { 'x-org-id': org } }); if (process.env.DEBUG_J) console.log('J', op, r.status, JSON.stringify(r.body).slice(0, 160)); return { ...r, row: r.body?.data?.[0], rows: r.body?.data }; };
 
 await asSuper();
 const L = id(), A = id();
@@ -28,8 +28,10 @@ const lvl = async (name) => (await rows('select id from access_levels where work
 const assign = async (u, l) => db.query("insert into access_assignments (workspace_id,access_level_id,principal_type,principal_id) values ($1,$2,'user',$3)", [L, l, u]);
 const C1 = id(), C2 = id(), PI = id(), P1 = id(), P2 = id(), PA = id();
 await db.query("insert into clients (id,workspace_id,name) values ($1,$3,'Client One'),($2,$3,'Client Two')", [C1, C2, L]);
-await db.query("insert into projects (id,workspace_id,client_id,name) values ($1,$5,null,'Internal'),($2,$5,$6,'One'),($3,$5,$7,'Two'),($4,$8,null,'Aurj project')", [PI, P1, P2, PA, L, C1, C2, A]);
+await db.query("insert into pm_projects (id,workspace_id,client_id,name) values ($1,$5,null,'Internal'),($2,$5,$6,'One'),($3,$5,$7,'Two'),($4,$8,null,'Aurj project')", [PI, P1, P2, PA, L, C1, C2, A]);
 await db.query("insert into memberships (workspace_id,user_id,kind,client_id) values ($1,$2,'client',$3)", [L, U.CL1, C1]);
+// Projects V2 access is project membership (the editor and the viewer are on the three projects; U.PM is on none)
+for (const p of [PI, P1, P2]) await db.query("insert into pm_project_members (workspace_id,project_id,user_id,role) values ($1,$2,$3,'editor'),($1,$2,$4,'viewer')", [L, p, U.ED, U.VW]);
 await db.query("update workspace_apps set enabled=true where workspace_id=$1 and app_key='portal'", [L]);
 await assign(U.ED, await lvl('All clients · edit')); await assign(U.ED, await lvl('All projects · edit'));
 await assign(U.VW, await lvl('All projects · read')); await assign(U.VW, await lvl('All clients · read'));
@@ -71,7 +73,7 @@ await asSuper();
 await db.query('update files set client_visible = true where id = $1', [cboard.id]);
 await asUser(U.CL1);
 check('FC17', 'A client contact does not see a shared document of a project that was not shared with them', (await rows('select id from files')).length === 0);
-await asSuper(); await db.query('update projects set client_visible = true where id = $1', [P1]);
+await asSuper(); await db.query('update pm_projects set client_visible = true where id = $1', [P1]);
 await asUser(U.CL1);
 check('FC18', 'Only when both the document and the project were shared does the client contact see it', (await rows('select id from files')).map((x) => x.id).join() === cboard.id);
 await asSuper();

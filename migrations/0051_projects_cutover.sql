@@ -69,7 +69,9 @@ where t.assignee_id is not null and exists (select 1 from public.memberships m w
 on conflict do nothing;
 
 insert into public.pm_tags (id, workspace_id, name, color)
-select g.id, g.workspace_id, left(btrim(g.name), 40), case when g.color ~ '^#[0-9a-fA-F]{6}$' then g.color else '#64748b' end
+select g.id, g.workspace_id, left(btrim(g.name), 40),
+       case g.color when 'blue' then '#2b5ce6' when 'green' then '#1d6b52' when 'amber' then '#b07a00' when 'red' then '#b42318'
+                    when 'violet' then '#6a3fc9' when 'teal' then '#0e7c86' when 'pink' then '#a33b6b' else '#64748b' end   -- the old app named its eight colours
 from public.project_tags g
 where not exists (select 1 from public.pm_tags x where x.id = g.id)
   and not exists (select 1 from public.pm_tags x where x.workspace_id = g.workspace_id and lower(x.name) = lower(btrim(g.name)));
@@ -110,6 +112,9 @@ update public.notifications n set entity_type = 'pm_task' where n.entity_type = 
 update public.activity_events a set entity_type = 'pm_task' where a.entity_type = 'project_task' and exists (select 1 from public.pm_tasks t where t.id = a.entity_id);
 
 -- rules last (copying them must not act on the moved tasks); a section rule needs its section
+-- The rules guard asks "can the assignee see this project?" for the signed-in organization, which a migration has none of;
+-- these rules were checked when they were made, and the assignee must still be a member (below and by foreign key).
+alter table public.pm_rules disable trigger pm_rules_guard;
 insert into public.pm_rules (id, workspace_id, project_id, trigger, trigger_status, trigger_section, action, assignee_id, priority, due_in_days, tag_id, enabled, created_by, created_at, updated_at)
 select r.id, r.workspace_id, r.project_id, r.trigger,
        case r.trigger_status when 'doing' then 'in_progress' else r.trigger_status end, r.trigger_section, r.action, r.assignee_id,
@@ -119,6 +124,8 @@ from public.project_rules r
 where not exists (select 1 from public.pm_rules x where x.id = r.id)
   and (r.action <> 'tag' or exists (select 1 from public.pm_tags g where g.id = r.tag_id))
   and (r.assignee_id is null or exists (select 1 from public.memberships m where m.workspace_id = r.workspace_id and m.user_id = r.assignee_id));
+
+alter table public.pm_rules enable trigger pm_rules_guard;
 
 set constraints pm_tasks_automate_after deferred;
 

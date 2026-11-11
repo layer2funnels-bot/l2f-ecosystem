@@ -18,8 +18,8 @@ export const portalOperations = [
       (select count(*)::int from approvals a where a.status = 'pending' and a.client_visible) as pending_approvals,
       (select count(*)::int from client_updates u where u.client_visible and u.archived_at is null) as updates,
       (select count(*)::int from files f where f.client_visible and f.archived_at is null) as files,
-      (select count(*)::int from projects p where p.client_visible and p.archived_at is null) as projects,
-      (select count(*)::int from project_tasks t where t.client_visible and t.archived_at is null and t.status <> 'done') as open_tasks`),
+      (select count(*)::int from pm_projects p where p.client_visible and p.archived_at is null and p.deleted_at is null) as projects,
+      (select count(*)::int from pm_tasks t where t.client_visible and t.deleted_at is null and t.status <> 'done') as open_tasks`),
   }),
   C({ name: 'portal.updates.list', class: 'read', run: (q) => q('select u.id, u.title, u.body, u.created_at from client_updates u where u.client_visible and u.archived_at is null order by u.created_at desc limit 100') }),
   C({
@@ -31,11 +31,12 @@ export const portalOperations = [
     name: 'portal.requests.answer', class: 'write', single: true, input: { ...id, response: { type: 'text', required: true, max: 8000 } },
     run: (q, _c, i) => q(`update client_requests set response = $2, status = 'answered' where id = $1 and client_visible and archived_at is null and status = 'open' returning id, status, updated_at`, [i.id, i.response]),
   }),
-  C({ name: 'portal.projects.list', class: 'read', run: (q) => q('select p.id, p.name, p.status, p.start_on, p.due_on from projects p where p.client_visible and p.archived_at is null order by p.due_on nulls last, p.name limit 100') }),
+  C({ name: 'portal.projects.list', class: 'read', run: (q) => q(`select p.id, p.name, case p.status when 'complete' then 'done' when 'on_hold' then 'on_hold' else 'active' end as status, p.start_on, p.due_on
+    from pm_projects p where p.client_visible and p.archived_at is null and p.deleted_at is null order by p.due_on nulls last, p.name limit 100`) }),
   C({
     name: 'portal.tasks.list', class: 'read', input: { project: { type: 'uuid' } },
-    run: (q, _c, i) => q(`select t.id, t.project_id, t.title, t.status, t.due_on, t.completed_at from project_tasks t
-      where t.client_visible and t.archived_at is null and ($1::uuid is null or t.project_id = $1) order by t.due_on nulls last, t.position, t.title limit 200`, [i.project ?? null]),
+    run: (q, _c, i) => q(`select t.id, t.project_id, t.title, case t.status when 'in_progress' then 'doing' when 'in_review' then 'doing' else t.status end as status, t.due_on, t.completed_at
+      from pm_tasks t where t.client_visible and t.deleted_at is null and ($1::uuid is null or t.project_id = $1) order by t.due_on nulls last, t.position, t.title limit 200`, [i.project ?? null]),
   }),
   C({ name: 'portal.files.list', class: 'read', run: (q) => q('select f.id, f.name, f.kind, f.mime_type, f.size_bytes, f.created_at from files f where f.client_visible and f.archived_at is null order by f.created_at desc limit 200') }),
   C({

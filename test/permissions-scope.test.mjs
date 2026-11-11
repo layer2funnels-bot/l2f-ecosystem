@@ -26,7 +26,7 @@ for (const u of [U.ED, U.SC, U.PR, U.VW]) for (const app of ['clients', 'project
 const C1 = id(), C2 = id(), C3 = id(), P1 = id(), P2 = id();
 await db.query("insert into clients (id,workspace_id,name) values ($1,$4,'C1'),($2,$4,'C2'),($3,$4,'C3')", [C1, C2, C3, L]);
 await db.query("insert into memberships (workspace_id,user_id,kind,client_id) values ($1,$2,'client',$3)", [L, U.CL, C3]);
-await db.query("insert into projects (id,workspace_id,client_id,name) values ($1,$3,$4,'P1'),($2,$3,$4,'P2')", [P1, P2, L, C2]);
+await db.query("insert into pm_projects (id,workspace_id,client_id,name) values ($1,$3,$4,'P1'),($2,$3,$4,'P2')", [P1, P2, L, C2]);
 const lvl = async (n) => (await rows('select id from access_levels where workspace_id=$1 and name=$2', [L, n]))[0].id;
 const assign = (u, level, client = null, project = null) => db.query("insert into access_assignments (workspace_id,access_level_id,principal_type,principal_id,client_id,project_id) values ($1,$2,'user',$3,$4,$5)", [L, level, u, client, project]);
 await assign(U.ED, await lvl('All clients · edit'));
