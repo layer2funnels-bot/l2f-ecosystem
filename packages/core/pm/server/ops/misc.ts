@@ -41,13 +41,16 @@ export const miscOps = {
     });
   },
 
+  // The shared ecosystem bell (migration 0049): the same list the shell shows, Projects V2 tasks only here.
   'notifications.list': async (ctx) => asUser(ctx, async (tx) => {
-    const items = (await all(tx, `select n.id, n.kind, n.summary, n.project_id, n.task_id, n.read_at, n.created_at, ${personCols('a', 'a')}
-      from pm_notifications n left join pm_people a on a.id = n.actor_id where n.user_id = pm.uid()
-      order by n.created_at desc, n.id desc limit 100`))
-      .map((r): Notification => ({ id: r.id, kind: r.kind, summary: r.summary, projectId: r.project_id, taskId: r.task_id, actor: person(r, 'a'), readAt: r.read_at, createdAt: r.created_at }));
-    const unread = (await one<Row>(tx, 'select count(*) n from pm_notifications where user_id = pm.uid() and read_at is null'))!.n as number;
-    return { items, unread };
+    const rows = await all(tx, `select n.id, n.kind, n.entity_id, n.title, n.project_id, n.actor_id, n.actor_name, n.read_at, n.created_at
+      from public.my_notifications(100) n where n.entity_type = 'pm_task'`);
+    const verb: Record<string, string> = { assigned: 'assigned you', mentioned: 'mentioned you in', commented: 'commented on', completed: 'completed', due_changed: 'changed the due date of' };
+    const items = rows.map((r): Notification => ({
+      id: r.id, kind: r.kind, summary: `${r.actor_name} ${verb[r.kind] ?? 'updated'} “${r.title}”`, projectId: r.project_id, taskId: r.entity_id,
+      actor: r.actor_id ? { id: r.actor_id, name: r.actor_name, email: '', color: '#3b4a6b' } : null, readAt: r.read_at, createdAt: r.created_at,
+    }));
+    return { items, unread: items.filter((i) => !i.readAt).length };
   }),
 
   'notifications.read': async (ctx, args) => {
@@ -55,8 +58,8 @@ export const miscOps = {
     const everything = args.all === undefined ? false : V.bool(args.all, 'all');
     if (!everything && !ids.length) throw new ApiError('invalid', 'Nothing to mark as read', 'ids');
     return asUser(ctx, async (tx) => {
-      if (everything) await run(tx, 'update pm_notifications set read_at = now() where user_id = pm.uid() and read_at is null');
-      else await run(tx, 'update pm_notifications set read_at = now() where user_id = pm.uid() and read_at is null and id = any($1::uuid[])', [ids]);
+      if (everything) await run(tx, "update public.notifications set read_at = now() where user_id = pm.uid() and entity_type = 'pm_task' and read_at is null");
+      else await run(tx, "update public.notifications set read_at = now() where user_id = pm.uid() and entity_type = 'pm_task' and read_at is null and id = any($1::uuid[])", [ids]);
       return { ok: true } as const;
     });
   },

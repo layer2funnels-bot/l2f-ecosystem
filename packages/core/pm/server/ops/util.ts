@@ -91,19 +91,19 @@ export async function activity(tx: Tx, projectId: string, taskId: string | null,
 }
 
 export async function notify(tx: Tx, ctx: Ctx, o: { userIds: string[]; projectId: string; taskId: string | null; kind: 'assigned' | 'mentioned' | 'commented' | 'completed' | 'due_changed'; summary: string }): Promise<void> {
-  const ids = [...new Set(o.userIds)].filter((u) => u !== ctx.userId); // never notify the actor
-  if (!ids.length) return;
-  await run(tx, `insert into pm_notifications (workspace_id, user_id, project_id, task_id, actor_id, kind, summary)
-    select pm.org(), u, $2, $3, pm.uid(), $4, $5 from unnest($1::uuid[]) u where pm.user_can_view($2, u)`,
-    [ids, o.projectId, o.taskId, o.kind, o.summary]);
+  // The shared ecosystem bell (migration 0049): each person only if they may open the task; never the actor.
+  const ids = [...new Set(o.userIds)].filter((u) => u !== ctx.userId);
+  if (!ids.length || !o.taskId) return;
+  await run(tx, 'select pm.notify($1::uuid[], $2, $3)', [ids, o.kind, o.taskId]);
 }
 
 export async function follow(tx: Tx, projectId: string, taskId: string, userId: string): Promise<void> {
-  await run(tx, `insert into pm_followers (task_id, user_id) select $1, $2 where pm.user_can_view($3, $2) on conflict do nothing`, [taskId, userId, projectId]);
+  void projectId;
+  await run(tx, 'select pm.follow($1, $2)', [taskId, userId]);
 }
 
 export async function followerIds(tx: Tx, taskId: string): Promise<string[]> {
-  return (await all<{ user_id: string }>(tx, 'select user_id from pm_followers where task_id = $1', [taskId])).map((r) => r.user_id);
+  return ((await one<{ ids: string[] }>(tx, 'select pm.follower_ids($1) ids', [taskId]))?.ids ?? []).map(String);
 }
 
 // ───────────── assignees ─────────────
@@ -152,7 +152,7 @@ const TASK_SELECT = `select t.id, t.project_id, p.name project_name, p.color pro
   (select count(*) from pm_checklist_items c where c.task_id = t.id and c.done) c_chk_done,
   (select count(*) from pm_attachments f where f.task_id = t.id and f.deleted_at is null) c_files,
   (select count(*) from pm_task_links l where l.task_id = t.id) c_links,
-  (select count(*) from pm_comments m where m.task_id = t.id and m.deleted_at is null) c_comments,
+  (select count(*) from public.comments m where m.workspace_id = t.workspace_id and m.entity_type = 'pm_task' and m.entity_id = t.id) c_comments,
   (select count(*) from pm_dependencies d join pm_tasks w on w.id = d.depends_on_id where d.task_id = t.id and w.status <> 'done' and w.deleted_at is null) c_wait
   from pm_tasks t join pm_projects p on p.id = t.project_id`;
 

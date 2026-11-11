@@ -26,8 +26,9 @@ async function visibleMentions(tx: Tx, projectId: string, ids: string[]): Promis
 }
 
 async function commentOut(tx: Tx, ctx: Ctx, id: string): Promise<Comment> {
-  const r = await one<Row>(tx, `select c.id, c.body, c.mentions, c.created_at, c.edited_at, c.author_id, ${personCols('u', 'u')}
-    from pm_comments c join pm_people u on u.id = c.author_id where c.id = $1`, [id]);
+  const r = await one<Row>(tx, `select c.id, c.body, c.created_at, c.edited_at, c.author_id, ${personCols('u', 'u')},
+    coalesce((select array_agg(m.user_id order by m.user_id) from public.comment_mentions m where m.workspace_id = c.workspace_id and m.comment_id = c.id), '{}') mentions
+    from public.comments c join pm_people u on u.id = c.author_id where c.id = $1 and c.entity_type = 'pm_task'`, [id]);
   if (!r) throw new ApiError('not_found', 'Comment not found');
   return { id: r.id, author: personOrThrow(r, 'u'), body: r.body, mentions: uuidArray(r.mentions), createdAt: r.created_at, editedAt: r.edited_at, mine: r.author_id === ctx.userId };
 }
@@ -139,12 +140,12 @@ export const collabOps = {
     return asUser(ctx, async (tx) => {
       const t = await taskScope(tx, taskId);
       if (on) await follow(tx, t.project_id, taskId, ctx.userId);
-      else await run(tx, 'delete from pm_followers where task_id = $1 and user_id = pm.uid()', [taskId]);
+      else await run(tx, "delete from public.follows where entity_type = 'pm_task' and entity_id = $1 and user_id = pm.uid()", [taskId]);
       return { following: on };
     });
   },
 
-  // -- comments --
+  // -- comments (the shared ecosystem comments, migration 0049: mentions, followers and the bell are handled there) --
   'comments.add': async (ctx, args) => {
     const taskId = V.uuid(args.taskId, 'taskId');
     const body = V.str(args.body, 'body', { min: 1, max: 10000 });
@@ -152,13 +153,8 @@ export const collabOps = {
     return asUser(ctx, async (tx) => {
       const t = await taskScope(tx, taskId); // any project member (including viewers) may comment
       if (t.deleted_at) throw new ApiError('invalid', 'This task is in the trash. Restore it first.');
-      const mentions = (await visibleMentions(tx, t.project_id, requested));
-      const r = await one<Row>(tx, `insert into pm_comments (task_id, author_id, body, mentions) values ($1, pm.uid(), $2, $3::uuid[]) returning id`, [taskId, body, mentions]);
-      await follow(tx, t.project_id, taskId, ctx.userId);
-      const me = await actorName(tx, ctx);
-      await notify(tx, ctx, { userIds: mentions, projectId: t.project_id, taskId, kind: 'mentioned', summary: `${me} mentioned you in “${t.title}”` });
-      const others = (await followerIds(tx, taskId)).filter((u) => !mentions.includes(u));
-      await notify(tx, ctx, { userIds: others, projectId: t.project_id, taskId, kind: 'commented', summary: `${me} commented on “${t.title}”` });
+      const mentions = await visibleMentions(tx, t.project_id, requested);
+      const r = await one<Row>(tx, "select id from public.comment_add('pm_task', $1, $2, $3::uuid[])", [taskId, body, mentions]);
       await activity(tx, t.project_id, taskId, 'task.commented', {});
       return commentOut(tx, ctx, r!.id);
     });
@@ -169,21 +165,14 @@ export const collabOps = {
     const body = V.str(args.body, 'body', { min: 1, max: 10000 });
     const requested = args.mentions === undefined ? undefined : V.uuidList(args.mentions, 'mentions', 50);
     return asUser(ctx, async (tx) => {
-      const c = await one<Row>(tx, 'select id, project_id, task_id, author_id, mentions from pm_comments where id = $1 and deleted_at is null', [id]);
+      const c = await one<Row>(tx, "select id, project_id, entity_id task_id, author_id from public.comments where id = $1 and entity_type = 'pm_task'", [id]);
       if (!c) throw new ApiError('not_found', 'Comment not found');
       if (c.author_id !== ctx.userId) throw new ApiError('forbidden', 'You can only edit your own comments');
-      let mentions = uuidArray(c.mentions);
-      let added: string[] = [];
+      if ((await run(tx, 'update public.comments set body = $2 where id = $1', [id, body])) === 0) throw new ApiError('not_found', 'Comment not found');
       if (requested) {
-        mentions = (await visibleMentions(tx, c.project_id, requested));
-        added = mentions.filter((m) => !uuidArray(c.mentions).includes(m));
-      }
-      if ((await run(tx, 'update pm_comments set body = $2, mentions = $3::uuid[], edited_at = now() where id = $1', [id, body, mentions])) === 0) {
-        throw new ApiError('not_found', 'Comment not found');
-      }
-      if (added.length) {
-        const t = await taskScope(tx, c.task_id);
-        await notify(tx, ctx, { userIds: added, projectId: c.project_id, taskId: c.task_id, kind: 'mentioned', summary: `${await actorName(tx, ctx)} mentioned you in “${t.title}”` });
+        // newly mentioned people are told (the shared trigger); a mention cannot be taken back once someone was told
+        const mentions = await visibleMentions(tx, c.project_id, requested);
+        await run(tx, `insert into public.comment_mentions (workspace_id, comment_id, user_id) select pm.org(), $1, u from unnest($2::uuid[]) u on conflict do nothing`, [id, mentions]);
       }
       return commentOut(tx, ctx, id);
     });
@@ -192,11 +181,10 @@ export const collabOps = {
   'comments.remove': async (ctx, args) => {
     const id = V.uuid(args.id, 'id');
     return asUser(ctx, async (tx) => {
-      const c = await one<Row>(tx, 'select author_id from pm_comments where id = $1 and deleted_at is null', [id]);
+      const c = await one<Row>(tx, "select author_id from public.comments where id = $1 and entity_type = 'pm_task'", [id]);
       if (!c) throw new ApiError('not_found', 'Comment not found');
-      const role = await orgRole(tx);
-      if (c.author_id !== ctx.userId && role !== 'owner' && role !== 'admin') throw new ApiError('forbidden', 'You can only remove your own comments');
-      if ((await run(tx, 'update pm_comments set deleted_at = now() where id = $1 and deleted_at is null', [id])) === 0) throw new ApiError('not_found', 'Comment not found');
+      if (c.author_id !== ctx.userId) throw new ApiError('forbidden', 'You can only remove your own comments');
+      if ((await run(tx, 'delete from public.comments where id = $1', [id])) === 0) throw new ApiError('not_found', 'Comment not found');
       return { ok: true } as const;
     });
   },

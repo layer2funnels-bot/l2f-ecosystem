@@ -228,8 +228,9 @@ export async function taskDetail(tx: Tx, ctx: Ctx, id: string): Promise<TaskDeta
     where d.task_id = $1 and w.deleted_at is null order by w.number`, [id])).map(ref);
   const blocking = (await all(tx, `select w.id, w.number, w.title, w.status from pm_dependencies d join pm_tasks w on w.id = d.task_id
     where d.depends_on_id = $1 and w.deleted_at is null order by w.number`, [id])).map(ref);
-  const comments = (await all(tx, `select c.id, c.body, c.mentions, c.created_at, c.edited_at, c.author_id, ${personCols('u', 'u')}
-    from pm_comments c join pm_people u on u.id = c.author_id where c.task_id = $1 and c.deleted_at is null order by c.created_at, c.id`, [id]))
+  const comments = (await all(tx, `select c.id, c.body, c.created_at, c.edited_at, c.author_id, ${personCols('u', 'u')},
+    coalesce((select array_agg(m.user_id order by m.user_id) from public.comment_mentions m where m.workspace_id = c.workspace_id and m.comment_id = c.id), '{}') mentions
+    from public.comments c join pm_people u on u.id = c.author_id where c.entity_type = 'pm_task' and c.entity_id = $1 order by c.seq limit 500`, [id]))
     .map((r): Comment => ({ id: r.id, author: personOrThrow(r, 'u'), body: r.body, mentions: uuidArray(r.mentions), createdAt: r.created_at, editedAt: r.edited_at, mine: r.author_id === ctx.userId }));
   const attachments = (await all(tx, `select f.id, f.file_id, f.created_at, ${fileCols}, ${personCols('u', 'u')}
     from pm_attachments f ${fileJoin('f')} left join pm_people u on u.id = f.uploaded_by where f.task_id = $1 and f.deleted_at is null order by f.created_at, f.id`, [id]))
@@ -244,7 +245,7 @@ export async function taskDetail(tx: Tx, ctx: Ctx, id: string): Promise<TaskDeta
   const activityItems = (await all(tx, `select a.id, a.kind, a.data, a.created_at, ${personCols('u', 'u')} from pm_activity a left join pm_people u on u.id = a.actor_id
     where a.task_id = $1 order by a.id desc limit 100`, [id]))
     .map((r) => ({ id: r.id as number, actor: person(r, 'u'), kind: r.kind as string, data: (r.data ?? {}) as Record<string, unknown>, createdAt: r.created_at as string }));
-  const followers = (await all(tx, `select ${personCols('u', 'u')} from pm_followers f join pm_people u on u.id = f.user_id where f.task_id = $1 order by lower(u.name), u.id`, [id]))
+  const followers = (await all(tx, `select ${personCols('u', 'u')} from unnest(pm.follower_ids($1)) f(user_id) join pm_people u on u.id = f.user_id order by lower(u.name), u.id`, [id]))
     .map((r) => personOrThrow(r, 'u'));
   return {
     ...base, description: extra.description, createdBy: person(extra, 'cb'), subtasks, checklist, waitingOn, blocking, comments, attachments, links,
