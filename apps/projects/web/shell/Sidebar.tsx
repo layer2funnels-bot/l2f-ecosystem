@@ -4,7 +4,7 @@ import type { ProjectKind, ProjectSummary } from '../../shared/api.ts';
 import { FAVORITES_NOTE, useFavorites } from '../lib/favorites.ts';
 import { useProjects } from '../lib/data.ts';
 import { useSession } from '../lib/session.tsx';
-import { cx, lsGet, lsSet, ROLE_LABEL } from '../lib/util.ts';
+import { cx, lsGet, lsSet } from '../lib/util.ts';
 import { links, useRoute } from '../router.ts';
 import { Icon } from '../ui/icons.tsx';
 import type { IconName } from '../ui/icons.tsx';
@@ -113,14 +113,8 @@ export function Sidebar({ onNavigate, onCollapse, mobile }: { onNavigate: () => 
   return (
     <aside className="pm-sidebar" aria-label="Sidebar">
       <div className="pm-sidebar__top">
-        {/* the shell's header owns the organization switcher; this only names the app and the active organization */}
-        <div className="pm-orgswitch" aria-label={`Projects in ${org.name}, ${ROLE_LABEL[org.role] ?? org.role}`}>
-          <span className="pm-orgswitch__logo" aria-hidden="true"><Icon name="folder" size={15} /></span>
-          <span className="pm-orgswitch__text">
-            <span className="pm-orgswitch__name pm-truncate">Projects</span>
-            <span className="pm-orgswitch__role pm-faint pm-truncate">{org.name} · {ROLE_LABEL[org.role] ?? org.role}</span>
-          </span>
-        </div>
+        {/* the shell's header names the app and the organization (and switches it); the sidebar starts with its pages */}
+        <span className="pm-sidebar__spacer" />
         {!mobile && <IconButton icon="panelLeft" label="Collapse sidebar" tooltip="Collapse sidebar ([)" size="sm" onClick={onCollapse} />}
       </div>
 

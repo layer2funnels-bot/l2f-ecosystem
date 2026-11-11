@@ -23,7 +23,8 @@ export function projectsV2View({ api, org, orgs, me, loader = () => import('/pro
   unmountProjects();
   const el = h('div', { class: 'projects-mount', 'aria-busy': 'true' });
   const slot = h('div', {}, skeleton(4));
-  const wrap = h('section', { class: 'projects-wrap' }, slot, el);
+  const wrap = h('section', { class: 'projects-wrap' }, el, slot);   // the app first: its top edge never moves when the placeholder goes
+  wrap.__fullApp = true;                     // the shell drops its rail and frame: Projects' own sidebar is the menu
   const entry = { orgId: org.org_id, el: wrap, unmount: null };
   current = entry;
   const host = { org: org.org_id, me, orgs, call: (op, input, orgId) => api.call(op, input, { org: orgId }) };

@@ -245,3 +245,6 @@ li.pm-prow + li.pm-prow { border-top: 1px solid var(--pm-border); }
 @media (max-width: 767px) {
   .pm-dialog.pm-task, .pm-dialog.pm-task.is-wide { top: var(--pm-shell-top, 0px); height: calc(100dvh - var(--pm-shell-top, 0px)); }
 }
+
+/* the app toolbar sits on the page under the shell header: no second bar look */
+.pm-topbar { background: transparent; border-bottom-color: transparent; }

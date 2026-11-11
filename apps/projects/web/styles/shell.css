@@ -121,3 +121,5 @@
 .pm-reveal { opacity: 0; transition: opacity var(--pm-t-fast) var(--pm-ease); }
 .pm-nav__section:hover .pm-reveal, .pm-nav__section:focus-within .pm-reveal, .pm-reveal:focus-visible, .pm-reveal[aria-expanded='true'] { opacity: 1; }
 @media (hover: none) { .pm-reveal { opacity: 1; } }
+
+.pm-sidebar__spacer { flex: 1; }

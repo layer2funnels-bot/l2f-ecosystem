@@ -34,6 +34,7 @@ export async function mount(el: HTMLElement, host: Host): Promise<() => void> {
   const mo = new MutationObserver(sync); mo.observe(html, { attributes: true, attributeFilter: ['data-theme'] });
   const mq = matchMedia('(prefers-color-scheme: dark)'); mq.addEventListener('change', sync);
   window.addEventListener('resize', sync);
+  const ro = new ResizeObserver(sync); if (el.parentElement) ro.observe(el.parentElement);   // the shell's header or a banner changing height
   const layer = document.createElement('div'); layer.className = 'pm-host pm-layer';   // dialogs, menus, toasts
   box.after(layer); layerRef = layer; sync();
   setDomRoot(shadow, layer);
@@ -42,7 +43,7 @@ export async function mount(el: HTMLElement, host: Host): Promise<() => void> {
   const root = createRoot(box);
   root.render(<StrictMode><App /></StrictMode>);
   return () => {
-    mo.disconnect(); mq.removeEventListener('change', sync); window.removeEventListener('resize', sync);
+    ro.disconnect(); mo.disconnect(); mq.removeEventListener('change', sync); window.removeEventListener('resize', sync);
     root.unmount(); setDomRoot(null, null); setHost(null); clearCache(); shadow.replaceChildren();
   };
 }

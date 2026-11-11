@@ -156,4 +156,13 @@
   --pm-on-accent: #062a2d;
 }
 
+/* Inside the ecosystem shell Projects is the page, not a panel on it: its background, sidebar and lines are the shell's own
+   (the shell's tokens reach into the shadow root), in light and dark. Outside the shell the approved values above apply. */
+.pm-host, .pm-host[data-theme='dark'] {
+  --pm-bg: var(--bg, #f6f7f9);
+  --pm-sidebar-bg: var(--surface2, #ffffff);
+  --pm-surface: var(--surface, #ffffff);
+  --pm-border: var(--line, #e2e5ea);
+}
+
 @media (prefers-reduced-motion: reduce) { .pm-host { --pm-t-fast: 0ms; --pm-t: 0ms; --pm-t-slow: 0ms; } }

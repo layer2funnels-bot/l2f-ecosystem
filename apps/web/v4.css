@@ -614,6 +614,11 @@ button.card:hover,a.card:hover{transform:translateY(-3px);box-shadow:var(--sh2)}
 .only-m{display:none}
 .content.wide{max-width:none}
 .content.flush{padding:0}
+/* full-screen apps (Projects): no rail, the app fills the page under the header */
+.shell.is-full{grid-template-columns:minmax(0,1fr)}
+.content.is-full{padding:0;max-width:none;min-height:0}
+.hdr .hdr-app{display:inline-flex;align-items:center;gap:8px;flex:none}
+.projects-wrap{margin:0;border:0;border-radius:0}
 
 /* drawer generic */
 .drw-h{display:flex;align-items:center;gap:10px;margin-bottom:14px}
