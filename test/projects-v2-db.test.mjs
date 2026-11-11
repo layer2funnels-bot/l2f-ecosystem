@@ -56,6 +56,12 @@ const Ta = await task(U.ED, P_CLIENT, 'A'), Tb = await task(U.ED, P_CLIENT, 'B')
 await as(U.ED); await db.query('insert into pm_dependencies (task_id, depends_on_id) values ($1, $2)', [Ta, Tb]);
 const cycle = await errCode(() => db.query('insert into pm_dependencies (task_id, depends_on_id) values ($1, $2)', [Tb, Ta]));
 check('V9', 'A circular "waiting on" is refused', cycle === '23514');
+// a child row (checklist item) takes its organization and project from its task, never from what the caller sends
+await as(U.ED);
+const spoofCk = await errCode(() => db.query("insert into pm_checklist_items (workspace_id, project_id, task_id, label) values ($1, $2, $3, 'spoofed')", [L, P_INT, T1]));
+await asSuper();
+const ck = (await rows("select c.project_id, t.project_id as task_project from pm_checklist_items c join pm_tasks t on t.id = c.task_id where c.label = 'spoofed'"))[0];
+check('V10', 'A checklist item takes its project from its task: naming another project is ignored (or refused), never stored', spoofCk !== 'no-error' || (ck && ck.project_id === ck.task_project));
 
 // ---- ecosystem rules
 check('E1', 'Without the Projects app grant an editor sees no project at all', (await visible(U.NOAPP)).length === 0);
