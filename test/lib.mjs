@@ -76,6 +76,6 @@ export function recorder() {
 }
 
 // An unexpected error is a failed run, reported in one line (no minified stack dumps).
-const crash = (e) => { console.log(`FAIL  CRASH ${e?.code ?? ''} ${e?.message ?? e}`); process.exit(1); };
+const crash = (e) => { console.log(`FAIL  CRASH ${e?.code ?? ''} ${e?.message ?? e}`); if (process.env.TEST_STACK) console.log(e?.stack); process.exit(1); };
 process.on('uncaughtException', crash);
 process.on('unhandledRejection', crash);

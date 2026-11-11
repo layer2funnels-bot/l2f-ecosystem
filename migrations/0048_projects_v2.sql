@@ -276,14 +276,13 @@ create table pm_attachments (
   workspace_id uuid not null,
   project_id uuid not null,
   task_id uuid not null,
-  name text not null check (length(name) between 1 and 255),
-  mime text not null,
-  size_bytes bigint not null check (size_bytes between 0 and 26214400),
-  storage_key text not null unique,
+  file_id uuid not null,                     -- the Drive file (owner decision: task files live in Drive)
   uploaded_by uuid not null,
   deleted_at timestamptz,
   created_at timestamptz not null default now(),
-  foreign key (workspace_id, task_id) references pm_tasks(workspace_id, id) on delete cascade
+  foreign key (workspace_id, task_id) references pm_tasks(workspace_id, id) on delete cascade,
+  foreign key (workspace_id, file_id) references public.files(workspace_id, id) on delete cascade,
+  unique (task_id, file_id)
 );
 
 create table pm_time_entries (
@@ -612,19 +611,17 @@ create table if not exists pm_resources (
   url text check (url is null or (url ~ '^https://' and length(url) <= 2000)),
   provider text,
   embed_url text check (embed_url is null or (embed_url ~ '^https://' and length(embed_url) <= 2500)),   -- computed by the server, never by the client
-  file_name text check (file_name is null or length(file_name) between 1 and 255),
-  storage_key text unique,
-  mime text,
-  size_bytes bigint check (size_bytes is null or size_bytes between 0 and 26214400),
+  file_id uuid,                              -- kind 'file': the Drive file (name, type and size come from Drive)
   description text not null default '' check (length(description) <= 2000),
   position double precision not null default 0,
   created_by uuid,
   created_at timestamptz not null default now(),
   deleted_at timestamptz,
   foreign key (workspace_id, project_id) references pm_projects(workspace_id, id) on delete cascade,
-  check ((kind = 'file' and storage_key is not null and url is null and embed_url is null and size_bytes is not null)
-      or (kind = 'link' and url is not null and storage_key is null and embed_url is null)
-      or (kind = 'embed' and url is not null and storage_key is null and embed_url is not null))
+  foreign key (workspace_id, file_id) references public.files(workspace_id, id) on delete cascade,
+  check ((kind = 'file' and file_id is not null and url is null and embed_url is null)
+      or (kind = 'link' and url is not null and file_id is null and embed_url is null)
+      or (kind = 'embed' and url is not null and file_id is null and embed_url is not null))
 );
 create index if not exists pm_resources_project on pm_resources (project_id, collection_id, position) where deleted_at is null;
 
@@ -662,15 +659,7 @@ do $$ declare t text; begin
   end loop;
 end $$;
 
--- Organization-wide storage totals. Security definer so the sum covers projects the caller cannot open,
--- but it returns two counts only, and only for the active organization of an organization member.
-create or replace function pm.storage_used() returns table (attachments bigint, resources bigint)
-language sql stable security definer set search_path = public, pg_temp as $$
-  select coalesce((select sum(size_bytes) from pm_attachments where workspace_id = pm.org()), 0)::bigint,
-         coalesce((select sum(size_bytes) from pm_resources where workspace_id = pm.org() and kind = 'file'), 0)::bigint
-  where pm.org_role() is not null
-$$;
-grant execute on function pm.project_scope(), pm.resource_guard(), pm.storage_used() to app_user;
+grant execute on function pm.project_scope(), pm.resource_guard() to app_user;
 
 -- Ecosystem documents are linked by reference: project links gain the 'sheet' (spreadsheet) kind.
 alter table pm_project_links drop constraint if exists pm_project_links_kind_check;
@@ -815,6 +804,25 @@ end $$;
 drop trigger if exists g on pm_collections;
 create trigger g before insert or update on pm_collections for each row execute function pm.collection_guard();
 grant execute on function pm.collection_guard() to app_user;
+
+-- ───────────── Drive files linked to tasks and collections (SDOR: Drive owns the file, Projects only points at it) ─────────────
+create function pm.file_link_guard() returns trigger language plpgsql security definer set search_path = public, pg_temp as $$
+declare f record; p record;
+begin
+  select space, client_id, project_id, kind into f from public.files where workspace_id = new.workspace_id and id = new.file_id;
+  if f.space is null then raise exception 'file not found' using errcode = '23503'; end if;
+  select client_id into p from pm_projects where id = new.project_id;
+  if f.kind <> 'file' and f.kind <> 'document' then raise exception 'Only files and documents can be attached' using errcode = '23514'; end if;
+  if f.space = 'personal' then raise exception 'A personal file cannot be attached: move it to a shared place first' using errcode = '23514'; end if;
+  if f.project_id is distinct from new.project_id and not (f.space = 'shared' and f.client_id is null)
+     and not (p.client_id is not null and f.client_id = p.client_id) then
+    raise exception 'Only this project''s files, this client''s files or shared Drive files can be attached' using errcode = '23514';
+  end if;
+  return new;
+end $$;
+-- named z_* so it fires after the triggers that fill workspace_id and project_id (Postgres runs same-event triggers by name)
+create trigger z_file_link before insert or update of file_id on pm_attachments for each row execute function pm.file_link_guard();
+create trigger z_file_link before insert or update of file_id on pm_resources for each row when (new.file_id is not null) execute function pm.file_link_guard();
 
 -- ======== ecosystem lockdown for every Projects V2 table ========
 alter table public.pm_activity enable row level security;
