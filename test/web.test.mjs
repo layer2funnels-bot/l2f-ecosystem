@@ -112,8 +112,9 @@ check('W26', 'Unsaved work is registered with a label and a save action, and cle
   check('W32', 'A call on its own goes to its own address, unchanged', sent.length === 1 && sent[0].url === '/api/y.alone');
 }
 
-check('W33', 'Projects has Workload and Portfolio pages, in the app and inside Office', parseRoute('#/projects/workload').params.view === 'workload' && parseRoute('#/projects/portfolio').params.view === 'portfolio'
-  && parseRoute('#/office/projects/workload').params.view === 'workload' && parseRoute('#/office/projects/portfolio').name === 'office-page');
+check('W33', 'Projects (V2) owns every #/projects address and routes its own pages; old Office addresses land on Projects', parseRoute('#/projects/workload').name === 'projects' && parseRoute('#/projects/workload').params.page === 'workload'
+  && parseRoute('#/projects/p/abc/list').name === 'projects' && parseRoute('#/projects').params.page === 'home'
+  && parseRoute('#/office/projects/portfolio').name === 'projects' && parseRoute('#/app/projects').name === 'projects');
 
 {
   let told = null; const session = { get: () => ({ access: 't' }), needsRefresh: () => false, expired: () => false };

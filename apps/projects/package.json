@@ -1,0 +1,24 @@
+{
+  "name": "@l2f/projects",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Projects (V2) inside the Layer2Funnels + Aurj ecosystem: mounted by the shell at #/projects through /projects/embed.js.",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
+    "@vitejs/plugin-react": "^6.1.2",
+    "typescript": "^5.9.0",
+    "vite": "^8.3.5"
+  }
+}

@@ -1,0 +1,16 @@
+/* One stylesheet for the shadow root (embed.tsx): component files must not inject into the page head (they would never
+   reach the shadow root). tokens.css is the approved fresh design: every colour, radius, shadow and font comes from it,
+   so a reskin is a token change. */
+@import './tokens.css';
+@import './base.css';
+@import './components.css';
+@import './layout.css';
+@import './shell.css';
+@import './calendar-timeline.css';
+@import './charts.css';
+@import './list-board.css';
+@import './oversight.css';
+@import './people.css';
+@import './resources.css';
+@import './task.css';
+@import '../fields/fields.css';

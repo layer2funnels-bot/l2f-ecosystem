@@ -11,7 +11,7 @@ const byKey = Object.fromEntries(FUNNEL_TYPES.map((t) => [t.key, t]));
 export const OFFICE_PAGES = [
   { key: 'home', label: 'Home', icon: 'home', href: '#/office', built: true },
   { key: 'planner', label: 'Planner', icon: 'planner', href: '#/planner', built: true },
-  { key: 'projects', label: 'Projects', icon: 'projects', href: '#/office/projects', built: true },
+  { key: 'projects', label: 'Projects', icon: 'projects', href: '#/projects', built: true },
   { key: 'funnels', label: 'Funnels', icon: 'funnels', href: '#/office/funnels', built: true },
   { key: 'documents', label: 'Documents', icon: 'doc', href: '#/office/documents', built: true },
   { key: 'team', label: 'Team', icon: 'team', href: '#/office/team', built: true },
@@ -54,22 +54,17 @@ export function parseRoute(hash) {
   if ((a === 'portal' && !b) || (a === 'app' && b === 'portal' && seg.length === 2)) return r('portal', {});
   if (a === 'portal' && b && seg.length <= 3) return r('portal', { client: b, page: c ?? 'home' });
   if (a === 'sheet' && b && seg.length === 2) return r('sheet', { id: b });
+  // Projects (apps/projects, mounted by modules/projects-v2.js) routes its own pages: #/projects/<page>… (the old Office
+  // addresses #/office/projects/… and #/app/projects land on its home)
+  if (a === 'projects' || (a === 'app' && b === 'projects' && seg.length === 2) || (a === 'office' && b === 'projects')) return r('projects', { page: a === 'projects' ? (b ?? 'home') : 'home' });
   if (a === 'clients' && !b) return r('clients', { view: 'list' });
   if (a === 'clients' && ['requests', 'sops', 'tools', 'settings'].includes(b) && seg.length === 2) return r('clients', { view: b });
   if (a === 'clients' && b === 'c' && c && seg.length === 3) return r('clients', { view: 'client', id: c });
-  if ((a === 'projects' && !b) || (a === 'app' && b === 'projects' && seg.length === 2)) return r('projects', { view: 'home' });
-  if (a === 'projects' && b === 'mine' && seg.length === 2) return r('projects', { view: 'mine' });
-  if (a === 'projects' && ['all', 'docs', 'dashboards', 'ai', 'workload', 'portfolio'].includes(b) && seg.length === 2) return r('projects', { view: b });
-  if (a === 'projects' && b === 'p' && c && seg.length === 3) return r('projects', { view: 'project', id: c });
   if (a === 'doc' && b && seg.length === 2) return r('doc', { id: b });
   if (a === 'image' && b && seg.length === 2) return r('image', { id: b });
   if (a === 'pdf' && b && seg.length === 2) return r('pdf', { id: b });
   if (a === 'board' && b && seg.length === 2) return r('board', { id: b });
   if (a === 'office' && seg.length === 1) return r('office');
-  if (a === 'office' && b === 'projects' && c === 'mine' && seg.length === 3) return r('office-page', { page: 'projects', view: 'mine' });
-  if (a === 'office' && b === 'projects' && (c === 'workload' || c === 'portfolio') && seg.length === 3) return r('office-page', { page: 'projects', view: c });
-  if (a === 'office' && b === 'projects' && c === 'p' && d && seg.length === 4) return r('office-page', { page: 'projects', view: 'project', id: d });
-  if (a === 'office' && b === 'projects' && seg.length === 2) return r('office-page', { page: 'projects', view: 'home' });
   if (a === 'office' && OFFICE_OTHER.has(b) && seg.length === 2) return r('office-page', { page: b });
   if (a === 'office' && b === 'admin') {
     if (seg.length === 2) return r('admin', { tab: 'members' });
