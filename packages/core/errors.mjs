@@ -26,7 +26,10 @@ const AS_UNAVAILABLE = new Set(['57P01', '57P03', '53300', '08006', '08001', 'PG
 
 export function toPublicError(err) {
   if (!err) return null;
+  // Projects V2 (packages/core/projects-v2-operations.mjs) hands over its own plain-language answer; never database text.
+  if (err.publicError && typeof err.publicError.message === 'string' && /^pm_/.test(String(err.code))) return Object.freeze({ ...err.publicError });
   const code = String(err.code ?? '');
+  if (code === 'pm_internal') return FAILED;
   if (code === 'DRIVE_IN_USE') return IN_USE;
   if (AS_NOT_FOUND.has(code)) return NOT_FOUND;
   if (AS_CONFLICT.has(code)) return CONFLICT;

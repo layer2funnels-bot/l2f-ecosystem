@@ -9,7 +9,9 @@ import { createSafeLogger } from '../packages/core/safe-log.mjs';
 
 const db = await openDb(); await migrate(db);
 const rawQuery = db.query.bind(db); db.query = async (s, p) => { try { return await rawQuery(s, p); } catch (e) { e.message += `   [SQL: ${String(s).slice(0, 110).replace(/\s+/g, ' ')}]`; throw e; } };
-const { asUser, asSuper } = session(db); const { results, check, errCode } = recorder();
+const S = session(db); const { asSuper } = S;
+// every real request names its organization (x-org-id); Projects V2 rows are only visible inside it
+const asUser = (u, o = {}) => S.asUser(u, { org: typeof L === 'undefined' ? null : L, ...o }); const { results, check, errCode } = recorder();
 const rows = async (s, p = []) => (await db.query(s, p)).rows;
 const affected = async (s, p = []) => (await db.query(s, p)).affectedRows;
 
@@ -32,9 +34,9 @@ const C1 = id(), C2 = id();
 await db.query("insert into clients (id,workspace_id,name) values ($1,$3,'Client One'),($2,$3,'Client Two')", [C1, C2, L]);
 await db.query("insert into memberships (workspace_id,user_id,kind,client_id) values ($1,$2,'client',$3)", [L, U.CL1, C1]);
 const P1 = id(), P2 = id(), P0 = id();
-await db.query("insert into projects (id,workspace_id,client_id,name) values ($1,$4,$5,'P1'),($2,$4,$6,'P2'),($3,$4,null,'P0')", [P1, P2, P0, L, C1, C2]);
+await db.query("insert into pm_projects (id,workspace_id,client_id,name,visibility) values ($1,$4,$5,'P1','organization'),($2,$4,$6,'P2','organization'),($3,$4,null,'P0','organization')", [P1, P2, P0, L, C1, C2]);
 const TK = { c1: id(), c2: id(), none: id() };
-await db.query("insert into project_tasks (id,workspace_id,project_id,title) values ($1,$4,$5,'Task C1'),($2,$4,$6,'Task C2'),($3,$4,$7,'Task none')", [TK.c1, TK.c2, TK.none, L, P1, P2, P0]);
+await db.query("insert into pm_tasks (id,workspace_id,project_id,title,number) values ($1,$4,$5,'Task C1',0),($2,$4,$6,'Task C2',0),($3,$4,$7,'Task none',0)", [TK.c1, TK.c2, TK.none, L, P1, P2, P0]);
 
 // ---- A. objectives
 await asUser(U.ED);
@@ -86,8 +88,8 @@ await db.query("insert into planner_objective_tasks (workspace_id,objective_id,t
 check('LN2', 'Someone who sees the tasks and may edit the objective links them (an organization-wide objective takes any task)', (await rows('select task_id from planner_objective_tasks where objective_id=$1', [o1.id])).length === 2);
 check('LN3', 'A client’s objective only takes that client’s tasks', (await errCode(() => db.query("insert into planner_objective_tasks (workspace_id,objective_id,task_id) values ($1,$2,$3)", [L, oc1, TK.c2]))) === 'P0001' && (await affected("insert into planner_objective_tasks (workspace_id,objective_id,task_id) values ($1,$2,$3)", [L, oc1, TK.c1])) === 1);
 check('LN4', 'A task of another organization cannot be linked', (await errCode(() => db.query("insert into planner_objective_tasks (workspace_id,objective_id,task_id) values ($1,$2,$3)", [L, o1.id, id()]))) !== 'no-error');
-check('LN5', 'A task that serves an objective cannot be deleted from under it (the link must go first)', await (async () => { await db.query("update project_tasks set archived_at=now() where id=$1", [TK.c1]); await asUser(U.OWN); return (await errCode(() => db.query("delete from project_tasks where id=$1", [TK.c1]))) === 'P0001'; })());
-await asUser(U.ADM); await db.query("update project_tasks set archived_at=null where id=$1", [TK.c1]);
+check('LN5', 'A task that serves an objective cannot be deleted from under it (the link must go first)', await (async () => { await db.query("update pm_tasks set deleted_at=now() where id=$1", [TK.c1]); await asUser(U.OWN); return (await errCode(() => db.query("delete from pm_tasks where id=$1", [TK.c1]))) === '23503'; })());   // Projects V2: the link holds the task (foreign key), so the delete is refused
+await asUser(U.ADM); await db.query("update pm_tasks set deleted_at=null where id=$1", [TK.c1]);
 await asUser(U.VW);
 check('LN6', 'A viewer sees links and cannot add or remove them', (await rows('select task_id from planner_objective_tasks')).length === 3 && (await affected("delete from planner_objective_tasks where objective_id=$1", [o1.id])) === 0);
 

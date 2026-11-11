@@ -13,6 +13,8 @@ const MAX_BODY_BYTES = 16 * 1024;
 // Saving a first-party document (Docs, Sheets, boards: up to 1,000,000 characters) needs a larger body; every other operation keeps the 16 KB limit.
 const LARGE_BODY_OPS = new Set(['drive.files.create', 'drive.files.versions.add']);
 const LARGE_BODY_BYTES = 4 * 1024 * 1024;
+// Projects V2 (pm.*) takes one args object of up to 120,000 characters (long task descriptions, rich pages).
+const PM_BODY_BYTES = 128 * 1024;
 export const BATCH_MAX = 4;   // about one connection plus four short transactions: stays near Cloudflare Free's 10 ms CPU (DECISIONS V4-28)
 const BASE_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
@@ -48,7 +50,8 @@ export function createHttpHandler({ api, verifyToken, extraOrigins = [] }) {
       if (!who.ok) return reply(SESSION_EXPIRED.status, errorBody(SESSION_EXPIRED));
 
       if (!(request.headers.get('content-type') ?? '').toLowerCase().startsWith('application/json')) return reply(BAD_REQUEST.status, errorBody(BAD_REQUEST));
-      const limit = LARGE_BODY_OPS.has(decodeURIComponent(url.pathname.slice('/api/'.length))) ? LARGE_BODY_BYTES : MAX_BODY_BYTES;
+      const opName = decodeURIComponent(url.pathname.slice('/api/'.length));
+      const limit = LARGE_BODY_OPS.has(opName) ? LARGE_BODY_BYTES : opName.startsWith('pm.') ? PM_BODY_BYTES : MAX_BODY_BYTES;
       const declared = Number(request.headers.get('content-length') ?? 0);
       if (declared > limit) return reply(BAD_REQUEST.status, errorBody(BAD_REQUEST));
       const text = await request.text();

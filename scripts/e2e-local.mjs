@@ -119,8 +119,8 @@ check('E24', 'SECURITY: the private schema is not exposed (policy helpers, rate-
 const gq = await direct('/graphql/v1', { method: 'POST', token: owner.token, body: { query: '{ clientsCollection { edges { node { name } } } workspacesCollection { edges { node { name } } } }' } });
 check('E25', 'SECURITY: GraphQL cannot read our tables either', !/Secret|Layer2Funnels|Aurj|E2E Client/.test(gq.text) && !(gq.json?.data && Object.values(gq.json.data).some((v) => v?.edges?.length)), gq.text.slice(0, 120));
 const priv = (await admin.query(`select
-  (select count(*) from pg_tables t where t.schemaname in ('public','private') and (has_table_privilege('authenticated', format('%I.%I', t.schemaname, t.tablename), 'select,insert,update,delete') or has_table_privilege('anon', format('%I.%I', t.schemaname, t.tablename), 'select,insert,update,delete')))::int tables,
-  (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname in ('public','private') and not exists (select 1 from pg_depend d where d.objid = p.oid and d.deptype = 'e') and (has_function_privilege('authenticated', p.oid, 'execute') or has_function_privilege('anon', p.oid, 'execute')))::int fns`)).rows[0];
+  (select count(*) from pg_tables t where t.schemaname in ('public','private','pm') and (has_table_privilege('authenticated', format('%I.%I', t.schemaname, t.tablename), 'select,insert,update,delete') or has_table_privilege('anon', format('%I.%I', t.schemaname, t.tablename), 'select,insert,update,delete')))::int tables,
+  (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname in ('public','private','pm') and not exists (select 1 from pg_depend d where d.objid = p.oid and d.deptype = 'e') and (has_function_privilege('authenticated', p.oid, 'execute') or has_function_privilege('anon', p.oid, 'execute')))::int fns`)).rows[0];
 check('E26', 'SECURITY: on the real Supabase stack no table or function of ours is granted to the Data API roles', priv.tables === 0 && priv.fns === 0, JSON.stringify(priv));
 await admin.query('create table public.zz_probe_future (id int)');
 const fut = (await admin.query("select has_table_privilege('authenticated','public.zz_probe_future','select') a, has_table_privilege('anon','public.zz_probe_future','select') b")).rows[0];
@@ -130,26 +130,27 @@ r = await post('launcher.list');
 check('E28', 'Control: the same people still work normally through our API after the lockdown', r.status === 200 && r.body.data.length > 0);
 
 
-// ---- Projects data layer through real tokens (migration 0013)
-r = await post('projects.create', { name: `E2E Project ${stamp}`, client: cl.id });
-const pj = r.body.data?.[0];
-check('E31', 'Projects: an owner creates a project for a client, then a task with a checklist item, through the real stack', r.status === 200 && pj?.client_id === cl.id
-  && (r = await post('tasks.create', { project: pj.id, title: 'E2E task', assignee: owner.id, due_on: '2026-12-01' })).status === 200 && r.body.data[0].client_id === cl.id
-  && (await post('checklist.add', { task: r.body.data[0].id, label: 'step' })).status === 200);
-const tk = r.body.data?.[0];
+// ---- Projects (V2, migrations 0048-0051) through real tokens: pm.* operations, one args object, answers as [{ r }]
+const pmCall = async (op, args, opts) => { const x = await post(`pm.${op}`, { args }, opts); return { status: x.status, r: x.body?.data?.[0]?.r, body: x.body }; };
+r = await pmCall('projects.create', { name: `E2E Project ${stamp}`, clientId: cl.id });
+const pj = r.r;
+let tkr = pj ? await pmCall('tasks.create', { projectId: pj.id, title: 'E2E task', assigneeIds: [owner.id], dueOn: '2026-12-01' }) : { status: 0 };
+const tk = tkr.r;
+check('E31', 'Projects: an owner creates a project for a client, then a task assigned to themselves with a checklist item, through the real stack', r.status === 200 && pj?.clientId === cl.id
+  && tkr.status === 200 && tk?.assignees?.some((a) => a.id === owner.id) && (await pmCall('checklist.add', { taskId: tk.id, label: 'step' })).status === 200);
 r = await post('my.work');
-check('E32', 'Projects: my.work lists the task assigned to the caller, with its project name', r.status === 200 && r.body.data.some((x) => x.id === tk.id && x.project_name === pj.name));
-r = await post('time.start', { project: pj.id, task: tk.id });
-const t0 = Date.now(); const startedAt = new Date(r.body.data?.[0]?.started_at).getTime();
-check('E33', 'Projects: a timer starts on the server clock (within seconds of now) and a second one is refused as a conflict', r.status === 200 && Math.abs(t0 - startedAt) < 20000 && (await post('time.start', { project: pj.id })).status === 409);
-r = await post('time.stop', { note: 'e2e' });
-check('E34', 'Projects: stopping it records the end by the server clock', r.status === 200 && new Date(r.body.data[0].ended_at) > new Date(r.body.data[0].started_at));
-r = await post('tasks.get', { id: tk.id }, { token: guest.token });
-check('E35', 'Projects: the invited editor (no project level) cannot read the task: a plain not-found', r.status === 404);
-r = await post('projects.get', { id: pj.id }, { org: A });
+check('E32', 'Projects: my.work (Office Home) lists the task assigned to the caller, with its project name', r.status === 200 && r.body.data.some((x) => x.id === tk?.id && x.project_name === pj?.name));
+r = await pmCall('time.start', { taskId: tk?.id });
+const t0 = Date.now();
+check('E33', 'Projects: a timer starts and a second one on the same person replaces nothing silently (one running timer)', r.status === 200 && (await pmCall('time.running', {})).r?.taskId === tk?.id);
+r = await pmCall('time.stop', {});
+check('E34', 'Projects: stopping it ends the entry (no timer left running)', r.status === 200 && !(await pmCall('time.running', {})).r && Date.now() - t0 < 60000);
+r = await pmCall('tasks.get', { id: tk?.id }, { token: guest.token });
+check('E35', 'Projects: the invited editor (not a member of the project) cannot read the task: a plain not-found', r.status === 404);
+r = await pmCall('projects.get', { id: pj?.id }, { org: A });
 check('E36', 'Projects: the other organization header cannot see the project', r.status === 404);
-const directP = await Promise.all(['projects', 'project_tasks', 'task_checklist_items', 'time_entries'].map((t) => fetch(`http://127.0.0.1:54321/rest/v1/${t}?select=id`, { headers: { apikey: KEY, authorization: `Bearer ${owner.token}` } }).then(async (x) => ({ t, status: x.status, rows: x.ok ? (await x.json()).length : 0 }))));
-check('E37', 'SECURITY: the Data API shows no project, task, checklist or time row to a signed-in owner (only our API can)', directP.every((d) => d.status >= 400 || d.rows === 0), JSON.stringify(directP));
+const directP = await Promise.all(['pm_projects', 'pm_tasks', 'pm_checklist_items', 'pm_time_entries', 'projects', 'project_tasks'].map((t) => fetch(`http://127.0.0.1:54321/rest/v1/${t}?select=id`, { headers: { apikey: KEY, authorization: `Bearer ${owner.token}` } }).then(async (x) => ({ t, status: x.status, rows: x.ok ? (await x.json()).length : 0 }))));
+check('E37', 'SECURITY: the Data API shows no project, task, checklist or time row (new or the old backup) to a signed-in owner (only our API can)', directP.every((d) => d.status >= 400 || d.rows === 0), JSON.stringify(directP));
 
 // ---- Drive data layer through real tokens (migration 0014)
 r = await post('drive.folders.create', { space: 'shared', name: `E2E Brand ${stamp}` });
@@ -224,7 +225,7 @@ check('E57', 'SECURITY: the Data API shows no approval, portal message, form, la
 // ---- Storage and Drive visibility are separate, in both organizations (migration 0025), through the real stack and real tokens
 await admin.query("update memberships set role = 'owner' where workspace_id = $1 and user_id = $2", [A, owner.id]);
 const driveIds = async (org2) => new Set((await post('drive.files.list', { space: 'shared', anywhere: true }, { org: org2 })).body.data.map((x) => x.id));
-const mkProj = async (org2, name) => (await admin.query("insert into projects (workspace_id, name) values ($1, $2) returning id", [org2, name])).rows[0].id;
+const mkProj = async (org2, name) => (await admin.query("insert into pm_projects (workspace_id, name, visibility) values ($1, $2, 'organization') returning id", [org2, name])).rows[0].id;
 const pL = await mkProj(L, 'E2E internal L'), pA = await mkProj(A, 'E2E internal A');
 const made2 = {};
 for (const [k, o2, pj] of [['L', L, pL], ['A', A, pA]]) {

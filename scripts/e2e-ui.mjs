@@ -294,43 +294,35 @@ await page.goBack(); await page.reload(); await wait('The sky follows your time 
   await page.goto(`${base}/#/launcher`); await wait('The sky follows your time of day');
 }
 
-// =============================================================== B4. Projects (shared module; opens at #/projects)
+// =============================================================== B4. Projects (V2: apps/projects, mounted by the shell at #/projects)
 {
-  const PJ = `Website relaunch ${Date.now()}`, T1 = `Write homepage copy ${Date.now()}`, T2 = `Review design ${Date.now()}`;   // unique per run: a re-run on the same local database never collides
-  await admin.query('update time_entries set ended_at = now() where ended_at is null');
-  await admin.query("insert into projects (workspace_id, name) select $1, 'Seed internal project' where not exists (select 1 from projects where workspace_id = $1 and client_id is null and archived_at is null)", [L]);   // a fresh database has no project yet: the home shows its empty state instead of the two sections
-  await page.goto(`${base}/#/projects`); await page.waitForSelector('.pj-sections h2', { timeout: 9000 }).catch(async (e) => { await shot(page, 'FAILED-pj'); console.log((await page.locator('body').innerText()).slice(0, 600), problems.slice(0, 3), net.slice(-4)); throw e; });
-  check('P1', 'Projects opens as its own app with a sidebar and a New project action', (await page.locator('.pj-side').count()) === 1 && (await page.getByRole('button', { name: 'New project' }).count()) >= 1);
-  check('P1c', 'Projects Home follows the design: a greeting, Your priorities, Projects and Recent updates, and the side rail lists Home, My Work, Projects, Docs, Whiteboards, Dashboards, AI Assist and App Center', (await page.locator('h1').first().innerText()).startsWith('Good ') && (await page.locator('main h2').allInnerTexts()).join('|').includes('Your priorities') && (await page.locator('main h2').allInnerTexts()).join('|').includes('Recent updates') && (await page.locator('nav.nav a').allInnerTexts()).map((t) => t.trim()).join('|').includes('Docs') && (await page.locator('nav.nav a').allInnerTexts()).map((t) => t.trim()).join('|').includes('App Center'));
-  await page.goto(`${base}/#/projects/all`); await page.reload();
-  await page.waitForFunction(() => document.querySelectorAll('.pj-sections h2').length >= 2, null, { timeout: 9000 });
-  check('P1b', 'Projects home has two labelled sections: Client projects (grouped by client) and the organization’s own projects', (await page.locator('.pj-sections h2').allInnerTexts()).join('|').toLowerCase().includes('client projects') && (await page.locator('.pj-sections h2').allInnerTexts()).some((t) => /projects$/i.test(t.trim()) && !/^client/i.test(t.trim())));
-  await page.getByRole('button', { name: 'New project' }).first().click(); await page.fill('#np-name', PJ); await page.getByRole('button', { name: 'Create project' }).click(); await page.waitForSelector('[role=tablist] [data-k="whiteboards"]', { timeout: 9000 });
-  const created = (await admin.query("select client_id, name from projects where name = $1", [PJ])).rows;
-  check('P2', 'A new internal project is created (no client) and its workspace opens with the tabs', created.length === 1 && created[0].client_id === null && (await page.getByRole('tab').count()) >= 7);
-  await page.getByRole('tab', { name: 'List', exact: true }).click(); await page.fill('input[name=t]', T1); await page.keyboard.press('Enter'); await wait(T1);
-  await page.fill('input[name=t]', T2); await page.keyboard.press('Enter'); await wait(T2);
-  check('P3', 'Tasks are added from the list and stored, and no stray “null” text is drawn on the page', !/\bnull\b/.test(await page.locator('main').innerText()) && (await admin.query("select count(*)::int n from project_tasks where title in ($1,$2)", [T1, T2])).rows[0].n === 2);
-  await page.getByRole('tab', { name: 'Board', exact: true }).click(); await wait('Drag a card');
-  const card = page.locator('.pj-cardtask', { hasText: T1 }); const target = page.locator('.pj-col[data-key=doing]');
-  await card.dragTo(target); await page.waitForFunction(() => document.querySelector('.pj-col[data-key=doing] .pj-cardtask'));
-  check('P4', 'Dragging a card to another column changes its status in the database', (await admin.query("select status from project_tasks where title = $1", [T1])).rows[0].status === 'doing');
-  await page.locator('.pj-cardtask', { hasText: T2 }).click(); await wait('Subtasks');
-  await page.fill('input[aria-label="Add a subtask"]', 'Check mobile'); await page.keyboard.press('Enter'); await wait('Check mobile');
-  await page.selectOption('#td-prio', 'high'); for (let n = 0; n < 30 && (await admin.query('select priority from project_tasks where title = $1', [T2])).rows[0].priority !== 'high'; n++) await page.waitForTimeout(100);
-  const t2 = (await admin.query("select priority, (select count(*)::int from project_tasks c where c.parent_task_id = t.id and c.title = 'Check mobile') n from project_tasks t where title = $1", [T2])).rows[0];   // subtasks are real tasks since Projects R1
-  check('P5', 'The task drawer saves priority on change and adds a subtask', t2.priority === 'high' && t2.n === 1);
-  await page.getByRole('button', { name: 'Start timer' }).click(); await wait('Timer running');
-  check('P6', 'Starting a timer shows it on every Projects page and stores a running entry using the database clock', (await admin.query('select count(*)::int n from time_entries where ended_at is null')).rows[0].n === 1);
-  await page.getByRole('button', { name: 'Stop timer' }).click(); await page.waitForFunction(() => document.querySelector('.pj-timer')?.hidden);
-  check('P7', 'Stopping the timer ends the entry', (await admin.query('select count(*)::int n from time_entries where ended_at is null')).rows[0].n === 0);
-  await page.keyboard.press('Escape'); await page.goto(`${base}/#/projects/mine`); await page.waitForSelector('.pj-mine', { timeout: 9000 });
-  check('P8', 'My Work opens and shows an empty state when nothing is assigned', (await page.locator('.empty, .pj-mine').count()) >= 1);
-  await page.keyboard.press('Control+k'); await page.fill('.cmdk-in', T1); await wait(T1);
-  check('P9', 'Ctrl+K search finds tasks by words and opens them', (await page.locator('.cmdk-list li[role=option]').count()) >= 1);
+  const PJ = `Website relaunch ${Date.now()}`, T1 = `Write homepage copy ${Date.now()}`;   // unique per run: a re-run on the same local database never collides
+  await page.goto(`${base}/#/projects`);
+  await page.getByText(/^Good (morning|afternoon|evening)/).first().waitFor({ timeout: 15000 }).catch(async (e) => { await shot(page, 'FAILED-pj'); console.log((await page.locator('body').innerText()).slice(0, 600), problems.slice(0, 3), net.slice(-4)); throw e; });
+  check('P1', 'Projects opens inside the shell (its header and organization switcher stay) with its own navigation and a New project action',
+    (await page.locator('.projects-mount').count()) === 1 && (await page.getByRole('link', { name: 'My Work' }).count()) >= 1 && (await page.getByRole('button', { name: 'New project' }).count()) >= 1);
+  await page.getByRole('button', { name: 'New project' }).first().click();
+  await page.getByRole('tab', { name: 'Internal' }).or(page.getByRole('radio', { name: 'Internal' })).or(page.getByRole('button', { name: 'Internal' })).first().click();
+  await page.getByLabel(/^Name/).first().fill(PJ); await page.getByRole('button', { name: /^Create/ }).click();
+  await page.waitForFunction(() => location.hash.startsWith('#/projects/p/'), null, { timeout: 9000 });
+  const created = (await admin.query('select id, client_id, is_personal from pm_projects where name = $1', [PJ])).rows;
+  check('P2', 'A new internal project is created in Projects V2 (no client, not personal) and opens at its own address', created.length === 1 && created[0].client_id === null && !created[0].is_personal);
+  await page.getByRole('button', { name: /add (your first )?task/i }).first().click(); await page.keyboard.type(T1); await page.keyboard.press('Enter');
+  await page.getByRole('button', { name: T1, exact: true }).waitFor({ timeout: 9000 });
+  check('P3', 'Typing a whole task name creates one task with that exact title (keys are not taken as shortcuts)', (await admin.query('select count(*)::int n from pm_tasks where title = $1', [T1])).rows[0].n === 1);
+  await page.getByRole('button', { name: T1, exact: true }).click(); await page.getByLabel('Add a comment').waitFor({ timeout: 9000 });
+  await page.getByLabel('Add a comment').fill('Draft is in Drive'); await page.keyboard.press('Control+Enter');
+  await page.getByText('Draft is in Drive', { exact: true }).last().waitFor({ timeout: 9000 });
+  const saved = async () => (await admin.query("select count(*)::int n from comments c join pm_tasks t on t.id = c.entity_id where c.entity_type = 'pm_task' and t.title = $1", [T1])).rows[0].n;
+  let nC = await saved(); for (let n = 0; n < 30 && nC !== 1; n++) { await page.waitForTimeout(100); nC = await saved(); }
+  check('P4', 'A comment on a task is saved in the shared comments service', nC === 1, `${nC} saved; recent API calls: ${net.slice(-4).join(' | ')}`);
+  check('P5', 'The task panel opens below the shell header (the organization switcher stays reachable)', await page.evaluate(() => {
+    const host = document.querySelector('.projects-mount'); const panel = host?.shadowRoot?.querySelector('.pm-task'); const top = host?.getBoundingClientRect().top ?? 0;
+    return !!panel && panel.getBoundingClientRect().top >= top - 1;
+  }));
   await page.keyboard.press('Escape');
-  await page.goto(`${base}/#/projects/p/00000000-0000-0000-0000-000000000000`); await wait('Not here');
-  check('P10', 'A project id that does not exist (or is not yours) shows the plain "Not here" state', (await page.locator('.empty').innerText()).includes('Not here'));
+  await page.goto(`${base}/#/projects/p/00000000-0000-0000-0000-000000000000`); await page.getByText("That project doesn't exist").first().waitFor({ timeout: 9000 });
+  check('P6', 'A project id that does not exist (or is not yours) shows a plain not-found state', true);
   await page.goto(`${base}/#/launcher`); await wait('The sky follows your time of day');
 }
 
@@ -339,8 +331,10 @@ await tile('office').click(); await wait('Needs your attention'); await wait('No
 check('U14', 'Office Home: the eight section menu, Home current, designed empty states, owner/admin card with waiting invitations', (await page.locator('nav.nav a').allInnerTexts()).join() === 'Home,Planner,Projects,Funnels,Documents,Team,Apps,Admin' && (await page.locator('nav.nav a[aria-current=page]').innerText()) === 'Home'
   && (await page.locator('main').innerText()).includes('Nothing assigned to you.') && await page.getByText('For owners and admins').isVisible() && await page.getByText('Invitations waiting').isVisible());
 await shot(page, 'c1-home');
-const hp = (await q("insert into projects (workspace_id,name) values ($1,'Quiz funnel rebuild') returning id", [L]))[0].id;
-await q("insert into project_tasks (workspace_id,project_id,title,assignee_id,due_on) values ($1,$2,'Edit quiz emails',$3,current_date + 3),($1,$2,'Late task',$3,current_date - 2)", [L, hp, uid]);
+// Projects V2 (migration 0051): the owner's tasks, assigned to them, feed Office Home through the same my.work / projects.deadlines answers
+const hp = (await q("insert into pm_projects (workspace_id,name,owner_id,visibility) values ($1,'Quiz funnel rebuild',$2,'organization') returning id", [L, uid]))[0].id;
+const hts = await q("insert into pm_tasks (workspace_id,project_id,title,due_on,number) values ($1,$2,'Edit quiz emails',current_date + 3,0),($1,$2,'Late task',current_date - 2,0) returning id", [L, hp]);
+for (const t of hts) await q('insert into pm_task_assignees (workspace_id,project_id,task_id,user_id) values ($1,$2,$3,$4)', [L, hp, t.id, uid]);
 await q("insert into planner_reviews (workspace_id,title,due_on) values ($1,'Q4 review', current_date + 2)", [L]);
 await visit(page, base + '/#/office'); await wait('Edit quiz emails');
 check('U14b', 'Office Home fills "My work", "Deadlines" and the review notice from Projects and Planner (overdue task flagged, project name shown, review coming up)', (await page.locator('main').innerText()).includes('Quiz funnel rebuild') && (await page.locator('main').innerText()).includes('Overdue') && await page.getByText('Coming up.').isVisible() && !(await page.locator('main').innerText()).includes('Nothing assigned to you.'));
@@ -795,8 +789,8 @@ await rm.close();
   await page.keyboard.press('Escape');
   await page.goto(`${base}/#/office/apps`); await wait('Locked and coming-soon apps');
   check('O7', 'Apps lists every app with its state: open links for available apps and the reason for locked or coming-soon ones', (await page.locator('.app-row').count()) >= 10 && (await page.locator('main').innerText()).includes('Coming soon') && (await page.locator('main a', { hasText: 'Open' }).count()) >= 3);
-  await page.goto(`${base}/#/office/projects`); await page.waitForSelector('.pj-sections', { timeout: 9000 });
-  check('O8', 'Office › Projects shows the real Projects screens inside Office (same data), with the Office menu still there and Projects marked current, and project links that stay inside Office', (await page.locator('.pj-side').count()) === 1 && (await page.locator('nav.nav a[aria-current=page]').innerText()).includes('Projects') && (await page.locator('.pj-card').count()) >= 0 && (await page.locator('.pj-side a[href^="#/office/projects/p/"], .pj-card[href^="#/office/projects/p/"]').count()) >= 0 && !(await page.locator('a[href^="#/projects/p/"]').count()));
+  await page.goto(`${base}/#/office/projects`); await page.waitForFunction(() => location.hash === '#/projects', null, { timeout: 9000 }); await page.waitForSelector('.projects-mount', { timeout: 9000 });
+  check('O8', 'The old Office › Projects address opens Projects (one Projects app, under the shell header)', (await page.locator('.projects-mount').count()) === 1);
   // Funnel Strategies (list, editor with side panel)
   const SN = `Webinar funnel ${Date.now()}`;
   await page.goto(`${base}/#/office/funnels/strategies`); await page.waitForSelector('text=One written strategy per funnel', { timeout: 9000 });

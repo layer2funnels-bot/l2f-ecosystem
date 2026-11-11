@@ -42,6 +42,16 @@ if (!existsSync(at('apps/planner/dist/index.html')) || !existsSync(at('apps/plan
   }
 }
 if (existsSync(at('apps/planner/dist/index.html'))) cpSync(at('apps/planner/dist'), out + '/planner', { recursive: true });
+// Projects (V2, React, migrations 0048-0050): built by its own Vite config into apps/projects/dist, served at /projects/;
+// the shell mounts /projects/embed.js at #/projects. Same rule as Planner: on Cloudflare a failed build stops the deploy.
+if (!existsSync(at('apps/projects/dist/embed.js'))) {
+  const run = (args) => spawnSync('npm', ['--prefix', at('apps/projects'), ...args], { stdio: 'inherit' }).status === 0;
+  if (!(run(['ci']) && run(['run', 'build']))) {
+    if (process.env.CF_PAGES) { console.error('Projects build failed: stopping so /projects/ is never served without its app.'); process.exit(1); }
+    console.warn('Projects bundle missing: run npm --prefix apps/projects ci && npm --prefix apps/projects run build first.');
+  }
+}
+if (existsSync(at('apps/projects/dist/embed.js'))) cpSync(at('apps/projects/dist'), out + '/projects', { recursive: true });
 cpSync(at('packages/ui'), out + '/packages/ui', { recursive: true });
 rmSync(out + '/gallery.html', { force: true }); rmSync(out + '/js/gallery.js', { force: true });         // the component gallery is for development and tests only
 writeFileSync(out + '/app-manifests.json', JSON.stringify(loadManifests().map(({ dir, ...m }) => m)));

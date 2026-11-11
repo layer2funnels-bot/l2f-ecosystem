@@ -37,7 +37,7 @@ const F1 = id(), F2 = id(), F0 = id(), FA = id();
 const mkfile = async (id_, ws, client, space, name, up) => db.query("insert into files (id,workspace_id,client_id,space,name,kind,mime_type,size_bytes,storage_path,uploaded_by) values ($1,$2,$3,$4,$5,'file','application/pdf',10,$6,$7)",
   [id_, ws, client, space, name, `${ws}/${client ? `clients/${client}` : 'shared'}/${name}`, up]);
 await mkfile(F1, L, C1, 'client', 'a.pdf', U.ED); await mkfile(F2, L, C2, 'client', 'b.pdf', U.ED); await mkfile(F0, L, null, 'shared', 'c.pdf', U.ED); await mkfile(FA, A, CA, 'client', 'z.pdf', U.AOWN);
-const P1 = id(); await db.query("insert into projects (id,workspace_id,client_id,name) values ($1,$2,$3,'P1')", [P1, L, C1]);
+const P1 = id(); await db.query("insert into pm_projects (id,workspace_id,client_id,name) values ($1,$2,$3,'P1')", [P1, L, C1]);
 
 // ---- A. requesting
 const req = (u, over = {}, org = L) => J('approvals.request', { subject_type: 'deliverable', subject: F1, title: 'Logo files', note: 'Please check', ...over }, u, org);

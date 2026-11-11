@@ -96,8 +96,13 @@ const measureOps = [
 const linkOps = [
   defineOperation({
     name: 'planner.links.list', class: 'read', input: { objective: { type: 'uuid', required: true } },
-    run: (q, _c, i) => q(`select l.objective_id, l.task_id, t.title, t.status, t.priority, t.due_on, t.assignee_id, t.project_id, p.name as project_name, t.archived_at
-      from planner_objective_tasks l join project_tasks t on t.workspace_id = l.workspace_id and t.id = l.task_id join projects p on p.workspace_id = t.workspace_id and p.id = t.project_id
+    // Projects V2 tasks (migration 0051), answered in Planner's own words: status doing/blocked/done, priority low/normal/high/urgent
+    run: (q, _c, i) => q(`select l.objective_id, l.task_id, t.title,
+        case t.status when 'in_progress' then 'doing' when 'in_review' then 'doing' else t.status end as status,
+        case t.priority when 'none' then 'normal' when 'medium' then 'normal' else t.priority end as priority,
+        t.due_on, (select a.user_id from pm_task_assignees a where a.task_id = t.id order by a.added_at, a.user_id limit 1) as assignee_id,
+        t.project_id, p.name as project_name, t.deleted_at as archived_at
+      from planner_objective_tasks l join pm_tasks t on t.workspace_id = l.workspace_id and t.id = l.task_id join pm_projects p on p.workspace_id = t.workspace_id and p.id = t.project_id
       where l.objective_id = $1 order by t.due_on nulls last, t.title`, [i.objective]),
   }),
   defineOperation({

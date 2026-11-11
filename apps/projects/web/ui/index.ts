@@ -1,0 +1,23 @@
+// Barrel for the shared UI primitives. Import from '../ui/index.ts'.
+export { Icon, LogoMark, ICON_NAMES } from './icons.tsx';
+export type { IconName } from './icons.tsx';
+export { Button, IconButton, Spinner } from './Button.tsx';
+export type { ButtonProps, IconButtonProps } from './Button.tsx';
+export { Field, Input, Textarea, Checkbox, Toggle } from './Form.tsx';
+export { Menu, MenuPanel, Select } from './Menu.tsx';
+export type { MenuItem, SelectOption } from './Menu.tsx';
+export { ContextMenuHost, contextMenuProps, openContextMenu, closeContextMenu, openMenuFrom } from './ContextMenu.tsx';
+export type { CtxItem, CtxItems } from './ContextMenu.tsx';
+export { askForm, askConfirm, PromptHost } from './Prompt.tsx';
+export type { AskField } from './Prompt.tsx';
+export { DatePicker } from './DatePicker.tsx';
+export { Avatar, AvatarStack, AssigneeStack, Chip, Badge, StatusPill, StatusMenu, PriorityFlag, PriorityMenu, ProgressBar } from './Badges.tsx';
+export { PersonPicker } from './PersonPicker.tsx';
+export { PeoplePicker, PeoplePickerPanel, PersonChip } from './PeoplePicker.tsx';
+export type { PickerTrigger } from './PeoplePicker.tsx';
+export { Tooltip, Popover, Portal, useFocusTrap } from './Overlay.tsx';
+export { Modal, Drawer, ConfirmDialog } from './Dialog.tsx';
+export { toast, ToastHost } from './Toast.tsx';
+export { Skeleton, SkeletonRows, EmptyState, ErrorState, ViewPending, Kbd, PageHeader, Card } from './Feedback.tsx';
+export { Tabs } from './Tabs.tsx';
+export type { TabItem } from './Tabs.tsx';

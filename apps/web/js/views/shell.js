@@ -146,7 +146,10 @@ export function shellView({ app, orgs, active, email, name, route, content, bann
   }
   const manifest = registry?.get(currentApp);
   const appName = manifest?.name ?? catalog.find((a) => a.app_key === currentApp)?.name ?? appLabel(currentApp);
-  const { items, current } = appNav(currentApp, route, { isAdmin });
+  // A full-screen app (Projects) brings its own sidebar: the shell keeps only its header (with the app switcher in it),
+  // and the app fills everything below, edge to edge. No second menu, no frame around the app.
+  const full = Boolean(content.__fullApp);
+  const { items, current } = full ? { items: [], current: null } : appNav(currentApp, route, { isAdmin });
   const here = items.find((i) => i.key === current);
   const search = h('label', { class: 'search' }, icon('search'), h('span', { class: 'sr' }, 'Search this organization'),
     h('input', { type: 'search', placeholder: `Search ${active.name}`, disabled: true, 'aria-describedby': 'search-why', autocomplete: 'off' }));
@@ -164,14 +167,16 @@ export function shellView({ app, orgs, active, email, name, route, content, bann
   paintCrumb();
   const onCrumbs = (e) => { if (e.detail.root === content) paintCrumb(); };
   document.addEventListener('l2f:crumbs', onCrumbs); offs.push(() => document.removeEventListener('l2f:crumbs', onCrumbs));
-  const header = h('header', { class: 'hdr' },
-    h('span', { class: 'only-m' }, appSwitcher({ catalog, registry, launcherCurrent: false, suffix: '-m' })),
+  const header = h('header', { class: full ? 'hdr is-full' : 'hdr' },
+    full ? h('span', { class: 'hdr-app' }, appSwitcher({ catalog, registry, launcherCurrent: false, suffix: '-f' }), plateOf(manifest ?? { id: currentApp }, 30))
+      : h('span', { class: 'only-m' }, appSwitcher({ catalog, registry, launcherCurrent: false, suffix: '-m' })),
     crumb,
     search, h('span', { class: 'sr', id: 'search-why' }, 'Search is not available yet. It arrives with the apps it searches.'),
     notifications ? bell(notifications) : h('span', { class: 'iconbtn hide-s', role: 'img', 'aria-label': 'Notifications are not available yet', 'aria-disabled': 'true', title: 'Notifications are not available yet' }, icon('bell')),
     sw, who);
   return h('div', { class: 'app', 'data-org': active.slug ?? '' }, skip,
-    h('div', { class: 'shell' }, side, h('div', { class: 'main' }, header, h('main', { class: 'content', id: 'main', 'aria-busy': 'false' }, banner ?? null, content))),
+    full ? h('div', { class: 'shell is-full' }, h('div', { class: 'main' }, header, h('main', { class: 'content flush wide is-full', id: 'main', 'aria-busy': 'false' }, banner ?? null, content)))
+      : h('div', { class: 'shell' }, side, h('div', { class: 'main' }, header, h('main', { class: 'content', id: 'main', 'aria-busy': 'false' }, banner ?? null, content))),
     items.length ? bottomBar(items, current, appName) : null);
 }
 

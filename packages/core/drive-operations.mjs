@@ -251,7 +251,7 @@ const personalOps = [
   }),
   defineOperation({
     name: 'drive.breakglass.list', class: 'read',
-    run: (q) => q(`select b.id, b.accessed_by, coalesce(a.display_name, a.email) as accessed_by_name, b.owner_id, coalesce(o.display_name, o.email) as owner_name, b.reason, b.files_seen, b.accessed_at
+    run: (q) => q(`select b.id, b.accessed_by, coalesce(a.display_name, a.email) as accessed_by_name, b.owner_id, coalesce(o.display_name, o.email) as owner_name, b.reason, b.files_seen, b.scope, b.accessed_at
       from drive_break_glass b left join profiles a on a.id = b.accessed_by left join profiles o on o.id = b.owner_id order by b.accessed_at desc limit 200`),
   }),
   defineOperation({

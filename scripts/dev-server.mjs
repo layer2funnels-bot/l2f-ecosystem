@@ -42,6 +42,14 @@ export async function startDevServer({ port = 8788, env = { ...LOCAL_ENV, ...pro
         const pbody = await readFile(pf);
         res.writeHead(200, { ...headersFor, 'content-type': TYPES[extname(pf)] ?? 'application/octet-stream', 'cache-control': 'no-store' }); res.end(pbody); return;
       }
+      // Projects is its own Vite app too (apps/projects, base /projects/): only its built files live under /projects/ (assets and
+      // embed.js); every other /projects address is a shell page (#-routed), so it falls through to index.html below
+      if (url.pathname.startsWith('/projects/') && extname(url.pathname)) {
+        const jdist = fileURLToPath(new URL('../apps/projects/dist/', import.meta.url));
+        const jf = normalize(join(jdist, url.pathname.replace(/^\/projects\//, ''))); if (!jf.startsWith(jdist)) { res.writeHead(404).end(); return; }
+        const jbody = await readFile(jf);
+        res.writeHead(200, { ...headersFor, 'content-type': TYPES[extname(jf)] ?? 'application/octet-stream', 'cache-control': 'no-store' }); res.end(jbody); return;
+      }
       const [base, rel] = url.pathname.startsWith('/packages/ui/') ? [ui, url.pathname.slice(13)] : url.pathname.startsWith('/packages/core/') ? [core, url.pathname.slice(15)] : [root, url.pathname];
       let file = normalize(join(base, rel)); if (!file.startsWith(base)) { res.writeHead(404).end(); return; }
       if (url.pathname === '/' || !extname(file)) file = join(root, 'index.html');

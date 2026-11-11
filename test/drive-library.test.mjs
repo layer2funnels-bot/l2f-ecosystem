@@ -35,7 +35,7 @@ for (const k of Object.keys(ORGS)) {
   await db.query("insert into memberships (workspace_id,user_id,kind,role) values ($1,$2,'staff','owner'),($1,$3,'staff','editor'),($1,$4,'staff','viewer'),($1,$5,'staff','owner')", [o.id, o.U.OWN, o.U.ED, o.U.VW, BOTH]);
   for (const u of [o.U.ED, o.U.VW]) for (const app of ['drive', 'projects', 'clients']) await db.query('insert into app_grants (workspace_id,user_id,app_key) values ($1,$2,$3)', [o.id, u, app]);
   await db.query("insert into clients (id,workspace_id,name) values ($1,$2,'A client')", [o.C, o.id]);
-  await db.query("insert into projects (id,workspace_id,client_id,name) values ($1,$2,null,'Internal')", [o.PI, o.id]);
+  await db.query("insert into pm_projects (id,workspace_id,client_id,name,visibility) values ($1,$2,null,'Internal','organization')", [o.PI, o.id]);
   for (const n of ['All clients · edit', 'All projects · edit']) await db.query("insert into access_assignments (workspace_id,access_level_id,principal_type,principal_id) values ($1,$2,'user',$3)", [o.id, await lvl(o.id, n), o.U.ED]);
   for (const n of ['All clients · read', 'All projects · read']) await db.query("insert into access_assignments (workspace_id,access_level_id,principal_type,principal_id) values ($1,$2,'user',$3)", [o.id, await lvl(o.id, n), o.U.VW]);
 }

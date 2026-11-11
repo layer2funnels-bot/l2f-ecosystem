@@ -10,7 +10,7 @@ import { createTheme } from './theme.js';
 import { loadRegistry } from './registry.js';
 import { docView } from './modules/docs.js';
 import { boardView } from './modules/whiteboard.js';
-import { projectsView } from './modules/projects.js';
+import { projectsV2View, unmountProjects, projectsMountedFor } from './modules/projects-v2.js';
 import { clientsView } from './modules/clients.js';
 import { driveView } from './modules/drive.js';
 import { publicView } from './modules/publicview.js';
@@ -276,6 +276,7 @@ async function doSwitch(target) {
   const mine = pageKeyFor(route);
   renderId++;                                               // anything still in flight for the old organization is now stale
   unmountPlanner();                                         // Planner holds the old organization's plans: gone before the switch is even confirmed
+  unmountProjects();                                        // so does Projects
   const button = root.querySelector('#org-switcher');
   if (button) { button.dataset.pending = 'true'; button.disabled = true; }
   const main = root.querySelector('#main');
@@ -327,10 +328,10 @@ const bannerEl = () => {
 const centered = (...c) => h('div', { class: 'authwrap' }, h('main', { class: 'authnarrow', id: 'main' }, h('div', { class: 'card', style: 'padding:32px' }, ...c)));
 
 // Planner isn't open to this person here (not switched on, coming soon, or no grant): say so plainly, in the shell's words.
-function plannerOffView(org, entry) {
+function plannerOffView(org, entry, app = 'Planner') {
   const soon = entry?.state === 'coming_soon';
-  return h('section', {}, h('div', { class: 'crumb' }, 'Apps'), h('h1', { 'data-page-title': true }, 'Planner'),
-    emptyState({ title: soon ? 'Planner is coming soon' : `Planner isn’t available to you in ${org.name}`,
+  return h('section', {}, h('div', { class: 'crumb' }, 'Apps'), h('h1', { 'data-page-title': true }, app),
+    emptyState({ title: soon ? `${app} is coming soon` : `${app} isn’t available to you in ${org.name}`,
       body: soon ? 'It isn’t switched on yet. Nothing has been lost.' : `Ask an ${org.name} admin for access, or switch to another organization at the top of the page.`,
       ic: 'lock', action: h('a', { class: 'btn pri', href: hrefFor.office() }, 'Go to Office Home') }));
 }
@@ -353,6 +354,8 @@ async function render(opts = {}) {
   const id = ++renderId; const live = () => id === renderId;
   const route = parseRoute(location.hash);
   if (route.name !== 'planner' || !session.signedIn() || unavailable) unmountPlanner();
+  if (route.name !== 'projects' || !session.signedIn() || unavailable) unmountProjects();
+  if (/^#\/(office|app)\/projects(\/|\?|$)/.test(location.hash)) { history.replaceState(null, '', '#/projects'); }   // old Office addresses
   document.body.classList.remove('hasb');
   theme.setOrg(null);
   if (!ready) { put(root, centered(skeleton(3))); return; }
@@ -417,7 +420,6 @@ async function render(opts = {}) {
         if (pg === 'documents') content = documentsView({ api, ctx: c });
         else if (pg === 'team') content = teamView({ api, ctx: c });
         else if (pg === 'apps') content = appsView({ catalog: ctx.catalog, registry, org, orgs: ctx.orgs });
-        else if (pg === 'projects') content = projectsView({ api, ctx: c, base: '#/office/projects', embedded: true, route: { view: route.params.view ?? 'home', id: route.params.id, query: route.query } });
         else content = appNotBuiltView(OFFICE_PAGES.find((p) => p.key === pg)?.label ?? 'This page');
         break;
       }
@@ -437,7 +439,14 @@ async function render(opts = {}) {
       case 'image': content = imageView({ api, id: route.params.id, ctx: c }); break;
       case 'pdf': content = pdfView({ api, id: route.params.id, ctx: c }); break;
       case 'clients': content = clientsView({ api, ctx: c, route: { view: route.params.view, id: route.params.id, query: route.query } }); break;
-      case 'projects': content = projectsView({ api, ctx: c, route: { view: route.params.view, id: route.params.id, query: route.query } }); break;
+      case 'projects': {
+        // the database refuses Projects without the app switched on here and the person's grant; this only explains it instead of mounting an app that can show nothing
+        const entry = ctx.catalog.find((a) => a.app_key === 'projects');
+        if (!ctx.catalogError && entry?.state !== 'available') { unmountProjects(); content = plannerOffView(org, entry, 'Projects'); break; }
+        const s = session.get();
+        content = projectsV2View({ api, org, orgs: ctx.orgs, me: { id: s?.userId, name: s?.name || s?.email || 'You' } });
+        break;
+      }
       case 'board': content = boardView({ api, id: route.params.id, ctx: c }); break;
       case 'planner': {
         // the database refuses Planner without the app switched on here and the person's grant; this only explains it instead of mounting an app that can show nothing
@@ -474,6 +483,11 @@ window.addEventListener('hashchange', () => {
   if (from.name === 'planner' && to.name === 'planner' && ready && session.signedIn() && !unavailable && ctx?.active && plannerMountedFor(ctx.active.org_id)) {
     document.querySelector('#main > .notice')?.remove();         // a shell message lasts one page, as in every other app
     return markAppNav(plannerSection(to.params.page));
+  }
+  // moving between Projects' own pages: Projects routes itself (no remount, no reload)
+  if (from.name === 'projects' && to.name === 'projects' && ready && session.signedIn() && !unavailable && ctx?.active && projectsMountedFor(ctx.active.org_id)) {
+    document.querySelector('#main > .notice')?.remove();
+    return;
   }
   window.scrollTo(0, 0); render();       // a new page starts at the top, as the design's navigation does
 });

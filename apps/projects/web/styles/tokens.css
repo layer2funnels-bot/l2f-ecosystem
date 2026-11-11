@@ -1,0 +1,168 @@
+/* Projects design tokens: the APPROVED fresh design (11 Nov 2026). Every colour, radius, shadow, font and size on every
+   Projects screen comes from these variables, so when the new ecosystem design arrives a reskin is a change of values here
+   and nothing else. Scoped to the shadow root (.pm-host); embed.tsx mirrors the shell's theme (data-theme) and active
+   organization (data-org) onto it. Statuses always pair colour with an icon or a word, never colour alone. */
+.pm-host {
+  --pm-font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --pm-font-head: "Inter Tight", "Inter", system-ui, sans-serif;
+  --pm-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --pm-fs-xs: 11.5px;
+  --pm-fs-sm: 12.5px;
+  --pm-fs: 14px;
+  --pm-fs-md: 16px;
+  --pm-fs-lg: 18px;
+  --pm-fs-xl: 24px;
+  --pm-lh: 1.45;
+
+  --pm-s-1: 4px;
+  --pm-s-2: 8px;
+  --pm-s-3: 12px;
+  --pm-s-4: 16px;
+  --pm-s-5: 24px;
+  --pm-s-6: 32px;
+  --pm-s-7: 40px;
+  --pm-s-8: 48px;
+
+  --pm-r-sm: 6px;
+  --pm-r-md: 10px;
+  --pm-r-lg: 14px;
+  --pm-r-full: 999px;
+
+  /* density: quick with a mouse, 44px targets with a finger */
+  --pm-ctl-h: 36px;
+  --pm-ctl-h-sm: 28px;
+  --pm-row-h: 40px;
+  --pm-sidebar-w: 248px;
+  --pm-topbar-h: 52px;
+
+  --pm-t-fast: 120ms;
+  --pm-t: 160ms;
+  --pm-t-slow: 180ms;
+  --pm-ease: cubic-bezier(0.2, 0, 0, 1);
+
+  color-scheme: light;
+  --pm-bg: #f6f7f9;
+  --pm-surface: #ffffff;
+  --pm-surface-2: #f1f3f6;
+  --pm-surface-hover: #eceff3;
+  --pm-surface-active: #e3e7ed;
+  --pm-sidebar-bg: #ffffff;
+  --pm-border: #e2e5ea;
+  --pm-border-strong: #c8cdd5;
+  --pm-text: #171a21;
+  --pm-text-2: #4b5260;
+  --pm-text-3: #5f6675;
+  --pm-text-inverse: #ffffff;
+  --pm-overlay: rgba(17, 24, 39, 0.42);
+  --pm-danger: #b42318;
+  --pm-danger-hover: #9a1d14;
+  --pm-danger-soft: #fdecea;
+  --pm-warning: #8a5200;
+  --pm-warning-soft: #fff3dc;
+  --pm-success: #1d6b52;
+  --pm-info-soft: #e8effc;
+  --pm-shadow-1: 0 1px 2px rgba(17, 24, 39, .06), 0 1px 1px rgba(17, 24, 39, .04);
+  --pm-shadow-2: 0 1px 2px rgba(17, 24, 39, .06), 0 4px 12px rgba(17, 24, 39, .08);
+  --pm-shadow-3: 0 10px 30px rgba(17, 24, 39, .14), 0 2px 8px rgba(17, 24, 39, .08);
+  --pm-st-todo: #5f6675;
+  --pm-st-in_progress: #1f5bd8;
+  --pm-st-in_review: #6a3fc9;
+  --pm-st-blocked: #b42318;
+  --pm-st-done: #1d6b52;
+  --pm-pr-urgent: #b42318;
+  --pm-pr-high: #b25e00;
+  --pm-pr-medium: #8a6a00;
+  --pm-pr-low: #1f5bd8;
+  --pm-pr-none: #8b92a0;
+  --pm-ps-on_track: #1d6b52;
+  --pm-ps-at_risk: #8a5200;
+  --pm-ps-off_track: #b42318;
+  --pm-ps-on_hold: #5f6675;
+  --pm-ps-complete: #1f5bd8;
+  --pm-accent: #2b5ce6;
+  --pm-accent-hover: #2350cc;
+  --pm-accent-active: #1e48c2;
+  --pm-accent-soft: #eaf0fd;
+  --pm-accent-text: #1e48c2;
+  --pm-on-accent: #ffffff;
+  --pm-focus: 0 0 0 2px var(--pm-surface), 0 0 0 4px var(--pm-accent);
+}
+@media (pointer: coarse) { .pm-host { --pm-ctl-h: 44px; --pm-ctl-h-sm: 36px; --pm-row-h: 52px; } }
+
+/* organization accents (placeholders until the new ecosystem design defines them) */
+.pm-host[data-org='aurj'] {
+  --pm-accent: #0e7c86;
+  --pm-accent-hover: #0b6c75;
+  --pm-accent-active: #0a6670;
+  --pm-accent-soft: #e3f4f5;
+  --pm-accent-text: #0a6670;
+  --pm-on-accent: #ffffff;
+}
+
+.pm-host[data-theme='dark'] {
+  color-scheme: dark;
+  --pm-bg: #0f1115;
+  --pm-surface: #171a20;
+  --pm-surface-2: #1c2027;
+  --pm-surface-hover: #232832;
+  --pm-surface-active: #2a303b;
+  --pm-sidebar-bg: #171a20;
+  --pm-border: #2a2f39;
+  --pm-border-strong: #3a4150;
+  --pm-text: #eef0f4;
+  --pm-text-2: #b7bdc8;
+  --pm-text-3: #9aa1ad;
+  --pm-text-inverse: #0f1115;
+  --pm-overlay: rgba(0, 0, 0, 0.6);
+  --pm-danger: #ff9a8f;
+  --pm-danger-hover: #ffb3aa;
+  --pm-danger-soft: #3a1c1a;
+  --pm-warning: #ffc266;
+  --pm-warning-soft: #3a2c12;
+  --pm-success: #7fd6b5;
+  --pm-info-soft: #1b2a4a;
+  --pm-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --pm-shadow-2: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.35);
+  --pm-shadow-3: 0 2px 4px rgba(0, 0, 0, 0.4), 0 12px 32px rgba(0, 0, 0, 0.55);
+  --pm-st-todo: #b7bdc8;
+  --pm-st-in_progress: #8fb0ff;
+  --pm-st-in_review: #c4a8ff;
+  --pm-st-blocked: #ff9a8f;
+  --pm-st-done: #7fd6b5;
+  --pm-pr-urgent: #ff9a8f;
+  --pm-pr-high: #ffc266;
+  --pm-pr-medium: #e8c25a;
+  --pm-pr-low: #8fb0ff;
+  --pm-pr-none: #9aa1ad;
+  --pm-ps-on_track: #7fd6b5;
+  --pm-ps-at_risk: #ffc266;
+  --pm-ps-off_track: #ff9a8f;
+  --pm-ps-on_hold: #b7bdc8;
+  --pm-ps-complete: #8fb0ff;
+  --pm-accent: #8fb0ff;
+  --pm-accent-hover: #a5c0ff;
+  --pm-accent-active: #7aa0f5;
+  --pm-accent-soft: #1b2a4a;
+  --pm-accent-text: #a5c0ff;
+  --pm-on-accent: #0b1730;
+}
+.pm-host[data-theme='dark'][data-org='aurj'] {
+  --pm-accent: #3cc3cc;
+  --pm-accent-hover: #5ad0d8;
+  --pm-accent-active: #2fb0b9;
+  --pm-accent-soft: #123437;
+  --pm-accent-text: #6fd9e0;
+  --pm-on-accent: #062a2d;
+}
+
+/* Inside the ecosystem shell Projects is the page, not a panel on it: its background, sidebar and lines are the shell's own
+   (the shell's tokens reach into the shadow root), in light and dark. Outside the shell the approved values above apply. */
+.pm-host, .pm-host[data-theme='dark'] {
+  --pm-bg: var(--bg, #f6f7f9);
+  --pm-sidebar-bg: var(--surface2, #ffffff);
+  --pm-surface: var(--surface, #ffffff);
+  --pm-border: var(--line, #e2e5ea);
+}
+
+@media (prefers-reduced-motion: reduce) { .pm-host { --pm-t-fast: 0ms; --pm-t: 0ms; --pm-t-slow: 0ms; } }
