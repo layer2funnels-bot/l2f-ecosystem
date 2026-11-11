@@ -23,6 +23,7 @@ import { PeoplePicker } from '../ui/PeoplePicker.tsx';
 import { Tabs } from '../ui/Tabs.tsx';
 import { toast } from '../ui/Toast.tsx';
 import { isMac } from './shortcuts.ts';
+import { realTarget } from '../lib/dom.ts';
 
 const lastKey = (orgId: string) => `pm.quickadd.project.${orgId}`;
 type Tab = 'task' | 'project' | 'link';
@@ -142,7 +143,7 @@ export function QuickAddTask({ open, onClose, presetProjectId }: { open: boolean
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Enter' || !(e.ctrlKey || e.metaKey) || e.defaultPrevented) return;
-      if (!(e.target as HTMLElement | null)?.closest?.('.pm-quickadd')) return;
+      if (!(realTarget(e) as HTMLElement | null)?.closest?.('.pm-quickadd')) return;
       e.preventDefault();
       if (act.current.tab === 'task') void act.current.submit('open'); else if (act.current.tab === 'link') void act.current.submitLink();
     };

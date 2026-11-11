@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, ReactNode, RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { cx } from '../lib/util.ts';
-import { activeEl, portalTarget } from '../lib/dom.ts';
+import { activeEl, portalTarget, realTarget } from '../lib/dom.ts';
 
 export function Portal({ children }: { children: ReactNode }) {
   return createPortal(children, portalTarget());
@@ -63,7 +63,7 @@ export function Popover({ anchor, open, onClose, children, align = 'start', matc
     window.addEventListener('resize', onResize);
     window.addEventListener('scroll', onResize, true);
     const onDown = (e: PointerEvent) => {
-      const t = e.target as Node;
+      const t = realTarget(e) as Node;
       if (ref.current?.contains(t)) return;
       if (anchor instanceof HTMLElement && anchor.contains(t)) return;
       closeRef.current('outside');

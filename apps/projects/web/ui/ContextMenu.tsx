@@ -9,7 +9,7 @@ import { cx } from '../lib/util.ts';
 import { Icon } from './icons.tsx';
 import type { IconName } from './icons.tsx';
 import { Portal } from './Overlay.tsx';
-import { byId, activeEl } from '../lib/dom.ts';
+import { byId, activeEl, realTarget } from '../lib/dom.ts';
 
 export interface CtxItem {
   id: string;
@@ -341,10 +341,10 @@ export function ContextMenuHost() {
   useEffect(() => {
     if (id === undefined) return;
     const inMenu = (t: EventTarget | null) => t instanceof Element && !!t.closest('.pm-ctx');
-    const onDown = (e: PointerEvent) => { if (!inMenu(e.target)) closeContextMenu(); };
-    const onScroll = (e: Event) => { if (!inMenu(e.target)) closeContextMenu(); };
+    const onDown = (e: PointerEvent) => { if (!inMenu(realTarget(e))) closeContextMenu(); };
+    const onScroll = (e: Event) => { if (!inMenu(realTarget(e))) closeContextMenu(); };
     const onKey = (e: KeyboardEvent) => {
-      if (inMenu(e.target)) return;
+      if (inMenu(realTarget(e))) return;
       if (e.key === 'Escape' || e.key === 'Tab') { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); } closeContextMenu(e.key === 'Escape'); }
     };
     const close = () => closeContextMenu();

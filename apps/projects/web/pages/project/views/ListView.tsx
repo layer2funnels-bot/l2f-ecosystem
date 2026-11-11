@@ -32,7 +32,7 @@ import {
 } from './taskViewShared.tsx';
 import type { CreateInit, GroupBy, MoveSpec, ViewState } from './taskViewShared.tsx';
 import { activeFilterCount, sanitizeState } from './taskViewShared.tsx';
-import { domRoot } from '../../../lib/dom.ts';
+import { domRoot, realTarget } from '../../../lib/dom.ts';
 
 // ---------------------------------------------------------------------------------------------
 // Groups
@@ -192,7 +192,7 @@ function ListViewInner({ project }: { project: ProjectDetail }) {
     if (!selIds.length) return;
     const onKey = (e: globalThis.KeyboardEvent) => {
       if (e.key !== 'Escape' || e.defaultPrevented) return;
-      const tg = e.target as HTMLElement | null;
+      const tg = realTarget(e) as HTMLElement | null;
       if (tg && (tg.tagName === 'INPUT' || tg.tagName === 'TEXTAREA')) return;
       if (domRoot().querySelector('[role="dialog"], .pm-pop')) return;
       setSelected(new Set());

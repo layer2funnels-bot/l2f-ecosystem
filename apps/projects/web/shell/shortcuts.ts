@@ -7,7 +7,7 @@ import type { Route } from '../router.ts';
 import type { IconName } from '../ui/icons.tsx';
 import { toast } from '../ui/Toast.tsx';
 import { taskPanel } from '../task/panelNav.ts';
-import { domRoot, activeEl } from '../lib/dom.ts';
+import { domRoot, activeEl, realTarget } from '../lib/dom.ts';
 
 export const isMac = typeof navigator !== 'undefined' && /mac|iphone|ipad/i.test(navigator.platform || navigator.userAgent);
 
@@ -231,7 +231,7 @@ export function useGlobalShortcuts(ctx: ShortcutCtx): void {
       if (['Shift', 'Control', 'Alt', 'Meta', 'CapsLock'].includes(e.key)) return;
       if (e.key === 'Escape') { clearPending(); closeTopmostOverlay(e); return; }
       const c = ref.current;
-      const typing = isTyping(e.target);
+      const typing = isTyping(realTarget(e));
       const overlay = overlayOpen();
 
       if (pending) {

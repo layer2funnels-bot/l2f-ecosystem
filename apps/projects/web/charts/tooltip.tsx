@@ -4,7 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import type { FocusEvent as ReactFocusEvent, KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent, ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { clamp } from './format.ts';
-import { portalTarget } from '../lib/dom.ts';
+import { portalTarget, realTarget } from '../lib/dom.ts';
 
 export interface TipRow { color?: string; label: string; value: string; strong?: boolean }
 export interface TipContent { title?: string; subtitle?: string; rows?: TipRow[]; note?: string }
@@ -36,7 +36,7 @@ export function useTip(): TipApi {
   const open = tip !== null;
   useEffect(() => {
     if (!open) return;
-    const down = (e: PointerEvent) => { if (!(e.target instanceof Element) || !e.target.closest(`[${POINT_ATTR}]`)) setTip(null); };
+    const down = (e: PointerEvent) => { const tg = realTarget(e); if (!(tg instanceof Element) || !tg.closest(`[${POINT_ATTR}]`)) setTip(null); };
     const key = (e: KeyboardEvent) => { if (e.key === 'Escape') setTip(null); };
     const scroll = () => setTip(null);
     document.addEventListener('pointerdown', down, true);

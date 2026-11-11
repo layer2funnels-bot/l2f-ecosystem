@@ -18,3 +18,6 @@ export function activeEl(): Element | null {
   return a;
 }
 export const byId = (id: string): HTMLElement | null => rootNode.getElementById(id) as HTMLElement | null;
+/** The element an event really came from. A listener on document or window sees events from inside the shadow root
+ *  retargeted to the host element; composedPath()[0] is the actual input, button or menu item. */
+export const realTarget = (e: Event): EventTarget | null => (typeof e.composedPath === 'function' ? e.composedPath()[0] ?? e.target : e.target);
