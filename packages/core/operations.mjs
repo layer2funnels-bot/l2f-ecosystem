@@ -22,11 +22,13 @@ import { formsOperations } from './forms-operations.mjs';
 import { ladderOperations, socialOperations } from './ladder-social-operations.mjs';
 import { projectsV2Operations } from './projects-v2-operations.mjs';
 import { fmpOperations } from './fmp-operations.mjs';
+import { fmpDataOperations } from './fmp-data-operations.mjs';
 
 export const operations = Object.freeze(Object.fromEntries([
   ...funnelOperations,
   ...clientsOperations,
   ...fmpOperations,
+  ...fmpDataOperations,
   ...projectsCompatOperations,
   ...collabOperations,
   ...driveOperations,
