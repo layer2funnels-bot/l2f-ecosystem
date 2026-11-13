@@ -1,6 +1,6 @@
 // The app: boot, routing, organization context, sign-in flows and organization switching. Views are functions of this context.
 import { h, put, announce, focusTitle } from './dom.js';
-import { createSession, parseAuthHash } from './session.js';
+import { createSession, parseAuthHash, sharedSessionStore, safeAppReturn } from './session.js';
 import { createAuthClient } from './gotrue.js';
 import { createApiClient, NO_ORG } from './api.js';
 import { parseRoute, hrefFor, pageKeyFor, routeForPage, defaultOrg, AUTH_ROUTES, OFFICE_PAGES, FUNNEL_TYPES, appLabel } from './routes.js';
@@ -41,7 +41,7 @@ const cfg = window.L2F_CONFIG;
 const root = document.getElementById('app');
 const store = (() => { try { localStorage.setItem('l2f.t', '1'); localStorage.removeItem('l2f.t'); return localStorage; } catch { const m = new Map(); return { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => m.set(k, v), removeItem: (k) => m.delete(k) }; } })();
 const tabStore = (() => { try { sessionStorage.setItem('l2f.t', '1'); sessionStorage.removeItem('l2f.t'); return sessionStorage; } catch { return store; } })();
-const session = createSession({ storage: store });
+const session = createSession({ storage: sharedSessionStore({ fallback: store, domain: cfg.cookieDomain || '' }) });   // one sign-in for every app on the domain
 // A pending invitation must survive the e-mail confirmation step: the confirmation link opens in a new tab (often another browser), so it is kept in
 // local storage as well as in the tab, and it also rides on the confirmation link itself (?invite=...).
 const inviteStore = {
@@ -104,6 +104,9 @@ async function boot() {
     if (fromLink.type === 'recovery') { ready = true; go('#/reset'); return; }
   }
   const r0 = parseRoute(location.hash);
+  // another ecosystem app (Funnel Mapper) sent the person to sign in: remember where to go back (only configured app addresses)
+  const appBack = safeAppReturn(r0.query?.return, cfg.appOrigins ?? []);
+  if (appBack) { tabStore.setItem('l2f.app-return', appBack); history.replaceState(null, '', `${location.pathname}#/${r0.name === 'home' ? 'signin' : r0.name}`); }
   if (r0.name === 'invite' && r0.query.token) { inviteStore.set(r0.query.token); history.replaceState(null, '', `${location.pathname}#/invite`); }
   if (r0.name === 'public') { ctx = null; ready = true; render(); return; }     // a public share link needs neither sign-in nor organizations
   if (!session.signedIn()) { ctx = null; ready = true; render(); return; }
@@ -122,6 +125,8 @@ async function boot() {
   const r = parseRoute(location.hash);
   if (pending) return go('#/invite');
   if (myInvites.length && !tabStore.getItem('l2f.inv.seen')) { tabStore.setItem('l2f.inv.seen', '1'); return go('#/invite'); }
+  const toApp = tabStore.getItem('l2f.app-return'); tabStore.removeItem('l2f.app-return');
+  if (toApp && safeAppReturn(toApp, cfg.appOrigins ?? [])) { location.href = toApp; return; }
   const back = tabStore.getItem('l2f.return'); tabStore.removeItem('l2f.return');
   if (back && AUTH_ROUTES.has(r.name)) { try { return go(JSON.parse(back).hash); } catch { /* fall through */ } }
   go(AUTH_ROUTES.has(r.name) || r.name === 'home' || r.name === 'no-org' ? hrefFor.launcher() : location.hash);

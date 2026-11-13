@@ -5,15 +5,13 @@ import { Icon } from "@/components/icon";
 import { fmtDate } from "@/lib/format";
 import { parseGraph, parseSettings } from "@/lib/graph";
 import type { VersionRow } from "@/lib/schemas";
-import { supabaseBrowser } from "@/lib/supabase/client";
+import { ecoCall } from "@/lib/eco/browser";
 import { editorSnapshot, replaceContent, setPanel, showToast, useEditor } from "@/lib/editor/store";
 
 export async function saveVersion(funnelId: string, label: string, auto = false) {
   const s = editorSnapshot();
-  const { error } = await supabaseBrowser()
-    .from("funnel_versions")
-    .insert({ funnel_id: funnelId, graph: s.graph as never, settings: s.settings as never, label, auto });
-  if (error) throw error;
+  const r = await ecoCall("fmp.versions.add", { funnel: funnelId, graph: s.graph, settings: s.settings, label, auto });
+  if (!r.ok || !r.data.length) throw new Error(r.ok ? "You can’t save versions of this funnel." : r.message);
 }
 
 export function VersionsPanel({ onSaved }: { onSaved?: () => void }) {
@@ -24,9 +22,9 @@ export function VersionsPanel({ onSaved }: { onSaved?: () => void }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const load = useCallback(async () => {
-    const { data, error } = await supabaseBrowser().from("funnel_versions").select("*").eq("funnel_id", funnelId).order("created_at", { ascending: false }).limit(100);
-    if (error) setErr(error.message);
-    setList(data ?? []);
+    const r = await ecoCall<VersionRow>("fmp.versions.list", { funnel: funnelId, limit: 100 });
+    if (!r.ok) setErr(r.message);
+    setList(r.ok ? r.data : []);
   }, [funnelId]);
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- loading external data
@@ -112,7 +110,7 @@ export function VersionsPanel({ onSaved }: { onSaved?: () => void }) {
                     aria-label={`Delete version ${v.label}`}
                     onClick={async () => {
                       if (!confirm("Delete this version?")) return;
-                      await supabaseBrowser().from("funnel_versions").delete().eq("id", v.id);
+                      await ecoCall("fmp.versions.delete", { id: v.id });
                       load();
                     }}
                   >

@@ -5,4 +5,8 @@ window.L2F_CONFIG = {
   publishableKey: 'sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH',
   googleEnabled: false,
   showDesignStatus: false,
+  // One sign-in for every app: the session cookie's domain (".example.com" when apps are on sub-domains of example.com; empty = this host only)
+  // and the addresses of the other ecosystem apps the sign-in page may send people back to (Funnel Mapper). Set at go-live.
+  cookieDomain: '',
+  appOrigins: ['http://127.0.0.1:3000'],
 };

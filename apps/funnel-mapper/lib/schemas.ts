@@ -1,6 +1,5 @@
 // Zod schemas for forms and DB rows outside the funnel graph.
 import { z } from "zod";
-import type { Database } from "./supabase/database.types";
 import { BILLING_FREQUENCIES, PRICING_MODELS } from "./pricing";
 
 export const CLIENT_STATUSES = ["lead", "proposal", "active", "paused", "past"] as const;
@@ -19,15 +18,18 @@ export const STATUS_LABEL: Record<string, string> = {
   archived: "Archived",
 };
 
-export type ClientRow = Database["public"]["Tables"]["clients"]["Row"];
-export type FunnelRow = Database["public"]["Tables"]["funnels"]["Row"];
-export type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
-export type TemplateRow = Database["public"]["Tables"]["templates"]["Row"];
-export type VersionRow = Database["public"]["Tables"]["funnel_versions"]["Row"];
-export type ActualRowDb = Database["public"]["Tables"]["funnel_actuals"]["Row"];
-export type ShareLinkRow = Database["public"]["Tables"]["share_links"]["Row"];
-export type ShareCommentRow = Database["public"]["Tables"]["share_comments"]["Row"];
-export type ProductRow = Database["public"]["Tables"]["products"]["Row"];
+// Record shapes as the ecosystem API returns them (stage 2; lib/eco/data.ts maps trash and storage fields to these names).
+import type { EcoClient, EcoFunnel } from "./eco/data";
+type J = Record<string, unknown>;
+export type ClientRow = EcoClient;
+export type FunnelRow = EcoFunnel & { graph: unknown };
+export type ProfileRow = { id: string; full_name: string; email: string };
+export type TemplateRow = { id: string; builtin_key: string | null; name: string; category: string; description: string; graph: unknown; settings: unknown; own?: boolean; created_at?: string };
+export type VersionRow = { id: string; funnel_id: string; label: string; auto: boolean; created_at: string; created_by?: string | null; graph: unknown; settings: unknown };
+export type ActualRowDb = { id: string; funnel_id: string; period_start: string; period_end: string; node_id: string; visitors: number | null; conversions: number | null; revenue: number | null; spend: number | null; source: string; source_ref: string | null; updated_at?: string };
+export type ShareLinkRow = { id: string; funnel_id: string; can_edit: boolean; hide_numbers: boolean; allow_comments: boolean; expires_at: string | null; created_at: string; token?: string };
+export type ShareCommentRow = { id: string; share_link_id: string; funnel_id: string; node_id: string | null; author_name: string; body: string; resolved: boolean; created_at: string };
+export type ProductRow = { id: string; client_id: string | null; name: string; type: string; params: J; notes: string; created_at: string; updated_at: string };
 
 const optUrl = z
   .string()

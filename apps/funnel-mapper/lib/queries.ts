@@ -1,16 +1,13 @@
 import "server-only";
-import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "./supabase/database.types";
 import type { TemplateOption } from "@/components/new-funnel-dialog";
+import { listTemplates } from "./eco/data";
 import { TEMPLATES13 } from "./templates13";
 
-type SB = SupabaseClient<Database>;
-
-/** Options for the "Start from" picker: the 13 approved built-in templates + the workspace's saved templates. */
-export async function templateOptions(sb: SB, savedLabel = "Team templates"): Promise<TemplateOption[]> {
-  const { data } = await sb.from("templates").select("id, name, builtin_key, owner_id, category").not("owner_id", "is", null).order("created_at");
+/** Options for the "Start from" picker: the 13 approved built-in templates + the organization's saved templates. */
+export async function templateOptions(savedLabel = "Team templates"): Promise<TemplateOption[]> {
+  const own = await listTemplates(true).catch(() => []);
   return [
     ...TEMPLATES13.map((t) => ({ value: `builtin:${t.key}`, label: `${t.n}. ${t.name}`, group: "Built-in templates" })),
-    ...(data ?? []).map((t) => ({ value: `template:${t.id}`, label: t.name, group: savedLabel })),
+    ...own.map((t) => ({ value: `template:${t.id}`, label: t.name, group: savedLabel })),
   ];
 }

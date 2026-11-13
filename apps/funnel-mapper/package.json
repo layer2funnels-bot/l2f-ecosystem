@@ -18,7 +18,9 @@
     "db:types": "supabase gen types typescript --local > lib/supabase/database.types.ts",
     "test:db": "vitest run -c vitest.db.config.mts",
     "deploy": "NODE_USE_ENV_PROXY=1 node scripts/deploy/deploy.mjs",
-    "live-check": "NODE_USE_ENV_PROXY=1 node scripts/deploy/live-check.mjs"
+    "live-check": "NODE_USE_ENV_PROXY=1 node scripts/deploy/live-check.mjs",
+    "cf:build": "opennextjs-cloudflare build",
+    "cf:size": "node scripts/cf-size.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
@@ -30,17 +32,17 @@
     "immer": "^11.1.18",
     "jspdf": "^4.2.1",
     "nanoid": "^6.0.1",
-    "next": "16.3.8",
+    "next": "16.4.6",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "recharts": "^3.10.1",
     "server-only": "^0.0.1",
-    "sharp": "^0.35.5",
     "zod": "^4.6.5",
     "zustand": "^5.0.15"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
+    "@opennextjs/cloudflare": "1.20.17",
     "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^22.20.4",
@@ -48,11 +50,12 @@
     "@types/react-dom": "^19",
     "@vitest/coverage-v8": "^5.0.3",
     "eslint": "^9",
-    "eslint-config-next": "16.3.8",
+    "eslint-config-next": "16.4.6",
     "supabase": "^2.119.0",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
     "typescript": "^5",
-    "vitest": "^5.0.3"
+    "vitest": "^5.0.3",
+    "wrangler": "4.161.0"
   }
 }

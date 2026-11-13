@@ -6,6 +6,7 @@ import { NOT_FOUND, INVALID, RATE_LIMITED, ORG_REQUIRED, toPublicError } from '.
 import { isUuid, validate } from './validate.mjs';
 import { operations as defaultOperations } from './operations.mjs';
 import { createRateLimiter } from './rate-limit.mjs';
+import { fmpPublic } from './fmp-data-operations.mjs';
 
 // "No organization chosen yet" (first sign-in, accepting an invitation). Matches nothing in the database.
 export const NO_ORG = '00000000-0000-0000-0000-000000000000';
@@ -49,6 +50,40 @@ export function createApi({ executor, logger, limiter = createRateLimiter(), ope
         }
         return done(requestId, 'public.link', t0, 200, 'ok', null, false, { ok: true, data: [out] });
       } catch (err) { return fail(requestId, 'public.link', t0, toPublicError(err), err?.code ?? null); }
+    },
+    /**
+     * Funnel Mapper public share links (no sign-in). action: 'get' | 'save' | 'comment'. The database checks the token by hash, its expiry, the
+     * link's permissions and that the funnel and client are not in the trash; anything else answers the same 404. Limited per address.
+     */
+    async publicFmpShare({ action, token, ip, body }) {
+      const requestId = `req_${randomBytes(8).toString('hex')}`, t0 = now(), op = `public.fmp.${action}`;
+      const gate = await limiter.take(`pubfmp:${ip || 'unknown'}`, action === 'get' ? 'read' : 'write');
+      if (!gate.allowed) return fail(requestId, op, t0, { ...RATE_LIMITED, retryAfterSeconds: gate.retryAfterSeconds });
+      if (typeof token !== 'string' || !/^[0-9a-f]{16,200}$/.test(token)) return fail(requestId, op, t0, NOT_FOUND);
+      try {
+        if (action === 'get') {
+          const [r] = await executor.withPublic((q) => fmpPublic.get(q, token));
+          if (!r?.data) return fail(requestId, op, t0, NOT_FOUND);
+          const d = r.data; const logo = d.client?.logo_path;
+          if (d.client) delete d.client.logo_path;   // never hand out a storage path; a short-lived address instead
+          if (logo && storage && /^[0-9a-f-]{36}\/fmp\/logo\//.test(logo)) d.client.logo_url = (await storage.signDownload({ path: logo, seconds: 3600 })).url;
+          return done(requestId, op, t0, 200, 'ok', null, false, { ok: true, data: [d] });
+        }
+        if (action === 'save') {
+          const g = body?.graph, st = body?.settings;
+          if (!g || typeof g !== 'object' || (st != null && typeof st !== 'object')) return fail(requestId, op, t0, INVALID);
+          await executor.withPublic((q) => fmpPublic.save(q, token, g, st ?? null));
+          return done(requestId, op, t0, 200, 'ok', null, false, { ok: true, data: [{ saved: true }] });
+        }
+        if (action === 'comment') {
+          const text = typeof body?.body === 'string' ? body.body : '';
+          if (!text.trim() || text.length > 4000) return fail(requestId, op, t0, INVALID);
+          const [r] = await executor.withPublic((q) => fmpPublic.comment(q, token, typeof body?.node_id === 'string' ? body.node_id : null,
+            typeof body?.author === 'string' ? body.author : '', text));
+          return done(requestId, op, t0, 200, 'ok', null, false, { ok: true, data: [{ id: r?.id }] });
+        }
+        return fail(requestId, op, t0, NOT_FOUND);
+      } catch (err) { return fail(requestId, op, t0, toPublicError(err), err?.code ?? null); }
     },
     // request: { operation, input, auth: { userId, email } | null, headers }
     // -> { status, body: { requestId, ok: true, data } | { requestId, ok: false, error } }; limited requests carry error.retryAfterSeconds

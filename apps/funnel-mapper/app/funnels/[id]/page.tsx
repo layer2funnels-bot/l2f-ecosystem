@@ -5,19 +5,23 @@ import { TrashedNotice } from "@/components/trashed-notice";
 import type { PaletteProduct } from "@/components/editor/palette";
 import { parseGraph, parseSettings } from "@/lib/graph";
 import { requireUser } from "@/lib/supabase/server";
+import { eco } from "@/lib/eco/server";
+import { launcherUrl } from "@/lib/eco/core";
+import { getClient, getFunnel, listProducts } from "@/lib/eco/data";
 
 export async function generateMetadata({ params }: PageProps<"/funnels/[id]">): Promise<Metadata> {
   const { id } = await params;
-  const { sb } = await requireUser();
-  const { data } = await sb.from("funnels").select("name").eq("id", id).maybeSingle();
-  return { title: data?.name ?? "Funnel" };
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return { title: "Funnel" };
+  await requireUser();
+  const f = await getFunnel(id).catch(() => null);
+  return { title: f?.name ?? "Funnel" };
 }
 
 export default async function FunnelPage({ params }: PageProps<"/funnels/[id]">) {
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
-  const { sb, user, profile, workspace, canEdit } = await requireUser();
-  const { data: f } = await sb.from("funnels").select("*").eq("id", id).maybeSingle();
+  const { user, profile, workspace, canEdit } = await requireUser();
+  const f = await getFunnel(id);
   if (!f) notFound();
   if (f.deleted_at)
     return (
@@ -25,24 +29,26 @@ export default async function FunnelPage({ params }: PageProps<"/funnels/[id]">)
         <TrashedNotice kind="funnel" id={f.id} name={f.name} canEdit={canEdit} />
       </main>
     );
-  const [{ data: client }, { data: products }, { data: lastVersion }, { count }] = await Promise.all([
-    sb.from("clients").select("id, name, logo_url, currency").eq("id", f.client_id).single(),
-    sb.from("products").select("id, name, type, params").or(`client_id.eq.${f.client_id},client_id.is.null`).order("name"),
-    sb.from("funnel_versions").select("created_at").eq("funnel_id", id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
-    sb.from("share_comments").select("id", { count: "exact", head: true }).eq("funnel_id", id).eq("resolved", false),
+  const [client, products, versions, comments] = await Promise.all([
+    getClient(f.client_id),
+    listProducts(f.client_id).catch(() => []),
+    eco<{ created_at: string }>("fmp.versions.list", { funnel: id, limit: 1, with_graph: false }),
+    eco<{ id: string }>("fmp.comments.list", { funnel: id, unresolved: true }),
   ]);
   if (!client) notFound();
+  const lastVersion = versions.ok ? versions.data[0] : undefined;
   return (
     <Editor
       mode="owner"
       userId={user.id}
       userName={profile.full_name || user.email || ""}
-      funnel={{ id: f.id, name: f.name, description: f.description, status: f.status, client_id: f.client_id, graph: parseGraph(f.graph), settings: parseSettings(f.settings), updated_at: f.updated_at }}
-      client={client}
+      funnel={{ id: f.id, name: f.name, description: f.description, status: f.status as never, client_id: f.client_id, graph: parseGraph(f.graph), settings: parseSettings(f.settings), updated_at: f.updated_at }}
+      client={{ id: client.id, name: client.name, logo_url: client.logo_url, currency: client.currency }}
       agency={{ name: workspace.agency_name, logo_url: workspace.agency_logo_url }}
-      products={(products ?? []) as PaletteProduct[]}
+      appsUrl={launcherUrl()}
+      products={products.map((p) => ({ id: p.id, name: p.name, type: p.type, params: p.params })) as PaletteProduct[]}
       lastVersionAt={lastVersion ? Date.parse(lastVersion.created_at) : 0}
-      unresolvedComments={count ?? 0}
+      unresolvedComments={comments.ok ? comments.data.length : 0}
       viewer={!canEdit}
     />
   );

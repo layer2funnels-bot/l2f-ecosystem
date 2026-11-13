@@ -51,7 +51,7 @@ const ownerMail = `owner.${stamp}@example.com`;
 const op = await newPage(); await signUp(op, 'Olivia Owner', ownerMail); await op.waitForTimeout(1500);
 const ownerId = (await q('select id from auth.users where email=$1', [ownerMail]))[0].id;
 await q("insert into memberships (workspace_id,user_id,kind,role) values ($1,$2,'staff','owner'),($3,$2,'staff','owner') on conflict do nothing", [L, ownerId, A]);
-const switchOrg = (p, org) => p.evaluate(async (org) => { const t = JSON.parse(localStorage.getItem('l2f.session.v1')).access; await fetch('/api/org.switch', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${t}`, 'x-org-id': '00000000-0000-0000-0000-000000000000' }, body: JSON.stringify({ org, app: 'office' }) }); }, org);
+const switchOrg = (p, org) => p.evaluate(async (org) => { const t = JSON.parse(decodeURIComponent(document.cookie.split('; ').find((c) => c.startsWith('l2f-session=')).slice(12))).access; await fetch('/api/org.switch', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${t}`, 'x-org-id': '00000000-0000-0000-0000-000000000000' }, body: JSON.stringify({ org, app: 'office' }) }); }, org);
 await switchOrg(op, L);      // the owner works in Layer2Funnels (an owner of two organizations invites into the one in the header)
 await op.goto(`${base}/#/office/admin/members`); await op.reload(); await until(op, 'Joining is by invitation only.');
 check('ON0', 'Setup: the owner is in Layer2Funnels', (await op.locator('.hdr').innerText()).includes('Layer2Funnels'));

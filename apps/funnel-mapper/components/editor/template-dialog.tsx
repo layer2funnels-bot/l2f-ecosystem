@@ -1,12 +1,12 @@
 "use client";
 import { forwardRef, useState } from "react";
-import { supabaseBrowser } from "@/lib/supabase/client";
+import { ecoCall } from "@/lib/eco/browser";
 import { editorSnapshot, showToast } from "@/lib/editor/store";
 
 const CATEGORIES = ["Tripwire", "Lead generation", "Webinar", "High ticket", "Subscription", "Launch", "Custom"];
 
 /** File → Save as template: shared with the whole team. */
-export const TemplateDialog = forwardRef<HTMLDialogElement, { userId: string; defaultName: string; description: string }>(function TemplateDialog({ userId, defaultName, description }, ref) {
+export const TemplateDialog = forwardRef<HTMLDialogElement, { userId: string; defaultName: string; description: string }>(function TemplateDialog({ defaultName, description }, ref) {
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const close = () => (ref as React.RefObject<HTMLDialogElement | null>).current?.close();
@@ -21,18 +21,16 @@ export const TemplateDialog = forwardRef<HTMLDialogElement, { userId: string; de
           setBusy(true);
           setErr("");
           const s = editorSnapshot();
-          const { error } = await supabaseBrowser()
-            .from("templates")
-            .insert({
-              owner_id: userId,
-              name,
-              category: String(fd.get("category") || "Custom"),
-              description: String(fd.get("description") ?? ""),
-              graph: { ...s.graph, view: { x: 60, y: 40, k: 1 } } as never,
-              settings: s.settings as never,
-            });
+          const r = await ecoCall("fmp.templates.create", {
+            name: name.slice(0, 200),
+            category: String(fd.get("category") || "Custom").slice(0, 60),
+            description: String(fd.get("description") ?? "").slice(0, 4000),
+            graph: { ...s.graph, view: { x: 60, y: 40, k: 1 } },
+            settings: s.settings,
+          });
           setBusy(false);
-          if (error) return setErr(error.message);
+          if (!r.ok) return setErr(r.message);
+          if (!r.data.length) return setErr("You can’t save templates here.");
           close();
           showToast("Saved to team templates");
         }}

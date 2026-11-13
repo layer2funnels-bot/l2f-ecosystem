@@ -14,6 +14,7 @@ import { typeOf } from "@/lib/catalog";
 import { byCurrencyRows, homeRange } from "@/lib/home-range";
 import { HomeRangePicker } from "@/components/home-range-picker";
 import { requireUser } from "@/lib/supabase/server";
+import { listActuals, listClients, listFunnels } from "@/lib/eco/data";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -45,58 +46,29 @@ const byCurrencyText = (rows: { cur: string; v: number }[]) =>
     .join(" · ") || "–";
 
 export default async function Dashboard({ searchParams }: PageProps<"/">) {
-  const { sb, profile, workspace } = await requireUser();
+  const { profile, workspace } = await requireUser();
   const sp = await searchParams;
   const one = (v: string | string[] | undefined) =>
     Array.isArray(v) ? v[0] : v;
   const range = homeRange(one(sp.range), one(sp.from), one(sp.to));
   // plan figures are per month: a range multiplies them by its number of months
   const k = range.months;
-  const [{ data: clients }, { data: funnels }] = await Promise.all([
-    // archived clients (and their funnels) are out of the active portfolio
-    sb
-      .from("clients")
-      .select(
-        "id, name, status, currency, logo_url, pricing_model, monthly_retainer, pricing_amount, billing_frequency, hours_per_month",
-      )
-      .is("archived_at", null)
-      .is("deleted_at", null)
-      .order("name"),
-    sb
-      .from("funnels")
-      .select(
-        "id, name, status, client_id, summary, settings, updated_at, thumbnail_url",
-      )
-      .is("deleted_at", null)
-      .order("updated_at", { ascending: false }),
-  ]);
-  const cl = clients ?? [];
+  const [allClients, funnels] = await Promise.all([listClients({ archived: false }), listFunnels()]);
+  // archived clients (and their funnels) are out of the active portfolio
+  const cl = allClients;
   const clientById = Object.fromEntries(cl.map((c) => [c.id, c]));
-  const fs = (funnels ?? []).filter(
+  const fs = funnels.filter(
     (f) => clientById[f.client_id] && f.status !== "archived",
   );
   // saved maps for the few funnels the page draws or checks (the rest are listed from their saved numbers, which keeps this page light)
   const SHOWN = 12;
-  const { data: maps } = fs.length
-    ? await sb.from("funnels").select("id, graph").in("id", fs.slice(0, SHOWN).map((f) => f.id))
-    : { data: [] as { id: string; graph: unknown }[] };
-  const graphOf = Object.fromEntries((maps ?? []).map((m) => [m.id, m.graph]));
+  const maps = await listFunnels({ ids: fs.slice(0, SHOWN).map((f) => f.id), withGraph: true });
+  const graphOf = Object.fromEntries(maps.map((m) => [m.id, m.graph]));
   // recorded actuals in the range (whole periods inside it), for live funnels
   const liveIds = fs.filter((f) => f.status === "live").map((f) => f.id);
-  const { data: acts } = liveIds.length
-    ? await sb
-        .from("funnel_actuals")
-        .select("funnel_id, revenue, spend, period_start, period_end")
-        .in("funnel_id", liveIds)
-        .gte("period_start", range.start)
-        .lte("period_end", range.end)
-    : {
-        data: [] as {
-          funnel_id: string;
-          revenue: number | null;
-          spend: number | null;
-        }[],
-      };
+  const acts = (await listActuals(liveIds) as { funnel_id: string; revenue: number | null; spend: number | null; period_start: string; period_end: string }[])
+    .filter((a) => a.period_start >= range.start && a.period_end <= range.end)
+    .map((a) => ({ ...a, revenue: a.revenue == null ? null : Number(a.revenue), spend: a.spend == null ? null : Number(a.spend) }));
   const curOf = (f: (typeof fs)[number]) =>
     (f.settings as { currency?: string })?.currency ??
     clientById[f.client_id]?.currency ??

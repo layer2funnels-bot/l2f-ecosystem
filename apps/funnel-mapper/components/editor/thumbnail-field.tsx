@@ -12,6 +12,10 @@ import { showToast, updateNode, useEditor } from "@/lib/editor/store";
 import { WireframeStrip } from "./block-visual";
 import { TextField } from "./fields";
 
+import { captureAndStore } from "@/lib/eco/upload";
+
+
+
 type Phase = "idle" | "loading" | "error" | "unavailable";
 
 export function ThumbnailField({ n }: { n: FunnelNode }) {
@@ -29,8 +33,8 @@ export function ThumbnailField({ n }: { n: FunnelNode }) {
     setPhase("loading");
     setMsg("");
     try {
-      const r = await fetch("/api/capture", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ url, nodeId: n.id }) });
-      const j = (await r.json().catch(() => ({}))) as { path?: string; message?: string; error?: string };
+      const j = await captureAndStore(url, n.id);
+      const r = { status: j.status, ok: j.status === 200 };
       if (r.status === 503 || j.error === "unavailable") {
         // no capture service is configured on this deployment (CAPTURE_URL_TEMPLATE): uploading is the way to add a preview
         setPhase("unavailable");

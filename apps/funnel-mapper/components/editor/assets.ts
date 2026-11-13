@@ -1,6 +1,6 @@
 "use client";
 // Workspace assets in the browser: saved style presets and workspace blocks (table workspace_assets, RLS by workspace).
-import { supabaseBrowser } from "@/lib/supabase/client";
+import { ecoCall } from "@/lib/eco/browser";
 import { nodeSchema, edgeSchema, type FunnelEdge, type FunnelNode } from "@/lib/graph";
 import { cleanStyle, type NodeStyle } from "@/lib/style";
 import { setActuals, setAssets, showToast, useEditor, type StylePreset, type WorkspaceBlock } from "@/lib/editor/store";
@@ -10,8 +10,9 @@ const blockData = z.object({ nodes: z.array(nodeSchema), edges: z.array(edgeSche
 
 export async function loadAssets() {
   if (useEditor.getState().assetsStatus !== "ready") setAssets({ assetsStatus: "loading" });
-  const { data, error } = await supabaseBrowser().from("workspace_assets").select("id, kind, name, data").order("created_at");
-  if (error || !data) return setAssets({ assetsStatus: "error" });
+  const r = await ecoCall<{ id: string; kind: string; name: string; data: unknown }>("fmp.assets.list", {});
+  if (!r.ok) return setAssets({ assetsStatus: "error" });
+  const data = r.data;
   const stylePresets: StylePreset[] = [],
     workspaceBlocks: WorkspaceBlock[] = [];
   for (const r of data) {
@@ -29,8 +30,8 @@ export async function loadAssets() {
 export async function saveStylePreset(name: string, style: NodeStyle | undefined) {
   const st = cleanStyle({ ...style });
   if (!st) return showToast("Style something first, then save it");
-  const { error } = await supabaseBrowser().from("workspace_assets").insert({ kind: "style", name: name.trim().slice(0, 60), data: st as never });
-  if (error) return showToast("Couldn’t save the style");
+  const r = await ecoCall("fmp.assets.add", { kind: "style", name: name.trim().slice(0, 60), data: st });
+  if (!r.ok || !r.data.length) return showToast("Couldn’t save the style");
   await loadAssets();
   showToast(`Saved “${name.trim()}” for this workspace`);
 }
@@ -42,8 +43,8 @@ export async function saveWorkspaceBlock(name: string) {
   const nodes = s.nodes.filter((n) => ids.has(n.id));
   if (!nodes.length) return showToast("Select the blocks to save first");
   const edges = s.edges.filter((e) => ids.has(e.from) && ids.has(e.to));
-  const { error } = await supabaseBrowser().from("workspace_assets").insert({ kind: "block", name: name.trim().slice(0, 60), data: { nodes, edges } as never });
-  if (error) return showToast("Couldn’t save the workspace block");
+  const r = await ecoCall("fmp.assets.add", { kind: "block", name: name.trim().slice(0, 60), data: { nodes, edges } });
+  if (!r.ok || !r.data.length) return showToast("Couldn’t save the workspace block");
   await loadAssets();
   showToast(`Saved “${name.trim()}” as a workspace block`);
 }
@@ -53,12 +54,12 @@ export async function ensureActuals() {
   const s = useEditor.getState();
   if (s.actuals !== null || s.shared || !s.funnelId) return;
   setActuals([]);
-  const { data } = await supabaseBrowser().from("funnel_actuals").select("*").eq("funnel_id", s.funnelId);
-  setActuals(data ?? []);
+  const r = await ecoCall("fmp.actuals.list", { funnel: s.funnelId });
+  setActuals((r.ok ? r.data : []) as never);
 }
 
 export async function removeAsset(id: string) {
-  const { error } = await supabaseBrowser().from("workspace_assets").delete().eq("id", id);
-  if (error) return showToast("Couldn’t remove it");
+  const r = await ecoCall("fmp.assets.delete", { id });
+  if (!r.ok || !r.data.length) return showToast("Couldn’t remove it");
   await loadAssets();
 }

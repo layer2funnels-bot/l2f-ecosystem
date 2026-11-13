@@ -5,7 +5,7 @@ import { createApiClient } from '../apps/web/js/api.js';
 const ORG_A = '11111111-1111-4111-8111-111111111111', ORG_B = '22222222-2222-4222-8222-222222222222';
 import { parseRoute, routeForPage, pageKeyFor, defaultOrg, hrefFor, FUNNEL_TYPES, OFFICE_PAGES } from '../apps/web/js/routes.js';
 import { PLANNER_PAGES, plannerSection } from '../apps/web/js/modules/planner.js';
-import { createSession, parseAuthHash } from '../apps/web/js/session.js';
+import { createSession, parseAuthHash, sharedSessionStore, safeAppReturn, SESSION_COOKIE } from '../apps/web/js/session.js';
 import { createAuthClient, isEmail } from '../apps/web/js/gotrue.js';
 import { MESSAGES, messageFor, fieldLabel } from '../apps/web/js/messages.js';
 import * as errors from '../packages/core/errors.mjs';
@@ -51,6 +51,20 @@ const ses = createSession({ storage, now: () => t });
 ses.set({ access_token: 'a', refresh_token: 'r', expires_in: 3600, user: { email: 'x@example.com', id: 'u' } });
 check('W12', 'Session stores tokens, survives a reload, and knows when to refresh or has expired', ses.signedIn() && createSession({ storage, now: () => t }).get().email === 'x@example.com' && !ses.needsRefresh() && (t += 3_560_000, ses.needsRefresh()) && !ses.expired() && (t += 100_000, ses.expired()));
 ses.clear(); check('W13', 'Clearing the session removes it from storage', !ses.signedIn() && !storage.getItem('l2f.session.v1'));
+// ---- one sign-in for every app: the shared session cookie
+const jar = new Map(); const set = []; const doc = { get cookie() { return [...jar].map(([k, v]) => `${k}=${v}`).join('; '); }, set cookie(c) { set.push(c); const [kv, ...a] = c.split('; '); const [k, v] = [kv.slice(0, kv.indexOf('=')), kv.slice(kv.indexOf('=') + 1)]; if (a.includes('Max-Age=0')) jar.delete(k); else jar.set(k, v); } };
+const lsm = new Map([['l2f.session.v1', JSON.stringify({ access: 'OLD', refresh: 'r0', expiresAt: 9e15 })], ['other', 'x']]); const ls = { getItem: (k) => lsm.get(k) ?? null, setItem: (k, v) => lsm.set(k, v), removeItem: (k) => lsm.delete(k) };
+const shared = sharedSessionStore({ fallback: ls, doc, domain: '.example.com', secure: true });
+const s1 = createSession({ storage: shared, now: () => t });
+check('W14a', 'A session saved by the earlier version moves to the shared cookie once (nobody is signed out); other browser data stays where it was', s1.get()?.access === 'OLD' && !lsm.has('l2f.session.v1') && shared.getItem('other') === 'x');
+s1.set({ access_token: 'A1', refresh_token: 'R1', expires_in: 3600, user: { email: 'x@example.com', id: 'u' } });
+check('W14b', 'The session cookie is for the whole domain, every path, Lax, Secure on https, 30 days', set.at(-1).startsWith(`${SESSION_COOKIE}=`) && /; Path=\/; SameSite=Lax; Domain=\.example\.com; Secure; Max-Age=2592000$/.test(set.at(-1)));
+jar.set(SESSION_COOKIE, encodeURIComponent(JSON.stringify({ access: 'A2', refresh: 'R2', expiresAt: t + 3_600_000 })));
+check('W14c', 'A renewal made by another app (Funnel Mapper) is used at once: the old refresh token is never sent again', s1.get().access === 'A2' && s1.get().refresh === 'R2' && !s1.needsRefresh());
+s1.clear(); check('W14d', 'Signing out removes the shared cookie (every app on the domain is signed out)', !jar.has(SESSION_COOKIE) && !s1.signedIn() && /Max-Age=0$/.test(set.at(-1)));
+check('W14e', 'After sign-in, only configured app addresses are returned to', safeAppReturn('https://fm.example.com/funnels/1?x=1', ['https://fm.example.com']) === 'https://fm.example.com/funnels/1?x=1'
+  && safeAppReturn('https://evil.test/', ['https://fm.example.com']) === null && safeAppReturn('javascript:alert(1)', ['https://fm.example.com']) === null && safeAppReturn(undefined, ['https://fm.example.com']) === null
+  && safeAppReturn('https://fm.example.com.evil.test/', ['https://fm.example.com']) === null);
 check('W14', 'Auth e-mail links: tokens are read from the URL hash, errors are noticed, nothing else is trusted', parseAuthHash('#access_token=A&refresh_token=R&expires_in=60&type=recovery').type === 'recovery' && parseAuthHash('#/signin') === null && parseAuthHash('#error_code=otp_expired').error === 'otp_expired');
 // ---- auth client against a fake server
 const calls = []; const fake = async (u, o) => { calls.push({ u, o }); return { ok: true, status: 200, json: async () => ({ access_token: 'T' }) }; };

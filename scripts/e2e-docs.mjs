@@ -33,7 +33,7 @@ await page.goto(`${base}/#/signup`); await page.reload(); await page.waitForSele
 await page.fill('#nm', 'Dana Docs'); await page.fill('#em', mail); await page.fill('#pw', PW); await page.click('button[type=submit]'); await page.waitForTimeout(1800);
 const uid = (await q('select id from auth.users where email=$1', [mail]))[0].id;
 await q("insert into memberships (workspace_id,user_id,kind,role) values ($1,$2,'staff','owner') on conflict do nothing", [L, uid]);
-await page.evaluate(async (org) => { const t = JSON.parse(localStorage.getItem('l2f.session.v1')).access; await fetch('/api/org.switch', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${t}`, 'x-org-id': '00000000-0000-0000-0000-000000000000' }, body: JSON.stringify({ org, app: 'office' }) }); }, L);
+await page.evaluate(async (org) => { const t = JSON.parse(decodeURIComponent(document.cookie.split('; ').find((c) => c.startsWith('l2f-session=')).slice(12))).access; await fetch('/api/org.switch', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${t}`, 'x-org-id': '00000000-0000-0000-0000-000000000000' }, body: JSON.stringify({ org, app: 'office' }) }); }, L);
 
 await page.reload(); await page.waitForTimeout(1200);
 const v1 = JSON.stringify({ v: 1, blocks: [{ t: 'h1', c: [{ x: 'Quarterly plan' }] }, { t: 'p', c: [{ x: 'Start with ' }, { x: 'the offer', b: 1 }, { x: '.' }] }, { t: 'h2', c: [{ x: 'Traffic' }] }, { t: 'ul', items: [[{ x: 'Ads' }], [{ x: 'Email' }]] }] });

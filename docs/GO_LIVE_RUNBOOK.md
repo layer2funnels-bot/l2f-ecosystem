@@ -120,7 +120,7 @@ Menu names change; if one is not found, search the Supabase docs for the setting
 - [ ] Project Settings → Database → Backups: note that free projects have no managed restore; our nightly job (step 10) is the backup.
 - [ ] Organization → Billing: stay on the plan the owner chose; no add-ons; spend cap on.
 - [ ] Cloudflare Pages: environment variables from step 8 (encrypted ones as secrets), custom domain.
-- [ ] GitHub → Settings → Secrets: `SUPABASE_DB_URL`, `AGE_RECIPIENT`, storage variables, `SITE_URL`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `FMP_READ_TOKEN` (nightly FMP job).
+- [ ] GitHub → Settings → Secrets: `SUPABASE_DB_URL`, `AGE_RECIPIENT`, storage variables, `SITE_URL`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`. (`FMP_READ_TOKEN` is no longer needed: the monthly FMP comparison job was retired on 13 Nov 2026.)
 
 ## 11. Keep-alive (owner)
 Free Supabase projects pause after 7 idle days. Add secrets `SITE_URL`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, rename `.github/workflows/keepalive.yml.disabled` to `keepalive.yml`. **Unverified [V15]:** whether these calls count as activity; check the dashboard after a week and, if the project still shows "inactive soon", move to the paid plan (about US$25 a month) or add a database-touching health call (small API change, needs approval).
@@ -149,7 +149,7 @@ Tell the team the address; keep Supabase logs and Cloudflare analytics open for 
 Each of steps 1, 3 (slot), 4, 5, 6, 7, 8, 10, 11 and 12 changes something outside this repository; the owner approves go-live **once**, after step 0, and the steps run in order with the checks above. The assistant does not create or change any live project, domain, account or key.
 
 ## Not covered here
-Funnel Mapper Pro hosting and data (separate approvals: docs/FMP_MIGRATION_PLAN.md, docs/FMP_CLOUDFLARE_SPIKE.md); the independent-account sign-up path; Drive file storage buckets and their backup; the design-awaiting areas (Clients redesign, Funnel Strategies).
+Funnel Mapper hosting (separate approval; no data move: a fresh start, DECISIONS FM-9). One sign-in (FM-10) needs Funnel Mapper on the same domain as the web app: set `cookieDomain` and `appOrigins` in `apps/web/config.js` and `ECOSYSTEM_COOKIE_DOMAIN`, `ECOSYSTEM_WEB_URL`, `ECOSYSTEM_API_URL`, `NEXT_PUBLIC_SITE_URL` for Funnel Mapper (docs/FMP_CLOUDFLARE_SPIKE.md for the Worker); the independent-account sign-up path; Drive file storage buckets and their backup; the design-awaiting areas (Clients redesign, Funnel Strategies).
 
 ## Switching on the v4 apps
 After the migrations (0001 to 0031) are applied, run `scripts/golive-activate-apps.sql` once. It makes Form Builder, Value Ladder, Social Planner and Whiteboard active for both organizations. People still need the app grant (or an access level that includes it) to see each app. Planner and Layer 2 Agents stay "coming soon".

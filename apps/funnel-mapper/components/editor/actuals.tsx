@@ -5,7 +5,7 @@ import { fmtDate, money, nf, pct } from "@/lib/format";
 import { DAYS_PER_PERIOD } from "@/lib/report-data";
 import { planVsActual, stepRows, type ActualRow } from "@/lib/funnel-math";
 import type { ActualRowDb } from "@/lib/schemas";
-import { supabaseBrowser } from "@/lib/supabase/client";
+import { ecoCall } from "@/lib/eco/browser";
 import { setActuals, useEditor } from "@/lib/editor/store";
 import { actualsCsv, fileName } from "@/lib/export";
 import { download } from "./exporters";
@@ -43,7 +43,9 @@ export function Actuals() {
   const dlg = useRef<HTMLDialogElement>(null);
 
   const load = useCallback(async () => {
-    const { data, error } = await supabaseBrowser().from("funnel_actuals").select("*").eq("funnel_id", funnelId).order("period_start", { ascending: false });
+    const r = await ecoCall<ActualRowDb>("fmp.actuals.list", { funnel: funnelId });
+    const error = r.ok ? null : { message: r.message };
+    const data = r.ok ? r.data : null;
     if (error) setErr(error.message);
     setRows(data ?? []);
     // keep the map's Actual mode and Trend widgets in step with what was just saved
@@ -91,18 +93,16 @@ export function Actuals() {
   const save = async () => {
     setSaving(true);
     setErr("");
-    const sb = supabaseBrowser();
     const n = (s: string) => (s.trim() === "" ? null : Number(s));
     const upserts = Object.entries(draft)
       .filter(([, v]) => Object.values(v).some((x) => x.trim() !== ""))
-      .map(([node_id, v]) => ({ funnel_id: funnelId, period_start: range.start, period_end: range.end, node_id, visitors: n(v.visitors), conversions: n(v.conversions), revenue: n(v.revenue), spend: n(v.spend) }));
+      .map(([node_id, v]) => ({ period_start: range.start, period_end: range.end, node_id, visitors: n(v.visitors), conversions: n(v.conversions), revenue: n(v.revenue), spend: n(v.spend) }));
     const empty = Object.entries(draft)
       .filter(([, v]) => Object.values(v).every((x) => x.trim() === ""))
       .map(([id]) => id);
-    const r1 = upserts.length ? await sb.from("funnel_actuals").upsert(upserts, { onConflict: "funnel_id,period_start,period_end,node_id" }) : { error: null };
-    const r2 = empty.length ? await sb.from("funnel_actuals").delete().eq("funnel_id", funnelId).eq("period_start", range.start).eq("period_end", range.end).in("node_id", empty) : { error: null };
+    const r = await ecoCall("fmp.actuals.save", { funnel: funnelId, rows: upserts, clear: empty.length ? { period_start: range.start, period_end: range.end, node_ids: empty } : undefined });
     setSaving(false);
-    if (r1.error || r2.error) return setErr((r1.error || r2.error)!.message);
+    if (!r.ok) return setErr(r.message);
     dlg.current?.close();
     load();
   };

@@ -6,18 +6,19 @@ import { blankSettings, parseGraph, parseSettings } from "@/lib/graph";
 import { TEMPLATES13, template13Graph } from "@/lib/templates13";
 import { templateOptions } from "@/lib/queries";
 import { requireUser } from "@/lib/supabase/server";
+import { listClients, listTemplates } from "@/lib/eco/data";
 import { isAnnot, typeOf } from "@/lib/catalog";
 import { TemplatesBrowser, type TemplateCard } from "./templates-browser";
 
 export const metadata: Metadata = { title: "Templates" };
 
 export default async function TemplatesPage() {
-  const { sb, isTeam, canEdit } = await requireUser();
-  const [{ data: templates }, { data: clients }, opts] = await Promise.all([
+  const { isTeam, canEdit } = await requireUser();
+  const [templates, clients, opts] = await Promise.all([
     // the 13 approved templates ship with the app (lib/templates13.ts); the database holds the workspace's saved ones
-    sb.from("templates").select("*").not("owner_id", "is", null).order("created_at"),
-    sb.from("clients").select("id, name").is("deleted_at", null).order("name"),
-    templateOptions(sb, isTeam ? "Team templates" : "Your templates"),
+    listTemplates(true, true),
+    listClients(),
+    templateOptions(isTeam ? "Team templates" : "Your templates"),
   ]);
   const list = templates ?? [];
   const approved: TemplateCard[] = TEMPLATES13.map((t) => {
@@ -49,7 +50,7 @@ export default async function TemplatesPage() {
       category: t.category,
       description: t.description ?? "",
       value: t.builtin_key ? `builtin:${t.builtin_key}` : `template:${t.id}`,
-      mine: !!t.owner_id,
+      mine: t.own,
       graph: t.graph,
       settings: t.settings,
       blocks: g.nodes.filter((n) => typeOf(n.type) && !isAnnot(n.type)).length,

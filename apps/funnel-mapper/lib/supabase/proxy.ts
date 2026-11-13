@@ -1,38 +1,35 @@
-import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { SESSION_COOKIE, cookieOptions, parseSession, renewSession, signInUrl } from "@/lib/eco/shared-session";
 
-// Everything is private except sign-in/recovery, token-checked share links and the code-checked private sign-up.
-const PUBLIC = ["/login", "/reset-password", "/auth/", "/s/", "/api/share/", "/api/version", "/join/", "/robots.txt"];
+// Everything is private except token-checked share links (and their API), the version probe, robots.txt and sign-out.
+const PUBLIC = ["/s/", "/api/share/", "/api/version", "/robots.txt", "/auth/signout"];
 
-/** Refreshes the Supabase session cookie on every request and guards private pages. */
+/**
+ * One sign-in for every app: Funnel Mapper has no sign-in page. It reads the ecosystem's shared session cookie, renews it shortly before it
+ * expires (and writes it back for the other apps), and sends anyone without a session to the ecosystem sign-in page, which brings them back.
+ */
 export async function updateSession(request: NextRequest) {
-  let response = NextResponse.next({ request });
-  const sb = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
-    cookies: {
-      getAll: () => request.cookies.getAll(),
-      setAll: (list) => {
-        list.forEach(({ name, value }) => request.cookies.set(name, value));
-        response = NextResponse.next({ request });
-        list.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
-      },
-    },
-  });
-  const {
-    data: { user },
-  } = await sb.auth.getUser();
   const path = request.nextUrl.pathname;
-  const isPublic = PUBLIC.some((p) => path.startsWith(p));
-  if (!user && !isPublic) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    url.search = path === "/" ? "" : `?next=${encodeURIComponent(path + request.nextUrl.search)}`;
-    return NextResponse.redirect(url);
+  if (PUBLIC.some((p) => path.startsWith(p))) return NextResponse.next({ request });
+  const secure = request.nextUrl.protocol === "https:";
+  let s = parseSession(request.cookies.get(SESSION_COOKIE)?.value);
+  let renewed = false;
+  if (s && s.expiresAt - Date.now() < 60_000) {
+    s = await renewSession(s);
+    renewed = true;
   }
-  if (user && path === "/login") {
-    const url = request.nextUrl.clone();
-    url.pathname = "/";
-    url.search = "";
-    return NextResponse.redirect(url);
+  if (!s) {
+    // come back to the same page, on Funnel Mapper's configured public address (the request's own host can differ behind a proxy)
+    const site = (process.env.NEXT_PUBLIC_SITE_URL ?? "").replace(/\/$/, "") || request.nextUrl.origin;
+    const to = signInUrl(`${site}${path}${request.nextUrl.search}`);
+    const res = to ? NextResponse.redirect(to) : new NextResponse("Sign-in isn’t set up for Funnel Mapper (ECOSYSTEM_WEB_URL).", { status: 503 });
+    if (renewed) res.cookies.set(SESSION_COOKIE, "", cookieOptions(secure, 0));   // the session ended elsewhere: clear it here too
+    return res;
   }
-  return response;
+  if (!renewed) return NextResponse.next({ request });
+  const value = JSON.stringify(s);
+  request.cookies.set(SESSION_COOKIE, value);   // this request's pages see the new token
+  const res = NextResponse.next({ request });
+  res.cookies.set(SESSION_COOKIE, value, cookieOptions(secure));   // and so do the other apps on the domain
+  return res;
 }

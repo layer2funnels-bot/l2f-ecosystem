@@ -11,6 +11,8 @@ import { money, ratio } from "@/lib/format";
 import { pricingSummary } from "@/lib/pricing";
 import { templateOptions } from "@/lib/queries";
 import { requireUser } from "@/lib/supabase/server";
+import { getClient, listClients, listFunnels, listProducts } from "@/lib/eco/data";
+import { clientsAppUrl } from "@/lib/eco/core";
 import { updateClientAction } from "../../actions";
 import { ClientTabs } from "./client-tabs";
 import { ArchiveClient, ClientLogo, ClientNotes, DeleteClient, FunnelList } from "./portfolio-bits";
@@ -18,8 +20,8 @@ import { ProductLibrary } from "./products";
 
 export async function generateMetadata({ params }: PageProps<"/clients/[id]">): Promise<Metadata> {
   const { id } = await params;
-  const { sb } = await requireUser();
-  const { data } = await sb.from("clients").select("name").eq("id", id).maybeSingle();
+  await requireUser();
+  const data = /^[0-9a-f-]{36}$/i.test(id) ? await getClient(id) : null;
   return { title: data?.name ?? "Client" };
 }
 
@@ -28,13 +30,13 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/c
   const sp = await searchParams;
   const tab = String(Array.isArray(sp.tab) ? sp.tab[0] : (sp.tab ?? "funnels"));
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
-  const { sb, isTeam, canEdit } = await requireUser();
-  const [{ data: client }, { data: funnelRows }, { data: allClients }, tpls, { data: products }] = await Promise.all([
-    sb.from("clients").select("*").eq("id", id).maybeSingle(),
-    sb.from("funnels").select("id, name, description, status, summary, settings, thumbnail_url, updated_at").eq("client_id", id).is("deleted_at", null).order("updated_at", { ascending: false }),
-    sb.from("clients").select("id, name, niche").is("deleted_at", null).order("name"),
-    templateOptions(sb, isTeam ? "Team templates" : "Your templates"),
-    sb.from("products").select("*").or(`client_id.eq.${id},client_id.is.null`).order("name"),
+  const { isTeam, canEdit } = await requireUser();
+  const [client, funnelRows, allClients, tpls, products] = await Promise.all([
+    getClient(id),
+    listFunnels({ client: id }),
+    listClients(),
+    templateOptions(isTeam ? "Team templates" : "Your templates"),
+    listProducts(id),
   ]);
   if (!client) notFound();
   if (client.deleted_at) return <TrashedNotice kind="client" id={client.id} name={client.name} canEdit={canEdit} />;
@@ -46,8 +48,7 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/c
   const live = rows.filter((f) => f.status !== "archived"),
     archivedRows = rows.filter((f) => f.status === "archived");
   const picked = showAll ? rows : [...live.slice(0, PAGE), ...archivedRows.slice(0, PAGE)];
-  const graphQ = showAll ? sb.from("funnels").select("id, graph").eq("client_id", id).is("deleted_at", null) : sb.from("funnels").select("id, graph").in("id", picked.map((f) => f.id));
-  const { data: graphRows } = picked.length ? await graphQ : { data: [] as { id: string; graph: unknown }[] };
+  const graphRows = picked.length ? await listFunnels({ ids: picked.map((f) => f.id), withGraph: true }) : [];
   const graphs = new Map((graphRows ?? []).map((g) => [g.id, g.graph]));
   const funnels = picked.map((f) => ({ ...f, graph: graphs.get(f.id) ?? null }));
   const hiddenFunnels = showAll ? 0 : Math.max(0, live.length - PAGE) + Math.max(0, archivedRows.length - PAGE);
@@ -94,6 +95,11 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/c
           </div>
         )}
         <div className="flex flex-wrap items-center gap-2">
+          {clientsAppUrl(client.id) && (
+            <a className="btn" href={clientsAppUrl(client.id)}>
+              <Icon name="users" /> Open in Clients
+            </a>
+          )}
           {client.website && (
             <a className="btn" href={client.website} target="_blank" rel="noreferrer">
               <Icon name="link" /> Website
@@ -201,7 +207,7 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/c
                     <h2 id="logo-h" className="mb-3 font-display text-lg font-bold">
                       Logo
                     </h2>
-                    <ClientLogo id={client.id} url={client.logo_url} />
+                    <ClientLogo id={client.id} path={client.logo_path} url={client.logo_url} />
                     <p className="mt-2 text-xs text-muted">Shown on the share pages you send this client.</p>
                   </section>
                   <section className="card p-5" aria-labelledby="details-h">

@@ -1,6 +1,5 @@
 "use client";
-import { useEffect, useSyncExternalStore } from "react";
-import { supabaseBrowser } from "@/lib/supabase/client";
+import { useSyncExternalStore } from "react";
 import { Icon } from "./icon";
 
 export type Theme = "dark" | "light";
@@ -20,37 +19,13 @@ function applyLocal(t: Theme, at = Date.now()) {
   window.dispatchEvent(new Event("fm-theme"));
 }
 
-/** Sets the theme and stores it on the person (Supabase user metadata), so it follows them to every device. */
+/** Sets the theme on this device (Funnel Mapper's own look; the ecosystem's profile and sign-in are shared, the theme is per device). */
 export function setTheme(t: Theme) {
-  const at = Date.now();
-  applyLocal(t, at);
-  // Best effort: share pages and signed-out screens have no user; the device choice above still applies.
-  const sb = supabaseBrowser();
-  sb.auth
-    .getUser()
-    .then(({ data }) => (data.user && data.user.user_metadata?.theme !== t ? sb.auth.updateUser({ data: { theme: t, theme_at: at } }) : null))
-    .catch(() => {});
+  applyLocal(t);
 }
 
 export function toggleTheme() {
   setTheme(currentTheme() === "dark" ? "light" : "dark");
-}
-
-/**
- * Keeps this device in step with the theme saved on the person (signed-in pages only). The newer choice wins, so a
- * change made on another device arrives here, and a choice made on this device before it was saved is not undone.
- */
-export function ThemeSync({ saved, at }: { saved: Theme | null; at: number }) {
-  useEffect(() => {
-    if (!saved || saved === currentTheme()) return;
-    let localAt = 0;
-    try {
-      const t = localStorage.getItem("fm-theme");
-      localAt = Number(localStorage.getItem("fm-theme-at")) || (t ? Date.now() : 0);
-    } catch {}
-    if (at > localAt) applyLocal(saved, at);
-  }, [saved, at]);
-  return null;
 }
 
 const subscribe = (cb: () => void) => {

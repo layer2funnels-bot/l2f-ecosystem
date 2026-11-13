@@ -23,9 +23,11 @@
   "grantRequired": true,
   "status": "building",
   "embeds": [],
-  "reuses": [],
+  "reuses": [
+    "clients"
+  ],
   "searchTypes": [],
-  "storage": "own-database",
+  "storage": "storage-adapter",
   "ai": false,
   "integrations": [],
   "codeDir": "apps/funnel-mapper",

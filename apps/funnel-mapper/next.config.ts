@@ -11,6 +11,8 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Tidy Up's layout engine only runs in the browser; the server gets a stub (keeps the server bundle within Cloudflare's free limit)
+  turbopack: { resolveAlias: { "elkjs/lib/elk.bundled.js": { browser: "elkjs/lib/elk.bundled.js", default: "./lib/elk-server-stub.ts" } } },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

@@ -1,22 +1,22 @@
 "use client";
 import { useEffect, useState } from "react";
-import { supabaseBrowser } from "@/lib/supabase/client";
+import { signedUrls } from "@/lib/eco/upload";
 
-/** Short-lived URL for a file in a private bucket (thumbnails, screenshots). Team members only, via storage RLS. */
-export function useSignedUrl(bucket: "thumbnails" | "screenshots", path: string | null | undefined, onMissing?: () => void) {
+/** Short-lived URL for a stored image (logos, thumbnails, screenshots), signed by the ecosystem API for people allowed to see it. */
+export function useSignedUrl(bucket: "thumbnails" | "screenshots" | "logos", path: string | null | undefined, onMissing?: () => void) {
   const [url, setUrl] = useState<string | null>(null);
   useEffect(() => {
     let alive = true;
     let timer: ReturnType<typeof setTimeout> | undefined;
     if (!path) return;
     const sign = () =>
-      supabaseBrowser()
-        .storage.from(bucket)
-        .createSignedUrl(path, 3600)
-        .then(({ data }) => {
+      signedUrls([path])
+        .then((m) => m[path] ?? null)
+        .catch(() => null)
+        .then((signed) => {
           if (!alive) return;
-          setUrl(data?.signedUrl ?? null);
-          if (!data?.signedUrl) onMissing?.();
+          setUrl(signed);
+          if (!signed) onMissing?.();
           // a long editing session outlives the link: sign again before it expires
           timer = setTimeout(sign, 50 * 60 * 1000);
         });

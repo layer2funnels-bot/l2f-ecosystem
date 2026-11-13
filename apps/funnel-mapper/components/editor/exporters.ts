@@ -7,7 +7,7 @@ import type { FunnelEdge, FunnelNode } from "@/lib/graph";
 import { mapSvg, type MapSvgOptions, type Measure } from "@/lib/export";
 import { reportData, type MonthlyActualRow, type ReportSettings } from "@/lib/report-data";
 import { typeOf } from "@/lib/catalog";
-import { supabaseBrowser } from "@/lib/supabase/client";
+import { signedUrls } from "@/lib/eco/upload";
 
 export function download(name: string, data: Blob | string, type = "application/octet-stream") {
   const blob = typeof data === "string" ? new Blob([data], { type }) : data;
@@ -160,9 +160,9 @@ async function loadShots(nodes: FunnelNode[]): Promise<Record<string, string>> {
         try {
           let url = n.shot!;
           if (!/^(https?:|data:)/.test(url)) {
-            const { data } = await supabaseBrowser().storage.from("screenshots").createSignedUrl(url, 120);
-            if (!data?.signedUrl) return;
-            url = data.signedUrl;
+            const signed = (await signedUrls([url]))[url];
+            if (!signed) return;
+            url = signed;
           }
           if (url.startsWith("data:")) return void (out[n.id] = url);
           const r = await fetch(url, { mode: "cors" });

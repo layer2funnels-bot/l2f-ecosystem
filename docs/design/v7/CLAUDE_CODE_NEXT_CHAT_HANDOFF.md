@@ -14,6 +14,9 @@ Read this first. It replaces the need to re-explain the project. The owner (Tabi
 - Status marks in briefs: [E] keep, [R] redesign, [N] new, [F] future (show "Later" only where the brief says).
 - Known package inconsistencies (read them before starting): Funnel Mapper repo location (now this repo, FM-6); README says P02 = Projects but the files say P02 = Clients (follow the files); token stylesheet is `apps/web/v4.css`, generated from `packages/ui/tokens.json` (never hand-edit it); the prototype's Funnel Mapper editor is a simplification (the real editor is the reference); client status "Lost" belongs to P02.
 
+## 3a. Funnel Mapper stage 2 (13 Nov 2026): read `docs/implementation/FUNNEL_MAPPER_STAGE2_REPORT.md` first
+Funnel Mapper uses only ecosystem API operations (migration 0053, `packages/core/fmp-data-operations.mjs`) and the ecosystem's ONE sign-in (shared session cookie, DECISIONS FM-10; it has no sign-in pages). Fresh start: no old data, only the 13 built-in templates (FM-9). Organization switching and Settings are the same as the other apps; independent accounts retired; Cloudflare build fits the free plan (2.76 MiB). Still to do, each with the owner's go-ahead: ecosystem go-live migrations, Cloudflare deploy on the same domain, rewriting FM's own browser suite. The "stage 2" items below about moving data are cancelled (FM-9).
+
 ## 3. Funnel Mapper migration report (stage 1)
 Full report: `docs/implementation/FUNNEL_MAPPER_REPORT.md`. Plan: `docs/implementation/FUNNEL_MAPPER_PLAN.md`. Changes per file: `docs/FMP_CHANGES.md`.
 - **Original**: `layer2funnels-bot/Funnel-Mapper` (Next.js 16, Supabase, React Flow, Zustand), commit `13a1e86`; no new commits since the copy. Untouched, as are its live Supabase and Vercel projects.

@@ -4,7 +4,7 @@ import { useReactFlow } from "@xyflow/react";
 import { useCallback, useEffect, useState } from "react";
 import { Icon } from "@/components/icon";
 import type { ShareCommentRow } from "@/lib/schemas";
-import { supabaseBrowser } from "@/lib/supabase/client";
+import { ecoCall } from "@/lib/eco/browser";
 import { selectNodes, setPanel, useEditor } from "@/lib/editor/store";
 
 /** Client feedback left on share pages. */
@@ -16,7 +16,8 @@ export function CommentsPanel({ onCount }: { onCount?: (n: number) => void }) {
   const [showResolved, setShowResolved] = useState(false);
   const viewer = useEditor((s) => s.viewer);
   const load = useCallback(async () => {
-    const { data } = await supabaseBrowser().from("share_comments").select("*").eq("funnel_id", funnelId).order("created_at", { ascending: false });
+    const r = await ecoCall<ShareCommentRow>("fmp.comments.list", { funnel: funnelId });
+    const data = r.ok ? r.data : null;
     setList(data ?? []);
     onCount?.((data ?? []).filter((c) => !c.resolved).length);
   }, [funnelId, onCount]);
@@ -69,7 +70,7 @@ export function CommentsPanel({ onCount }: { onCount?: (n: number) => void }) {
                     type="button"
                     className="btn sm"
                     onClick={async () => {
-                      await supabaseBrowser().from("share_comments").update({ resolved: !c.resolved }).eq("id", c.id);
+                      await ecoCall("fmp.comments.resolve", { id: c.id, resolved: !c.resolved });
                       load();
                     }}
                   >
@@ -80,7 +81,7 @@ export function CommentsPanel({ onCount }: { onCount?: (n: number) => void }) {
                     className="btn sm danger"
                     onClick={async () => {
                       if (!confirm("Delete this comment?")) return;
-                      await supabaseBrowser().from("share_comments").delete().eq("id", c.id);
+                      await ecoCall("fmp.comments.delete", { id: c.id });
                       load();
                     }}
                   >

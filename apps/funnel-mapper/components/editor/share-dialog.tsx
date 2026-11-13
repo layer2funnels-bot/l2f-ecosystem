@@ -1,12 +1,12 @@
 "use client";
 // Share (V2): permission View / Comment / Edit, numbers, funnel notes, expiry, a live preview of what the client sees,
 // and every link with its permission state, copy and revoke. Links live in share_links (RLS: workspace writers).
-import { forwardRef, useCallback, useEffect, useState } from "react";
+import { forwardRef, useCallback, useEffect, useRef, useState } from "react";
 import { GraphThumb } from "@/components/graph-thumb";
 import { BrandMark, Icon } from "@/components/icon";
 import { fmtDate } from "@/lib/format";
 import type { ShareLinkRow } from "@/lib/schemas";
-import { supabaseBrowser } from "@/lib/supabase/client";
+import { ecoCall } from "@/lib/eco/browser";
 import { setSettings, useEditor } from "@/lib/editor/store";
 import { Seg } from "./fields";
 
@@ -43,6 +43,7 @@ export const ShareDialog = forwardRef<HTMLDialogElement, ShareDialogProps>(funct
   const [expires, setExpires] = useState("0");
   const [date, setDate] = useState("");
   const [copied, setCopied] = useState("");
+  const fresh = useRef<Record<string, string>>({});
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const notesShared = useEditor((s) => s.settings.notes.shared);
@@ -51,8 +52,9 @@ export const ShareDialog = forwardRef<HTMLDialogElement, ShareDialogProps>(funct
   const edges = useEditor((s) => s.edges);
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const load = useCallback(async () => {
-    const { data } = await supabaseBrowser().from("share_links").select("*").eq("funnel_id", funnelId).order("created_at", { ascending: false });
-    setLinks(data ?? []);
+    const r = await ecoCall<ShareLinkRow>("fmp.links.list", { funnel: funnelId });
+    // a link's address is only known right after it is made (the server keeps a fingerprint, never the link itself)
+    setLinks((r.ok ? r.data : []).map((l) => (fresh.current[l.id] ? { ...l, token: fresh.current[l.id] } : l)));
   }, [funnelId]);
   useEffect(() => {
      
@@ -68,16 +70,17 @@ export const ShareDialog = forwardRef<HTMLDialogElement, ShareDialogProps>(funct
     if (expires === "date" && !date) return setErr("Pick the date the link should stop working.");
     if (expires === "date" && Date.parse(`${date}T23:59:59`) < Date.now()) return setErr("That date has already passed.");
     setBusy(true);
-    const { error } = await supabaseBrowser()
-      .from("share_links")
-      .insert({ funnel_id: funnelId, ...flags(perm), hide_numbers: !showNums, expires_at: expiresAt() });
+    const exp = expiresAt();
+    const r = await ecoCall<ShareLinkRow>("fmp.links.create", { funnel: funnelId, ...flags(perm), hide_numbers: !showNums, ...(exp ? { expires_at: exp } : {}) });
     setBusy(false);
-    if (error) return setErr(error.message);
+    if (!r.ok) return setErr(r.message);
+    if (!r.data[0]?.token) return setErr("Only admins can create share links.");
+    fresh.current[r.data[0].id] = r.data[0].token;
     load();
   };
   const update = async (id: string, patch: Partial<Pick<ShareLinkRow, "can_edit" | "allow_comments" | "hide_numbers">>) => {
-    const { error } = await supabaseBrowser().from("share_links").update(patch).eq("id", id);
-    if (error) setErr(error.message);
+    const r = await ecoCall("fmp.links.update", { id, ...patch });
+    if (!r.ok) setErr(r.message);
     load();
   };
   const copy = async (token: string) => {
@@ -188,18 +191,25 @@ export const ShareDialog = forwardRef<HTMLDialogElement, ShareDialogProps>(funct
                       <span className={`pill ${expired ? "st-past" : "st-draft"}`}>{l.expires_at ? `${expired ? "Expired" : "Expires"} ${fmtDate(l.expires_at)}` : "No expiry"}</span>
                     </div>
                     <div className="mt-2 flex flex-wrap gap-2">
-                      <button type="button" className="btn sm" onClick={() => copy(l.token)}>
-                        {copied === l.token ? "Copied" : "Copy link"}
-                      </button>
-                      <a className="btn sm" href={`/s/${l.token}`} target="_blank" rel="noreferrer">
-                        Open
-                      </a>
+                      {l.token ? (
+                        <>
+                          <button type="button" className="btn sm" onClick={() => copy(l.token!)}>
+                            {copied === l.token ? "Copied" : "Copy link"}
+                          </button>
+                          <a className="btn sm" href={`/s/${l.token}`} target="_blank" rel="noreferrer">
+                            Open
+                          </a>
+                          <span className="text-xs text-muted">Copy it now: for safety the link is shown only once.</span>
+                        </>
+                      ) : (
+                        <span className="text-xs text-muted">Link shared earlier (for safety it is shown only once). Lost it? Revoke it and create a new one.</span>
+                      )}
                       <button
                         type="button"
                         className="btn sm danger"
                         onClick={async () => {
                           if (!confirm("Revoke this link? Anyone using it loses access.")) return;
-                          await supabaseBrowser().from("share_links").delete().eq("id", l.id);
+                          await ecoCall("fmp.links.delete", { id: l.id });
                           load();
                         }}
                       >

@@ -14,7 +14,8 @@ import { monthlyPlanVsActual, reportData } from "@/lib/report-data";
 import { chartSeries, mrrDetail, type WidgetMetric } from "@/lib/widget-data";
 import { elkLayout, layoutMetrics, tidyLayout } from "@/lib/layout";
 import { FUNNEL_STATUSES, STATUS_LABEL } from "@/lib/schemas";
-import { supabaseBrowser } from "@/lib/supabase/client";
+import { ecoCall } from "@/lib/eco/browser";
+import { uploadImage } from "@/lib/eco/upload";
 import { clearDraft, readDraft, useAutosave, type SaveFn } from "@/lib/editor/saver";
 import {
   addWidget,
@@ -94,6 +95,8 @@ export interface EditorProps {
   funnel: { id: string; name: string; description: string; status: string; client_id: string; graph: FunnelGraph; settings: FunnelSettings; updated_at: string };
   client: { id: string; name: string; logo_url: string | null; currency: string };
   agency: { name: string; logo_url: string | null };
+  /** The ecosystem Launcher ("All apps", V7 16 §2: the editor's way out); owner mode only. */
+  appsUrl?: string;
   products?: PaletteProduct[];
   lastVersionAt?: number;
   share?: { token: string; canEdit: boolean; hideNumbers: boolean; allowComments: boolean; comments: ShareCommentLite[] };
@@ -144,8 +147,8 @@ function EditorInner(props: EditorProps) {
   const changeStatus = useCallback(
     async (st: string) => {
       setStatus(st);
-      const { error } = await supabaseBrowser().from("funnels").update({ status: st }).eq("id", funnel.id);
-      if (error) showToast("Couldn’t change status");
+      const r = await ecoCall("fmp.funnels.update", { id: funnel.id, status: st });
+      if (!r.ok || !r.data.length) showToast("Couldn’t change status");
     },
     [funnel.id],
   );
@@ -267,11 +270,8 @@ function EditorInner(props: EditorProps) {
   const save: SaveFn = useCallback(
     async (p) => {
       if (owner) {
-        const { error } = await supabaseBrowser()
-          .from("funnels")
-          .update({ name: p.name, graph: p.graph as never, settings: p.settings as never, summary: p.summary as never })
-          .eq("id", funnel.id);
-        if (error) throw error;
+        const r = await ecoCall("fmp.funnels.update", { id: funnel.id, name: p.name, graph: p.graph, settings: p.settings, summary: p.summary });
+        if (!r.ok || !r.data.length) throw new Error(r.ok ? "not saved" : r.message);
       } else if (share?.canEdit) {
         const r = await fetch(`/api/share/${share.token}`, { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ graph: p.graph, settings: p.settings }) });
         if (!r.ok) throw new Error("save failed");
@@ -282,7 +282,7 @@ function EditorInner(props: EditorProps) {
   useAutosave({
     funnelId: funnel.id,
     save,
-    saveVersion: manage ? async (p) => void (await supabaseBrowser().from("funnel_versions").insert({ funnel_id: funnel.id, graph: p.graph as never, settings: p.settings as never, label: "Autosave", auto: true })) : undefined,
+    saveVersion: manage ? async (p) => void (await ecoCall("fmp.versions.add", { funnel: funnel.id, graph: p.graph, settings: p.settings, label: "Autosave", auto: true })) : undefined,
     lastVersionAt: props.lastVersionAt,
     enabled: ready && (manage || !!share?.canEdit),
   });
@@ -393,10 +393,8 @@ function EditorInner(props: EditorProps) {
       // V2 F7: stored as WebP under 100 KB
       const img = await new Promise<HTMLImageElement>((res, rej) => Object.assign(new Image(), { onload: function (this: HTMLImageElement) { res(this); }, onerror: rej, src: png.url }));
       const blob = dataUrlToBlob(encodeUnder(Object.assign(img, { width: img.naturalWidth, height: img.naturalHeight }), 800));
-      const sb = supabaseBrowser();
-      const path = `${funnel.id}.png`;
-      const { error } = await sb.storage.from("thumbnails").upload(path, blob, { upsert: true, contentType: "image/webp", cacheControl: "60" });
-      if (!error) await sb.from("funnels").update({ thumbnail_url: path }).eq("id", funnel.id);
+      const path = await uploadImage(blob, "thumb");
+      await ecoCall("fmp.funnels.update", { id: funnel.id, thumbnail_path: path });
     } catch {}
   };
 
@@ -829,6 +827,11 @@ function EditorInner(props: EditorProps) {
           <Link href="/" className="fm-logo" aria-label="Home" title="Home">
             <Icon name="logo" size={17} strokeWidth={2.2} />
           </Link>
+        )}
+        {owner && props.appsUrl && (
+          <a href={props.appsUrl} className="btn icon fm-hide-phone" aria-label="All apps" title="All apps">
+            <Icon name="grid" />
+          </a>
         )}
         {!owner && (
           <span className="flex items-center gap-2 font-display font-extrabold">

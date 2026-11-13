@@ -12,7 +12,7 @@ import { money, nf } from "@/lib/format";
 import { planVsActual, stepRows } from "@/lib/funnel-math";
 import { DAYS_PER_PERIOD } from "@/lib/report-data";
 import type { ActualRowDb } from "@/lib/schemas";
-import { supabaseBrowser } from "@/lib/supabase/client";
+import { ecoCall } from "@/lib/eco/browser";
 import { useEditor } from "@/lib/editor/store";
 import { download } from "./exporters";
 
@@ -108,8 +108,8 @@ function TypeGrid({ rows, onSaved }: { rows: ActualRowDb[]; onSaved: () => void 
     }
     if (!up.length) return;
     setState({ t: "Saving…" });
-    const { error } = await supabaseBrowser().from("funnel_actuals").upsert(up as never, { onConflict: "funnel_id,period_start,period_end,node_id" });
-    if (error) return setState({ t: `Not saved: ${error.message}. Your typing is kept; try again.`, err: true });
+    const r = await ecoCall("fmp.actuals.save", { funnel: funnelId, rows: up });
+    if (!r.ok) return setState({ t: `Not saved: ${r.message}. Your typing is kept; try again.`, err: true });
     setState({ t: "Saved" });
     onSaved();
   }, [funnelId, onSaved]);
@@ -247,9 +247,13 @@ function CsvImport({ onSaved }: { onSaved: () => void }) {
     setBusy(true);
     const ref = `${file.name} · ${new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`;
     const up = toUpserts(checked, funnelId, ref);
-    const { error } = await supabaseBrowser().from("funnel_actuals").upsert(up as never, { onConflict: "funnel_id,period_start,period_end,node_id" });
+    let error: { message: string } | null = null;
+    for (let i = 0; i < up.length && !error; i += 500) {
+      const r = await ecoCall("fmp.actuals.save", { funnel: funnelId, rows: up.slice(i, i + 500) });
+      if (!r.ok) error = { message: r.message };
+    }
     setBusy(false);
-    if (error) return setDone({ t: `Nothing was imported: ${error.message}`, err: true });
+    if (error) return setDone({ t: `Nothing more was imported: ${error.message}`, err: true });
     setDone({ t: `${up.length} ${up.length === 1 ? "value set" : "value sets"} imported from ${file.name}.${bad.length ? ` ${bad.length} ${bad.length === 1 ? "row was" : "rows were"} not imported (listed above).` : ""}` });
     onSaved();
   };

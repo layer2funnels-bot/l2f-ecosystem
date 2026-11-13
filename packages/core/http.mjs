@@ -11,7 +11,7 @@ import { NOT_FOUND, SESSION_EXPIRED, BAD_REQUEST, FAILED } from './errors.mjs';
 
 const MAX_BODY_BYTES = 16 * 1024;
 // Saving a first-party document (Docs, Sheets, boards: up to 1,000,000 characters) needs a larger body; every other operation keeps the 16 KB limit.
-const LARGE_BODY_OPS = new Set(['drive.files.create', 'drive.files.versions.add']);
+const LARGE_BODY_OPS = new Set(['drive.files.create', 'drive.files.versions.add', 'fmp.funnels.create', 'fmp.funnels.update', 'fmp.versions.add', 'fmp.templates.create', 'fmp.actuals.save', 'fmp.assets.add']);   // funnel maps can be large too
 const LARGE_BODY_BYTES = 4 * 1024 * 1024;
 // Projects V2 (pm.*) takes one args object of up to 120,000 characters (long task descriptions, rich pages).
 const PM_BODY_BYTES = 128 * 1024;
@@ -37,6 +37,20 @@ export function createHttpHandler({ api, verifyToken, extraOrigins = [] }) {
         if (request.method !== 'GET') return reply(405, errorBody(NOT_FOUND), { allow: 'GET' });
         const ip = request.headers.get('cf-connecting-ip') ?? (request.headers.get('x-forwarded-for') ?? '').split(',')[0].trim();
         const out = await api.publicLink({ token: url.searchParams.get('t') ?? '', ip });
+        return reply(out.status, out.body, { 'x-robots-tag': 'noindex' });
+      }
+      if (url.pathname === '/api/public/fmp-share') {   // Funnel Mapper share links (no sign-in): GET to view, POST {t, action: save|comment, ...}
+        const ip = request.headers.get('cf-connecting-ip') ?? (request.headers.get('x-forwarded-for') ?? '').split(',')[0].trim();
+        if (request.method === 'GET') {
+          const out = await api.publicFmpShare({ action: 'get', token: url.searchParams.get('t') ?? '', ip });
+          return reply(out.status, out.body, { 'x-robots-tag': 'noindex' });
+        }
+        if (request.method !== 'POST') return reply(405, errorBody(NOT_FOUND), { allow: 'GET, POST' });
+        const raw = await request.text();
+        if (raw.length > LARGE_BODY_BYTES) return reply(413, errorBody(BAD_REQUEST));
+        let b; try { b = JSON.parse(raw); } catch { return reply(BAD_REQUEST.status, errorBody(BAD_REQUEST)); }
+        const action = b?.action === 'save' || b?.action === 'comment' ? b.action : 'none';
+        const out = await api.publicFmpShare({ action, token: typeof b?.t === 'string' ? b.t : '', ip, body: b });
         return reply(out.status, out.body, { 'x-robots-tag': 'noindex' });
       }
       if (request.method !== 'POST') return reply(405, errorBody(NOT_FOUND), { allow: 'POST' });
