@@ -371,7 +371,7 @@ export function adminView({ api, live, org, role, route, rerender, go, clients }
       h('table', { class: 'tbl', style: 'margin-top:var(--space-4)' }, h('caption', { class: 'sr' }, `Storage used by ${org.name}`),
         h('tbody', {}, h('tr', {}, h('th', { scope: 'row' }, `Used by ${org.name}`), h('td', { id: 'storage-org' }, size(u.org_bytes))),
           h('tr', {}, h('th', { scope: 'row' }, 'Files'), h('td', {}, String(u.files))), h('tr', {}, h('th', { scope: 'row' }, 'Stored versions'), h('td', {}, String(u.versions))),
-          ...spaces.map(([k, v]) => h('tr', {}, h('th', { scope: 'row' }, { shared: 'Shared space', client: 'Client files', personal: 'Personal spaces' }[k] ?? k), h('td', {}, size(v))))))));
+          ...spaces.map(([k, v]) => h('tr', {}, h('th', { scope: 'row' }, { shared: 'Shared space', client: 'Client files', personal: 'Personal spaces', funnel_mapper: 'Funnel Mapper images' }[k] ?? k), h('td', {}, size(v))))))));
   }
 
   (tab === 'members' ? members : tab === 'storage' ? storage : tab === 'clients' ? clientAccess : access)();

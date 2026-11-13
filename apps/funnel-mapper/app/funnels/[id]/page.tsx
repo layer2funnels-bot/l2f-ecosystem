@@ -6,6 +6,7 @@ import type { PaletteProduct } from "@/components/editor/palette";
 import { parseGraph, parseSettings } from "@/lib/graph";
 import { requireUser } from "@/lib/supabase/server";
 import { eco } from "@/lib/eco/server";
+import { launcherUrl } from "@/lib/eco/core";
 import { getClient, getFunnel, listProducts } from "@/lib/eco/data";
 
 export async function generateMetadata({ params }: PageProps<"/funnels/[id]">): Promise<Metadata> {
@@ -44,6 +45,7 @@ export default async function FunnelPage({ params }: PageProps<"/funnels/[id]">)
       funnel={{ id: f.id, name: f.name, description: f.description, status: f.status as never, client_id: f.client_id, graph: parseGraph(f.graph), settings: parseSettings(f.settings), updated_at: f.updated_at }}
       client={{ id: client.id, name: client.name, logo_url: client.logo_url, currency: client.currency }}
       agency={{ name: workspace.agency_name, logo_url: workspace.agency_logo_url }}
+      appsUrl={launcherUrl()}
       products={products.map((p) => ({ id: p.id, name: p.name, type: p.type, params: p.params })) as PaletteProduct[]}
       lastVersionAt={lastVersion ? Date.parse(lastVersion.created_at) : 0}
       unresolvedComments={comments.ok ? comments.data.length : 0}

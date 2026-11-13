@@ -321,3 +321,67 @@ revoke all on function private.fmp_share_safe_graph(jsonb, boolean) from public;
 revoke all on function private.fmp_share_link(text), private.fmp_shared_get(text), private.fmp_shared_save(text, jsonb, jsonb),
   private.fmp_shared_comment(text, text, text, text) from public;
 grant execute on function private.fmp_shared_get(text), private.fmp_shared_save(text, jsonb, jsonb), private.fmp_shared_comment(text, text, text, text) to app_user;
+
+-- ------------------------------------------------------------------ stored images count like every other stored file
+-- Funnel Mapper's images (logos, thumbnails, page captures and their block pictures) live in the shared file storage under
+-- <org>/fmp/... They are registered here so the one application-wide storage cap (0023) and Admin's usage counter include them, and so
+-- the storage backup knows them (not "orphans"). Registration happens before the upload address is signed; the cap check uses the same
+-- lock as file_versions, so two uploads from different apps cannot both slip under the cap.
+create table fmp.images (
+  path text primary key,
+  workspace_id uuid not null references public.workspaces(id) on delete cascade,
+  kind text not null check (kind in ('logo', 'thumb', 'shot', 'pic')),
+  size_bytes bigint not null check (size_bytes between 1 and 600000),
+  created_by uuid, created_at timestamptz not null default now(),
+  check (path like workspace_id::text || '/fmp/' || '%')
+);
+alter table fmp.images enable row level security;
+alter table fmp.images force row level security;
+create policy org_scope on fmp.images as restrictive for all using (private.org_in_scope(workspace_id)) with check (private.org_in_scope(workspace_id));
+create policy images_select on fmp.images for select using (private.has_permission(workspace_id, 'fmp.funnel.view'));
+create policy images_insert on fmp.images for insert with check (private.has_permission(workspace_id, 'fmp.funnel.edit'));
+create policy images_update on fmp.images for update using (private.has_permission(workspace_id, 'fmp.funnel.edit')) with check (private.has_permission(workspace_id, 'fmp.funnel.edit'));
+grant select, insert, update on fmp.images to app_user;
+
+create or replace function private.fmp_images_cap() returns trigger
+language plpgsql security definer set search_path = '' as $$
+declare cap bigint; used bigint;
+begin
+  new.created_by := coalesce(new.created_by, private.current_user_id());
+  perform pg_advisory_xact_lock(7230001);                      -- the same lock as file_versions (0023)
+  select s.cap_bytes into cap from public.storage_settings s;
+  used := private.storage_used_bytes() - case when tg_op = 'UPDATE' then old.size_bytes else 0 end;
+  if used + new.size_bytes > cap then
+    raise exception 'storage limit reached' using errcode = 'P0001', hint = 'storage_limit';
+  end if;
+  return new;
+end $$;
+revoke all on function private.fmp_images_cap() from public;
+create trigger fmp_images_cap before insert or update on fmp.images for each row execute function private.fmp_images_cap();
+
+-- the cap and the usage counter now count both registers
+create or replace function private.storage_used_bytes() returns bigint
+language sql stable security definer set search_path = '' as $$
+  select (select coalesce(sum(size_bytes), 0) from public.file_versions where storage_path is not null)
+       + (select coalesce(sum(size_bytes), 0) from fmp.images)
+$$;
+create or replace function public.storage_usage()
+returns table (total_bytes bigint, cap_bytes bigint, org_bytes bigint, files int, versions int, by_space jsonb)
+language plpgsql stable security definer set search_path = '' as $$
+declare r text := private.request_org(); ws uuid; fm bigint;
+begin
+  if r is null or r !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' then return; end if;
+  ws := r::uuid;
+  if not private.has_role(ws, 'admin') then return; end if;
+  fm := (select coalesce(sum(i.size_bytes), 0) from fmp.images i where i.workspace_id = ws)::bigint;
+  return query select private.storage_used_bytes(), (select s.cap_bytes from public.storage_settings s),
+    (coalesce((select sum(v.size_bytes) from public.file_versions v where v.workspace_id = ws and v.storage_path is not null), 0) + fm)::bigint,
+    (select count(*)::int from public.files f where f.workspace_id = ws and f.kind = 'file'),
+    (select count(*)::int from public.file_versions v where v.workspace_id = ws and v.storage_path is not null),
+    coalesce((select jsonb_object_agg(x.space, x.bytes) from (select f.space, sum(v.size_bytes)::bigint as bytes from public.file_versions v join public.files f on f.id = v.file_id where v.workspace_id = ws and v.storage_path is not null group by f.space) x), '{}'::jsonb)
+      || case when fm > 0 then jsonb_build_object('funnel_mapper', fm) else '{}'::jsonb end;
+end $$;
+revoke all on function public.storage_usage() from public;
+grant execute on function public.storage_usage() to app_user;
+revoke all on function private.storage_used_bytes() from public;
+grant execute on function private.storage_used_bytes() to app_user;

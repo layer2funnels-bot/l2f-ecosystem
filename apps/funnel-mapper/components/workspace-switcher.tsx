@@ -1,19 +1,17 @@
 "use client";
-import { useActionState, useEffect, useId, useRef } from "react";
-import { createWorkspaceAction, switchWorkspaceAction } from "@/app/(app)/actions";
+import { useEffect, useRef } from "react";
+import { switchWorkspaceAction } from "@/app/(app)/actions";
 import type { WorkspaceOption } from "@/lib/supabase/server";
 import { Icon } from "./icon";
 
 /**
- * Sidebar workspace button (V2 D1). Opens a popover menu over the page: your workspaces, and (admins) creating a new one.
- * Collapses to the workspace tile on the 64px icon rail.
+ * Sidebar organization button (V7 16 §2): the ecosystem organization you work in, the others you can switch to, and "All apps"
+ * (the way back to the ecosystem Launcher). Organizations are created and managed in Office › Admin, not here.
+ * Collapses to the organization tile on the 64px icon rail.
  */
-export function WorkspaceSwitcher({ currentId, workspaces, canCreate, logo, team }: { currentId: string; workspaces: WorkspaceOption[]; canCreate: boolean; logo?: string | null; team: boolean }) {
-  const [state, create] = useActionState(createWorkspaceAction, undefined);
-  const id = useId();
+export function WorkspaceSwitcher({ currentId, workspaces, logo, appsUrl }: { currentId: string; workspaces: WorkspaceOption[]; logo?: string | null; appsUrl?: string }) {
   const ref = useRef<HTMLDetailsElement>(null);
   const current = workspaces.find((w) => w.id === currentId);
-  const kind = (w: WorkspaceOption) => (w.kind === "team" ? "Layer2Funnels team" : "Workspace");
   // close on outside click and Escape (the popover floats over the page)
   useEffect(() => {
     const out = (e: PointerEvent) => {
@@ -34,7 +32,7 @@ export function WorkspaceSwitcher({ currentId, workspaces, canCreate, logo, team
       document.removeEventListener("keydown", esc);
     };
   }, []);
-  const name = current?.name ?? "Workspace";
+  const name = current?.name ?? "Organization";
   return (
     <details ref={ref} className="group relative mb-3" data-testid="workspace-switcher">
       <summary title={name} className="flex h-11 cursor-pointer list-none items-center gap-2.5 rounded-[9px] px-2 hover:bg-side-item lg:max-xl:justify-center [&::-webkit-details-marker]:hidden">
@@ -49,13 +47,13 @@ export function WorkspaceSwitcher({ currentId, workspaces, canCreate, logo, team
         <span className="min-w-0 flex-1 lg:max-xl:sr-only">
           <span className="block truncate text-[14.5px] font-semibold text-side-ink">{name}</span>
           <span className="block text-[12.5px] text-side-muted" data-testid="workspace-kind">
-            {team ? "Team workspace" : "Private workspace"}
+            Funnel Mapper
           </span>
         </span>
         <Icon name="chevronRight" size={16} className="shrink-0 text-side-muted transition-transform group-open:rotate-90 lg:max-xl:hidden" />
       </summary>
       <div className="absolute top-full left-0 z-50 mt-1 w-[264px] rounded-[10px] bg-side-item p-2 shadow-card ring-1 ring-white/10">
-        <ul className="m-0 list-none p-0" aria-label="Your workspaces">
+        <ul className="m-0 list-none p-0" aria-label="Your organizations">
           {workspaces.map((w) => (
             <li key={w.id}>
               <form action={switchWorkspaceAction.bind(null, w.id)}>
@@ -65,27 +63,16 @@ export function WorkspaceSwitcher({ currentId, workspaces, canCreate, logo, team
                   disabled={w.id === currentId}
                 >
                   <span className="min-w-0 flex-1 truncate font-medium">{w.name}</span>
-                  <span className="shrink-0 text-[12px] text-side-muted">{kind(w)}</span>
+                  <span className="shrink-0 text-[12px] text-side-muted">{w.id === currentId ? "Current" : "Switch"}</span>
                 </button>
               </form>
             </li>
           ))}
         </ul>
-        {canCreate && (
-          <form action={create} className="mt-2 border-t border-white/10 pt-2">
-            <label htmlFor={`${id}-ws`} className="mb-1 block px-1 text-xs font-semibold text-side-muted">
-              New workspace
-            </label>
-            <input id={`${id}-ws`} name="name" className="input mb-2 w-full" placeholder="Workspace name" maxLength={120} required autoComplete="off" />
-            {state?.error && (
-              <p role="alert" className="mb-2 px-1 text-xs text-bad">
-                {state.error}
-              </p>
-            )}
-            <button className="btn primary sm w-full">
-              <Icon name="plus" /> Create workspace
-            </button>
-          </form>
+        {appsUrl && (
+          <a href={appsUrl} className="mt-2 flex min-h-[38px] items-center gap-2 rounded-lg border-t border-white/10 px-2 pt-2 text-sm text-side-muted no-underline hover:text-side-ink">
+            <Icon name="grid" size={16} /> All apps
+          </a>
         )}
       </div>
     </details>

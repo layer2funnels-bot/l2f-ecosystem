@@ -30,7 +30,7 @@ const initials = (s: string) =>
  * App shell navigation (V2 D1). ≥1280: 232px sidebar. 1024–1279: 64px icon rail (labels in tooltips). 640–1023: left drawer
  * from a menu button. Phone: bottom tab bar (More opens the drawer).
  */
-export function AppNav({ agency, user, role, logo, team, workspaceId, workspaces, canCreate, trash = 0, pinned = [], counts = {} }: { agency: string; user: string; role: string; logo?: string | null; team: boolean; workspaceId: string; workspaces: WorkspaceOption[]; canCreate: boolean; trash?: number; pinned?: { id: string; name: string; status: string }[]; counts?: Record<string, number> }) {
+export function AppNav({ agency, user, role, logo, team, workspaceId, workspaces, appsUrl, trash = 0, pinned = [], counts = {} }: { agency: string; user: string; role: string; logo?: string | null; team: boolean; workspaceId: string; workspaces: WorkspaceOption[]; appsUrl?: string; trash?: number; pinned?: { id: string; name: string; status: string }[]; counts?: Record<string, number> }) {
   const path = usePathname();
   const [open, setOpen] = useState(false);
   const active = (h: string) => (h === "/" ? path === "/" : path.startsWith(h));
@@ -58,7 +58,7 @@ export function AppNav({ agency, user, role, logo, team, workspaceId, workspaces
   const quiet = "h-[34px] w-full items-center gap-2.5 rounded-lg px-2.5 text-[14px] text-side-muted hover:bg-side-item hover:text-side-ink lg:max-xl:justify-center lg:max-xl:px-0";
   const nav = (
     <nav aria-label="Main" className="flex h-full flex-col gap-0.5 px-3 py-3.5 lg:max-xl:px-2">
-      <WorkspaceSwitcher currentId={workspaceId} workspaces={workspaces} canCreate={canCreate} logo={logo} team={team} />
+      <WorkspaceSwitcher currentId={workspaceId} workspaces={workspaces} logo={logo} appsUrl={appsUrl} />
       <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto">
         {NAV.map(link)}
         {link(TRASH)}

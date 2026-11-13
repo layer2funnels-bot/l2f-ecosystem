@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { cache } from "react";
 import type { Database } from "./database.types";
 import type { Role } from "../roles";
-import { currentOrg, ecoRows } from "../eco/server";
+import { currentOrg, eco, ecoRows } from "../eco/server";
 
 /** Server Supabase client bound to the request's auth cookies. */
 export async function supabaseServer() {
@@ -42,7 +42,10 @@ export const requireUser = cache(async () => {
   if (!user) redirect("/login");
   const { org, orgs } = await currentOrg();
   if (!org) redirect("/unavailable");
-  const settings = (await ecoRows<{ id: string; name: string; slug: string; default_currency: string; is_admin: boolean }>("fmp.settings.get"))[0];
+  // Funnel Mapper not switched on here (or not in this person's access): the API answers "not found" or nothing; show /unavailable
+  const st = await eco<{ id: string; name: string; slug: string; default_currency: string; is_admin: boolean }>("fmp.settings.get");
+  if (!st.ok && st.code === "session_expired") redirect("/login");
+  const settings = st.ok ? st.data[0] : undefined;
   if (!settings) redirect("/unavailable");
   const me = (await ecoRows<{ id: string; display_name: string; email: string }>("profile.get"))[0];
   const role = org.role as Role;

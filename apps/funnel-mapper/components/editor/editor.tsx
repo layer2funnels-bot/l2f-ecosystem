@@ -95,6 +95,8 @@ export interface EditorProps {
   funnel: { id: string; name: string; description: string; status: string; client_id: string; graph: FunnelGraph; settings: FunnelSettings; updated_at: string };
   client: { id: string; name: string; logo_url: string | null; currency: string };
   agency: { name: string; logo_url: string | null };
+  /** The ecosystem Launcher ("All apps", V7 16 §2: the editor's way out); owner mode only. */
+  appsUrl?: string;
   products?: PaletteProduct[];
   lastVersionAt?: number;
   share?: { token: string; canEdit: boolean; hideNumbers: boolean; allowComments: boolean; comments: ShareCommentLite[] };
@@ -825,6 +827,11 @@ function EditorInner(props: EditorProps) {
           <Link href="/" className="fm-logo" aria-label="Home" title="Home">
             <Icon name="logo" size={17} strokeWidth={2.2} />
           </Link>
+        )}
+        {owner && props.appsUrl && (
+          <a href={props.appsUrl} className="btn icon fm-hide-phone" aria-label="All apps" title="All apps">
+            <Icon name="grid" />
+          </a>
         )}
         {!owner && (
           <span className="flex items-center gap-2 font-display font-extrabold">

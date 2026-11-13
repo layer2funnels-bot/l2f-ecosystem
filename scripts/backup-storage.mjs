@@ -18,7 +18,8 @@ try {
   let dbRows = null;
   if (process.env.SUPABASE_DB_URL) {
     const pg = (await import('pg')).default; const c = new pg.Client({ connectionString: process.env.SUPABASE_DB_URL }); await c.connect();
-    dbRows = (await c.query('select storage_path as path, size_bytes::float8 as size from file_versions where storage_path is not null')).rows; await c.end();
+    dbRows = (await c.query(`select storage_path as path, size_bytes::float8 as size from file_versions where storage_path is not null
+      union all select path, size_bytes::float8 from fmp.images`)).rows; await c.end();   // file_versions + Funnel Mapper's images (0053)
   }
   const maxBytes = Number(process.env.BACKUP_MAX_BYTES ?? 400000000);
   let manifest;

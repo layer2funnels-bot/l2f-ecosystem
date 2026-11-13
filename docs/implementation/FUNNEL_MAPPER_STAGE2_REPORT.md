@@ -14,6 +14,16 @@ Stage 1 (PR #47): code copy in `apps/funnel-mapper`, rename, original theme, mig
 - **Cloudflare**: Next 16.4.6 with `@opennextjs/cloudflare`; the server bundle is **2.76 MiB compressed, under the free plan's 3 MiB limit** (was 3.79). `npm run cf:build` then `npm run cf:size` checks it. Nothing was deployed.
 - **Fixes found on the way**: a person limited to one client could see other clients' funnels (fixed: client check on every table, FD3/FD10/FD11); typing one number in the real-numbers grid cleared the other numbers of that row (fixed, FD9); `org.list` needed the API's "no organization" marker (found in the browser test).
 
+## 2a. Ecosystem-rule check (13 Nov, after the owner asked that Funnel Mapper follow every ecosystem rule)
+Checked against `docs/EXTERNAL_APP_ONBOARDING.md` (14-point checklist) and the V7 brief `16_FUNNEL_MAPPER.md`. Fixed in this round:
+- **Storage limit**: Funnel Mapper's images now count toward the one 8 GB limit like every other stored file (register `fmp.images`, same lock as Drive), show in Office › Admin › Storage as "Funnel Mapper images", and are known to the nightly file backup. Uploads are refused when the store is full (FD34; two new deliberate-break checks caught).
+- **Way in and out like other apps**: the Launcher opens Funnel Mapper in the organization you are in (`?org=`; ignored unless you belong to it); the sidebar shows the organization (switch between yours) and **All apps** back to the Launcher; the editor has an **All apps** button (V7 16 §2).
+- **Aurj / organizations without Funnel Mapper**: "Funnel Mapper isn't set up for Aurj" with **Switch to Layer2Funnels** (V7 16 §4). Before this fix that case showed an error page.
+- **Open in Clients** on each client page (V7 16 §4). Settings › Team links to Office › Admin.
+- App manifest: reuses Clients; storage through the shared storage adapter.
+
+Checklist items still open (each listed in §5): the ecosystem's own rail with search and notifications is not drawn inside Funnel Mapper (it runs as its own app at its own address; it has its own search, and notifications are off ecosystem-wide); Funnel Mapper items are not in the ecosystem's shared search yet; one sign-in across both addresses (today a person signs in once in each, with the same account).
+
 ## 3. Old database (read-only look, nothing changed)
 Owner reset the password; queried read-only on 13 Nov:
 - 4 workspaces: **Layer2Funnels** (team) and 3 personal ("Aurj", "Live check …", "Hammad Workspave"). The 3 personal ones hold **no clients, funnels, products or templates**, so retiring them loses nothing; there is nothing to export for them.
@@ -32,6 +42,8 @@ Owner reset the password; queried read-only on 13 Nov:
 | `next build` and Cloudflare build | pass; 2.76 MiB |
 | Copy ledger `check:fmp-copy` | pass |
 | Browser walkthrough on the local ecosystem (sign in → home → new shared client → new funnel → editor "Saved" → funnels, clients, templates, trash, settings) | pass, no server errors; funnel stored in `fmp.funnels` on the shared client |
+| Second walkthrough: opened in Aurj → "not set up" → switch; organization from the Launcher; forged organization ignored; Open in Clients; logo upload (shrunk in the browser, stored, shown); editor All apps; Settings → Office › Admin | all pass, no errors |
+| Mutation check after the storage change | 116/116 caught |
 
 **Not verified yet:** the long Funnel Mapper browser suite (≈195 tests) against the ecosystem; it was written for the old database and needs updating. Share links and image upload were tested at API level, not yet clicked through in a browser.
 
@@ -41,6 +53,7 @@ Owner reset the password; queried read-only on 13 Nov:
 3. **Cloudflare deploy**: needs a Cloudflare login on this session (or the owner's account) and the ecosystem addresses as settings. Free plan; nothing to buy.
 4. Close the 3 empty personal workspaces in the old project after the move (nothing in them).
 5. Update Funnel Mapper's own browser suite to the ecosystem setup.
+6. One sign-in across the ecosystem and Funnel Mapper addresses (host Funnel Mapper under the same domain, or a sign-in hand-off), and Funnel Mapper items in the ecosystem's shared search. Both are design decisions for the go-live step.
 
 ## 6. Statement
 No live database was changed, nothing was deployed, the original Funnel-Mapper repository and its live Supabase/Vercel projects were not touched. The old database was only read.

@@ -12,6 +12,7 @@ import { pricingSummary } from "@/lib/pricing";
 import { templateOptions } from "@/lib/queries";
 import { requireUser } from "@/lib/supabase/server";
 import { getClient, listClients, listFunnels, listProducts } from "@/lib/eco/data";
+import { clientsAppUrl } from "@/lib/eco/core";
 import { updateClientAction } from "../../actions";
 import { ClientTabs } from "./client-tabs";
 import { ArchiveClient, ClientLogo, ClientNotes, DeleteClient, FunnelList } from "./portfolio-bits";
@@ -94,6 +95,11 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/c
           </div>
         )}
         <div className="flex flex-wrap items-center gap-2">
+          {clientsAppUrl(client.id) && (
+            <a className="btn" href={clientsAppUrl(client.id)}>
+              <Icon name="users" /> Open in Clients
+            </a>
+          )}
           {client.website && (
             <a className="btn" href={client.website} target="_blank" rel="noreferrer">
               <Icon name="link" /> Website

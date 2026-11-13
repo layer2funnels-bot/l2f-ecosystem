@@ -276,6 +276,9 @@ export const fmpDataOperations = [
       const ext = { 'image/webp': 'webp', 'image/png': 'png', 'image/jpeg': 'jpg', 'image/svg+xml': 'svg', 'image/gif': 'gif' }[i.mime_type];
       // the block's 208 x 256 picture sits next to its capture (Funnel Mapper's lib/shot-path.ts picPath)
       const path = i.kind === 'pic' ? (/\.webp$/.test(i.of) ? i.of.replace(/\.webp$/, '-pic.webp') : `${i.of}-pic.webp`) : `${ctx.orgId}/fmp/${i.kind}/${randomBytes(16).toString('hex')}.${ext}`;
+      // registered first: counts toward the shared storage cap (refused when full) and is known to the backup
+      await q(`insert into fmp.images (path, workspace_id, kind, size_bytes) values ($1, $2, $3, $4)
+        on conflict (path) do update set size_bytes = excluded.size_bytes`, [path, ctx.orgId, i.kind, i.size_bytes]);
       const r = await ctx.storage.signUpload({ path, size: i.size_bytes, contentType: i.mime_type });
       return [{ path, url: r.url, method: r.method ?? 'PUT', headers: r.headers ?? {} }];
     },

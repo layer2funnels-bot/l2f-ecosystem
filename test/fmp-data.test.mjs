@@ -141,6 +141,13 @@ check('FD33', 'Images go to the organization\'s Funnel Mapper folder; the block 
   && data(await call('fmp.files.url', { paths: [shot.path] }, U.VW)).length === 1 && data(await call('fmp.files.url', { paths: [shot.path] }, U.AOWN, A)).length === 0
   && data(await call('fmp.files.url', { paths: [`${L}/drive/x.pdf`] }, U.VW)).length === 0);
 await asSuper();
+const imgBytes = async () => Number((await rows('select coalesce(sum(size_bytes),0)::int n from fmp.images'))[0].n);
+check('FD34', 'Funnel Mapper images are registered and count toward the one storage cap; a full store refuses the upload', await imgBytes() === 2000
+  && Number((await rows('select private.storage_used_bytes()::int n'))[0].n) >= 2000
+  && await (async () => { await db.query('update storage_settings set cap_bytes = private.storage_used_bytes() + 500'); const r = await call('fmp.files.upload', { kind: 'logo', size_bytes: 1000, mime_type: 'image/webp' }, U.ED);
+    await db.query('update storage_settings set cap_bytes = 8000000000'); return r.status === 507 && r.body?.error?.code === 'storage_limit'; })()
+  && await imgBytes() === 2000);
+await asSuper();
 check('FD25', 'Funnel and share-link changes are in the audit log', (await rows("select count(*)::int n from audit_events where workspace_id=$1 and action like 'funnels.%'", [L]))[0].n >= 3
   && (await rows("select count(*)::int n from audit_events where workspace_id=$1 and action like 'share_links.%'", [L]))[0].n >= 1);
 

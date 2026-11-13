@@ -354,7 +354,6 @@ export async function updateWorkspaceAction(_: ActionResult, fd: FormData): Prom
 
 // Team, invitations, roles, ownership, branding and independent accounts are managed by the ecosystem now (Office › Admin);
 // these keep their names so older screens compile, and say where to go.
-export async function createWorkspaceAction(_s: ActionResult, _fd: FormData): Promise<ActionResult> { return { error: MANAGED }; }   // eslint-disable-line @typescript-eslint/no-unused-vars
 
 /** Switch to another organization you work in (only ones the ecosystem lists for you; the API checks every call anyway). */
 export async function switchWorkspaceAction(id: string) {

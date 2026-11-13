@@ -76,7 +76,7 @@ export function launcherView({ catalog, error, org, orgs, role, name, registry, 
         actions: [...(other ? [{ label: `Switch to ${other.name}`, cls: 'primary', on: () => onSwitch(other.org_id) }] : []), { label: 'Ask an admin', on: () => toast('Message only for now. No request was sent.', false) }, { label: 'Close', focus: true }] });
     }
     if (a.app_key === 'funnel_mapper_pro') {
-      if (a.launch_url) { location.href = a.launch_url; return; }          // same tab, as a regular app
+      if (a.launch_url) { location.href = withOrg(a.launch_url, org.org_id); return; }   // same tab, as a regular app, in the same organization
       return dialog({ title: 'Funnel Mapper isn’t connected yet', body: h('p', {}, 'Its address hasn’t been set. An owner adds it when Funnel Mapper goes live.'), actions: [{ label: 'Close', focus: true }] });
     }
     const go = () => { location.hash = BUILT.has(a.app_key) ? hrefFor.office() : hrefFor.app(a.app_key); };
@@ -112,3 +112,8 @@ export function launcherView({ catalog, error, org, orgs, role, name, registry, 
 export const appNotBuiltView = (name) => h('section', {}, designBadge(), h('div', { class: 'crumb' }, 'Apps'), h('h1', { 'data-page-title': true }, name),
   emptyState({ title: `${name} isn’t built yet`, body: 'Its design and screens come later. Nothing has been lost; the data layer is separate.', ic: 'clock', action: h('a', { class: 'btn primary', href: hrefFor.office() }, 'Go to Office Home') }));
 export { roleLabel };
+
+/** Funnel Mapper runs at its own address: it opens in the organization chosen here (it checks the person really belongs to it). */
+export function withOrg(url, orgId) {
+  try { const u = new URL(url); if (orgId) u.searchParams.set('org', orgId); return u.toString(); } catch { return url; }
+}

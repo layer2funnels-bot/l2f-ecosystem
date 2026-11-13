@@ -30,3 +30,10 @@ export async function ecoFetch<T = Record<string, unknown>>(base: string, op: st
 }
 
 export const ECO_API = () => process.env.ECOSYSTEM_API_URL || process.env.NEXT_PUBLIC_ECOSYSTEM_API_URL || "";
+
+/** The ecosystem web app (server-only setting ECOSYSTEM_WEB_URL), or "" when it isn't set. */
+export const ecoWebUrl = () => (process.env.ECOSYSTEM_WEB_URL ?? "").replace(/\/$/, "");
+/** The ecosystem Launcher ("All apps"), or undefined when the ecosystem address isn't set. */
+export const launcherUrl = () => (ecoWebUrl() ? `${ecoWebUrl()}/#/` : undefined);
+/** A client's page in the Clients app. */
+export const clientsAppUrl = (clientId: string) => (ecoWebUrl() ? `${ecoWebUrl()}/#/clients/c/${clientId}` : undefined);
