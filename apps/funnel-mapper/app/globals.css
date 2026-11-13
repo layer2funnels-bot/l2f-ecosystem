@@ -1,103 +1,105 @@
 @import "tailwindcss";
 
-/* Ecosystem design tokens (docs/design/08, 21 Oct 2026). Light is the default; Emerald is retired in this copy only. The dark values stay
-   for a later option (no switch is offered). Blue is --primary; the map's meaning is carried by line style, icons and printed numbers, not hue alone. */
+/* Locked Emerald design tokens (docs/MASTER_HANDOFF.md §5). Dark-first; a light variant via [data-theme="light"]. */
 :root {
   /* surfaces */
-  --bg: #f5f8fd; /* canvas / page */
-  --dot: #d3dce9;
-  --library: #ffffff; /* left block library */
-  --chrome: #ffffff; /* top / bottom workspace chrome, cards */
-  --panel: #ffffff;
-  --panel2: #e3eafa; /* inspector / raised / hover / inputs */
-  --line: #c9cfd8;
-  --ink: #1b1f27;
-  --muted: #566070;
-  /* brand: the ecosystem primary */
-  --brand: #173a8f;
-  --brand-hover: #12307a;
-  --brand-press: #0e2765;
-  --brand-light: #173a8f; /* links, icons and highlights on light surfaces */
-  --brand-ink: #ffffff; /* text on the primary colour */
-  --brand-soft: #e3eafa;
-  --side: #ffffff;
-  --side-ink: #1b1f27;
-  --side-muted: #566070;
-  --side-item: #e3eafa;
-  --side-line: #c9cfd8;
-  /* node categories (design 08): hue-mapped, readable with dark icons; the saturated stripe colours arrive with the node stripe change */
-  --c-traffic: #7cc4f5; /* sky */
-  --c-page: #c4b5f4; /* violet */
-  --c-offer: #ffa68f; /* coral */
-  --c-action: #9db4ee; /* blue */
-  --c-logic: #f5b942; /* amber */
-  --c-goal: #e59ac4; /* magenta */
-  --c-note: #d9cbb8; /* sand */
-  --cat-ink: #1b1f27; /* icons on category colours */
-  --good: #1d5f9e; /* success / people who continue: blue (with a check and the % on the label) */
-  --bad: #b3261e; /* broken: red text with a cross */
-  --neg: #b3261e; /* negative money */
-  --warn: #8a5200; /* leak / warning text (amber fills use #f5b942 with this as the outline) */
-  --edge: #667391; /* node border, same as inputs */
-  /* leak = people lost, attention = health checks: dashed lines and a triangle, never colour alone */
-  --lost: #8a5200;
-  --attention: #8a5200;
-  /* categorical chart series, validated against #ffffff: blue, orange, violet, brown, sky */
-  --chart-1: #173a8f;
-  --chart-2: #c2410c;
-  --chart-3: #6b46c1;
-  --chart-4: #8a5200;
-  --chart-5: #4db3f0;
-  --alt: var(--lost);
-  --backdrop: rgba(15, 23, 42, 0.45);
-  --shadow: 0 1px 2px rgba(15, 23, 42, 0.06), 0 6px 18px rgba(15, 23, 42, 0.08);
-  color-scheme: light;
-}
-/* Dark (a later option, not offered): the old dark surfaces with the ecosystem blue lifted for contrast */
-:root[data-theme="dark"] {
-  --bg: #0b1220;
+  --bg: #0b1220; /* canvas / page */
   --dot: #1c2738;
-  --library: #0f172a;
-  --chrome: #111827;
+  --library: #0f172a; /* left block library, app sidebar */
+  --chrome: #111827; /* top / bottom workspace chrome, cards */
   --panel: #111827;
-  --panel2: #1e293b;
+  --panel2: #1e293b; /* inspector / panels / inputs */
   --line: #334155;
   --ink: #e2e8f0;
   --muted: #94a3b8;
-  --brand: #6b8ee0;
-  --brand-hover: #86a3ea;
-  --brand-press: #a3b8f0;
-  --brand-light: #9db4ee;
-  --brand-ink: #0b1220;
-  --brand-soft: rgba(107, 142, 224, 0.16);
+  /* brand */
+  --brand: #10b981;
+  --brand-hover: #059669;
+  --brand-press: #047857;
+  --brand-light: #34d399; /* links, icons and highlights on dark surfaces */
+  --brand-ink: #0b1220; /* text on emerald (8.5:1) */
+  --brand-soft: rgba(16, 185, 129, 0.12);
   --side: #0f172a;
   --side-ink: #e2e8f0;
   --side-muted: #94a3b8;
   --side-item: #1e293b;
   --side-line: #1e293b;
+  /* semantic category colours */
   --c-traffic: #60a5fa;
   --c-page: #a78bfa;
   --c-offer: #fb923c;
-  --c-action: #9db4ee;
+  --c-action: #2dd4bf;
   --c-logic: #fbbf24;
-  --c-goal: #e59ac4;
-  --c-note: #d9cbb8;
-  --cat-ink: #0b1220;
-  --good: #7fb0e6;
+  --c-goal: #84cc16;
+  --c-note: #fde68a;
+  --cat-ink: #0b1220; /* icons on category colours */
+  --good: #22c55e;
   --bad: #f87171;
-  --neg: #fca5a5;
+  --neg: #fca5a5; /* negative money */
   --warn: #fbbf24;
   --edge: #64748b;
-  --lost: #f5b942;
+  /* V2 semantics: orange = people lost (non-convert lines, key leak); amber = needs attention (health checks) */
+  --lost: #f97316;
   --attention: #fbbf24;
-  --chart-1: #6b8ee0;
+  /* categorical chart series, validated (lightness band, CVD separation, contrast) against #111827 */
+  --chart-1: #059669;
   --chart-2: #ea580c;
-  --chart-3: #a78bfa;
-  --chart-4: #fbbf24;
-  --chart-5: #4db3f0;
+  --chart-3: #3b82f6;
+  --chart-4: #b45309;
+  --chart-5: #34d399; /* light Emerald: second series (profit, leads) */
+  --alt: var(--lost);
   --backdrop: rgba(2, 6, 23, 0.6);
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 6px 16px rgba(0, 0, 0, 0.25);
   color-scheme: dark;
+}
+:root[data-theme="light"] {
+  /* V2 Light theme (reference/CLAUDE_CODE_IMPLEMENTATION.md F13, V2-theme-tokens): only surfaces, borders and text swap.
+     Emerald, its hover/pressed colours, the category colours and the leak line colour are the same as Dark. */
+  --bg: #f4f6fa; /* canvas */
+  --dot: #d3dbe6;
+  --library: #ffffff; /* panel / library */
+  --chrome: #ffffff; /* top bar and blocks */
+  --panel: #ffffff;
+  --panel2: #e5eaf1; /* raised / hover */
+  --line: #c4cedb; /* border */
+  --ink: #0f172a; /* primary text 16.5:1 */
+  --muted: #55657b; /* secondary text 5.9:1 */
+  --brand: #10b981;
+  --brand-hover: #059669;
+  --brand-press: #047857;
+  --brand-light: #047857; /* emerald text on light surfaces 5.1:1 */
+  --brand-ink: #03241a; /* dark green text on the Emerald button 6.5:1 */
+  --brand-soft: #d1fae5;
+  --side: #ffffff;
+  --side-ink: #0f172a;
+  --side-muted: #55657b;
+  --side-item: #e5eaf1;
+  --side-line: #c4cedb;
+  --c-traffic: #60a5fa;
+  --c-page: #a78bfa;
+  --c-offer: #fb923c;
+  --c-action: #2dd4bf;
+  --c-logic: #fbbf24;
+  --c-goal: #84cc16;
+  --c-note: #fde68a;
+  --cat-ink: #0b1220;
+  --good: #15803d;
+  --bad: #b91c1c; /* red text (errors) 6.0:1 */
+  --neg: #b91c1c;
+  --warn: #b45309; /* amber text (checks) 4.6:1 */
+  --edge: #7b8aa0; /* strong border / dashes */
+  --lost: #c2410c; /* orange text (leaks) 4.8:1 */
+  --attention: #b45309;
+  /* categorical chart series, validated against #ffffff */
+  --chart-1: #047857;
+  --chart-2: #c2410c;
+  --chart-3: #2563eb;
+  --chart-4: #a16207;
+  --chart-5: #10b981;
+  --alt: #c2410c;
+  --backdrop: rgba(15, 23, 42, 0.45);
+  --shadow: 0 1px 2px rgba(15, 23, 42, 0.06), 0 6px 18px rgba(15, 23, 42, 0.08);
+  color-scheme: light;
 }
 
 @theme inline {
@@ -105,7 +107,6 @@
   --color-panel: var(--panel);
   --color-panel2: var(--panel2);
   --color-line: var(--line);
-  --color-edge: var(--edge);
   --color-ink: var(--ink);
   --color-muted: var(--muted);
   --color-brand: var(--brand);
@@ -130,6 +131,9 @@
   --font-display: var(--font-bricolage), var(--font-dm-sans), sans-serif;
   --font-mono: var(--font-jetbrains), ui-monospace, "SFMono-Regular", Menlo, monospace;
   --shadow-card: var(--shadow);
+  /* V7: one step up from Tailwind's 12 / 14 px (the owner found the app too small) */
+  --text-xs: 13px;
+  --text-sm: 14.5px;
 }
 
 @layer base {
@@ -148,7 +152,7 @@ body {
   color: var(--ink);
   font-family: var(--font-sans);
   /* the design's working size: 13px with tabular figures */
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.4;
   font-feature-settings: "tnum" 1;
   -webkit-font-smoothing: antialiased;
@@ -186,9 +190,9 @@ button {
     background: transparent;
     border-radius: 8px;
     padding: 0 12px;
-    min-height: 32px;
+    min-height: 34px;
     font-weight: 500;
-    font-size: 13px;
+    font-size: 14px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -242,7 +246,7 @@ button {
   .btn.sm {
     min-height: 28px;
     padding: 0 10px;
-    font-size: 12px;
+    font-size: 13px;
     border-radius: 7px;
   }
   .btn svg {
@@ -263,7 +267,7 @@ button {
   }
   .field > label,
   .field > .lbl {
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 500;
     color: #cbd5e1;
   }
@@ -273,7 +277,7 @@ button {
   }
   .field .help,
   p.help {
-    font-size: 11.5px;
+    font-size: 12.5px;
     color: var(--muted);
     line-height: 1.45;
   }
@@ -282,9 +286,9 @@ button {
     background: var(--bg);
     border-radius: 8px;
     padding: 0 10px;
-    min-height: 34px;
+    min-height: 36px;
     width: 100%;
-    font-size: 13px;
+    font-size: 14px;
   }
   textarea.input {
     min-height: 90px;
@@ -300,7 +304,7 @@ button {
     display: flex;
     gap: 8px;
     align-items: center;
-    font-size: 13px;
+    font-size: 14px;
     margin-bottom: 12px;
   }
   .check input {
@@ -328,7 +332,7 @@ button {
     background: transparent;
     border-radius: 6px;
     padding: 0 12px;
-    font-size: 12.5px;
+    font-size: 13.5px;
     font-weight: 500;
     color: var(--muted);
     min-height: 26px;
@@ -358,11 +362,11 @@ button {
     border: none;
     background: none;
     padding: 10px 10px;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 500;
     color: var(--muted);
     position: relative;
-    min-height: 38px;
+    min-height: 40px;
     display: inline-flex;
     align-items: center;
     gap: 5px;
@@ -390,7 +394,7 @@ button {
     gap: 10px 8px;
   }
   .statbox > div {
-    font-size: 11px;
+    font-size: 12px;
     color: var(--muted);
   }
   .statbox b {
@@ -409,17 +413,17 @@ button {
   }
   .rline span {
     font-weight: 700;
-    font-size: 14px;
+    font-size: 15px;
   }
   .rline b {
     font-family: var(--font-display);
-    font-size: 16px;
+    font-size: 17px;
     text-align: right;
   }
   .rline small {
     grid-column: 1/-1;
     color: var(--muted);
-    font-size: 12px;
+    font-size: 13px;
   }
   .pos {
     color: var(--good);
@@ -432,7 +436,7 @@ button {
     border-radius: 10px;
     padding: 10px 12px;
     margin-bottom: 14px;
-    font-size: 13px;
+    font-size: 14px;
     line-height: 18px;
   }
   .warns b {
@@ -447,13 +451,13 @@ button {
   table.tbl {
     width: 100%;
     border-collapse: collapse;
-    font-size: 12.5px;
+    font-size: 13.5px;
   }
   .tbl th {
     text-align: left;
     color: var(--muted);
     font-weight: 600;
-    font-size: 11px;
+    font-size: 12px;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     padding: 0 8px 10px;
@@ -484,7 +488,7 @@ button {
     display: inline-flex;
     align-items: center;
     gap: 7px;
-    font-size: 12.5px;
+    font-size: 13.5px;
     color: var(--ink);
     white-space: nowrap;
   }
@@ -501,14 +505,14 @@ button {
     gap: 4px;
     border-radius: 999px;
     padding: 2px 9px;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 700;
     white-space: nowrap;
     border: 1px solid transparent;
   }
   .kb {
     font-family: inherit;
-    font-size: 11px;
+    font-size: 12px;
     color: var(--muted);
     border: 1px solid var(--line);
     border-radius: 5px;
@@ -553,7 +557,7 @@ button {
     background: none;
     border-radius: 8px;
     text-align: left;
-    font-size: 14px;
+    font-size: 15px;
     cursor: pointer;
     color: var(--ink);
     text-decoration: none;
@@ -570,14 +574,14 @@ button {
     margin: 6px 4px;
   }
   .menu-pop .ph {
-    font-size: 12px;
+    font-size: 13px;
     color: var(--muted);
     padding: 6px 10px 2px;
     font-weight: 700;
   }
   .menu-pop kbd {
     font-family: inherit;
-    font-size: 11px;
+    font-size: 12px;
     color: var(--muted);
     margin-left: auto;
     border: 1px solid var(--line);
@@ -620,14 +624,14 @@ button {
 :root {
   --st-muted: #cbd5e1;
   --st-blue: #93c5fd;
-  --st-good: #9fc3ea;
+  --st-good: #4ade80;
   --st-warn: #fcd34d;
   --st-bad: #fca5a5;
 }
 :root[data-theme="light"] {
   --st-muted: #334155;
   --st-blue: #1d4ed8;
-  --st-good: #1d5f9e;
+  --st-good: #166534;
   --st-warn: #92400e;
   --st-bad: #991b1b;
 }
@@ -671,7 +675,7 @@ button {
   padding: 0 8px;
   border-radius: 11px;
   border: 1px solid var(--line);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   text-decoration: none;
 }
@@ -761,7 +765,7 @@ button {
   margin-bottom: -1px;
   background: transparent;
   color: var(--muted);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
@@ -774,7 +778,7 @@ button {
   color: var(--ink);
 }
 .fm-ctabs .n {
-  font-size: 11.5px;
+  font-size: 12.5px;
   padding: 0 6px;
   border-radius: 8px;
   background: var(--brand-soft);
@@ -813,13 +817,13 @@ button {
   align-items: center;
   justify-content: center;
   padding: 7px 14px;
-  min-height: 36px;
+  min-height: 38px;
   border: 1px solid var(--line);
   background: var(--bg);
   border-radius: 8px;
   color: var(--ink);
   font-weight: 600;
-  font-size: 13px;
+  font-size: 14px;
   white-space: nowrap;
   text-decoration: none;
 }
@@ -952,13 +956,13 @@ button {
 }
 .fm-rangeopt {
   text-align: left;
-  min-height: 36px;
+  min-height: 38px;
   padding: 0 10px;
   border: 0;
   border-radius: 8px;
   background: transparent;
   color: var(--ink);
-  font-size: 14px;
+  font-size: 15px;
 }
 .fm-rangeopt:hover {
   background: var(--panel2);
@@ -973,12 +977,12 @@ button {
   gap: 4px;
 }
 .fm-monthgrid button {
-  min-height: 36px;
+  min-height: 38px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: transparent;
   color: var(--ink);
-  font-size: 13px;
+  font-size: 14px;
 }
 .fm-monthgrid button.in {
   background: var(--brand-soft);
@@ -1003,7 +1007,7 @@ button {
   height: 18px;
   padding: 0 6px;
   border-radius: 5px;
-  font-size: 10.5px;
+  font-size: 11.5px;
   font-weight: 700;
   line-height: 1;
   vertical-align: middle;
@@ -1032,7 +1036,7 @@ button {
   border-radius: 8px;
   background: var(--panel);
   color: var(--ink);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.45;
 }
 .fm-finding.leak {
@@ -1053,7 +1057,7 @@ button {
 }
 .fm-finding .im {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
 }
 .fm-finding .acts {
   display: flex;
@@ -1183,7 +1187,7 @@ button {
 }
 .fm-hero-eyebrow {
   grid-column: 1 / -1;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.09em;
   text-transform: uppercase;
@@ -1211,7 +1215,7 @@ button {
 .fm-hero-sub {
   grid-column: 1;
   margin: 0;
-  font-size: 12.5px;
+  font-size: 13.5px;
   color: var(--muted);
 }
 .fm-hero-kpis {
@@ -1223,13 +1227,13 @@ button {
 }
 .fm-hero-kpis dt {
   display: inline;
-  font-size: 11.5px;
+  font-size: 12.5px;
   color: var(--muted);
 }
 .fm-hero-kpis dd {
   display: inline;
   margin: 0 0 0 5px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -1264,7 +1268,7 @@ button {
   border-left: 0;
 }
 .fm-tot dt {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
 }
 .fm-tot dd {
@@ -1282,7 +1286,7 @@ button {
   font-family: inherit;
   font-weight: 400;
   letter-spacing: 0;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.4;
   color: var(--muted);
 }
@@ -1295,7 +1299,7 @@ button {
 .fm-subcell {
   display: block;
   margin-top: 2px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
 }
 @media (max-width: 1023px) {
@@ -1357,13 +1361,13 @@ button {
 }
 .fm-secth h2 {
   font-family: var(--font-display);
-  font-size: 17px;
+  font-size: 18px;
   font-weight: 600;
   color: var(--ink);
   margin: 0;
 }
 .fm-secth a {
-  font-size: 12.5px;
+  font-size: 13.5px;
   color: var(--brand-light);
   text-decoration: none;
 }
@@ -1372,7 +1376,7 @@ button {
 }
 .fm-empty-line {
   color: var(--muted);
-  font-size: 13px;
+  font-size: 14px;
   padding: 18px 0;
   margin: 0;
 }
@@ -1397,7 +1401,7 @@ button {
   position: absolute;
   left: 8px;
   bottom: 8px;
-  font-size: 10.5px;
+  font-size: 11.5px;
   color: #cbd5e1;
   background: rgba(11, 18, 32, 0.82);
   border: 1px solid var(--side-line);
@@ -1414,7 +1418,7 @@ button {
 }
 .fm-frow b {
   font-family: var(--font-display);
-  font-size: 14.5px;
+  font-size: 15.5px;
   font-weight: 600;
   min-width: 0;
   overflow: hidden;
@@ -1422,7 +1426,7 @@ button {
   white-space: nowrap;
 }
 .fm-frow.sub {
-  font-size: 12.5px;
+  font-size: 13.5px;
   color: var(--muted);
 }
 .fm-frow.sub b {
@@ -1446,20 +1450,20 @@ button {
 }
 .fm-attn b {
   display: block;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--ink);
   line-height: 1.35;
 }
 .fm-attn small {
   display: block;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
   line-height: 1.4;
 }
 .fm-aic {
   width: 32px;
-  height: 32px;
+  height: 34px;
   border-radius: 8px;
   display: grid;
   place-items: center;
@@ -1495,11 +1499,11 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 36px;
+  height: 38px;
   border-bottom: 1px solid var(--side-line);
   color: var(--ink);
   text-decoration: none;
-  font-size: 13px;
+  font-size: 14px;
 }
 .fm-pipe a:hover {
   color: var(--brand-light);
@@ -1519,7 +1523,7 @@ button {
   border: 1px solid var(--side-line);
   background: transparent;
   color: var(--muted);
-  font-size: 12.5px;
+  font-size: 13.5px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -1553,7 +1557,7 @@ button {
 }
 .fm-addprompt .ic {
   width: 36px;
-  height: 36px;
+  height: 38px;
   border-radius: 9px;
   background: var(--brand-soft);
   color: var(--brand-light);
@@ -1563,13 +1567,13 @@ button {
 }
 .fm-addprompt b {
   display: block;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
 }
 .fm-addprompt small {
   display: block;
   color: var(--muted);
-  font-size: 12.5px;
+  font-size: 13.5px;
   margin-top: 2px;
   line-height: 1.5;
 }
@@ -1632,7 +1636,7 @@ dialog.fm-sheetdlg > .body {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 12.5px;
+  font-size: 13.5px;
   text-decoration: none;
   border: 0;
   background: transparent;
@@ -1673,7 +1677,7 @@ dialog.fm-sheetdlg > .body {
   flex: 1;
   min-width: 0;
   font-family: var(--font-display);
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--ink);
   text-decoration: none;
@@ -1691,13 +1695,13 @@ dialog.fm-sheetdlg > .body {
   margin: 0;
 }
 .fm-fnum dt {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
 }
 .fm-fnum dd {
   margin: 1px 0 0;
   font-family: var(--font-display);
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--ink);
 }
@@ -1707,7 +1711,7 @@ dialog.fm-sheetdlg > .body {
   gap: 12px;
   padding-top: 10px;
   border-top: 1px solid var(--side-line);
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
 }
 .fm-ffoot .fm-rep {
@@ -1729,7 +1733,7 @@ dialog.fm-sheetdlg > .body {
   border-radius: 12px;
   background: transparent;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 14px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1742,7 +1746,7 @@ dialog.fm-sheetdlg > .body {
 }
 .menu-label {
   padding: 6px 10px 2px;
-  font-size: 10.5px;
+  font-size: 11.5px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--muted);
@@ -1758,7 +1762,7 @@ dialog.fm-sheetdlg > .body {
   align-items: baseline;
   padding: 9px 0;
   border-bottom: 1px solid var(--side-line);
-  font-size: 13px;
+  font-size: 14px;
 }
 .fm-kn dt {
   color: var(--muted);
@@ -1772,7 +1776,7 @@ dialog.fm-sheetdlg > .body {
   border: 1px solid var(--line);
   border-radius: 6px;
   padding: 1px 8px;
-  font-size: 11.5px;
+  font-size: 12.5px;
   color: var(--muted);
 }
 
@@ -1798,23 +1802,23 @@ dialog.fm-sheetdlg > .body {
 }
 .fm-tname {
   font-family: var(--font-display);
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
 }
 .fm-tdesc {
-  font-size: 12.5px;
+  font-size: 13.5px;
   color: var(--muted);
   line-height: 1.5;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  min-height: 38px;
+  min-height: 40px;
 }
 .fm-tfoot {
   display: flex;
   justify-content: space-between;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
 }
 .fm-tplpanel {
@@ -1847,14 +1851,14 @@ dialog.fm-sheetdlg > .body {
   display: block;
 }
 .fm-pane > h2 {
-  font-size: 17px !important;
+  font-size: 18px !important;
   font-weight: 600 !important;
 }
 .fm-roles {
   margin: 0 0 20px;
   padding: 14px 0 0;
   border-top: 1px solid var(--side-line);
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
   display: grid;
   gap: 10px;
@@ -1862,10 +1866,10 @@ dialog.fm-sheetdlg > .body {
 .fm-roles dt {
   font-weight: 600;
   color: var(--ink);
-  font-size: 13px;
+  font-size: 14px;
 }
 .fm-roles dt.eyebrow {
-  font-size: 10.5px;
+  font-size: 11.5px;
   letter-spacing: 0.09em;
   text-transform: uppercase;
   color: var(--muted);
@@ -2029,12 +2033,12 @@ dialog.fm-sheetdlg > .body {
   }
   .tbl.fm-stackrows td:first-child {
     grid-column: 1 / -1;
-    font-size: 15px;
+    font-size: 16px;
   }
   .tbl.fm-stackrows td[data-label]::before {
     content: attr(data-label);
     display: block;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 500;
     color: var(--muted);
   }
@@ -2068,14 +2072,14 @@ dialog.fm-sheetdlg > .body {
 .fm-empty h3 {
   margin: 0 0 6px;
   font-family: var(--font-display);
-  font-size: 17px;
+  font-size: 18px;
   font-weight: 600;
   color: var(--ink);
 }
 .fm-empty p {
   margin: 0 auto;
   max-width: 44ch;
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.5;
   color: var(--muted);
 }
@@ -2105,7 +2109,7 @@ dialog.fm-sheetdlg > .body {
   background: var(--brand-soft);
 }
 .fm-funnels .fm-rename {
-  height: 34px;
+  height: 36px;
   max-width: 260px;
   font-weight: 700;
 }
@@ -2125,7 +2129,7 @@ dialog.fm-sheetdlg > .body {
 }
 .fm-bulk .input {
   width: auto;
-  height: 34px;
+  height: 36px;
   padding-block: 0;
 }
 .fm-bulk-x {
@@ -2134,7 +2138,7 @@ dialog.fm-sheetdlg > .body {
 .fm-rowmenu kbd {
   margin-left: auto;
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
 }
 .fm-rowmenu .fm-sub {
@@ -2186,12 +2190,4 @@ dialog.fm-sheetdlg > .body {
     padding-left: 6px;
     padding-right: 6px;
   }
-}
-
-/* Ecosystem header in the editor is a thin bar above it (components/eco-header.tsx): the editor gives up its height, and the bar steps aside in presentation mode. */
-body:has(.eco-compact) .fm-editor {
-  height: calc(100dvh - 44px);
-}
-body:has(.fm-present) .eco-compact {
-  display: none;
 }

@@ -100,8 +100,8 @@ export function TemplatesBrowser({ cards, clients, options, canEdit, mineTitle }
               <dd>{cur.blocks}</dd>
             </div>
           </dl>
-          <h3 className="mb-1 text-[10.5px] font-semibold tracking-[0.09em] text-muted uppercase">Steps</h3>
-          <ol className="m-0 mb-5 max-h-[170px] list-decimal overflow-y-auto pl-5 text-[13px]">
+          <h3 className="mb-1 text-[11.5px] font-semibold tracking-[0.09em] text-muted uppercase">Steps</h3>
+          <ol className="m-0 mb-5 max-h-[170px] list-decimal overflow-y-auto pl-5 text-[14px]">
             {cur.steps.map((s, i) => (
               <li key={i}>{s}</li>
             ))}

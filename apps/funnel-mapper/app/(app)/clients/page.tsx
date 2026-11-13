@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/page-header";
 import { money } from "@/lib/format";
 import { monthlyValue } from "@/lib/pricing";
 import { requireUser } from "@/lib/supabase/server";
+import { sharedClientsEnabled } from "@/lib/ecosystem/clients";
 import { ClientsBrowser, type ClientListItem } from "./clients-browser";
 
 export const metadata: Metadata = { title: "Clients" };
@@ -28,6 +29,12 @@ export default async function ClientsPage({ searchParams }: PageProps<"/clients"
   return (
     <>
       <PageHeader title="Clients" sub={`${active.length} client${active.length === 1 ? "" : "s"}${fees.length ? ` · ${fees.join(" + ")} / mo in agency fees` : ""}`} />
+      {sharedClientsEnabled() && (
+        <p className="card mb-4 px-4 py-3 text-sm" role="note">
+          Shared with the Clients app: a client added here also appears in Clients, and the other way round. Pricing, notes and funnels stay in Funnel Mapper.
+          {process.env.ECOSYSTEM_CLIENTS_APP_URL ? <> <a className="text-brand underline-offset-2 hover:underline" href={process.env.ECOSYSTEM_CLIENTS_APP_URL}>Open Clients</a></> : null}
+        </p>
+      )}
       <ClientsBrowser clients={items} initialStatus={typeof sp.status === "string" ? sp.status : ""} initialQuery={typeof sp.q === "string" ? sp.q : ""} />
     </>
   );

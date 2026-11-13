@@ -16,6 +16,23 @@ export function ClientForm({ action, client, defaultCurrency = "GBP", submitLabe
   return (
     <form action={formAction} noValidate>
       <FormMessage state={state?.error ? state : undefined} />
+      {state?.candidates?.length ? (
+        // Shared clients: a possible duplicate was found. Nothing is linked until the person chooses.
+        <fieldset className="card mb-4 p-4" aria-label="Possible existing clients">
+          <legend className="text-sm font-semibold">Is this one of these clients?</legend>
+          {state.candidates.map((x, n) => (
+            <label key={x.id} className="mt-2 flex items-start gap-2 text-sm">
+              <input type="radio" name="shared_link_to" value={x.id} defaultChecked={n === 0} />
+              <span><b>{x.name}</b>{x.business_name ? ` · ${x.business_name}` : ""}{x.email ? ` · ${x.email}` : ""}
+                <span className="block text-muted">{x.match === "email_exact" ? "Same e-mail address" : "Similar name: check before linking"}</span></span>
+            </label>
+          ))}
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button className="btn primary" type="submit" name="shared_decision" value="link">Link to the selected client</button>
+            <button className="btn" type="submit" name="shared_decision" value="new">Create a new client</button>
+          </div>
+        </fieldset>
+      ) : null}
       <div className="row2">
         <div className="field">
           <label htmlFor={`${p}-name`}>Client name *</label>

@@ -309,7 +309,7 @@ export function mapSvg(g: { nodes: FunnelNode[]; edges: FunnelEdge[] }, R: Funne
   g.nodes
     .filter((f) => f.type === "frame")
     .forEach((f) => {
-      const c = String(f.p.color ?? "#173A8F");
+      const c = String(f.p.color ?? "#10B981");
       const w = f.w ?? 400,
         h = f.h ?? 300;
       const t = look(f.s, { size: 13, lh: 17, weight: 700, rel: true });

@@ -1,5 +1,5 @@
 // Launcher (design 03): every app that exists, in the designed order, with its state taken from launcher.catalog (the real app registry
-// and this person's access). Funnel Mapper Pro is a normal tile: it opens in the same tab.
+// and this person's access). Funnel Mapper (app key funnel_mapper_pro) is a normal tile: it opens in the same tab.
 import { h, icon, dialog, toast, emptyState, errorState, designBadge, roleLabel } from '../ui.js';
 import { hrefFor } from '../routes.js';
 import { plateOf } from '../registry.js';
@@ -77,7 +77,7 @@ export function launcherView({ catalog, error, org, orgs, role, name, registry, 
     }
     if (a.app_key === 'funnel_mapper_pro') {
       if (a.launch_url) { location.href = a.launch_url; return; }          // same tab, as a regular app
-      return dialog({ title: 'Funnel Mapper Pro isn’t connected yet', body: h('p', {}, 'Its address hasn’t been set. An owner adds it when Funnel Mapper Pro goes live.'), actions: [{ label: 'Close', focus: true }] });
+      return dialog({ title: 'Funnel Mapper isn’t connected yet', body: h('p', {}, 'Its address hasn’t been set. An owner adds it when Funnel Mapper goes live.'), actions: [{ label: 'Close', focus: true }] });
     }
     const go = () => { location.hash = BUILT.has(a.app_key) ? hrefFor.office() : hrefFor.app(a.app_key); };
     if (!tile || reduceMotion()) return go();        // opening an app zooms it out of its icon; no motion if the person asked for none

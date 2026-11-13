@@ -388,7 +388,7 @@ export const TYPES = {
 
   note: { cat: "annot", label: "Sticky note", icon: "note", d: { text: "Write a note…" } },
   label: { cat: "annot", label: "Heading text", icon: "text", d: { text: "Stage name", size: 28 } },
-  frame: { cat: "annot", label: "Stage frame", icon: "frame", d: { color: "#173A8F" } },
+  frame: { cat: "annot", label: "Stage frame", icon: "frame", d: { color: "#10B981" } },
   shape: { cat: "annot", label: "Shape", icon: "shape", d: { shape: "rounded", text: "" } },
   image: { cat: "annot", label: "Image / logo", icon: "image", d: { src: "", alt: "", fit: "contain" } },
   checklist: { cat: "annot", label: "Checklist", icon: "task", d: { title: "Checklist", items: [] } },
@@ -538,7 +538,7 @@ export const fourPorts = (type: string) => {
 export const canReceive = (type: string) => !["traffic", "annot"].includes(typeOf(type)?.cat);
 
 export const FRAME_COLORS: [string, string][] = [
-  ["#173A8F", "Primary blue"],
+  ["#10B981", "Emerald"],
   ["#6D3FD9", "Purple"],
   ["#2563EB", "Blue"],
   ["#0F766E", "Teal"],

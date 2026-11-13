@@ -1,4 +1,4 @@
-Fonts self-hosted for Funnel Mapper Pro (latin subset), all under the SIL Open Font License 1.1 (https://openfontlicense.org).
+Fonts self-hosted for Funnel Mapper (latin subset), all under the SIL Open Font License 1.1 (https://openfontlicense.org).
 Bricolage Grotesque, DM Sans, JetBrains Mono. Files from the @fontsource packages (npm), unmodified.
 
 === bricolage-grotesque ===

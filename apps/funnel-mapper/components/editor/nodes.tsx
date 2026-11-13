@@ -356,7 +356,7 @@ export const FrameNode = memo(function FrameNode({ id, selected }: P) {
   return (
     <>
       <Resizer n={n} selected={selected} minW={160} minH={100} />
-      <div className={`fm-frame${selected ? " sel" : ""}`} style={{ ["--fc" as string]: String(n.p.color ?? "#173A8F"), ...boxCss(n.s) }} aria-label={`Stage frame: ${n.name}`}>
+      <div className={`fm-frame${selected ? " sel" : ""}`} style={{ ["--fc" as string]: String(n.p.color ?? "#10B981"), ...boxCss(n.s) }} aria-label={`Stage frame: ${n.name}`}>
         <LockBadge n={n} />
         <span className="ftitle" style={textCss(n.s)}>
           {n.name}

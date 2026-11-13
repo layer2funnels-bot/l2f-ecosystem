@@ -75,9 +75,9 @@ export interface EdgeStyle {
 
 /** Semantic connection presets: a label plus a look. Applying one only sets edge style; the maths is untouched. */
 export const EDGE_PRESETS: Record<string, { label: string; style: Partial<EdgeStyle> }> = {
-  yes: { label: "Yes", style: { label: "Yes", color: "#1D5F9E", preset: "yes" } },
+  yes: { label: "Yes", style: { label: "Yes", color: "#22C55E", preset: "yes" } },
   no: { label: "No", style: { label: "No", color: "#F97316", dash: "dashed", preset: "no" } },
-  purchase: { label: "Purchase", style: { label: "Purchase", color: "#1D5F9E", preset: "purchase" } },
+  purchase: { label: "Purchase", style: { label: "Purchase", color: "#10B981", preset: "purchase" } },
   nothanks: { label: "No thanks", style: { label: "No thanks", color: "#94A3B8", dash: "dashed", preset: "nothanks" } },
   retarget: { label: "Retargeting", style: { label: "Retargeting", color: "#F97316", dash: "dotted", arrow: "end", preset: "retarget" } },
 };
@@ -183,9 +183,9 @@ const r2 = (v: number) => Math.round(v * 100) / 100;
 /** Built-in quick styles (Style tab, context menu). `style` replaces the block's style; Default clears it. */
 export const QUICK_STYLES: { key: string; label: string; style: NodeStyle | null }[] = [
   { key: "default", label: "Default", style: null },
-  { key: "emphasis", label: "Emphasis", style: { border: "#173A8F", borderW: 2, shadow: "soft" } },
+  { key: "emphasis", label: "Emphasis", style: { border: "#10B981", borderW: 2, shadow: "soft" } },
   { key: "muted", label: "Muted", style: { opacity: 0.6, color: "#94A3B8" } },
   { key: "offer", label: "Offer", style: { border: "#FB923C", borderW: 2 } },
   { key: "warning", label: "Warning", style: { border: "#FBBF24", borderW: 2, borderStyle: "dashed" } },
-  { key: "ghost", label: "L2F Ghost", style: { fill: "transparent", border: "#173A8F", borderW: 1, borderStyle: "dashed", opacity: 0.9 } },
+  { key: "ghost", label: "L2F Ghost", style: { fill: "transparent", border: "#10B981", borderW: 1, borderStyle: "dashed", opacity: 0.9 } },
 ];
