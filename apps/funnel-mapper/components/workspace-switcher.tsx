@@ -1,4 +1,5 @@
 "use client";
+import { withBase } from "@/lib/base-path";
 import { useEffect, useId, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { switchWorkspaceAction } from "@/app/(app)/actions";
@@ -50,7 +51,7 @@ export function useOrgSwitch() {
     } catch {
       /* private window: the switch still happens */
     }
-    window.location.assign(r.to);
+    window.location.assign(withBase(r.to));
   };
   return { go, pending, error };
 }

@@ -1,4 +1,5 @@
 "use client";
+import { withBase } from "@/lib/base-path";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
@@ -28,7 +29,7 @@ export function TopStrip({ canEdit, clients, templates, defaultCurrency = "GBP",
   const onClientPage = /^\/clients\/[^/]+$/.test(path) && path !== "/clients/new";
   return (
     <div className="sticky top-12 z-30 flex h-[56px] max-sm:top-0 items-center gap-3 border-b border-side-line bg-bg px-4 sm:px-6 lg:top-0 lg:px-10">
-      <form action="/clients" role="search" className="fm-search flex h-[34px] min-w-0 flex-1 items-center gap-2.5 rounded-[9px] border border-line bg-library px-2.5 text-muted focus-within:border-brand sm:max-w-[380px] sm:flex-none sm:basis-[380px]">
+      <form action={withBase("/clients")} role="search" className="fm-search flex h-[34px] min-w-0 flex-1 items-center gap-2.5 rounded-[9px] border border-line bg-library px-2.5 text-muted focus-within:border-brand sm:max-w-[380px] sm:flex-none sm:basis-[380px]">
         <Icon name="search" size={16} />
         <input ref={input} name="q" type="search" aria-label="Quick search" placeholder="Search clients, funnels, templates…" autoComplete="off" className="min-w-0 flex-1 border-0 bg-transparent text-[14px] text-ink outline-none placeholder:text-muted" />
         <kbd className="hidden rounded border border-line px-1 font-mono text-[11.5px] leading-[15px] text-muted sm:inline">⌘K</kbd>

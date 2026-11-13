@@ -1,4 +1,5 @@
 "use client";
+import { withBase } from "@/lib/base-path";
 import { ecoCall } from "./browser";
 
 /** Puts an already-shrunk image (Funnel Mapper keeps every image under 100 KB) in the ecosystem file storage; returns its path. */
@@ -39,7 +40,7 @@ export async function storeShot(raw: Blob): Promise<{ path: string; bytes: numbe
 
 /** Asks the server for a page capture, then stores it like an uploaded screenshot. */
 export async function captureAndStore(url: string, nodeId: string): Promise<{ path?: string; bytes?: number; message?: string; error?: string; status: number }> {
-  const r = await fetch("/api/capture", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ url, nodeId }) });
+  const r = await fetch(withBase("/api/capture"), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ url, nodeId }) });
   if (!r.ok || !/^image\//.test(r.headers.get("content-type") ?? "")) return { ...((await r.json().catch(() => ({}))) as { message?: string; error?: string }), status: r.status };
   try {
     return { ...(await storeShot(await r.blob())), status: 200 };

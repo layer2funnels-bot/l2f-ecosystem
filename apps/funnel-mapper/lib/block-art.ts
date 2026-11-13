@@ -1,3 +1,4 @@
+import { withBase } from "@/lib/base-path";
 // Owner block artwork (reference/supporting-assets/icons.json → public/blocks/*.webp), keyed by library key / block type.
 // Categories without artwork (Pages, Offers, Communities, AI Calling, AI Automation) use the family tile and system icon.
 export interface BlockArt {
@@ -131,4 +132,4 @@ export const artOf = (key: string): BlockArt | null => {
   const a = BLOCK_ART[key];
   return a && !a.glyph ? a : null;
 };
-export const artSrc = (a: BlockArt) => `/blocks/${a.file}`;
+export const artSrc = (a: BlockArt) => withBase(`/blocks/${a.file}`);

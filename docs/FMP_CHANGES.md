@@ -8,7 +8,7 @@ Rules that still apply: code only; no real data; no connection to any live proje
 
 | File | Change | Reason |
 |---|---|---|
-| `.env.example` | Product name. Stage 2: the ecosystem's public sign-in key (renewal and sign-out only), ecosystem API/web addresses and the shared cookie domain; no service key, no sign-up code. | V7 rename; stage 2. |
+| `.env.example` | Product name. Stage 2: the ecosystem's public sign-in key (renewal and sign-out only), ecosystem API/web addresses and the shared cookie domain; no service key, no sign-up code. `NEXT_PUBLIC_BASE_PATH` (live `/fmp`). | V7 rename; stage 2. |
 | `app/(app)/actions.ts` | Every action runs an ecosystem API operation (`fmp.*`). "New client" creates the shared client and asks the person to decide on possible duplicates (never linked automatically). Template screenshots are accepted only from this organization's Funnel Mapper captures. Organization switching uses `org.switch`. | Shared clients (V7 03 §3, 16 §4); stage 2. |
 | `app/(app)/clients/[id]/page.tsx` | Fixed-size text classes (`text-[N px]`) one step up (+1 px). V7 16 §4: "Open in Clients" link to the client in the Clients app. | FM-7 sizes. |
 | `app/(app)/clients/clients-browser.tsx` | Fixed-size text classes (`text-[N px]`) one step up (+1 px). | FM-7 sizes. |
@@ -28,15 +28,15 @@ Rules that still apply: code only; no real data; no connection to any live proje
 | `app/fonts/jetbrains-mono-latin-500-normal.woff2` | Added (latin subset, unmodified from the `@fontsource` npm package). | Self-hosted font: the build must never fetch fonts. SIL OFL 1.1. |
 | `app/globals.css` | Original theme (dark navy + emerald, with light as an option). Text 10–17 px one step up (+1 px) and control heights 30–38 px +2 px; Tailwind `text-xs` 13 px, `text-sm` 14.5 px. | FM-7: V7 sizes one step up; owner feedback "too small". |
 | `app/layout.tsx` | Title and application name "Funnel Mapper"; fonts self-hosted (`next/font/local`, same families and weights). The dark default and the light/dark choice are the original's again. | V7 rename; builds never fetch fonts; design decision FM-7 (docs/implementation/FUNNEL_MAPPER_DESIGN_DECISIONS.md). |
-| `components/app-nav.tsx` | Brand text "Funnel Mapper"; bigger text classes. Stage 2: "All apps" address; your name opens your ecosystem profile. | V7 rename; FM-7 sizes; stage 2. |
+| `components/app-nav.tsx` | Brand text "Funnel Mapper"; bigger text classes. Stage 2: "All apps" address; your name opens your ecosystem profile. Sign-out form carries the base path. | V7 rename; FM-7 sizes; stage 2. |
 | `components/client-form.tsx` | Duplicate decision step ("Link to the selected client" / "Create a new client"), shown only when the shared list found possible matches. Bigger text classes. | V7 16 §4; never link automatically (owner, 13 Nov). |
 | `components/editor/editor.css` | Editor panels, toolbars, inspector, KPI bar and library text +1 px. Map blocks, lines, frames and notes unchanged. Clickable check rows (`.fm-kcheck`). | FM-7 sizes (maps and exports must look exactly as before); audit P0 clickable checks. |
 | `components/editor/forecast-charts.tsx` | Fixed-size text classes (`text-[N px]`) one step up (+1 px). | FM-7 sizes. |
 | `components/editor/kpi-bar.tsx` | Each model check in the checks popover is a button: it selects and zooms to its block, or opens the funnel panel. | Audit P0 "make warnings clickable". |
 | `components/page-header.tsx` | Fixed-size text classes (`text-[N px]`) one step up (+1 px). | FM-7 sizes. |
 | `components/theme-toggle.tsx` | Fixed-size text classes (`text-[N px]`) one step up (+1 px). Light/dark is remembered per device (it was saved on the old Funnel Mapper account, which no longer exists). | FM-7 sizes. |
-| `components/top-strip.tsx` | Fixed-size text classes (`text-[N px]`) one step up (+1 px). | FM-7 sizes. |
-| `components/workspace-switcher.tsx` | Organization switcher the same as the ecosystem's (organization mark, "Your organizations", role, "Current", same footer); switching uses the ecosystem rule (`org.switch`): the ecosystem remembers the choice for every app, the same page is kept, a client or funnel never comes along, and "isn't set up" when Funnel Mapper is off there. "All apps" back to the Launcher. | V7 16 §2; owner, 13 Nov: switching the same as other apps. |
+| `components/top-strip.tsx` | Fixed-size text classes (`text-[N px]`) one step up (+1 px). Search form carries the base path. | FM-7 sizes. |
+| `components/workspace-switcher.tsx` | Organization switcher the same as the ecosystem's (organization mark, "Your organizations", role, "Current", same footer); switching uses the ecosystem rule (`org.switch`): the ecosystem remembers the choice for every app, the same page is kept, a client or funnel never comes along, and "isn't set up" when Funnel Mapper is off there. "All apps" back to the Launcher. After a switch, the page address carries the base path. | V7 16 §2; owner, 13 Nov: switching the same as other apps. |
 | `lib/ecosystem/clients.ts` | Added: duplicate-decision helpers for the ecosystem Client service (`fmp.clients.*`). | Shared clients; always on since stage 2. |
 | `lib/supabase/database.types.ts` | Regenerated: `clients.ecosystem_client_id`. | Follows the new migration. |
 | `supabase/migrations/20261113000000_ecosystem_client_ref.sql` | Added: nullable `clients.ecosystem_client_id` (unique when set). | Funnel Mapper's own row points at the shared client; null for every existing row. |
@@ -71,9 +71,9 @@ Every read and write goes through the ecosystem API as the signed-in person; the
 | `components/editor/actuals.tsx` | Real numbers load and save through `fmp.actuals.list` / `fmp.actuals.save`. | Stage 2. |
 | `components/editor/assets.ts` | Saved styles and blocks through `fmp.assets.*`. | Stage 2. |
 | `components/editor/comments.tsx` | Comments through `fmp.comments.*`. | Stage 2. |
-| `components/editor/editor.tsx` | Status, saves, autosave versions and thumbnails through the ecosystem API and file storage. "All apps" button in the editor top bar (V7 16 §2: the editor's way out). | Stage 2. |
+| `components/editor/editor.tsx` | Status, saves, autosave versions and thumbnails through the ecosystem API and file storage. "All apps" button in the editor top bar (V7 16 §2: the editor's way out). Share-page saves carry the base path. | Stage 2. |
 | `components/editor/exporters.ts` | Stored images signed through `fmp.files.url`. | Stage 2. |
-| `components/editor/share-dialog.tsx` | Share links through `fmp.links.*`; a new link's address is shown once (only its hash is stored). | Stage 2. |
+| `components/editor/share-dialog.tsx` | Share links through `fmp.links.*`; a new link's address is shown once (only its hash is stored). Copied and opened share links carry the base path. | Stage 2. |
 | `components/editor/template-dialog.tsx` | Save as template through `fmp.templates.create`. | Stage 2. |
 | `components/editor/thumbnail-field.tsx` | Page capture stored from the browser (`captureAndStore`). | Stage 2. |
 | `components/editor/versions.tsx` | Version history through `fmp.versions.*`. | Stage 2. |
@@ -97,16 +97,16 @@ Every read and write goes through the ecosystem API as the signed-in person; the
 | `lib/supabase/admin.ts` | Deleted: no service key in Funnel Mapper; people are managed in Office › Admin. | Stage 2. |
 | `scripts/recompress-images.mts` | Deleted: maintenance script for the old storage buckets. | Stage 2. |
 | `tests/unit/image-pipeline.test.ts` | Deleted with the sharp pipeline. | Stage 2. |
-| `app/(auth)/unavailable/page.tsx` | Added: "Funnel Mapper isn't set up for …" with "Switch to …" for the person's organizations where it is on; without a session, the ecosystem sign-in. | Stage 2; V7 16 §4. |
+| `app/(auth)/unavailable/page.tsx` | Added: "Funnel Mapper isn't set up for …" with "Switch to …" for the person's organizations where it is on; without a session, the ecosystem sign-in. Sign-out form carries the base path. | Stage 2; V7 16 §4. |
 | `app/api/eco/[op]/route.ts` | Added: same-site relay from the browser to the ecosystem API (allow-listed `fmp.*` and `org.list`, same-origin check). | Stage 2. |
-| `lib/eco/browser.ts` | Added: `ecoCall` for components. | Stage 2. |
+| `lib/eco/browser.ts` | Added: `ecoCall` for components. Calls carry the base path. | Stage 2. |
 | `lib/eco/core.ts` | Added: ecosystem API call with the person's token and organization; "no organization" marker for `org.list`; Launcher, Clients-app and profile addresses. | Stage 2. |
 | `lib/eco/data.ts` | Added: server reads in the shapes the screens use; client logos signed for one hour. | Stage 2. |
 | `lib/eco/server.ts` | Added: the token from the shared session cookie, the current organization as the ecosystem remembers it (same default as the web app), `eco` / `ecoRows`. A failed organization list is reported as such, never as "no access". | Stage 2. |
-| `lib/eco/upload.ts` | Added: image upload to the organization's files, signed addresses, page capture storage. | Stage 2. |
+| `lib/eco/upload.ts` | Added: image upload to the organization's files, signed addresses, page capture storage. Calls carry the base path. | Stage 2. |
 | `.gitignore` | Cloudflare build folders (`.open-next/`, `.wrangler/`) ignored. | Stage 2: Cloudflare hosting. |
 | `eslint.config.mjs` | Lint skips the Cloudflare build folders. | Stage 2: Cloudflare hosting. |
-| `next.config.ts` | Server builds get a stub for elkjs (Tidy Up runs in the browser), keeping the Worker under Cloudflare's free 3 MiB. | Stage 2: Cloudflare hosting. |
+| `next.config.ts` | Server builds get a stub for elkjs (Tidy Up runs in the browser), keeping the Worker under Cloudflare's free 3 MiB. One address: `basePath` from `NEXT_PUBLIC_BASE_PATH` (live `/fmp`). | Stage 2: Cloudflare hosting. |
 | `lib/elk-server-stub.ts` | Added: the server's stand-in for elkjs. | Stage 2: Cloudflare hosting. |
 | `open-next.config.ts` | Added: Cloudflare adapter configuration (`@opennextjs/cloudflare`). | Stage 2: Cloudflare hosting. |
 | `scripts/cf-size.mjs` | Added: `npm run cf:size` checks the compressed Worker against the free 3 MiB limit (2.76 MiB on 13 Nov). | Stage 2: Cloudflare hosting. |
@@ -132,5 +132,16 @@ Owner: "only one sign-in, the main ecosystem sign-in, to access any app" (chosen
 | `app/auth/confirm/route.ts` | Deleted: e-mail links go to the ecosystem. | One sign-in. |
 | `app/auth/removed/route.ts` | Deleted: removal is handled by the ecosystem. | One sign-in. |
 | `lib/supabase/client.ts` | Deleted: no Supabase sign-in client in Funnel Mapper. | One sign-in. |
-| `wrangler.production.jsonc` | Added: the live Worker (fmp.tabishriaz.com, same domain as the ecosystem for the one sign-in); public values only. | Go-live, owner approval 13 Nov 2026. |
+| `wrangler.production.jsonc` | Added: the live Worker (fmp.tabishriaz.com, same domain as the ecosystem for the one sign-in); public values only. Now: no address of its own (office.tabishriaz.com/fmp through the ecosystem site), base path `/fmp`. | Go-live, owner approval 13 Nov 2026. |
 | `scripts/cf-deploy.mjs` | Added: `npm run cf:deploy` builds with the live public values, checks the free-plan size, publishes. | Go-live. |
+
+## One address for every app (owner, 13 Nov 2026)
+
+Owner: "I don't want 2 URLs for one app, everything will be under office.tabishriaz.com, all the apps, Funnel Mapper as well." Live, Funnel Mapper is office.tabishriaz.com/fmp (Next.js `basePath`, `NEXT_PUBLIC_BASE_PATH=/fmp`); the ecosystem site hands /fmp/* to the Funnel Mapper Worker (`functions/fmp/[[path]].js`, service binding). Same address, so the sign-in cookie is shared without any cookie-domain setting. Locally the base path is empty.
+
+| File | Change | Why |
+|---|---|---|
+| `lib/base-path.ts` | Added: the base path and `withBase` for plain addresses (fetch, form actions, images, copied share links). | One address. |
+| `components/editor/lib-tile.tsx` | Block artwork addresses carry the base path. | One address. |
+| `lib/block-art.ts` | Block artwork addresses carry the base path. | One address. |
+| `components/editor/share-comments.tsx` | Share-page comments call `/fmp/api/share/...` live. | One address. |

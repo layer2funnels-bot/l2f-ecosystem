@@ -1,4 +1,5 @@
 "use client";
+import { withBase } from "@/lib/base-path";
 // Share (V2): permission View / Comment / Edit, numbers, funnel notes, expiry, a live preview of what the client sees,
 // and every link with its permission state, copy and revoke. Links live in share_links (RLS: workspace writers).
 import { forwardRef, useCallback, useEffect, useRef, useState } from "react";
@@ -50,7 +51,7 @@ export const ShareDialog = forwardRef<HTMLDialogElement, ShareDialogProps>(funct
   const hasNotes = useEditor((s) => !!s.settings.notes.body.trim());
   const nodes = useEditor((s) => s.nodes);
   const edges = useEditor((s) => s.edges);
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const origin = typeof window !== "undefined" ? window.location.origin + withBase("") : "";
   const load = useCallback(async () => {
     const r = await ecoCall<ShareLinkRow>("fmp.links.list", { funnel: funnelId });
     // a link's address is only known right after it is made (the server keeps a fingerprint, never the link itself)
@@ -196,7 +197,7 @@ export const ShareDialog = forwardRef<HTMLDialogElement, ShareDialogProps>(funct
                           <button type="button" className="btn sm" onClick={() => copy(l.token!)}>
                             {copied === l.token ? "Copied" : "Copy link"}
                           </button>
-                          <a className="btn sm" href={`/s/${l.token}`} target="_blank" rel="noreferrer">
+                          <a className="btn sm" href={withBase(`/s/${l.token}`)} target="_blank" rel="noreferrer">
                             Open
                           </a>
                           <span className="text-xs text-muted">Copy it now: for safety the link is shown only once.</span>

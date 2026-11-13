@@ -106,8 +106,8 @@ async function boot() {
     if (fromLink.type === 'recovery') { ready = true; go('#/reset'); return; }
   }
   const r0 = parseRoute(location.hash);
-  // another ecosystem app (Funnel Mapper) sent the person to sign in: remember where to go back (only configured app addresses)
-  const appBack = safeAppReturn(r0.query?.return, cfg.appOrigins ?? []);
+  // another ecosystem app (Funnel Mapper, at /fmp on this address) sent the person to sign in: remember where to go back (this address or configured app addresses only)
+  const appBack = safeAppReturn(r0.query?.return, [location.origin, ...(cfg.appOrigins ?? [])]);
   if (appBack) { tabStore.setItem('l2f.app-return', appBack); history.replaceState(null, '', `${location.pathname}#/${r0.name === 'home' ? 'signin' : r0.name}`); }
   if (r0.name === 'invite' && r0.query.token) { inviteStore.set(r0.query.token); history.replaceState(null, '', `${location.pathname}#/invite`); }
   if (r0.name === 'public') { ctx = null; ready = true; render(); return; }     // a public share link needs neither sign-in nor organizations
@@ -128,7 +128,7 @@ async function boot() {
   if (pending) return go('#/invite');
   if (myInvites.length && !tabStore.getItem('l2f.inv.seen')) { tabStore.setItem('l2f.inv.seen', '1'); return go('#/invite'); }
   const toApp = tabStore.getItem('l2f.app-return'); tabStore.removeItem('l2f.app-return');
-  if (toApp && safeAppReturn(toApp, cfg.appOrigins ?? [])) { location.href = toApp; return; }
+  if (toApp && safeAppReturn(toApp, [location.origin, ...(cfg.appOrigins ?? [])])) { location.href = toApp; return; }
   const back = tabStore.getItem('l2f.return'); tabStore.removeItem('l2f.return');
   if (back && AUTH_ROUTES.has(r.name)) { try { return go(JSON.parse(back).hash); } catch { /* fall through */ } }
   go(AUTH_ROUTES.has(r.name) || r.name === 'home' || r.name === 'no-org' ? hrefFor.launcher() : location.hash);

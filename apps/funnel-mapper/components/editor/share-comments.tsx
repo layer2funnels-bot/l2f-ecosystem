@@ -1,4 +1,5 @@
 "use client";
+import { withBase } from "@/lib/base-path";
 import { TimeAgo } from "@/components/time-ago";
 import { useState } from "react";
 import { useEditor } from "@/lib/editor/store";
@@ -29,7 +30,7 @@ export function ShareComments({ token, initial }: { token: string; initial: Shar
           e.preventDefault();
           setErr("");
           setBusy(true);
-          const r = await fetch(`/api/share/${token}/comments`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ author, body, node_id: sel?.id ?? "" }) });
+          const r = await fetch(withBase(`/api/share/${token}/comments`), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ author, body, node_id: sel?.id ?? "" }) });
           setBusy(false);
           if (!r.ok) return setErr((await r.json().catch(() => ({}))).error ?? "Couldn’t post the comment");
           const { id } = await r.json();

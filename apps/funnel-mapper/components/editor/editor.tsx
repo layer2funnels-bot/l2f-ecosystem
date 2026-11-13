@@ -1,4 +1,5 @@
 "use client";
+import { withBase } from "@/lib/base-path";
 import "./editor.css";
 import { ReactFlowProvider, useReactFlow } from "@xyflow/react";
 import Link from "next/link";
@@ -273,7 +274,7 @@ function EditorInner(props: EditorProps) {
         const r = await ecoCall("fmp.funnels.update", { id: funnel.id, name: p.name, graph: p.graph, settings: p.settings, summary: p.summary });
         if (!r.ok || !r.data.length) throw new Error(r.ok ? "not saved" : r.message);
       } else if (share?.canEdit) {
-        const r = await fetch(`/api/share/${share.token}`, { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ graph: p.graph, settings: p.settings }) });
+        const r = await fetch(withBase(`/api/share/${share.token}`), { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ graph: p.graph, settings: p.settings }) });
         if (!r.ok) throw new Error("save failed");
       }
     },

@@ -1,3 +1,4 @@
+import { withBase } from "@/lib/base-path";
 // A library block drawn exactly as in the approved design (reference "Library-169" / "Blocks-sidebar"): the owner's artwork
 // where there is one, the browser-window tile for pages and offers, the system tile for Communities, AI Calling and AI
 // Automation, and the family tile for anything else. `size` is the design's 44px tile; every part scales with it.
@@ -7,7 +8,7 @@ import { SYS_TILES, WIDGET_TILES, WINDOWS, type SysTile } from "@/lib/design-til
 import type { IconName } from "@/lib/icons";
 import { BlockTile } from "./block-visual";
 
-const artSrc = (file: string) => `/blocks/${file}`;
+const artSrc = (file: string) => withBase(`/blocks/${file}`);
 
 function Sys({ t, size }: { t: SysTile; size: number }) {
   const widget = t.shape === "sq" && !t.bg;
