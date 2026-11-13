@@ -47,7 +47,7 @@ function OptNum({ label, value, onChange, min, max, step = "any", placeholder }:
 
 const HEX = /^#[0-9a-f]{6}$/i;
 /** Colour picker + hex box; empty = default colour. */
-function ColorField({ label, value, onChange, fallback = "#173a8f" }: { label: string; value: string | undefined; onChange: (v: string | undefined) => void; fallback?: string }) {
+function ColorField({ label, value, onChange, fallback = "#10b981" }: { label: string; value: string | undefined; onChange: (v: string | undefined) => void; fallback?: string }) {
   return (
     <Field label={label}>
       {(id) => (
@@ -184,7 +184,7 @@ function StyleShortcuts({ ids }: { ids: string[] }) {
   );
 }
 
-const ACCENTS = ["#A78BFA", "#173A8F", "#FB923C", "#60A5FA", "#2DD4BF", "#FBBF24", "#94A3B8"];
+const ACCENTS = ["#A78BFA", "#10B981", "#FB923C", "#60A5FA", "#2DD4BF", "#FBBF24", "#94A3B8"];
 
 /** A funnel block is a picture or shape with its name under it (V4): colour, icon and the number chip are all that is styled. */
 function BlockStyle({ n, all }: { n: FunnelNode; all: string[] }) {

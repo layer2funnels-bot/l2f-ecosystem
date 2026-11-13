@@ -26,7 +26,7 @@ export function strategiesListView(ctx) {
   }
   function create() {
     const name = field({ id: 'ns-name', label: 'Funnel name', maxlength: 200, hint: 'For example: Webinar funnel' });
-    dialog({ title: 'New Funnel Strategy', body: [name.el, h('p', { class: 'fine muted' }, 'One strategy per funnel. The map stays in Funnel Mapper Pro; you can link it from the strategy.')], actions: [{ label: 'Create', cls: 'primary', on: async () => {
+    dialog({ title: 'New Funnel Strategy', body: [name.el, h('p', { class: 'fine muted' }, 'One strategy per funnel. The map stays in Funnel Mapper; you can link it from the strategy.')], actions: [{ label: 'Create', cls: 'primary', on: async () => {
       const nm = name.input.value.trim(); if (!nm || /[\/\\]/.test(nm)) return name.error('Give it a name without slashes.');
       const d = await api.call('drive.files.create', { app: 'funnels', space: 'shared', name: nm, kind: 'document', mime_type: DOC_MIME, body: serialize({ v: 1, blocks: [{ t: 'h1', c: [{ x: nm }] }, { t: 'h2', c: [{ x: 'Funnel overview' }] }, { t: 'p', c: [] }, { t: 'h2', c: [{ x: 'Target audience' }] }, { t: 'p', c: [] }, { t: 'h2', c: [{ x: 'Offer and value' }] }, { t: 'p', c: [] }, { t: 'h2', c: [{ x: 'Customer journey' }] }, { t: 'p', c: [] }, { t: 'h2', c: [{ x: 'Messaging direction' }] }, { t: 'p', c: [] }, { t: 'h2', c: [{ x: 'Success criteria' }] }, { t: 'p', c: [] }] }) });
       if (!d.ok) { toast('Couldn’t create the document here. Strategies need Drive access to write.', false); return false; }
@@ -37,7 +37,7 @@ export function strategiesListView(ctx) {
   search.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { q = search.value.trim(); load(); }, 200); });
   const st = h('select', { 'aria-label': 'Status' }, h('option', { value: '' }, 'All statuses'), ...STATUS.map(([k, l]) => h('option', { value: k }, l))); st.addEventListener('change', () => { status = st.value; load(); });
   const sh = h('select', { 'aria-label': 'Show' }, h('option', { value: 'active' }, 'Active'), h('option', { value: 'archived' }, 'Archived')); sh.addEventListener('change', () => { show = sh.value; load(); });
-  put(root, h('div', { class: 'crumb' }, 'Office · Funnels'), h('div', { class: 'pj-head' }, h('div', {}, h('h1', { 'data-page-title': true }, 'Funnel Strategies'), h('p', { class: 'sub' }, 'One written strategy per funnel. Maps stay in Funnel Mapper Pro.')), canNew ? btn('New Funnel Strategy', create, 'primary') : null),
+  put(root, h('div', { class: 'crumb' }, 'Office · Funnels'), h('div', { class: 'pj-head' }, h('div', {}, h('h1', { 'data-page-title': true }, 'Funnel Strategies'), h('p', { class: 'sub' }, 'One written strategy per funnel. Maps stay in Funnel Mapper.')), canNew ? btn('New Funnel Strategy', create, 'primary') : null),
     h('div', { class: 'toolbar' }, search, st, sh), body);
   load(); return root;
 }
@@ -52,7 +52,7 @@ export function strategyView(ctx, id) {
     const side = () => {
       const st = h('select', { id: 'st-status', 'aria-label': 'Status', ...(canEdit ? {} : { disabled: true }) }, ...STATUS.map(([k, l]) => h('option', { value: k, ...(k === s.status ? { selected: true } : {}) }, l)));
       st.addEventListener('change', () => save({ status: st.value }, `Marked ${STATUS.find(([k]) => k === st.value)[1].toLowerCase()}.`));
-      const map = h('div', {}); const paintMap = () => put(map, s.map_url ? [h('p', {}, h('a', { href: s.map_url, target: '_blank', rel: 'noopener noreferrer' }, s.map_label || 'Open the funnel map'), ' ', h('span', { class: 'fine muted' }, 'in Funnel Mapper Pro')), h('p', { class: 'fine muted' }, 'A link only. The map isn’t copied or synced.'), canEdit ? btn('Remove link', async () => { if (await save({ clear_map: true }, 'Link removed.')) paintMap(); }, 'link') : null]
+      const map = h('div', {}); const paintMap = () => put(map, s.map_url ? [h('p', {}, h('a', { href: s.map_url, target: '_blank', rel: 'noopener noreferrer' }, s.map_label || 'Open the funnel map'), ' ', h('span', { class: 'fine muted' }, 'in Funnel Mapper')), h('p', { class: 'fine muted' }, 'A link only. The map isn’t copied or synced.'), canEdit ? btn('Remove link', async () => { if (await save({ clear_map: true }, 'Link removed.')) paintMap(); }, 'link') : null]
         : [h('p', { class: 'muted' }, 'No map linked yet.'), canEdit ? btn('Link a map', linkMap, '') : null]);
       function linkMap() {
         const url = field({ id: 'mp-url', label: 'Map address', hint: 'Starts with https://' }); const label = field({ id: 'mp-label', label: 'Name (optional)', maxlength: 200 });

@@ -34,7 +34,7 @@
   padding: 4px 6px;
   border-radius: 6px;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 14px;
   text-decoration: none;
 }
 .fm-crumb:hover {
@@ -54,7 +54,7 @@
   border-radius: 999px;
   background: var(--bg);
   color: var(--ink);
-  font-size: 12px;
+  font-size: 13px;
   white-space: nowrap;
 }
 .fm-scen i {
@@ -145,7 +145,7 @@
   min-height: 32px;
   padding: 0 8px;
   border-radius: 6px;
-  font-size: 13px;
+  font-size: 14px;
   cursor: pointer;
 }
 .fm-layers-pop label:hover {
@@ -166,7 +166,7 @@
   background: var(--bg);
 }
 .fm-saved {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
   display: inline-flex;
   align-items: center;
@@ -201,7 +201,7 @@
 }
 .fm-side h2 {
   font-family: var(--font-display);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   margin: 16px 4px 8px;
 }
@@ -218,7 +218,7 @@
   color: var(--side-muted);
 }
 .fm-side p.hint {
-  font-size: 12.5px;
+  font-size: 13.5px;
   line-height: 18px;
   color: var(--side-muted);
   margin: 10px 4px 0;
@@ -244,7 +244,7 @@
   padding: 3px 28px 3px 6px;
   color: var(--side-ink);
   text-align: left;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 18px;
   user-select: none;
   min-height: 34px;
@@ -261,7 +261,7 @@
 }
 .fm-pprice {
   flex: none;
-  font-size: 11.5px;
+  font-size: 12.5px;
   color: var(--side-muted);
 }
 .fm-pcats {
@@ -280,7 +280,7 @@
   border-radius: 6px;
   background: transparent;
   color: var(--side-muted);
-  font-size: 11.5px;
+  font-size: 12.5px;
 }
 .fm-pcats button i {
   width: 6px;
@@ -337,7 +337,7 @@
   border-radius: 8px;
   padding: 4px 8px 4px 4px;
   color: var(--side-ink);
-  font-size: 12px;
+  font-size: 13px;
   min-height: 32px;
 }
 .fm-pchips button:hover {
@@ -493,7 +493,7 @@
   white-space: nowrap;
 }
 .fm-nstats {
-  font-size: 12px;
+  font-size: 13px;
   line-height: 16px;
   color: var(--muted);
   white-space: nowrap;
@@ -507,7 +507,7 @@
   position: absolute;
   right: 8px;
   top: 8px;
-  font-size: 10.5px;
+  font-size: 11.5px;
   font-weight: 800;
   border-radius: 999px;
   padding: 1px 6px;
@@ -608,7 +608,7 @@
   border: 1px solid color-mix(in srgb, var(--cc) 60%, transparent);
   background: var(--bg);
   color: var(--cc);
-  font-size: 10.5px;
+  font-size: 11.5px;
   font-weight: 700;
 }
 .fm-hide-all .fm-price {
@@ -646,7 +646,7 @@
 }
 .fm-perf-line b {
   font-family: var(--font-display);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--ink);
 }
@@ -712,7 +712,7 @@
   position: absolute;
   right: 0;
   top: -15px;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--muted);
 }
@@ -844,7 +844,7 @@
 }
 .fm-plabel {
   position: absolute;
-  font-size: 10.5px;
+  font-size: 11.5px;
   font-weight: 800;
   pointer-events: none;
 }
@@ -1108,7 +1108,7 @@
   border: 0;
   background: transparent;
   padding: 8px 10px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--muted);
   border-bottom: 2px solid transparent;
@@ -1125,7 +1125,7 @@
 }
 .fm-sec > h4 {
   margin: 0 0 10px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -1273,7 +1273,7 @@
   max-width: 360px;
   text-align: center;
   color: var(--muted);
-  font-size: 15px;
+  font-size: 16px;
   line-height: 22px;
 }
 .fm-canvas-empty .acts {
@@ -1336,7 +1336,7 @@
   color: var(--bg);
   padding: 10px 16px;
   border-radius: 10px;
-  font-size: 14px;
+  font-size: 15px;
   z-index: 90;
   box-shadow: var(--shadow);
 }
@@ -1356,13 +1356,13 @@
   margin: 0 0 2px;
 }
 .fm-insp h4 {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   margin: 18px 0 8px;
 }
 .fm-insp .sub {
   color: var(--muted);
-  font-size: 13px;
+  font-size: 14px;
   margin: 0 0 14px;
 }
 /* scope header: back link, name alone, type + status on the second line */
@@ -1379,7 +1379,7 @@
   border-radius: 6px;
   background: transparent;
   color: var(--muted);
-  font-size: 12.5px;
+  font-size: 13.5px;
   font-weight: 600;
   cursor: pointer;
 }
@@ -1407,7 +1407,7 @@
   padding: 0 8px;
   border-radius: 10px;
   border: 1px solid var(--line);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--muted);
 }
@@ -1450,7 +1450,7 @@
   min-width: 48px;
   text-align: right;
   font-weight: 700;
-  font-size: 13px;
+  font-size: 14px;
 }
 .fm-tblwrap {
   overflow-x: auto;
@@ -1473,13 +1473,13 @@
   border-right: 1px solid var(--line);
 }
 .fm-kpi div {
-  font-size: 11.5px;
+  font-size: 12.5px;
   color: var(--muted);
   white-space: nowrap;
 }
 .fm-kpi b {
   font-family: var(--font-display);
-  font-size: 17px;
+  font-size: 18px;
   white-space: nowrap;
 }
 .fm-kpop {
@@ -1495,7 +1495,7 @@
   border-right: 1px solid var(--line);
   background: transparent;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -1519,7 +1519,7 @@
   margin-left: auto;
   align-self: center;
   padding: 0 14px;
-  font-size: 11.5px;
+  font-size: 12.5px;
   color: var(--muted);
   white-space: nowrap;
 }
@@ -1535,7 +1535,7 @@
   border: 1px solid var(--line);
   border-radius: 12px;
   box-shadow: var(--shadow);
-  font-size: 13px;
+  font-size: 14px;
 }
 .fm-kpop-card.wide {
   width: 360px;
@@ -1543,7 +1543,7 @@
 .fm-kpop-card h3 {
   margin: 0 0 8px;
   font-family: var(--font-display);
-  font-size: 14px;
+  font-size: 15px;
 }
 .fm-kpop-card ul {
   margin: 0 0 10px;
@@ -1552,30 +1552,6 @@
 .fm-kpop-card p {
   margin: 0;
   color: var(--muted);
-}
-.fm-kcheck {
-  display: block;
-  width: 100%;
-  min-height: 32px;
-  padding: 4px 6px;
-  margin-left: -6px;
-  border: 0;
-  border-radius: 6px;
-  background: none;
-  color: var(--ink);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-.fm-kcheck:hover,
-.fm-kcheck:focus-visible {
-  background: var(--panel2);
-}
-.fm-kcheck small {
-  display: block;
-  color: var(--brand-light);
-  font-size: 11.5px;
-  font-weight: 600;
 }
 .fm-kgo {
   display: flex;
@@ -1589,7 +1565,7 @@
   border-radius: 7px;
   background: var(--bg);
   color: var(--ink);
-  font-size: 12px;
+  font-size: 13px;
 }
 .fm-kgo button:hover {
   border-color: var(--brand);
@@ -1599,7 +1575,7 @@
   background: none;
   padding: 0;
   color: var(--brand-light);
-  font-size: 12.5px;
+  font-size: 13.5px;
   font-weight: 600;
 }
 .fm-ekgrid {
@@ -1609,13 +1585,13 @@
   margin: 0;
 }
 .fm-ekgrid dt {
-  font-size: 11.5px;
+  font-size: 12.5px;
   color: var(--muted);
 }
 .fm-ekgrid dd {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 700;
 }
 
@@ -1785,7 +1761,7 @@
   border: 0;
   background: transparent;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   text-align: left;
   cursor: pointer;
@@ -1809,7 +1785,7 @@
   white-space: nowrap;
 }
 .fp-kicker {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--muted);
 }
@@ -1829,7 +1805,7 @@
 .fp-numbers.muted,
 .fp-hint {
   font-family: inherit;
-  font-size: 13.5px;
+  font-size: 14.5px;
   font-weight: 400;
   color: var(--muted);
 }
@@ -1840,7 +1816,7 @@
   margin-top: 10px;
   padding-top: 10px;
   border-top: 1px solid var(--line);
-  font-size: 14px;
+  font-size: 15px;
 }
 .fp-actions {
   display: flex;
@@ -1957,13 +1933,13 @@
   white-space: normal;
 }
 .fm-richfield .lbl {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
 }
 .seg.sm button {
   min-height: 26px;
   padding: 2px 8px;
-  font-size: 12px;
+  font-size: 13px;
   flex: none;
 }
 .fm-richbar {
@@ -1990,7 +1966,7 @@
   border-radius: 6px;
   display: inline-grid;
   place-items: center;
-  font-size: 12.5px;
+  font-size: 13.5px;
   font-weight: 700;
   color: var(--muted);
 }
@@ -2012,7 +1988,7 @@
   border-radius: 0 0 9px 9px;
 }
 .fm-richarea {
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.5;
 }
 .fm-richpreview {
@@ -2020,7 +1996,7 @@
   border-radius: 9px;
   padding: 10px 12px;
   min-height: 90px;
-  font-size: 13.5px;
+  font-size: 14.5px;
   line-height: 1.5;
   background: var(--bg);
 }
@@ -2135,7 +2111,7 @@
 }
 .fm-rnav h2 {
   font-family: var(--font-display);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -2153,7 +2129,7 @@
   text-align: left;
   padding: 7px 10px;
   border-radius: 8px;
-  font-size: 13.5px;
+  font-size: 14.5px;
   color: var(--muted);
   border-left: 2px solid transparent;
 }
@@ -2202,19 +2178,19 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--muted);
   min-width: 220px;
 }
 .fm-rh {
   font-family: var(--font-display);
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 800;
   margin: 26px 0 10px;
 }
 .fm-rmain .sub {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--muted);
   margin: 10px 0;
 }
@@ -2229,7 +2205,7 @@
   border-bottom: 1px solid var(--line);
 }
 .fm-rkpis dt {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
   font-weight: 600;
 }
@@ -2248,7 +2224,7 @@
 }
 .fm-rkpis small {
   display: block;
-  font-size: 11.5px;
+  font-size: 12.5px;
   color: var(--muted);
   margin-top: 1px;
 }
@@ -2268,7 +2244,7 @@
 }
 .fm-rcallout p {
   margin: 4px 0 0;
-  font-size: 13.5px;
+  font-size: 14.5px;
   line-height: 1.5;
 }
 .fm-rgrid {
@@ -2280,12 +2256,12 @@
   margin: 0 0 18px;
 }
 .fm-chart figcaption {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   margin-bottom: 4px;
 }
 .fm-rtbl {
-  font-size: 13px;
+  font-size: 14px;
   margin-bottom: 8px;
 }
 .fm-rtbl tbody th,
@@ -2308,14 +2284,14 @@
   border-top: 2px solid var(--line);
 }
 .fm-rtbl small.block {
-  font-size: 11.5px;
+  font-size: 12.5px;
   font-weight: 600;
 }
 .fm-rsel {
   min-height: 30px !important;
   padding: 3px 6px !important;
   width: auto !important;
-  font-size: 12.5px;
+  font-size: 13.5px;
 }
 .fm-rcontrols {
   display: flex;
@@ -2329,7 +2305,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 12.5px;
+  font-size: 13.5px;
   font-weight: 700;
   width: 190px;
 }
@@ -2338,7 +2314,7 @@
   border-radius: 12px;
   padding: 22px;
   color: var(--muted);
-  font-size: 14px;
+  font-size: 15px;
   max-width: 640px;
 }
 .fm-rempty b {
@@ -2362,12 +2338,12 @@
   align-items: baseline;
 }
 .fm-rgoal header b {
-  font-size: 15px;
+  font-size: 16px;
 }
 .fm-rgoal header small {
   display: block;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
 }
 .fm-rgoal header > span {
   font-weight: 700;
@@ -2403,7 +2379,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 12.5px;
+  font-size: 13.5px;
   font-weight: 700;
   min-width: 150px;
   flex: 1;
@@ -2466,7 +2442,7 @@ button.link {
   flex: 1;
   justify-content: center;
   border: 1px solid var(--line);
-  font-size: 12.5px;
+  font-size: 13.5px;
   padding: 6px 8px;
 }
 .menu-pop .fm-layer-presets button[aria-checked="true"] {
@@ -2483,7 +2459,7 @@ button.link {
   border-radius: 6px;
   background: var(--bg);
   padding: 3px 6px;
-  font-size: 13px;
+  font-size: 14px;
 }
 .fm-period-badge {
   position: absolute;
@@ -2496,7 +2472,7 @@ button.link {
   color: var(--ink);
   border-radius: 999px;
   padding: 5px 12px;
-  font-size: 12.5px;
+  font-size: 13.5px;
   box-shadow: var(--shadow);
 }
 
@@ -2564,7 +2540,7 @@ button.link {
 }
 .fm-health h4 {
   margin: 0 0 6px;
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--muted);
@@ -2593,7 +2569,7 @@ button.link {
   border-radius: 6px;
   background: transparent;
   color: var(--ink);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 18px;
 }
 .fm-health li button {
@@ -2611,7 +2587,7 @@ button.link {
   display: block;
   margin-top: 3px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 17px;
 }
 .fm-health .ok {
@@ -2620,7 +2596,7 @@ button.link {
   gap: 8px;
   align-items: center;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 14px;
 }
 .fm-health .ok svg {
   color: var(--good);
@@ -2642,12 +2618,12 @@ button.link {
   border: 1px solid var(--line);
   background: var(--panel);
   box-shadow: var(--shadow);
-  font-size: 11.5px;
+  font-size: 12.5px;
   color: var(--muted);
 }
 .fm-legend b {
   color: var(--ink);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
@@ -2684,7 +2660,7 @@ button.link {
   border: 1px solid var(--line);
   background: transparent;
   color: var(--ink);
-  font-size: 12.5px;
+  font-size: 13.5px;
   font-weight: 600;
   cursor: pointer;
 }
@@ -2725,7 +2701,7 @@ button.link {
 }
 .fm-ftb button.tab {
   padding: 0 10px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -2761,7 +2737,7 @@ button.link {
   background: var(--bg);
   border: 1px solid var(--line);
   color: var(--ink);
-  font-size: 11.5px;
+  font-size: 12.5px;
   font-weight: 500;
   white-space: nowrap;
   pointer-events: none;
@@ -2800,7 +2776,7 @@ button.link {
   border-radius: 7px;
   background: transparent;
   color: var(--ink);
-  font-size: 13px;
+  font-size: 14px;
   text-align: left;
   cursor: pointer;
 }
@@ -2830,7 +2806,7 @@ button.link {
 .fm-ctx kbd {
   margin-left: auto;
   font: inherit;
-  font-size: 11.5px;
+  font-size: 12.5px;
   color: var(--muted);
 }
 .fm-ctx .subs {
@@ -2841,7 +2817,7 @@ button.link {
 @media (pointer: coarse) {
   .fm-ctx button {
     min-height: 44px;
-    font-size: 15px;
+    font-size: 16px;
   }
   .fm-ftb {
     height: 56px;
@@ -2896,7 +2872,7 @@ dialog.fm-typepick {
   color: var(--cat-ink);
 }
 .tp-name {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2904,7 +2880,7 @@ dialog.fm-typepick {
 }
 .tp-tile small {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
 }
 .fm-toast button {
   margin-left: 12px;
@@ -2932,7 +2908,7 @@ dialog.fm-typepick {
   inset: 0;
   display: grid;
   place-items: center;
-  font-size: 12.5px;
+  font-size: 13.5px;
   font-weight: 600;
   color: var(--ink);
 }
@@ -2958,7 +2934,7 @@ dialog.fm-typepick {
 }
 .fm-wait .wait-preview {
   margin-top: 6px;
-  font-size: 12.5px;
+  font-size: 13.5px;
   color: var(--muted);
 }
 .fm-wait .wait-preview b {
@@ -3004,7 +2980,7 @@ dialog.fm-typepick {
   border-radius: 8px;
   background: transparent;
   color: var(--ink);
-  font-size: 13px;
+  font-size: 14px;
   text-align: left;
   cursor: pointer;
 }
@@ -3027,7 +3003,7 @@ dialog.fm-typepick {
 .fm-outline small,
 .fm-wsblocks small {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   white-space: nowrap;
 }
 .fm-outline .st {
@@ -3182,7 +3158,7 @@ dialog.fm-typepick {
 }
 .fm-rgroup h3 {
   margin: 0 8px 4px;
-  font-size: 10.5px;
+  font-size: 11.5px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -3267,16 +3243,16 @@ dialog.fm-sharedlg {
   background: #fff;
   display: grid;
   place-items: center;
-  font-size: 11px;
+  font-size: 12px;
   color: #0b1220;
 }
 .fm-sharepreview .logos i {
   color: var(--muted);
   font-style: normal;
-  font-size: 12px;
+  font-size: 13px;
 }
 .fm-sharepreview .who {
-  font-size: 12.5px;
+  font-size: 13.5px;
   font-weight: 600;
   min-width: 0;
   overflow: hidden;
@@ -3291,7 +3267,7 @@ dialog.fm-sharedlg {
 .fm-sharepreview ul {
   margin: 0;
   padding: 8px 12px 10px 28px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
 }
 .fm-sharepreview-fold {
@@ -3300,7 +3276,7 @@ dialog.fm-sharedlg {
 .fm-sharepreview-fold summary {
   cursor: pointer;
   padding: 10px 0;
-  font-size: 13.5px;
+  font-size: 14.5px;
   font-weight: 600;
   color: var(--brand);
 }
@@ -3503,7 +3479,7 @@ dialog.fm-sharedlg {
     min-width: 0;
     max-width: none;
     width: 100%;
-    font-size: 14px;
+    font-size: 15px;
   }
   .fm-crumbs {
     flex: 1 1 0;
@@ -3545,7 +3521,7 @@ dialog.fm-sharedlg {
     border: 0;
     background: transparent;
     color: var(--ink);
-    font-size: 11.5px;
+    font-size: 12.5px;
     font-weight: 600;
   }
   .fm-actionbar button:disabled {
@@ -3559,7 +3535,7 @@ dialog.fm-sharedlg {
     align-self: center;
     padding: 0 14px;
     color: var(--muted);
-    font-size: 13px;
+    font-size: 14px;
   }
   /* the sheet sits above the action bar; no floating toolbar or right-click menu on a phone */
   .fm-editor.fm-has-bar .fm-insp {
@@ -3580,13 +3556,13 @@ dialog.fm-sharedlg {
   }
   .fm-ctx button {
     min-height: 44px;
-    font-size: 15px;
+    font-size: 16px;
   }
   .fm-insp input,
   .fm-insp select,
   .fm-insp textarea {
     min-height: 44px;
-    font-size: 15px;
+    font-size: 16px;
   }
   .fm-fab {
     bottom: 14px;
@@ -3637,7 +3613,7 @@ dialog.fm-sharedlg {
 }
 .fm-avp-head h3 {
   margin: 0;
-  font-size: 15px;
+  font-size: 16px;
 }
 .fm-avp-state {
   padding: 24px 0;
@@ -3745,20 +3721,20 @@ dialog.fm-sharedlg {
   white-space: nowrap;
   min-height: 32px;
   padding: 4px 12px;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 /* ---------- Simulate (lib/simulate.ts): baseline vs now, drawn on the map ---------- */
 :root {
-  --sim-up: #7fb0e6;
+  --sim-up: #34d399;
   --sim-down: #f87171;
-  --sim-up-bg: rgba(23, 58, 143, 0.16);
+  --sim-up-bg: rgba(16, 185, 129, 0.16);
   --sim-down-bg: rgba(248, 113, 113, 0.16);
 }
 :root[data-theme="light"] {
-  --sim-up: #1d5f9e;
+  --sim-up: #047857;
   --sim-down: #b91c1c;
-  --sim-up-bg: #e4edf7;
+  --sim-up-bg: #d1fae5;
   --sim-down-bg: #fee2e2;
 }
 .fm-simbtn[aria-pressed="true"] {
@@ -3800,7 +3776,7 @@ dialog.fm-sharedlg {
 .fm-simchip span {
   padding: 1px 7px;
   border-radius: 9px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   line-height: 16px;
   border: 1px solid transparent;
@@ -3864,7 +3840,7 @@ dialog.fm-sharedlg {
 /* delta chips (KPI strip, Simulate panel) */
 .fm-dchip {
   display: inline-block;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   line-height: 14px;
   white-space: nowrap;
@@ -3897,11 +3873,11 @@ dialog.fm-sharedlg {
 .fm-sim-head h3 {
   margin: 0 0 2px;
   color: var(--brand-light);
-  font-size: 17px;
+  font-size: 18px;
 }
 .fm-sim-head .sub {
   margin: 0;
-  font-size: 12.5px;
+  font-size: 13.5px;
 }
 .fm-sim-sec {
   padding: 12px 0;
@@ -3909,7 +3885,7 @@ dialog.fm-sharedlg {
 }
 .fm-sim-sec h4 {
   margin: 0 0 8px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -3925,7 +3901,7 @@ dialog.fm-sharedlg {
   min-width: 0;
 }
 .fm-sim-tot dt {
-  font-size: 11.5px;
+  font-size: 12.5px;
   color: var(--muted);
 }
 .fm-sim-tot dd {
@@ -3934,7 +3910,7 @@ dialog.fm-sharedlg {
 }
 .fm-sim-tot b {
   font-family: var(--font-display);
-  font-size: 16px;
+  font-size: 17px;
   white-space: nowrap;
 }
 .fm-sim-tot .big b {
@@ -3942,7 +3918,7 @@ dialog.fm-sharedlg {
 }
 .fm-sim-leak {
   margin: 10px 0 0;
-  font-size: 12.5px;
+  font-size: 13.5px;
   color: var(--muted);
 }
 .fm-lever {
@@ -3952,14 +3928,14 @@ dialog.fm-sharedlg {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
 }
 .fm-lever output {
   font-weight: 700;
 }
 .fm-lever output small {
-  font-size: 11px;
+  font-size: 12px;
 }
 .fm-lever output small.up {
   color: var(--sim-up);
@@ -3974,7 +3950,7 @@ dialog.fm-sharedlg {
 }
 .fm-lever .help {
   margin: 0;
-  font-size: 11.5px;
+  font-size: 12.5px;
   color: var(--muted);
 }
 .fm-sim-chips {
@@ -3982,7 +3958,7 @@ dialog.fm-sharedlg {
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
 }
 .fm-sim-selname {
@@ -3995,7 +3971,7 @@ dialog.fm-sharedlg {
 }
 .fm-knob label {
   display: block;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   margin-bottom: 4px;
 }
@@ -4006,7 +3982,7 @@ dialog.fm-sharedlg {
 }
 .fm-knob .was {
   margin: 4px 0 0;
-  font-size: 11.5px;
+  font-size: 12.5px;
   color: var(--muted);
 }
 .fm-sim-movers,
@@ -4034,13 +4010,13 @@ dialog.fm-sharedlg {
 }
 .fm-sim-movers .nm {
   font-weight: 600;
-  font-size: 13px;
+  font-size: 14px;
 }
 .fm-sim-movers .d {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 10px;
-  font-size: 12px;
+  font-size: 13px;
 }
 .fm-sim-movers .pos {
   color: var(--sim-up);
@@ -4053,7 +4029,7 @@ dialog.fm-sharedlg {
   justify-content: space-between;
   align-items: center;
   gap: 8px;
-  font-size: 12.5px;
+  font-size: 13.5px;
 }
 .fm-sim-actions .row {
   display: flex;
@@ -4079,12 +4055,12 @@ dialog.fm-sharedlg {
   min-width: 0;
 }
 .fm-sim-key span {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
 }
 .fm-sim-key b {
   font-family: var(--font-display);
-  font-size: 16px;
+  font-size: 17px;
   white-space: nowrap;
 }
 @media (min-width: 1024px) {
@@ -4236,7 +4212,7 @@ dialog.fm-sharedlg {
 }
 .fm-sim-note {
   margin: 0 0 8px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
 }
 .fm-kpis.before {
@@ -4253,7 +4229,7 @@ dialog.fm-sharedlg {
   border: 1px solid var(--attention);
   background: var(--panel);
   color: var(--ink);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   pointer-events: none;
 }
@@ -4314,7 +4290,7 @@ dialog.fm-sharedlg {
 .fm-pcount {
   font-family: var(--font-sans);
   font-weight: 500;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--side-muted);
 }
 .fm-acc {
@@ -4332,7 +4308,7 @@ dialog.fm-sharedlg {
   border-radius: 8px;
   background: transparent;
   color: var(--side-ink);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   text-align: left;
 }
@@ -4371,7 +4347,7 @@ dialog.fm-sharedlg {
   border: 0;
   background: transparent;
   color: var(--brand-light);
-  font-size: 12.5px;
+  font-size: 13.5px;
   font-weight: 600;
   min-height: 28px;
   padding: 0 4px;
@@ -4381,7 +4357,7 @@ dialog.fm-sharedlg {
 }
 .fm-pempty {
   padding: 6px 4px;
-  font-size: 13px;
+  font-size: 14px;
 }
 .fm-pempty p {
   margin: 0 0 4px;
@@ -4417,7 +4393,7 @@ dialog.fm-sharedlg {
   display: flex;
   align-items: baseline;
   gap: 8px;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 18px;
 }
 .wg-path .pn {
@@ -4440,7 +4416,7 @@ dialog.fm-sharedlg {
   height: 18px;
   padding: 0 6px;
   border-radius: 5px;
-  font-size: 10.5px;
+  font-size: 11.5px;
   font-weight: 700;
   letter-spacing: 0.02em;
   line-height: 1;
@@ -4473,7 +4449,7 @@ dialog.fm-sharedlg {
 .fm-kcap {
   margin: 0 0 6px;
   color: var(--muted);
-  font-size: 12.5px;
+  font-size: 13.5px;
 }
 
 /* V2 four ports: 12px circles on all four sides, hidden at rest; shown on hover, on selection and on every block while a
@@ -4550,7 +4526,7 @@ dialog.fm-sharedlg {
   gap: 2px;
 }
 .fm-linemenu > b {
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--muted);
@@ -4577,12 +4553,12 @@ dialog.fm-sharedlg {
 .fm-linemenu .l {
   display: block;
   font-weight: 700;
-  font-size: 13px;
+  font-size: 14px;
 }
 .fm-linemenu small {
   display: block;
   color: var(--muted);
-  font-size: 11.5px;
+  font-size: 12.5px;
 }
 .fm-mswatch {
   flex: none;
@@ -4607,7 +4583,7 @@ dialog.fm-sharedlg {
   border-radius: 8px;
   background: transparent;
   color: var(--ink);
-  font-size: 13px;
+  font-size: 14px;
   text-align: left;
 }
 .fm-meanings button[aria-checked="true"] {
@@ -4641,7 +4617,7 @@ dialog.fm-sharedlg {
   background: transparent;
   color: var(--side-ink);
   text-align: left;
-  font-size: 13px;
+  font-size: 14px;
 }
 .fm-tpllist button:hover,
 .fm-tpllist button:focus-visible {
@@ -4655,7 +4631,7 @@ dialog.fm-sharedlg {
   place-items: center;
   border-radius: 6px;
   border: 1px solid var(--side-line);
-  font-size: 11px;
+  font-size: 12px;
   color: var(--side-muted);
   font-variant-numeric: tabular-nums;
 }
@@ -4675,7 +4651,7 @@ dialog.fm-sharedlg {
   border: 1px solid var(--side-line);
   border-radius: 10px;
   overflow: hidden;
-  font-size: 12px;
+  font-size: 13px;
 }
 .fm-tplhover svg {
   display: block;
@@ -4739,7 +4715,7 @@ dialog.fm-sharedlg {
 .fm-dchip {
   display: inline-block;
   margin-top: 2px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
 }
 .fm-dchip.good {
@@ -4750,7 +4726,7 @@ dialog.fm-sharedlg {
 }
 .fm-src {
   margin-left: 6px;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
   border: 1px solid var(--line);
   border-radius: 4px;
@@ -4763,7 +4739,7 @@ dialog.fm-sharedlg {
   padding: 0;
   margin: 0 0 12px;
   counter-reset: s;
-  font-size: 12.5px;
+  font-size: 13.5px;
   color: var(--muted);
 }
 .fm-aesteps li {
@@ -4783,7 +4759,7 @@ dialog.fm-sharedlg {
 .fm-aebad {
   margin: 6px 0;
   padding-left: 18px;
-  font-size: 13px;
+  font-size: 14px;
   max-height: 160px;
   overflow: auto;
 }
@@ -4805,19 +4781,19 @@ dialog.fm-sharedlg {
 }
 .fm-cal-m b {
   display: block;
-  font-size: 12.5px;
+  font-size: 13.5px;
   margin: 4px 0;
 }
 .fm-cal-g {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 2px;
-  font-size: 12px;
+  font-size: 13px;
   text-align: center;
 }
 .fm-cal-g .w {
   color: var(--muted);
-  font-size: 10.5px;
+  font-size: 11.5px;
 }
 .fm-cal-g button {
   position: relative;
@@ -4862,7 +4838,7 @@ dialog.fm-sharedlg {
   border-radius: 8px;
   background: var(--panel);
   color: var(--ink);
-  font-size: 12.5px;
+  font-size: 13.5px;
   padding: 0 6px;
 }
 .fm-before-badge.actual {
@@ -4890,7 +4866,7 @@ dialog.fm-sharedlg {
   white-space: nowrap;
   background: var(--chrome);
   border-bottom: 1px solid var(--panel2);
-  font-size: 12.5px;
+  font-size: 13.5px;
 }
 .fm-sbchip {
   display: inline-flex;
@@ -4979,7 +4955,7 @@ dialog.fm-sharedlg {
   border-radius: 999px;
   background: var(--panel);
   color: var(--attention);
-  font-size: 12px;
+  font-size: 13px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -5009,7 +4985,7 @@ dialog.fm-sharedlg {
   background: var(--panel2);
   border: 1px solid var(--line);
   box-shadow: var(--shadow);
-  font-size: 13px;
+  font-size: 14px;
   max-width: calc(100% - 32px);
 }
 .fm-walknav {
@@ -5055,7 +5031,7 @@ dialog.fm-sharedlg {
 }
 .fm-kwas {
   display: block;
-  font-size: 10.5px;
+  font-size: 11.5px;
   color: var(--muted);
   white-space: nowrap;
 }
@@ -5095,12 +5071,12 @@ dialog.fm-sharedlg {
 .fm-mathpanel {
   padding: 12px 14px 24px;
   overflow: auto;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.5;
 }
 .fm-mathpanel h3 {
   font-family: var(--font-display);
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
   margin-bottom: 8px;
 }
@@ -5138,7 +5114,7 @@ dialog.fm-sharedlg {
   border: 1px solid var(--line);
   background: transparent;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   line-height: 1;
 }
@@ -5150,7 +5126,7 @@ dialog.fm-sharedlg {
 .rline .fm-whysum {
   grid-column: 1 / -1;
   font-family: var(--font-mono);
-  font-size: 11.5px;
+  font-size: 12.5px;
   color: var(--ink);
 }
 
@@ -5168,7 +5144,7 @@ dialog.fm-sharedlg {
   min-height: 0;
   background: var(--side);
   color: var(--side-ink);
-  font-size: 13px;
+  font-size: 14px;
 }
 .fm-sb-h {
   padding: 12px 12px 8px;
@@ -5184,7 +5160,7 @@ dialog.fm-sharedlg {
 }
 .fm-sb-ttl b {
   font-family: var(--font-display);
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--ink);
 }
@@ -5215,7 +5191,7 @@ dialog.fm-sharedlg {
 }
 .fm-sb-s:focus-within {
   border-color: var(--brand);
-  box-shadow: 0 0 0 3px rgba(23, 58, 143, 0.15);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
 }
 .fm-sb-s input {
   flex: 1;
@@ -5225,7 +5201,7 @@ dialog.fm-sharedlg {
   outline: none;
   color: var(--ink);
   font: inherit;
-  font-size: 12.5px;
+  font-size: 13.5px;
   padding: 0;
   min-height: 0;
 }
@@ -5234,7 +5210,7 @@ dialog.fm-sharedlg {
 }
 .fm-sb-s kbd {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
   border: 1px solid var(--line);
   border-radius: 4px;
@@ -5249,7 +5225,7 @@ dialog.fm-sharedlg {
 .fm-sb-sec {
   display: flex;
   justify-content: space-between;
-  font-size: 10.5px;
+  font-size: 11.5px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--muted);
@@ -5291,7 +5267,7 @@ dialog.fm-sharedlg {
   place-items: center;
 }
 .fm-sb-l {
-  font-size: 10.5px;
+  font-size: 11.5px;
   line-height: 1.2;
   text-align: center;
   max-width: 76px;
@@ -5334,7 +5310,7 @@ dialog.fm-sharedlg {
   background: transparent;
   color: var(--ink);
   font: inherit;
-  font-size: 12.5px;
+  font-size: 13.5px;
   border-radius: 8px;
   text-align: left;
 }
@@ -5357,7 +5333,7 @@ dialog.fm-sharedlg {
 .fm-sb-row .x {
   margin-left: auto;
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: 11.5px;
   color: var(--muted);
 }
 .fm-sb-acc {
@@ -5374,7 +5350,7 @@ dialog.fm-sharedlg {
   background: transparent;
   color: var(--ink);
   font: inherit;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   text-align: left;
   border-radius: 8px;
@@ -5397,7 +5373,7 @@ dialog.fm-sharedlg {
 }
 .fm-sb-ahc {
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: 11.5px;
   color: var(--muted);
 }
 .fm-sb-ah > svg {
@@ -5412,14 +5388,14 @@ dialog.fm-sharedlg {
   background: transparent;
   color: var(--brand-light);
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   border-radius: 7px;
   margin-bottom: 4px;
 }
 .fm-sb-hint {
   margin: 2px 6px 8px;
-  font-size: 11.5px;
+  font-size: 12.5px;
   color: var(--muted);
   line-height: 1.45;
 }
@@ -5438,13 +5414,13 @@ dialog.fm-sharedlg {
   padding: 28px 14px;
   text-align: center;
   color: var(--muted);
-  font-size: 12.5px;
+  font-size: 13.5px;
   line-height: 1.5;
 }
 .fm-sb-empty b {
   display: block;
   color: var(--ink);
-  font-size: 13.5px;
+  font-size: 14.5px;
   margin-bottom: 4px;
 }
 .fm-sb-cta {
@@ -5460,7 +5436,7 @@ dialog.fm-sharedlg {
   background: var(--brand-soft);
   color: var(--brand-light);
   font: inherit;
-  font-size: 12.5px;
+  font-size: 13.5px;
   font-weight: 600;
   margin-top: 14px;
 }
@@ -5499,8 +5475,8 @@ dialog.fm-sharedlg {
   border-radius: 18%;
 }
 .fm-sys.wdg {
-  background: rgba(23, 58, 143, 0.14);
-  box-shadow: 0 0 0 1px rgba(23, 58, 143, 0.35);
+  background: rgba(16, 185, 129, 0.14);
+  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.35);
 }
 .fm-sys .gl {
   display: grid;
@@ -5536,7 +5512,7 @@ dialog.fm-sharedlg {
   background: #fbbf24;
 }
 .fm-mwc i:nth-child(3) {
-  background: #4d7fe0;
+  background: #34d399;
 }
 .fm-mw svg {
   display: block;
@@ -5565,7 +5541,7 @@ dialog.fm-sharedlg {
 .fm-top .fm-crumbs {
   gap: 2px;
   flex: 0 1 auto;
-  font-size: 13px;
+  font-size: 14px;
 }
 .fm-top .fm-fname {
   background: transparent;
@@ -5575,7 +5551,7 @@ dialog.fm-sharedlg {
   border-radius: 7px;
   color: var(--ink);
   font-weight: 600;
-  font-size: 13px;
+  font-size: 14px;
   min-width: 80px;
   max-width: 260px;
   width: auto;
@@ -5602,7 +5578,7 @@ dialog.fm-sharedlg {
 }
 .fm-top .fm-saved {
   margin-left: 8px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
 }
 .fm-top .btn.icon {
@@ -5625,11 +5601,11 @@ dialog.fm-sharedlg {
   min-height: 32px;
   padding: 0 12px;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 14px;
 }
 .fm-top .btn.tidy {
-  border: 1px solid rgba(23, 58, 143, 0.4);
-  background: rgba(23, 58, 143, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  background: rgba(16, 185, 129, 0.1);
   color: var(--brand-light);
 }
 .fm-top .fm-edit-tools {
@@ -5659,7 +5635,7 @@ dialog.fm-sharedlg {
   min-height: 26px;
   padding: 0 12px;
   border-radius: 6px;
-  font-size: 12.5px;
+  font-size: 13.5px;
   font-weight: 500;
   border: 0;
   background: transparent;
@@ -5693,7 +5669,7 @@ dialog.fm-sharedlg {
   border: 1px solid var(--line);
   display: grid;
   place-items: center;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--ink);
   flex: none;
@@ -5732,7 +5708,7 @@ dialog.fm-sharedlg {
   background: transparent;
   box-shadow: none;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
 }
 .fm-stagebar .seg button[aria-pressed="true"] {
@@ -5769,7 +5745,7 @@ dialog.fm-sharedlg {
   border-radius: 6px;
   background: transparent;
   color: var(--muted);
-  font-size: 12.5px;
+  font-size: 13.5px;
 }
 .fm-top .fm-actswitch button[aria-pressed="true"] {
   background: var(--panel2);
@@ -5801,10 +5777,10 @@ dialog.fm-sharedlg {
     line-height: 20px;
   }
   .fm-kpis:not(.sim) .fm-kpi div {
-    font-size: 11px;
+    font-size: 12px;
   }
   .fm-kpis:not(.sim) .fm-kpi b {
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 600;
     color: var(--ink);
   }
@@ -5823,7 +5799,7 @@ dialog.fm-sharedlg {
   }
   .fm-kpis .fm-kunit {
     padding: 0 10px;
-    font-size: 11.5px;
+    font-size: 12.5px;
   }
 }
 
@@ -5841,10 +5817,10 @@ dialog.fm-sharedlg {
 }
 .fm-node.sel {
   border-color: var(--brand);
-  box-shadow: 0 0 0 1px var(--brand), 0 0 0 5px rgba(23, 58, 143, 0.16);
+  box-shadow: 0 0 0 1px var(--brand), 0 0 0 5px rgba(16, 185, 129, 0.16);
 }
 .fm-node.sel.multi {
-  box-shadow: 0 0 0 1px rgba(23, 58, 143, 0.7);
+  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.7);
 }
 .fm-node:hover:not(.sel) {
   border-color: #475569;
@@ -5926,7 +5902,7 @@ dialog.fm-sharedlg {
   background: #fbbf24;
 }
 .pgo-chrome i:nth-child(3) {
-  background: #4d7fe0;
+  background: #34d399;
 }
 .pgo-page {
   position: relative;
@@ -5954,7 +5930,7 @@ dialog.fm-sharedlg {
   padding: 1px 0 5px;
 }
 .pgo-title {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--ink);
   line-height: 1.2;
@@ -5971,7 +5947,7 @@ dialog.fm-sharedlg {
   min-width: 0;
 }
 .pgo-l {
-  font-size: 10.5px;
+  font-size: 11.5px;
   color: var(--muted);
   white-space: nowrap;
   overflow: hidden;
@@ -5986,7 +5962,7 @@ dialog.fm-sharedlg {
 }
 .pgo-r {
   font-family: var(--font-display);
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--ink);
   line-height: 1.15;
@@ -5994,7 +5970,7 @@ dialog.fm-sharedlg {
   white-space: nowrap;
 }
 .pgo-r small {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 500;
   color: var(--muted);
   margin-left: 3px;
@@ -6204,7 +6180,7 @@ dialog.fm-sharedlg {
 }
 .fm-insp h4 {
   margin: 0;
-  font-size: 10.5px;
+  font-size: 11.5px;
   letter-spacing: 0.09em;
   text-transform: uppercase;
   color: var(--muted);
@@ -6212,7 +6188,7 @@ dialog.fm-sharedlg {
 }
 .fm-insp .sub {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
   margin: 3px 0 0;
 }
 .fm-scopehead {
@@ -6220,7 +6196,7 @@ dialog.fm-sharedlg {
   margin: 0 -16px;
 }
 .fm-fscope .eyebrow {
-  font-size: 10.5px;
+  font-size: 11.5px;
   letter-spacing: 0.09em;
   text-transform: uppercase;
   color: var(--muted);
@@ -6232,7 +6208,7 @@ dialog.fm-sharedlg {
 .fm-scopehead .fm-back {
   margin: 0 0 6px 0;
   padding: 0;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
 }
 .fm-scopehead h3 {
@@ -6242,7 +6218,7 @@ dialog.fm-sharedlg {
   height: 24px;
   padding: 0 9px;
   border-radius: 999px;
-  font-size: 11.5px;
+  font-size: 12.5px;
   font-weight: 500;
   color: var(--ink);
 }
@@ -6266,7 +6242,7 @@ dialog.fm-sharedlg {
   border: 0;
   background: transparent;
   color: var(--muted);
-  font-size: 12.5px;
+  font-size: 13.5px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -6298,7 +6274,7 @@ dialog.fm-sharedlg {
   border: 0;
   background: transparent;
   color: var(--brand-light);
-  font-size: 12px;
+  font-size: 13px;
   padding: 0;
 }
 .fm-sa:hover {
@@ -6320,7 +6296,7 @@ dialog.fm-sharedlg {
   background: transparent;
   text-align: left;
   color: var(--ink);
-  font-size: 12.5px;
+  font-size: 13.5px;
   line-height: 1.4;
 }
 .fm-chkrow:hover {
@@ -6349,7 +6325,7 @@ dialog.fm-sharedlg {
   gap: 8px;
   margin: 0;
   color: var(--brand-light);
-  font-size: 12.5px;
+  font-size: 13.5px;
 }
 .fm-mrow {
   display: grid;
@@ -6358,7 +6334,7 @@ dialog.fm-sharedlg {
   gap: 2px 10px;
   padding: 7px 0;
   border-bottom: 1px solid var(--side-line);
-  font-size: 13px;
+  font-size: 14px;
 }
 .fm-mrow:last-child {
   border-bottom: 0;
@@ -6374,7 +6350,7 @@ dialog.fm-sharedlg {
 .fm-mrow small {
   grid-column: 1 / -1;
   color: var(--muted);
-  font-size: 11.5px;
+  font-size: 12.5px;
   line-height: 1.45;
 }
 .fm-mrow .fm-whysum {
@@ -6386,7 +6362,7 @@ dialog.fm-sharedlg {
 .fm-more > summary {
   cursor: pointer;
   color: var(--brand-light);
-  font-size: 12px;
+  font-size: 13px;
   padding: 6px 0;
   list-style: none;
 }
@@ -6395,7 +6371,7 @@ dialog.fm-sharedlg {
 }
 .fm-leakp {
   margin: 0 0 8px;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.5;
   color: var(--ink);
 }
@@ -6415,7 +6391,7 @@ dialog.fm-sharedlg {
 .fm-insp-tabs button {
   position: relative;
   padding: 10px 8px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   border-bottom: 0;
   margin-bottom: 0;
@@ -6446,7 +6422,7 @@ dialog.fm-sharedlg {
   justify-content: space-between;
   gap: 10px;
   padding: 7px 0;
-  font-size: 13px;
+  font-size: 14px;
 }
 .fm-path .yes {
   color: var(--brand-light);
@@ -6460,7 +6436,7 @@ dialog.fm-sharedlg {
   color: var(--ink);
   font-weight: 600;
   padding: 0;
-  font-size: 13px;
+  font-size: 14px;
   text-align: right;
 }
 .fm-path .none {
@@ -6476,7 +6452,7 @@ dialog.fm-sharedlg {
   padding: 0 8px 0 9px;
   border-radius: 999px;
   border: 1px solid var(--line);
-  font-size: 11.5px;
+  font-size: 12.5px;
   color: var(--ink);
 }
 .fm-pillsel i {
@@ -6537,7 +6513,7 @@ dialog.fm-sharedlg {
   padding: 0 6px;
   border-radius: 6px;
   color: var(--ink);
-  font-size: 12px;
+  font-size: 13px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -6565,7 +6541,7 @@ dialog.fm-sharedlg {
 }
 .fm-ftb button.next {
   padding: 0 10px 0 8px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
 }
 .fm-ftb .vr {
@@ -6592,7 +6568,7 @@ dialog.fm-sharedlg {
   letter-spacing: -0.02em;
 }
 .fm-rhead .sub {
-  font-size: 14px;
+  font-size: 15px;
 }
 .fm-rsnap {
   flex-direction: row;
@@ -6604,7 +6580,7 @@ dialog.fm-sharedlg {
 .fm-rsnap .input {
   min-height: 30px;
   height: 30px;
-  font-size: 12.5px;
+  font-size: 13.5px;
   width: auto;
 }
 .fm-rpersel {
@@ -6612,7 +6588,7 @@ dialog.fm-sharedlg {
   margin: -34px 0 14px;
 }
 .fm-rh {
-  font-size: 17px;
+  font-size: 18px;
   font-weight: 600;
 }
 .fm-rkpis {
@@ -6678,7 +6654,7 @@ dialog.fm-sharedlg {
 }
 .fm-rcallout b:first-child {
   font-family: var(--font-display);
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
 }
 .fm-rcallout p {
@@ -6758,7 +6734,7 @@ dialog.fm-sharedlg > p {
 }
 .fm-sharepane-h h4 {
   margin: 0;
-  font-size: 10.5px;
+  font-size: 11.5px;
   letter-spacing: 0.09em;
   text-transform: uppercase;
   color: var(--muted);
@@ -6770,7 +6746,7 @@ dialog.fm-sharedlg > p {
 .fm-sharebox .check {
   justify-content: space-between;
   flex-direction: row-reverse;
-  font-size: 14px;
+  font-size: 15px;
   margin-bottom: 4px;
 }
 .fm-sharebox .check input[role="switch"] {
@@ -6834,7 +6810,7 @@ dialog.fm-sharedlg > p {
 
 .fm-scopehead .eyebrow {
   display: block;
-  font-size: 10.5px;
+  font-size: 11.5px;
   letter-spacing: 0.09em;
   text-transform: uppercase;
   color: var(--muted);
@@ -6857,7 +6833,7 @@ dialog.fm-sharedlg > p {
   border: 1px solid var(--line);
   border-radius: 999px;
   padding: 3px 10px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--ink);
 }
 .fm-insp > fieldset .fm-meanings {
@@ -6886,7 +6862,7 @@ dialog.fm-sharedlg > p {
   pointer-events: none;
 }
 .fm-present-ui .fp-kicker {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.09em;
   text-transform: uppercase;
@@ -6904,7 +6880,7 @@ dialog.fm-sharedlg > p {
 .fm-present-ui .fp-sub {
   margin: 0;
   max-width: 640px;
-  font-size: 16px;
+  font-size: 17px;
   color: var(--muted);
 }
 .fm-present-ui .fp-stats {
@@ -6914,7 +6890,7 @@ dialog.fm-sharedlg > p {
   text-align: right;
 }
 .fm-present-ui .fp-stats dt {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--muted);
 }
 .fm-present-ui .fp-stats dd {
@@ -6933,7 +6909,7 @@ dialog.fm-sharedlg > p {
   border-radius: 12px;
   border: 1px solid var(--line);
   background: var(--panel2);
-  font-size: 13px;
+  font-size: 14px;
   border-top: 0;
   margin: 0;
 }
@@ -7036,7 +7012,7 @@ dialog.fm-sharedlg > p {
 }
 .fm-clientview .fm-top .fm-fname {
   font-family: var(--font-display);
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   text-align: center;
 }
@@ -7503,7 +7479,7 @@ dialog.fm-exportdlg {
 }
 .fm-exp-sec h4 {
   margin: 0 0 8px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
 }
 .fm-exp-list {
@@ -7519,7 +7495,7 @@ dialog.fm-exportdlg {
   align-items: center;
   gap: 8px;
   min-height: 32px;
-  font-size: 13.5px;
+  font-size: 14.5px;
 }
 .fm-exp-row {
   display: flex;
@@ -7558,7 +7534,7 @@ dialog.fm-exportdlg {
   border-radius: 10px;
   background: var(--panel);
   color: var(--muted);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.4;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
 }
@@ -7571,7 +7547,7 @@ dialog.fm-exportdlg {
   }
 }
 :root[data-theme="light"] .fm-saved-retry {
-  color: #173a8f;
+  color: #047857;
 }
 
 /* tablet header: the funnel name gives way before the scenario pill does (the pill used to be clipped to "Basel") */
@@ -7627,13 +7603,13 @@ dialog.fm-exportdlg {
   gap: 0;
 }
 .pgo-m.one small {
-  font-size: 10.5px;
+  font-size: 11.5px;
   font-weight: 400;
   color: var(--muted);
 }
 .pgo-m.one strong {
   font-family: var(--font-display);
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   line-height: 1.15;
   color: var(--ink);
@@ -7765,7 +7741,7 @@ dialog.fm-exportdlg {
 .fm-plan-k {
   padding: 0 4px 0 12px;
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: 11.5px;
   letter-spacing: 0.08em;
   color: var(--muted);
 }
@@ -7782,7 +7758,7 @@ dialog.fm-exportdlg {
   background: transparent;
   color: var(--ink);
   font: inherit;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
 }
@@ -7819,7 +7795,7 @@ dialog.fm-exportdlg {
 .fm-plan-h {
   margin: 0 4px 8px;
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: 11.5px;
   letter-spacing: 0.08em;
   color: var(--muted);
 }
@@ -7858,13 +7834,13 @@ dialog.fm-exportdlg {
 }
 .fm-plan-opt b {
   display: block;
-  font-size: 13.5px;
+  font-size: 14.5px;
   font-weight: 600;
 }
 .fm-plan-opt small,
 .fm-plan-cmp small {
   display: block;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
 }
 .fm-plan-new {
@@ -7893,7 +7869,7 @@ dialog.fm-exportdlg {
 }
 .fm-plan-cmp b {
   display: block;
-  font-size: 13.5px;
+  font-size: 14.5px;
   font-weight: 600;
 }
 .fm-switch {
@@ -7942,9 +7918,9 @@ dialog.fm-exportdlg {
   gap: 12px;
   min-height: 40px;
   padding: 0 16px;
-  border-bottom: 1px solid rgba(23, 58, 143, 0.35);
-  background: rgba(23, 58, 143, 0.12);
-  font-size: 13px;
+  border-bottom: 1px solid rgba(16, 185, 129, 0.35);
+  background: rgba(16, 185, 129, 0.12);
+  font-size: 14px;
   color: var(--muted);
 }
 .fm-banner b {
@@ -7956,7 +7932,7 @@ dialog.fm-exportdlg {
   border: 1px solid var(--brand);
   border-radius: 6px;
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: 11.5px;
   letter-spacing: 0.06em;
   color: var(--brand-light);
 }
@@ -7978,7 +7954,7 @@ dialog.fm-exportdlg {
 :root[data-theme="light"] .fm-banner-back,
 :root[data-theme="light"] .fm-plan-new,
 :root[data-theme="light"] .fm-plan-act[aria-pressed="true"] {
-  color: #173a8f;
+  color: #047857;
 }
 /* the calendar */
 .fm-range {
@@ -8057,7 +8033,7 @@ dialog.fm-exportdlg {
   margin-bottom: 8px;
   text-align: center;
   font-weight: 600;
-  font-size: 13.5px;
+  font-size: 14.5px;
 }
 .fm-cal-g {
   display: grid;
@@ -8067,7 +8043,7 @@ dialog.fm-exportdlg {
 }
 .fm-cal-w {
   padding: 4px 0;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
 }
 .fm-cal-d {
@@ -8079,14 +8055,14 @@ dialog.fm-exportdlg {
   background: transparent;
   color: var(--ink);
   font: inherit;
-  font-size: 13px;
+  font-size: 14px;
   cursor: pointer;
 }
 .fm-cal-d:hover {
   background: var(--panel2);
 }
 .fm-cal-d.in {
-  background: rgba(23, 58, 143, 0.2);
+  background: rgba(16, 185, 129, 0.2);
 }
 .fm-cal-d.end {
   background: var(--brand);
@@ -8117,7 +8093,7 @@ dialog.fm-exportdlg {
   gap: 8px;
   padding: 10px 14px;
   border-top: 1px solid var(--line);
-  font-size: 12.5px;
+  font-size: 13.5px;
   color: var(--muted);
 }
 .fm-range-foot .btn {
@@ -8189,14 +8165,14 @@ dialog.fm-exportdlg {
 }
 .fm-sbx-h b {
   display: block;
-  font-size: 14px;
+  font-size: 15px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .fm-sbx-h small {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
 }
 .fm-sbx-tile {
   width: 10px;
@@ -8253,7 +8229,7 @@ dialog.fm-exportdlg {
   background: transparent;
   color: var(--muted);
   font: inherit;
-  font-size: 13px;
+  font-size: 14px;
   padding: 8px 10px;
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
@@ -8292,7 +8268,7 @@ dialog.fm-exportdlg {
   gap: 6px;
 }
 .fm-sbx-f .lbl {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
 }
 .fm-sbx-rate {
@@ -8311,7 +8287,7 @@ dialog.fm-exportdlg {
   align-items: center;
   gap: 4px;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 14px;
 }
 .fm-sbx-num input,
 .fm-sbx-unit input {
@@ -8328,7 +8304,7 @@ dialog.fm-exportdlg {
 .fm-sbx-sub,
 .fm-sbx-note {
   margin: 0;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
 }
 .fm-sbx-res {
@@ -8337,7 +8313,7 @@ dialog.fm-exportdlg {
   border-left: 2px solid var(--brand);
   background: var(--brand-soft);
   border-radius: 0 8px 8px 0;
-  font-size: 13px;
+  font-size: 14px;
 }
 .fm-sbx-sw {
   display: flex;
@@ -8368,7 +8344,7 @@ dialog.fm-exportdlg {
   background: transparent;
   color: var(--brand-light);
   font: inherit;
-  font-size: 13px;
+  font-size: 14px;
   padding: 6px 8px;
   border-radius: 8px;
   cursor: pointer;
@@ -8402,7 +8378,7 @@ dialog.fm-exportdlg {
   }
 }
 :root[data-theme="light"] .fm-sbx-res {
-  background: rgba(23, 58, 143, 0.1);
+  background: rgba(16, 185, 129, 0.1);
 }
 @media (max-width: 767px) {
   /* on a phone the settings box is the bottom sheet; the full panel sheet waits behind it */
@@ -8415,7 +8391,7 @@ dialog.fm-exportdlg {
 /* ---- Right panel, redrawn: funnel level + block Analytics ---- */
 .fm-foruse {
   margin: 0 0 10px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
 }
 .fm-three {
@@ -8430,7 +8406,7 @@ dialog.fm-exportdlg {
   min-width: 0;
 }
 .fm-three span {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
 }
 .fm-three b {
@@ -8440,7 +8416,7 @@ dialog.fm-exportdlg {
   font-variant-numeric: tabular-nums;
 }
 .fm-three small {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
 }
 .fm-splitbar {
@@ -8472,7 +8448,7 @@ dialog.fm-exportdlg {
   background: transparent;
   color: var(--brand-light);
   font: inherit;
-  font-size: 13px;
+  font-size: 14px;
   cursor: pointer;
 }
 .fm-linkbtn:hover {
@@ -8509,7 +8485,7 @@ dialog.fm-exportdlg {
   border-radius: 4px;
   background: var(--brand);
   color: var(--brand-ink);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.06em;
 }
@@ -8521,7 +8497,7 @@ dialog.fm-exportdlg {
   background: var(--brand);
   color: var(--brand-ink);
   font: inherit;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   cursor: pointer;
 }
@@ -8534,7 +8510,7 @@ dialog.fm-exportdlg {
   border-radius: 8px;
   border: 1px solid var(--line);
   background: var(--panel2);
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
 }
 .fm-sbx-diff b {
@@ -8805,17 +8781,17 @@ dialog.fm-exportdlg {
 }
 .fm-blk.sel .fm-pbody,
 .fm-blk.sel .fm-form:not(.art) {
-  box-shadow: 0 0 0 2px var(--brand), 0 0 0 8px rgba(23, 58, 143, 0.16);
+  box-shadow: 0 0 0 2px var(--brand), 0 0 0 8px rgba(16, 185, 129, 0.16);
 }
 .fm-blk.sel .fm-form.art {
   box-shadow: none;
 }
 .fm-blk.sel .fm-form.art .fm-art {
-  filter: drop-shadow(0 0 1px var(--brand)) drop-shadow(0 0 1px var(--brand)) drop-shadow(0 0 6px rgba(23, 58, 143, 0.5));
+  filter: drop-shadow(0 0 1px var(--brand)) drop-shadow(0 0 1px var(--brand)) drop-shadow(0 0 6px rgba(16, 185, 129, 0.5));
 }
 .fm-blk.sel.multi .fm-pbody,
 .fm-blk.sel.multi .fm-form:not(.art) {
-  box-shadow: 0 0 0 2px rgba(23, 58, 143, 0.7);
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.7);
 }
 .fm-blk.warn .fm-pbody,
 .fm-blk.warn .fm-form:not(.art) {
@@ -9053,7 +9029,7 @@ dialog.fm-exportdlg {
   border: 0;
   outline: none;
   color: var(--ink);
-  font-size: 14px;
+  font-size: 15px;
   height: 100%;
 }
 .fm-qa-cat {
@@ -9069,7 +9045,7 @@ dialog.fm-exportdlg {
   background: var(--bg);
   color: var(--ink);
   font: inherit;
-  font-size: 12.5px;
+  font-size: 13.5px;
   font-weight: 600;
   cursor: pointer;
 }
@@ -9123,7 +9099,7 @@ dialog.fm-exportdlg {
   padding: 0 9px;
   border-radius: 7px;
   color: var(--ink);
-  font-size: 13px;
+  font-size: 14px;
   cursor: pointer;
 }
 .fm-qa-menu li i {
@@ -9141,7 +9117,7 @@ dialog.fm-exportdlg {
 }
 .fm-qa-menu li small {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
 }
 .fm-qa-menu li.cur,
 .fm-qa-menu li:hover {
@@ -9159,7 +9135,7 @@ dialog.fm-exportdlg {
 }
 .fm-qa-h {
   margin: 10px 0 6px;
-  font-size: 10.5px;
+  font-size: 11.5px;
   font-weight: 700;
   letter-spacing: 0.09em;
   text-transform: uppercase;
@@ -9196,7 +9172,7 @@ dialog.fm-exportdlg {
   overflow: hidden;
   padding: 0 4px;
   max-width: 100%;
-  font-size: 11.5px;
+  font-size: 12.5px;
   font-weight: 600;
   line-height: 1.25;
   text-align: center;
@@ -9251,13 +9227,13 @@ dialog.fm-exportdlg {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
 }
 .fm-qa-rows small {
   flex: none;
   color: var(--muted);
-  font-size: 11.5px;
+  font-size: 12.5px;
 }
 .fm-qa-rows .fm-qa-t[aria-selected="true"] {
   background: color-mix(in srgb, var(--brand) 10%, transparent);
@@ -9277,7 +9253,7 @@ dialog.fm-exportdlg {
 .fm-qa-none {
   margin: 14px 4px;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 14px;
 }
 .fm-qa-foot {
   display: flex;
@@ -9288,7 +9264,7 @@ dialog.fm-exportdlg {
   height: 36px;
   padding: 0 12px;
   border-top: 1px solid var(--line);
-  font-size: 11.5px;
+  font-size: 12.5px;
   color: var(--muted);
 }
 .fm-qa-foot kbd {
@@ -9310,7 +9286,7 @@ dialog.fm-exportdlg {
   padding: 4px 2px;
   color: var(--brand-light);
   font: inherit;
-  font-size: 12.5px;
+  font-size: 13.5px;
   font-weight: 600;
   cursor: pointer;
 }
@@ -9386,12 +9362,12 @@ dialog.fm-exportdlg {
   background: var(--line);
 }
 .fm-qa.sheet .fm-qa-in input {
-  font-size: 16px; /* no zoom-in on iOS */
+  font-size: 17px; /* no zoom-in on iOS */
   min-height: 44px;
 }
 .fm-qa.sheet .fm-qa-cat {
   height: 36px;
-  font-size: 13px;
+  font-size: 14px;
 }
 .fm-qa.sheet .fm-qa-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -9424,4 +9400,28 @@ dialog.fm-exportdlg {
   .fm-qa.sheet {
     animation: none;
   }
+}
+.fm-kcheck {
+  display: block;
+  width: 100%;
+  min-height: 32px;
+  padding: 4px 6px;
+  margin-left: -6px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.fm-kcheck:hover,
+.fm-kcheck:focus-visible {
+  background: var(--panel2);
+}
+.fm-kcheck small {
+  display: block;
+  color: var(--brand-light);
+  font-size: 12.5px;
+  font-weight: 600;
 }

@@ -71,7 +71,7 @@ test.describe("workspaces", () => {
     await expect(page.getByRole("list", { name: "Team members" })).not.toContainText(email);
 
     const { ctx, page: indie, mail } = await acceptInvite(browser, email, since);
-    expect(mail.HTML).toContain("private Funnel Mapper Pro V2 workspace");
+    expect(mail.HTML).toContain("private Funnel Mapper workspace");
     await expect(indie.getByText("Indie Person Co").first()).toBeVisible();
     await indie.goto("/clients");
     await expect(indie.getByRole("link", { name: /Sam Carter/ })).toHaveCount(0);

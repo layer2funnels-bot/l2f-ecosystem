@@ -60,7 +60,7 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/c
   const niches = [...new Set((allClients ?? []).map((c) => c.niche).filter(Boolean))];
   return (
     <>
-      <nav aria-label="Breadcrumb" className="mb-4 flex items-center gap-1.5 text-[13px] text-muted">
+      <nav aria-label="Breadcrumb" className="mb-4 flex items-center gap-1.5 text-[14px] text-muted">
         <Link href="/clients" className="text-muted no-underline hover:text-ink">
           Clients
         </Link>
@@ -127,7 +127,7 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/c
               </section>
               <aside className="min-w-0 space-y-8">
                 <section aria-labelledby="kn-h">
-                  <h2 id="kn-h" className="mb-3 font-display text-[17px] font-semibold">
+                  <h2 id="kn-h" className="mb-3 font-display text-[18px] font-semibold">
                     Key numbers
                   </h2>
                   <dl className="fm-kn">
@@ -150,7 +150,7 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/c
                   </dl>
                 </section>
                 <section aria-labelledby="nt-h">
-                  <h2 id="nt-h" className="mb-3 font-display text-[17px] font-semibold">
+                  <h2 id="nt-h" className="mb-3 font-display text-[18px] font-semibold">
                     Notes
                   </h2>
                   <fieldset disabled={!canEdit} className="m-0 min-w-0 border-0 p-0">
@@ -159,7 +159,7 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/c
                 </section>
                 {client.tags.length > 0 && (
                   <section aria-labelledby="tg-h">
-                    <h2 id="tg-h" className="mb-3 font-display text-[17px] font-semibold">
+                    <h2 id="tg-h" className="mb-3 font-display text-[18px] font-semibold">
                       Tags
                     </h2>
                     <div className="flex flex-wrap gap-1.5">

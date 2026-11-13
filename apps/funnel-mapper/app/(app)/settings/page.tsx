@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHeader } from "@/components/page-header";
+import { AppearancePicker } from "@/components/theme-toggle";
 import { ROLE_HELP, ROLE_LABEL } from "@/lib/roles";
 import { requireUser } from "@/lib/supabase/server";
 import { SettingsNav } from "./settings-nav";
@@ -22,6 +23,7 @@ export default async function SettingsPage() {
     { id: "workspace", label: "Workspace & branding" },
     { id: "team", label: "Team" },
     ...(isTeam && isOwner ? [{ id: "independent", label: "Independent accounts" }] : []),
+    { id: "appearance", label: "Appearance" },
     { id: "account", label: "Account" },
   ];
   return (
@@ -51,7 +53,7 @@ export default async function SettingsPage() {
         <p className="mb-4 text-sm text-muted">Shown on client share links and PDF reports, next to the client’s logo.{!isAdmin && " Only admins can change it."}</p>
         <WorkspaceForm agencyName={workspace.agency_name} currency={workspace.default_currency} disabled={!isAdmin} />
         <div className="mt-4">
-          <span className="mb-2 block text-[13px] font-bold">Agency logo</span>
+          <span className="mb-2 block text-[14px] font-bold">Agency logo</span>
           {isAdmin ? (
             <AgencyLogo url={workspace.agency_logo_url} />
           ) : workspace.agency_logo_url ? (
@@ -123,6 +125,13 @@ export default async function SettingsPage() {
         </section>
       )}
 
+      <section id="appearance" className="fm-pane card mb-6 scroll-mt-24 p-6" aria-labelledby="look-h">
+        <h2 id="look-h" className="mb-1 font-display text-lg font-bold">
+          Appearance
+        </h2>
+        <p className="mb-4 text-sm text-muted">Choose how the whole app looks. It is remembered for you on every device.</p>
+        <AppearancePicker />
+      </section>
       <section id="account" className="fm-pane" aria-labelledby="acct-h">
         <h2 id="acct-h" className="mb-3 font-display text-lg font-bold">
           Account

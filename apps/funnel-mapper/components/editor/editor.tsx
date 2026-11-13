@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BrandMark, Icon } from "@/components/icon";
 import { Menu } from "@/components/menu";
+import { toggleTheme } from "@/components/theme-toggle";
 import { isAnnot } from "@/lib/catalog";
 import { CURRENCIES, CURRENCY_CODES, exportFunnelFile, importFunnelFile, isCurrency, type FunnelGraph, type FunnelNode, type FunnelSettings } from "@/lib/graph";
 import { healthChecks } from "@/lib/health";
@@ -801,6 +802,9 @@ function EditorInner(props: EditorProps) {
               )}
               <button type="button" role="menuitem" onClick={() => (close(), rf.fitView({ padding: 0.15, duration: 250, maxZoom: 1.2 }))}>
                 Fit map to screen
+              </button>
+              <button type="button" role="menuitem" onClick={() => (close(), toggleTheme())}>
+                Switch light / dark
               </button>
               <button type="button" role="menuitem" onClick={() => (close(), helpRef.current?.showModal())}>
                 Keyboard shortcuts<kbd>?</kbd>

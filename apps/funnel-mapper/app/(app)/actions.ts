@@ -10,10 +10,12 @@ import { normalisePricing } from "@/lib/pricing";
 import { clientFormSchema, FUNNEL_STATUSES, type ClientForm } from "@/lib/schemas";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { requireUser } from "@/lib/supabase/server";
+import { createSharedClient, decisionMessage, sharedClientsEnabled, type SharedClient } from "@/lib/ecosystem/clients";
+import { ecosystemSession } from "@/lib/ecosystem/session";
 import { builtinTemplate, reidGraph } from "@/lib/templates";
 import { TEMPLATE13_BY_KEY, template13Graph } from "@/lib/templates13";
 
-export type ActionResult = { error?: string; ok?: boolean; id?: string; added?: boolean } | undefined;
+export type ActionResult = { error?: string; ok?: boolean; id?: string; added?: boolean; candidates?: SharedClient[] } | undefined;
 const uuid = z.uuid();
 const newId = () => "n" + crypto.randomUUID().replace(/-/g, "").slice(0, 12);
 
@@ -46,7 +48,23 @@ export async function createClientAction(_: ActionResult, fd: FormData): Promise
   if (!canEdit) return { error: VIEWER };
   const p = clientValues(fd);
   if ("error" in p) return { error: p.error };
-  const { data, error } = await sb.from("clients").insert({ ...p.data, owner_id: user.id }).select("id").single();
+  // Shared clients (off by default; see lib/ecosystem/clients.ts): the client is created in, or linked to, the ecosystem list
+  // FIRST; only then is Funnel Mapper's own row (pricing, notes, funnels) written, carrying the shared id. Never a local-only client.
+  let ecosystemClientId: string | null = null;
+  if (sharedClientsEnabled()) {
+    const session = await ecosystemSession();
+    if (!session) return { error: "Shared clients need the ecosystem sign-in, which is not connected yet. Nothing was saved." };
+    const decision = fd.get("shared_decision"); const linkTo = fd.get("shared_link_to");
+    const o = await createSharedClient(session, {
+      name: p.data.name, email: p.data.email || null, business_name: p.data.business_name || null,
+      decision: decision === "new" || decision === "link" ? decision : undefined, link_to: typeof linkTo === "string" ? linkTo : null,
+    });
+    if (o.kind === "needs_decision") return { error: decisionMessage(o), candidates: o.candidates };
+    if (o.kind === "denied") return { error: "You can't add clients to the shared list. Ask an admin for access." };
+    if (o.kind === "unavailable") return { error: o.message };
+    ecosystemClientId = o.client.id;
+  }
+  const { data, error } = await sb.from("clients").insert({ ...p.data, owner_id: user.id, ...(ecosystemClientId ? { ecosystem_client_id: ecosystemClientId } : {}) }).select("id").single();
   if (error) return { error: error.message };
   revalidatePath("/clients");
   revalidatePath("/");

@@ -167,21 +167,21 @@ export function ClientsBrowser({ clients, initialStatus = "", initialQuery = "" 
                 <div className="flex items-center gap-3">
                   <Avatar c={c} />
                   <div className="min-w-0 flex-1">
-                    <div className="truncate font-display text-[17px] font-bold">{c.name}</div>
-                    <div className="truncate text-[13px] text-muted">{c.business_name || c.niche || "—"}</div>
+                    <div className="truncate font-display text-[18px] font-bold">{c.name}</div>
+                    <div className="truncate text-[14px] text-muted">{c.business_name || c.niche || "—"}</div>
                   </div>
                   <StatusPill status={c.status} />
                 </div>
                 <div className="grid grid-cols-3 gap-2 rounded-xl bg-bg px-3 py-2 text-xs text-muted">
                   <div>
-                    Funnels<b className="block font-display text-[15px] text-ink">{c.funnels}</b>
+                    Funnels<b className="block font-display text-[16px] text-ink">{c.funnels}</b>
                   </div>
                   <div>
-                    Live<b className="block font-display text-[15px] text-ink">{c.liveFunnels}</b>
+                    Live<b className="block font-display text-[16px] text-ink">{c.liveFunnels}</b>
                   </div>
                   <div>
                     Pricing
-                    <b className="block truncate font-display text-[15px] text-ink" title={pricingSummary(c, c.currency) || undefined}>
+                    <b className="block truncate font-display text-[16px] text-ink" title={pricingSummary(c, c.currency) || undefined}>
                       {pricingShort(c, c.currency)}
                     </b>
                   </div>

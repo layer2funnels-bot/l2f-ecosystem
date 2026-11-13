@@ -137,7 +137,7 @@ export function routeForPage(app, page) {
   if (t) return hrefFor.list(t.key);        // record pages are never carried across organizations: the list is the landing
   return hrefFor.office();
 }
-export const appLabel = (app) => ({ office: 'Office', funnel_mapper_pro: 'Funnel Mapper Pro', projects: 'Projects', clients: 'Clients', drive: 'Drive', planner: 'Planner' }[app] ?? 'That app');
+export const appLabel = (app) => ({ office: 'Office', funnel_mapper_pro: 'Funnel Mapper', projects: 'Projects', clients: 'Clients', drive: 'Drive', planner: 'Planner' }[app] ?? 'That app');
 
 // No active organization yet (first sign-in): start where the person has the most authority, then by name.
 const RANK = { owner: 0, admin: 1, editor: 2, viewer: 3 };

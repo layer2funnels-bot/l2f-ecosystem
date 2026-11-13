@@ -22,7 +22,7 @@ const portFrom = (fromType: string | undefined, handle: string | null | undefine
 
 export const DND_MIME = "application/x-funnel-block";
 
-/** The line being dragged off a port: The primary colour while it can land, amber when the block under it can't take people. */
+/** The line being dragged off a port: Emerald while it can land, amber when the block under it can't take people. */
 function ConnectionLine({ fromX, fromY, toX, toY, fromPosition, connectionStatus }: ConnectionLineComponentProps) {
   const bad = connectionStatus === "invalid";
   const dx = Math.max(40, Math.abs(toX - fromX) / 2),
@@ -353,7 +353,7 @@ export function Canvas() {
 
   const miniColor = useCallback((n: Node) => {
     const node = useEditor.getState().nodes.find((x) => x.id === n.id);
-    if (node?.type === "frame") return `${String(node.p.color ?? "#173A8F")}26`;
+    if (node?.type === "frame") return `${String(node.p.color ?? "#10B981")}26`;
     const T = node && typeOf(node.type);
     return T ? CATDARK[T.color ?? T.cat] : "#888";
   }, []);

@@ -41,7 +41,7 @@ export function ForecastCharts({ rows, currency }: { rows: ProjectionRow[]; curr
   const fmt = (v: number) => moneyShort(v, currency);
   return (
     <figure className="m-0 mb-3" aria-label="Forecast charts. Use “Show table” for the numbers.">
-      <figcaption className="mb-1 text-[13px] font-bold">Revenue and costs per month</figcaption>
+      <figcaption className="mb-1 text-[14px] font-bold">Revenue and costs per month</figcaption>
       <Legend
         items={[
           ["Revenue", "var(--chart-1)"],
@@ -60,7 +60,7 @@ export function ForecastCharts({ rows, currency }: { rows: ProjectionRow[]; curr
           </LineChart>
         </ResponsiveContainer>
       </div>
-      <figcaption className="mt-3 mb-1 text-[13px] font-bold">Cumulative profit</figcaption>
+      <figcaption className="mt-3 mb-1 text-[14px] font-bold">Cumulative profit</figcaption>
       <div className="h-[140px]">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={rows} margin={{ top: 6, right: 8, bottom: 0, left: 0 }}>

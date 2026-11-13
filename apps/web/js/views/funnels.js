@@ -1,5 +1,5 @@
 // Office → Funnels (design 06): home, list, record, edit, share with a client, archive / restore, delete permanently (type the name).
-// The business records live here in Office; Funnel Mapper Pro keeps its own data in this phase. The database decides who may do what; the
+// The business records live here in Office; Funnel Mapper keeps its own data in this phase. The database decides who may do what; the
 // buttons only follow `ctx.can`, which comes from the same permission engine (organization-wide or on one client).
 import { h, put, icon, pill, btn, link, dialog, toast, field, notice, skeleton, errorState, emptyState, notFoundState, readOnlyNotice, plate, initials } from '../ui.js';
 import { FUNNEL_TYPES, hrefFor } from '../routes.js';
@@ -100,7 +100,7 @@ export function funnelsHomeView(ctx) {
         recent.length ? h('ul', { class: 'rows' }, ...recent.map(({ t, x }) => h('li', {}, h('span', {}, h('b', {}, nameOf(t.key, x) || '(untitled)'), h('br'), h('span', { class: 'fine' }, `${t.one.toLowerCase()} · ${when(x.updated_at)}`)), h('a', { class: 'btn', href: hrefFor.record(t.key, x.id) }, 'Open'))))
           : emptyState({ title: 'Nothing here yet', body: 'Records you create appear here.', ic: 'doc' })),
       stratBox,
-      h('section', { class: 'card pad' }, h('h3', {}, 'Funnel maps'), h('p', { class: 'fine', style: 'margin:var(--space-2) 0 var(--space-3)' }, 'Funnel maps live in the Funnel Mapper Pro app. How they appear here needs a deliberate design first.'), pill('Link design pending', 'warn'))));
+      h('section', { class: 'card pad' }, h('h3', {}, 'Funnel maps'), h('p', { class: 'fine', style: 'margin:var(--space-2) 0 var(--space-3)' }, 'Funnel maps live in the Funnel Mapper app. How they appear here needs a deliberate design first.'), pill('Link design pending', 'warn'))));
   })();
   return h('section', {}, subnav('home'), ...pageHead('Office · Funnels', 'Funnels', `Your ${ctx.orgName} funnel assets in one place.`), box);
 }

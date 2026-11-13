@@ -1,6 +1,6 @@
 {
   "id": "funnel_mapper_pro",
-  "name": "Funnel Mapper Pro",
+  "name": "Funnel Mapper",
   "description": "Map, model and forecast",
   "group": "Studio",
   "plate": {
@@ -17,7 +17,9 @@
     "layer2funnels",
     "aurj"
   ],
-  "permissionPrefix": [],
+  "permissionPrefix": [
+    "fmp"
+  ],
   "grantRequired": true,
   "status": "building",
   "embeds": [],

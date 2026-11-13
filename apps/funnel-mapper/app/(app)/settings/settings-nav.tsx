@@ -45,7 +45,7 @@ export function SettingsNav({ sections }: { sections: { id: string; label: strin
                   e.preventDefault();
                   show(s.id);
                 }}
-                className={`block rounded-lg px-3 py-2 text-[13.5px] font-medium no-underline ${cur === s.id ? "bg-side-item text-ink" : "text-muted hover:bg-side-item hover:text-ink"}`}
+                className={`block rounded-lg px-3 py-2 text-[14.5px] font-medium no-underline ${cur === s.id ? "bg-side-item text-ink" : "text-muted hover:bg-side-item hover:text-ink"}`}
               >
                 {s.label}
               </a>
