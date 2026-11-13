@@ -66,18 +66,22 @@ export function WorkspaceSwitcher({ currentId, workspaces, appsUrl }: { currentI
   const current = workspaces.find((w) => w.id === currentId);
   const { go, pending, error } = useOrgSwitch();
   const [note, setNote] = useState("");
+  // the note left by a switch (the page was reloaded): read once after arrival, shown for a few seconds
   useEffect(() => {
+    let n: string | null = null;
     try {
-      const n = sessionStorage.getItem(NOTE_KEY);
-      if (n) {
-        sessionStorage.removeItem(NOTE_KEY);
-        setNote(n);
-        const t = setTimeout(() => setNote(""), 7000);
-        return () => clearTimeout(t);
-      }
+      n = sessionStorage.getItem(NOTE_KEY);
+      if (n) sessionStorage.removeItem(NOTE_KEY);
     } catch {
-      /* nothing to show */
+      /* private window: nothing to show */
     }
+    if (!n) return;
+    const show = setTimeout(() => setNote(n), 0);
+    const hide = setTimeout(() => setNote(""), 7000);
+    return () => {
+      clearTimeout(show);
+      clearTimeout(hide);
+    };
   }, []);
   // close on outside click and Escape (the menu floats over the page)
   useEffect(() => {
