@@ -17,8 +17,8 @@ insert into public.clients (id, workspace_id, name, archived_at)
 update public.client_profiles p set business_name = nullif(c.business_name, ''), niche = nullif(c.niche, ''), email = nullif(c.email, ''), phone = nullif(c.phone, ''), website = case when c.website ~ '^https?://' then c.website end,
     country = nullif(c.country, ''), currency = c.currency, status = c.status, tags = c.tags[1:20]
   from fmp_src.clients c join fmp.id_map m on m.kind = 'client' and m.old_id = c.id where p.client_id = m.new_id;
-insert into fmp.client_commercial (client_id, workspace_id, monthly_retainer, pricing_model, pricing_amount, logo_path, was_in_trash)
-  select m.new_id, :'org', c.monthly_retainer, c.pricing_model, c.pricing_amount, c.logo_url, c.deleted_at is not null from fmp_src.clients c join fmp.id_map m on m.kind = 'client' and m.old_id = c.id on conflict (client_id) do nothing;
+insert into fmp.client_commercial (workspace_id, client_id, monthly_retainer, pricing_model, pricing_amount, logo_path, was_in_trash)
+  select :'org', m.new_id, c.monthly_retainer, c.pricing_model, c.pricing_amount, c.logo_url, c.deleted_at is not null from fmp_src.clients c join fmp.id_map m on m.kind = 'client' and m.old_id = c.id on conflict (workspace_id, client_id) do nothing;
 -- FMP's free-text client notes become ONE internal team note per client (never client-visible)
 insert into public.client_notes (workspace_id, client_id, body)
   select :'org', m.new_id, c.notes from fmp_src.clients c join fmp.id_map m on m.kind = 'client' and m.old_id = c.id

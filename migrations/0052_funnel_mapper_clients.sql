@@ -24,16 +24,19 @@ create schema if not exists fmp;
 revoke all on schema fmp from public;
 
 -- ------------------------------------------------------------------ commercial terms per client (Funnel Mapper's own data about a shared client)
-create table fmp.client_commercial (
+create table fmp.client_commercial (       -- the same fields and values as Funnel Mapper's own clients table (20261005000000_client_pricing.sql), so a move loses nothing
   workspace_id uuid not null references public.workspaces(id) on delete cascade,
   client_id uuid not null,
   monthly_retainer numeric(12, 2) not null default 0 check (monthly_retainer >= 0),
-  pricing_model text not null default 'retainer'
-    check (pricing_model in ('retainer', 'fixed_project', 'one_time', 'hourly', 'revenue_share', 'other')),
+  pricing_model text not null default 'retainer' check (pricing_model in ('retainer', 'fixed', 'one_time', 'hourly', 'commission', 'other')),
   pricing_amount numeric(12, 2) not null default 0 check (pricing_amount >= 0),
-  pricing_frequency text check (pricing_frequency is null or pricing_frequency in ('once', 'hour', 'week', 'month', 'quarter', 'year')),
+  billing_frequency text not null default 'monthly' check (billing_frequency in ('one_time', 'weekly', 'monthly', 'quarterly', 'yearly')),
+  hours_per_month numeric(8, 2) not null default 0 check (hours_per_month >= 0),
+  commission_pct numeric(5, 2) not null default 0 check (commission_pct between 0 and 100),
+  project_start date, project_end date check (project_end is null or project_start is null or project_end >= project_start),
+  pricing_notes text not null default '' check (length(pricing_notes) <= 20000),
   logo_path text check (logo_path is null or length(logo_path) <= 400),
-  notes text not null default '' check (length(notes) <= 20000),
+  was_in_trash boolean not null default false,   -- set only by the data move: Funnel Mapper's trash arrives as an archived client
   updated_by uuid, updated_at timestamptz not null default now(),
   primary key (workspace_id, client_id),
   foreign key (workspace_id, client_id) references public.clients (workspace_id, id) on delete cascade
@@ -65,7 +68,7 @@ create trigger audit_fmp_client_commercial after insert or update or delete on f
 
 -- ------------------------------------------------------------------ old id -> new id (data move, verification, rollback). Never reachable by the app role.
 create table fmp.id_map (
-  kind text not null check (kind in ('client', 'workspace', 'user', 'funnel', 'product', 'share_link', 'template')),
+  kind text not null check (kind in ('client', 'workspace', 'user', 'funnel', 'version', 'actual', 'product', 'share_link', 'comment', 'template')),
   old_id uuid not null,
   new_id uuid not null,
   workspace_id uuid references public.workspaces(id) on delete cascade,

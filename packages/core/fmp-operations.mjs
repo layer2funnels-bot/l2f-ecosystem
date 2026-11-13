@@ -12,7 +12,7 @@ import { defineOperation } from './define.mjs';
 const T = (max = 8000) => ({ type: 'text', min: 0, max });
 const STATUS = { type: 'enum', values: ['lead', 'proposal', 'active', 'paused', 'past'] };
 const SELECT = `select c.id, c.name, c.archived_at, c.created_at, p.business_name, p.email, p.status, p.niche, p.tags,
-    cc.monthly_retainer, cc.pricing_model, cc.pricing_amount, cc.pricing_frequency
+    cc.monthly_retainer, cc.pricing_model, cc.pricing_amount, cc.billing_frequency, cc.hours_per_month, cc.commission_pct, cc.project_start, cc.project_end, cc.pricing_notes
   from clients c left join client_profiles p on p.client_id = c.id
   left join fmp.client_commercial cc on cc.workspace_id = c.workspace_id and cc.client_id = c.id`;
 
@@ -100,13 +100,14 @@ export const fmpOperations = [
     name: 'fmp.clients.commercial.set', class: 'write', single: true,
     input: {
       client: { type: 'uuid', required: true }, monthly_retainer: { type: 'number', min: 0, max: 1e9 },
-      pricing_model: { type: 'enum', values: ['retainer', 'fixed_project', 'one_time', 'hourly', 'revenue_share', 'other'] },
-      pricing_amount: { type: 'number', min: 0, max: 1e9 }, pricing_frequency: { type: 'enum', values: ['once', 'hour', 'week', 'month', 'quarter', 'year'] },
-      notes: T(20000),
+      pricing_model: { type: 'enum', values: ['retainer', 'fixed', 'one_time', 'hourly', 'commission', 'other'] },
+      pricing_amount: { type: 'number', min: 0, max: 1e9 }, billing_frequency: { type: 'enum', values: ['one_time', 'weekly', 'monthly', 'quarterly', 'yearly'] },
+      hours_per_month: { type: 'number', min: 0, max: 1e6 }, commission_pct: { type: 'number', min: 0, max: 100 },
+      project_start: { type: 'date' }, project_end: { type: 'date' }, pricing_notes: T(20000),
     },
     run: async (q, ctx, i) => {
       if (!(await q('select 1 from clients where id = $1', [i.client])).length) return [];
-      const cols = ['monthly_retainer', 'pricing_model', 'pricing_amount', 'pricing_frequency', 'notes'].filter((k) => i[k] !== undefined);
+      const cols = ['monthly_retainer', 'pricing_model', 'pricing_amount', 'billing_frequency', 'hours_per_month', 'commission_pct', 'project_start', 'project_end', 'pricing_notes'].filter((k) => i[k] !== undefined);
       const vals = [ctx.orgId, i.client, ...cols.map((k) => i[k])];
       const ins = cols.length ? `, ${cols.join(', ')}` : ''; const ph = cols.map((_, n) => `$${n + 3}`).join(', ');
       const upd = cols.length ? cols.map((k) => `${k} = excluded.${k}`).join(', ') : 'updated_at = now()';

@@ -104,7 +104,7 @@ r = await call('fmp.clients.match', { name: 'Aurj Student Co', email: 'hello@aur
 check('FM23', 'Duplicate checks in Layer2Funnels never find Aurj clients', data(r)[0].exact.length === 0 && data(r)[0].possible.length === 0);
 
 // ---- F. commercial terms (Funnel Mapper's own data about a shared client)
-r = await call('fmp.clients.commercial.set', { client: C1, monthly_retainer: 1500, pricing_model: 'hourly', pricing_amount: 60, pricing_frequency: 'hour' }, U.ED);
+r = await call('fmp.clients.commercial.set', { client: C1, monthly_retainer: 1500, pricing_model: 'hourly', pricing_amount: 60, hours_per_month: 10 }, U.ED);
 check('FM24', 'An editor sets a client\'s pricing in Funnel Mapper; it is stored once and shown in the list', r.status === 200 && Number(data(r)[0]?.monthly_retainer) === 1500 && data(r)[0]?.pricing_model === 'hourly'
   && Number(data(await call('fmp.clients.list', {}, U.VW)).find((x) => x.id === C1)?.pricing_amount) === 60);
 r = await call('fmp.clients.commercial.set', { client: C1, monthly_retainer: 9 }, U.VW);
