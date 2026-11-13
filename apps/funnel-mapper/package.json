@@ -21,7 +21,8 @@
     "live-check": "NODE_USE_ENV_PROXY=1 node scripts/deploy/live-check.mjs",
     "cf:build": "opennextjs-cloudflare build",
     "cf:size": "node scripts/cf-size.mjs",
-    "cf:deploy": "node scripts/cf-deploy.mjs"
+    "cf:deploy": "node scripts/cf-deploy.mjs",
+    "cf:build:live": "node scripts/cf-deploy.mjs --build-only"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
