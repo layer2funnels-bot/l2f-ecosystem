@@ -1,0 +1,612 @@
+[
+ [
+  "launcher",
+  "Launcher",
+  "Ecosystem"
+ ],
+ [
+  "profile",
+  "Your profile (global)",
+  "Ecosystem"
+ ],
+ [
+  "auth",
+  "Sign in screens",
+  "Ecosystem"
+ ],
+ [
+  "states",
+  "Shared states",
+  "Ecosystem"
+ ],
+ [
+  "system",
+  "Design system",
+  "Ecosystem"
+ ],
+ [
+  "office/home",
+  "Home",
+  "Office"
+ ],
+ [
+  "office/funnels",
+  "Funnels overview",
+  "Office"
+ ],
+ [
+  "office/avatars",
+  "Customer Avatars (list)",
+  "Office"
+ ],
+ [
+  "office/avatar-new",
+  "New avatar: import or blank, choose 3D look",
+  "Office"
+ ],
+ [
+  "office/avatar/john",
+  "Avatar profile",
+  "Office"
+ ],
+ [
+  "office/avatar/john/deep",
+  "Avatar full profile",
+  "Office"
+ ],
+ [
+  "office/avatar/john/edit",
+  "Avatar: edit chapters",
+  "Office"
+ ],
+ [
+  "office/avatar/john/use",
+  "Avatar: use it",
+  "Office"
+ ],
+ [
+  "office/avatar/john/evidence",
+  "Avatar: evidence",
+  "Office"
+ ],
+ [
+  "office/offers",
+  "Offers & Products",
+  "Office"
+ ],
+ [
+  "office/offer-new",
+  "New offer",
+  "Office"
+ ],
+ [
+  "office/stories",
+  "Stories",
+  "Office"
+ ],
+ [
+  "office/story-new",
+  "New story",
+  "Office"
+ ],
+ [
+  "office/brandkits",
+  "Brand Kits (many)",
+  "Office"
+ ],
+ [
+  "office/brandkit-new",
+  "New brand kit",
+  "Office"
+ ],
+ [
+  "office/brandkit/l2f",
+  "Brand kit",
+  "Office"
+ ],
+ [
+  "office/strategies",
+  "Funnel Strategies",
+  "Office"
+ ],
+ [
+  "office/strategy-template",
+  "Default strategy template",
+  "Office"
+ ],
+ [
+  "office/strategy/s1",
+  "Strategy document",
+  "Office"
+ ],
+ [
+  "office/documents",
+  "Documents with sections",
+  "Office"
+ ],
+ [
+  "office/team",
+  "Team",
+  "Office"
+ ],
+ [
+  "office/member/SN",
+  "Member",
+  "Office"
+ ],
+ [
+  "office/apps",
+  "Apps",
+  "Office"
+ ],
+ [
+  "office/admin/people",
+  "Admin: people",
+  "Office"
+ ],
+ [
+  "office/admin/person/SN",
+  "Person: relationships + app/feature access",
+  "Office"
+ ],
+ [
+  "office/admin/teammates",
+  "Teammate access",
+  "Office"
+ ],
+ [
+  "office/admin/clients",
+  "Client access (owner only)",
+  "Office"
+ ],
+ [
+  "office/admin/roles",
+  "Roles",
+  "Office"
+ ],
+ [
+  "office/admin/review",
+  "Access review",
+  "Office"
+ ],
+ [
+  "office/admin/storage",
+  "Storage & version rules",
+  "Office"
+ ],
+ [
+  "office/admin/branding",
+  "Organization branding",
+  "Office"
+ ],
+ [
+  "office/admin/audit",
+  "Audit log",
+  "Office"
+ ],
+ [
+  "projects/home",
+  "Home",
+  "Projects"
+ ],
+ [
+  "projects/mywork",
+  "My Work",
+  "Projects"
+ ],
+ [
+  "projects/workload",
+  "Workload",
+  "Projects"
+ ],
+ [
+  "projects/portfolio",
+  "Portfolio",
+  "Projects"
+ ],
+ [
+  "projects/files",
+  "Files (new)",
+  "Projects"
+ ],
+ [
+  "projects/all",
+  "All projects",
+  "Projects"
+ ],
+ [
+  "projects/trash",
+  "Trash",
+  "Projects"
+ ],
+ [
+  "projects/p/p1/overview",
+  "Overview",
+  "Projects"
+ ],
+ [
+  "projects/p/p1/list",
+  "List",
+  "Projects"
+ ],
+ [
+  "projects/p/p1/board",
+  "Board",
+  "Projects"
+ ],
+ [
+  "projects/p/p1/calendar",
+  "Calendar",
+  "Projects"
+ ],
+ [
+  "projects/p/p1/timeline",
+  "Timeline",
+  "Projects"
+ ],
+ [
+  "projects/p/p1/report",
+  "Report",
+  "Projects"
+ ],
+ [
+  "projects/p/p1/docs",
+  "Docs & links",
+  "Projects"
+ ],
+ [
+  "projects/p/p1/collection",
+  "Collection",
+  "Projects"
+ ],
+ [
+  "projects/p/p5/overview",
+  "Archived project",
+  "Projects"
+ ],
+ [
+  "planner/home",
+  "Home",
+  "Planner"
+ ],
+ [
+  "planner/mywork",
+  "My work",
+  "Planner"
+ ],
+ [
+  "planner/plans",
+  "Plans",
+  "Planner"
+ ],
+ [
+  "planner/plan/map",
+  "Plan: Planner view",
+  "Planner"
+ ],
+ [
+  "planner/plan/timeline",
+  "Plan: Timeline",
+  "Planner"
+ ],
+ [
+  "planner/plan/reviews",
+  "Plan: Reviews",
+  "Planner"
+ ],
+ [
+  "planner/plan/settings",
+  "Plan: Settings",
+  "Planner"
+ ],
+ [
+  "planner/alignment",
+  "Alignment",
+  "Planner"
+ ],
+ [
+  "planner/reports",
+  "Reports",
+  "Planner"
+ ],
+ [
+  "planner/model/map",
+  "Strategy map (redesigned)",
+  "Planner"
+ ],
+ [
+  "planner/model/kinds",
+  "Objective kinds",
+  "Planner"
+ ],
+ [
+  "planner/model/kpi",
+  "KPI types",
+  "Planner"
+ ],
+ [
+  "planner/model/fa",
+  "Focus areas",
+  "Planner"
+ ],
+ [
+  "planner/model/horizons",
+  "Time horizons",
+  "Planner"
+ ],
+ [
+  "planner/model/tpl",
+  "Templates",
+  "Planner"
+ ],
+ [
+  "fmp/home",
+  "Home",
+  "Funnel Mapper"
+ ],
+ [
+  "fmp/clients",
+  "Clients",
+  "Funnel Mapper"
+ ],
+ [
+  "fmp/client/sc",
+  "Client",
+  "Funnel Mapper"
+ ],
+ [
+  "fmp/funnels",
+  "Funnels",
+  "Funnel Mapper"
+ ],
+ [
+  "fmp/funnel/pt",
+  "Editor",
+  "Funnel Mapper"
+ ],
+ [
+  "fmp/funnel/pt/reports",
+  "Reports",
+  "Funnel Mapper"
+ ],
+ [
+  "fmp/templates",
+  "Templates",
+  "Funnel Mapper"
+ ],
+ [
+  "fmp/trash",
+  "Trash",
+  "Funnel Mapper"
+ ],
+ [
+  "fmp/settings",
+  "Settings",
+  "Funnel Mapper"
+ ],
+ [
+  "clients/list",
+  "All clients (table \u00b7 grid \u00b7 pipeline)",
+  "Clients"
+ ],
+ [
+  "clients/c/hk/Overview",
+  "Client overview",
+  "Clients"
+ ],
+ [
+  "clients/c/hk/Work/0",
+  "Work \u203a Brand Base (submitted answers)",
+  "Clients"
+ ],
+ [
+  "clients/c/hk/Work/1",
+  "Work \u203a Strategy workspace",
+  "Clients"
+ ],
+ [
+  "clients/c/hk/Work/1/avatar",
+  "Strategy \u203a Customer Avatar",
+  "Clients"
+ ],
+ [
+  "clients/c/hk/Work/1/offers",
+  "Strategy \u203a Offers",
+  "Clients"
+ ],
+ [
+  "clients/c/hk/Work/1/brand",
+  "Strategy \u203a Brand Kits",
+  "Clients"
+ ],
+ [
+  "clients/c/hk/Work/2",
+  "Work \u203a Copy",
+  "Clients"
+ ],
+ [
+  "clients/c/hk/Work/3",
+  "Work \u203a Build",
+  "Clients"
+ ],
+ [
+  "clients/c/hk/Documents",
+  "Documents",
+  "Clients"
+ ],
+ [
+  "clients/requests",
+  "Requests & Approvals",
+  "Clients"
+ ],
+ [
+  "clients/r/r3",
+  "Request detail",
+  "Clients"
+ ],
+ [
+  "clients/sops",
+  "SOPs",
+  "Clients"
+ ],
+ [
+  "clients/settings/stages",
+  "Settings",
+  "Clients"
+ ],
+ [
+  "drive/home",
+  "Home",
+  "Drive"
+ ],
+ [
+  "drive/mydrive",
+  "Library",
+  "Drive"
+ ],
+ [
+  "drive/personal",
+  "Personal",
+  "Drive"
+ ],
+ [
+  "drive/edit/doc/sop",
+  "Docs editor",
+  "Drive"
+ ],
+ [
+  "drive/edit/sheet/cal",
+  "Sheets editor",
+  "Drive"
+ ],
+ [
+  "drive/edit/slides/deck",
+  "Slides editor",
+  "Drive"
+ ],
+ [
+  "drive/edit/image/hero",
+  "Image editor",
+  "Drive"
+ ],
+ [
+  "drive/edit/pdf/prop",
+  "PDF editor",
+  "Drive"
+ ],
+ [
+  "tasks/today",
+  "Today",
+  "Tasks"
+ ],
+ [
+  "tasks/upcoming",
+  "Upcoming",
+  "Tasks"
+ ],
+ [
+  "tasks/inbox",
+  "Inbox",
+  "Tasks"
+ ],
+ [
+  "tasks/teammates",
+  "Teammates",
+  "Tasks"
+ ],
+ [
+  "tasks/list/mine",
+  "My tasks (blocks, show completed)",
+  "Tasks"
+ ],
+ [
+  "tasks/list/team",
+  "Team list with access",
+  "Tasks"
+ ],
+ [
+  "portal/home",
+  "Home",
+  "Client Portal"
+ ],
+ [
+  "portal/requests",
+  "Requests",
+  "Client Portal"
+ ],
+ [
+  "portal/approvals",
+  "Approvals",
+  "Client Portal"
+ ],
+ [
+  "portal/notes",
+  "My notes",
+  "Client Portal"
+ ],
+ [
+  "whiteboard/home",
+  "Boards and folders",
+  "Whiteboard"
+ ],
+ [
+  "whiteboard/folder/f1",
+  "Folder",
+  "Whiteboard"
+ ],
+ [
+  "whiteboard/board/b1",
+  "Full-page board",
+  "Whiteboard"
+ ],
+ [
+  "forms/list",
+  "Forms",
+  "Forms"
+ ],
+ [
+  "forms/b/quiz",
+  "Builder",
+  "Forms"
+ ],
+ [
+  "forms/subs",
+  "Responses",
+  "Forms"
+ ],
+ [
+  "ladder/list",
+  "Ladders",
+  "Value Ladder"
+ ],
+ [
+  "ladder/map/hk",
+  "Ladder",
+  "Value Ladder"
+ ],
+ [
+  "social/calendar",
+  "Calendar",
+  "Social Planner"
+ ],
+ [
+  "social/board",
+  "Pipeline",
+  "Social Planner"
+ ],
+ [
+  "agents/home",
+  "Agents",
+  "Layer 2 Agents"
+ ],
+ [
+  "agents/meeting/new",
+  "Meeting Intelligence",
+  "Layer 2 Agents"
+ ],
+ [
+  "agents/ask",
+  "Ask",
+  "Layer 2 Agents"
+ ]
+]
