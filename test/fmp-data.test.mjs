@@ -84,6 +84,15 @@ check('FD12', 'Saved styles and blocks belong to the organization', !!data(r)[0]
 check('FD13', 'Default currency: admins change it, editors cannot', data(await call('fmp.settings.set', { default_currency: 'USD' }, U.OWN)).length === 1
   && (await call('fmp.settings.set', { default_currency: 'EUR' }, U.ED)).status !== 200 && data(await call('fmp.settings.get', {}, U.VW))[0]?.default_currency === 'USD');
 
+// ---- B2. clients as Funnel Mapper shows them
+r = await call('fmp.clients.update', { id: C1, business_name: 'Carter Strength', email: ' SAM@X.test ', pricing_model: 'hourly', pricing_amount: 60, hours_per_month: 10, notes: 'FM note', tags: ['pt'] }, U.ED);
+const full = data(await call('fmp.clients.full', { id: C1 }, U.VW))[0];
+check('FD30', 'Funnel Mapper client form: identity goes to the shared client, pricing and notes to Funnel Mapper\'s own record', r.status === 200 && full.business_name === 'Carter Strength' && full.email === 'sam@x.test'
+  && full.pricing_model === 'hourly' && Number(full.pricing_amount) === 60 && full.notes === 'FM note' && (await rows('select business_name from client_profiles where client_id=$1', [C1]))[0].business_name === 'Carter Strength');
+check('FD31', 'Viewers and people scoped elsewhere cannot change a client from Funnel Mapper', data(await call('fmp.clients.update', { id: C1, notes: 'x' }, U.VW)).length === 0
+  && data(await call('fmp.clients.update', { id: C2, notes: 'x' }, U.SCOPED)).length === 0 && data(await call('fmp.clients.full', {}, U.SCOPED)).map((c) => c.id).join() === C1
+  && data(await call('fmp.clients.full', {}, U.NOFMP)).length === 0);
+
 // ---- C. share links and the public page
 r = await call('fmp.links.create', { funnel: F1, allow_comments: true }, U.ED);
 check('FD14', 'Editors cannot create share links (sharing is admin by default, sensitive)', data(r).length === 0 || r.status !== 200);

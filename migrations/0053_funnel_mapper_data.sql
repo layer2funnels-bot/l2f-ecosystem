@@ -95,7 +95,8 @@ create table fmp.org_settings (                   -- per organization: default c
   updated_by uuid, updated_at timestamptz not null default now()
 );
 -- Funnel Mapper's own trash for clients (separate from the Clients app's archive)
-alter table fmp.client_commercial add column trashed_at timestamptz, add column trashed_by uuid;
+alter table fmp.client_commercial add column trashed_at timestamptz, add column trashed_by uuid,
+  add column notes text not null default '' check (length(notes) <= 50000);   -- Funnel Mapper's own notes about a client (V7 03 §3: notes stay with Funnel Mapper)
 
 create index fmp_funnels_client on fmp.funnels (workspace_id, client_id);
 create index fmp_funnels_updated on fmp.funnels (workspace_id, updated_at desc);

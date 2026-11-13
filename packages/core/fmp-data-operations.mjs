@@ -201,6 +201,60 @@ export const fmpDataOperations = [
     run: (q, ctx, i) => q(`insert into fmp.org_settings (workspace_id, default_currency) values ($1, $2) on conflict (workspace_id) do update set default_currency = excluded.default_currency returning default_currency`, [ctx.orgId, i.default_currency]),
   }),
 
+  // ---------------------------------------------------------------- clients as Funnel Mapper shows them (shared identity + Funnel Mapper's own terms)
+  defineOperation({
+    name: 'fmp.clients.full', class: 'read',
+    input: { id: { type: 'uuid' }, trashed: { type: 'bool' }, archived: { type: 'bool' } },
+    run: async (q, ctx, i) => {
+      if (!(await q('select private.has_permission($1, $2) ok', [ctx.orgId, 'fmp.funnel.view']))[0]?.ok) return [];
+      return q(`select c.id, c.name, c.created_at, c.archived_at, coalesce(p.business_name, '') business_name, coalesce(p.niche, '') niche, coalesce(p.email, '') email,
+          coalesce(p.phone, '') phone, coalesce(p.website, '') website, coalesce(p.country, '') country, coalesce(p.currency, s.default_currency, 'GBP') currency,
+          coalesce(p.status, 'lead') status, coalesce(p.tags, '{}') tags,
+          coalesce(cc.monthly_retainer, 0) monthly_retainer, coalesce(cc.pricing_model, 'retainer') pricing_model, coalesce(cc.pricing_amount, 0) pricing_amount,
+          coalesce(cc.billing_frequency, 'monthly') billing_frequency, coalesce(cc.hours_per_month, 0) hours_per_month, coalesce(cc.commission_pct, 0) commission_pct,
+          cc.project_start, cc.project_end, coalesce(cc.pricing_notes, '') pricing_notes, coalesce(cc.notes, '') notes, cc.logo_path, cc.trashed_at,
+          greatest(c.created_at, cc.updated_at) updated_at
+        from clients c left join client_profiles p on p.client_id = c.id
+        left join fmp.client_commercial cc on cc.workspace_id = c.workspace_id and cc.client_id = c.id
+        left join fmp.org_settings s on s.workspace_id = c.workspace_id
+        where ($1::uuid is null or c.id = $1) and ($1::uuid is not null or ((cc.trashed_at is not null) = coalesce($2, false)))
+          and ($3::boolean is null or (c.archived_at is not null) = $3)
+        order by c.name limit 1000`, [i.id ?? null, i.trashed ?? null, i.archived ?? null]);
+    },
+  }),
+  defineOperation({
+    // Funnel Mapper's client form: identity fields go to the shared client (Clients rules), its own terms and notes to fmp.client_commercial
+    name: 'fmp.clients.update', class: 'write', single: true,
+    input: {
+      id: ID, name: { type: 'text', min: 1, max: 200 }, business_name: T(200), niche: T(200), email: T(330), phone: T(40), website: T(300), country: T(80), currency: { type: 'currency' },
+      status: { type: 'enum', values: ['lead', 'proposal', 'active', 'paused', 'past'] }, tags: { type: 'list', items: 'text', max: 20, itemMax: 40, itemMin: 1 },
+      archived: { type: 'bool' }, logo_path: T(400), notes: T(50000),
+      monthly_retainer: { type: 'number', min: 0, max: 1e9 }, pricing_model: { type: 'enum', values: ['retainer', 'fixed', 'one_time', 'hourly', 'commission', 'other'] },
+      pricing_amount: { type: 'number', min: 0, max: 1e9 }, billing_frequency: { type: 'enum', values: ['one_time', 'weekly', 'monthly', 'quarterly', 'yearly'] },
+      hours_per_month: { type: 'number', min: 0, max: 1e6 }, commission_pct: { type: 'number', min: 0, max: 100 }, project_start: { type: 'date' }, project_end: { type: 'date' }, pricing_notes: T(20000),
+      clear_project_dates: { type: 'bool' },
+    },
+    run: async (q, ctx, i) => {
+      if (!(await q('select 1 from clients where id = $1', [i.id])).length) return [];
+      if (!(await q('select private.has_permission($1, $2, $3) ok', [ctx.orgId, 'fmp.funnel.edit', i.id]))[0]?.ok) return [];
+      if (i.name !== undefined) await q('update clients set name = $2 where id = $1', [i.id, i.name]);
+      if (i.archived !== undefined) await q(`update clients set archived_at = case when $2 then coalesce(archived_at, now()) else null end where id = $1`, [i.id, i.archived]);
+      const prof = ['business_name', 'niche', 'email', 'phone', 'website', 'country', 'currency', 'status', 'tags'].filter((k) => i[k] !== undefined);
+      if (prof.length) {
+        const val = (k) => (k === 'email' ? (String(i.email).trim().toLowerCase() || null) : k === 'website' ? (/^https?:\/\//.test(i.website) ? i.website : null) : i[k] === '' ? null : i[k]);
+        await q(`update client_profiles set ${prof.map((k, n) => `${k} = $${n + 2}`).join(', ')} where client_id = $1`, [i.id, ...prof.map(val)]);
+      }
+      const x = { ...i, ...(i.clear_project_dates ? { project_start: null, project_end: null } : {}) };
+      const comm = ['monthly_retainer', 'pricing_model', 'pricing_amount', 'billing_frequency', 'hours_per_month', 'commission_pct', 'project_start', 'project_end', 'pricing_notes', 'notes', 'logo_path']
+        .filter((k) => x[k] !== undefined || (i.clear_project_dates && (k === 'project_start' || k === 'project_end')));
+      if (comm.length) {
+        await q(`insert into fmp.client_commercial (workspace_id, client_id, ${comm.join(', ')}) values ($1, $2, ${comm.map((_, n) => `$${n + 3}`).join(', ')})
+          on conflict (workspace_id, client_id) do update set ${comm.map((k) => `${k} = excluded.${k}`).join(', ')}`, [ctx.orgId, i.id, ...comm.map((k) => x[k] ?? null)]);
+      }
+      return [{ id: i.id }];
+    },
+  }),
+
   // ---------------------------------------------------------------- Funnel Mapper's trash for clients (the Clients app archive is separate)
   defineOperation({
     name: 'fmp.clients.trash', class: 'write', single: true, input: { client: ID },

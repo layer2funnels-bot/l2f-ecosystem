@@ -13,20 +13,17 @@ on conflict (kind, old_id) do nothing;
 
 -- clients: into the ecosystem Clients tables (a profile row is created by the trigger), the FMP-only commercial fields beside them
 insert into public.clients (id, workspace_id, name, archived_at)
-  select m.new_id, :'org', c.name, coalesce(c.archived_at, c.deleted_at) from fmp_src.clients c join fmp.id_map m on m.kind = 'client' and m.old_id = c.id on conflict (id) do nothing;
+  select m.new_id, :'org', c.name, c.archived_at from fmp_src.clients c join fmp.id_map m on m.kind = 'client' and m.old_id = c.id on conflict (id) do nothing;
 update public.client_profiles p set business_name = nullif(c.business_name, ''), niche = nullif(c.niche, ''), email = nullif(c.email, ''), phone = nullif(c.phone, ''), website = case when c.website ~ '^https?://' then c.website end,
     country = nullif(c.country, ''), currency = c.currency, status = c.status, tags = c.tags[1:20]
   from fmp_src.clients c join fmp.id_map m on m.kind = 'client' and m.old_id = c.id where p.client_id = m.new_id;
-insert into fmp.client_commercial (workspace_id, client_id, monthly_retainer, pricing_model, pricing_amount, logo_path, was_in_trash)
-  select :'org', m.new_id, c.monthly_retainer, c.pricing_model, c.pricing_amount, c.logo_url, c.deleted_at is not null from fmp_src.clients c join fmp.id_map m on m.kind = 'client' and m.old_id = c.id on conflict (workspace_id, client_id) do nothing;
--- FMP's free-text client notes become ONE internal team note per client (never client-visible)
-insert into public.client_notes (workspace_id, client_id, body)
-  select :'org', m.new_id, c.notes from fmp_src.clients c join fmp.id_map m on m.kind = 'client' and m.old_id = c.id
-   where length(trim(c.notes)) > 0 and not exists (select 1 from public.client_notes n where n.client_id = m.new_id);
+insert into fmp.client_commercial (workspace_id, client_id, monthly_retainer, pricing_model, pricing_amount, logo_path, was_in_trash, trashed_at, notes)
+  select :'org', m.new_id, c.monthly_retainer, c.pricing_model, c.pricing_amount, c.logo_url, c.deleted_at is not null, c.deleted_at, c.notes from fmp_src.clients c join fmp.id_map m on m.kind = 'client' and m.old_id = c.id on conflict (workspace_id, client_id) do nothing;
+-- Funnel Mapper's client notes stay Funnel Mapper's own (V7 03 §3): carried in fmp.client_commercial.notes by the insert above
 
 insert into fmp.products (id, workspace_id, client_id, name, type, params, notes, created_at)
   select mp.new_id, :'org', mc.new_id, p.name, p.type, p.params, p.notes, p.created_at from fmp_src.products p join fmp.id_map mp on mp.kind = 'product' and mp.old_id = p.id left join fmp.id_map mc on mc.kind = 'client' and mc.old_id = p.client_id on conflict (id) do nothing;
-insert into fmp.funnels (id, workspace_id, client_id, name, description, status, graph, settings, summary, thumbnail_path, archived_at, created_at, updated_at)
+insert into fmp.funnels (id, workspace_id, client_id, name, description, status, graph, settings, summary, thumbnail_path, trashed_at, created_at, updated_at)
   select mf.new_id, :'org', mc.new_id, f.name, f.description, f.status, f.graph, f.settings, f.summary, f.thumbnail_url, f.deleted_at, f.created_at, f.updated_at
     from fmp_src.funnels f join fmp.id_map mf on mf.kind = 'funnel' and mf.old_id = f.id join fmp.id_map mc on mc.kind = 'client' and mc.old_id = f.client_id on conflict (id) do nothing;
 insert into fmp.funnel_versions (id, workspace_id, funnel_id, graph, settings, label, auto, created_at)
