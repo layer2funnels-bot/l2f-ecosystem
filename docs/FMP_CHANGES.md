@@ -87,7 +87,7 @@ Every read and write goes through the ecosystem API as the signed-in person; the
 | `lib/supabase/proxy.ts` | `/join/` no longer public (independent sign-up removed). | Stage 2. |
 | `lib/supabase/server.ts` | `requireUser` uses the ecosystem: organization from `org.list`, role, profile; `/unavailable` when Funnel Mapper isn't switched on. | Stage 2. |
 | `package-lock.json` | Follows `package.json`. | Stage 2. |
-| `package.json` | `sharp` removed (images are shrunk in the browser; keeps the server bundle small for Cloudflare). | Stage 2. |
+| `package.json` | `sharp` removed (images are shrunk in the browser); Next 16.4.6 (needed by the Cloudflare adapter); `@opennextjs/cloudflare` and `wrangler` (dev only); scripts `cf:build`, `cf:size`. | Stage 2; owner decision: Cloudflare hosting. |
 | `app/(auth)/join/[code]/join-form.tsx` | Deleted: independent sign-up retired (owner decision). | Stage 2. |
 | `app/(auth)/join/[code]/page.tsx` | Deleted: independent sign-up retired (owner decision). | Stage 2. |
 | `app/api/image/route.ts` | Deleted: images are shrunk in the browser and stored through `fmp.files.upload`. | Stage 2. |
@@ -104,3 +104,11 @@ Every read and write goes through the ecosystem API as the signed-in person; the
 | `lib/eco/data.ts` | Added: server reads in the shapes the screens use; client logos signed for one hour. | Stage 2. |
 | `lib/eco/server.ts` | Added: session token, current organization (cookie `fm-org`), `eco` / `ecoRows`. | Stage 2. |
 | `lib/eco/upload.ts` | Added: image upload to the organization's files, signed addresses, page capture storage. | Stage 2. |
+| `.gitignore` | Cloudflare build folders (`.open-next/`, `.wrangler/`) ignored. | Stage 2: Cloudflare hosting. |
+| `eslint.config.mjs` | Lint skips the Cloudflare build folders. | Stage 2: Cloudflare hosting. |
+| `next.config.ts` | Server builds get a stub for elkjs (Tidy Up runs in the browser), keeping the Worker under Cloudflare's free 3 MiB. | Stage 2: Cloudflare hosting. |
+| `lib/elk-server-stub.ts` | Added: the server's stand-in for elkjs. | Stage 2: Cloudflare hosting. |
+| `open-next.config.ts` | Added: Cloudflare adapter configuration (`@opennextjs/cloudflare`). | Stage 2: Cloudflare hosting. |
+| `scripts/cf-size.mjs` | Added: `npm run cf:size` checks the compressed Worker against the free 3 MiB limit (2.76 MiB on 13 Nov). | Stage 2: Cloudflare hosting. |
+| `wrangler.jsonc` | Added: Cloudflare Worker settings (name `funnel-mapper`, Node compatibility). No account, domain or secret in it. | Stage 2: Cloudflare hosting. |
+| `AGENTS.md` | Added: the note `next dev` 16.4 writes for coding assistants (kept so the tree stays clean). | Stage 2: Next 16.4.6. |

@@ -7,6 +7,9 @@
 export type EcoResult<T> = { ok: true; data: T[] } | { ok: false; status: number; code: string; message: string; fields?: string[] };
 
 /** Operations Funnel Mapper may relay from the browser. Everything else is refused before it leaves Funnel Mapper. */
+/** The ecosystem API's marker for "no organization yet" (packages/core/api.mjs NO_ORG). */
+export const NO_ORG = "00000000-0000-0000-0000-000000000000";
+
 export const BROWSER_OPS = /^(fmp\.[a-z_.]+|org\.list)$/;
 
 export async function ecoFetch<T = Record<string, unknown>>(base: string, op: string, input: unknown, token: string, orgId: string | null, timeoutMs = 15000): Promise<EcoResult<T>> {
@@ -14,7 +17,8 @@ export async function ecoFetch<T = Record<string, unknown>>(base: string, op: st
   try {
     const res = await fetch(`${base.replace(/\/$/, "")}/api/${op}`, {
       method: "POST", signal: ctl.signal, cache: "no-store",
-      headers: { "content-type": "application/json", authorization: `Bearer ${token}`, ...(orgId ? { "x-org-id": orgId } : {}) },
+      // calls made before an organization is chosen (org.list) carry the API's "no organization" marker
+      headers: { "content-type": "application/json", authorization: `Bearer ${token}`, "x-org-id": orgId ?? NO_ORG },
       body: JSON.stringify(input ?? {}),
     });
     const body = (await res.json().catch(() => null)) as { ok?: boolean; data?: T[]; error?: { code: string; message: string; fields?: string[] } } | null;
