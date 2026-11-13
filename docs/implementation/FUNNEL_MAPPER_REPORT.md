@@ -24,7 +24,7 @@ Plan: `FUNNEL_MAPPER_PLAN.md`. Design decisions: `FUNNEL_MAPPER_DESIGN_DECISIONS
 | Matching report for the later data move | `scripts/fmp-client-match.mjs` | `test/fmp-client-match.test.mjs` 6/6 |
 
 ## 3. Database and API changes
-- **0052** (local only, not applied live): `apps.name` → "Funnel Mapper"; permissions `fmp.funnel.view/create/edit/delete/share`; schema `fmp` with `client_commercial` (row security: Funnel Mapper access AND the client in scope AND the organization; audited) and `id_map` (no access for the app role). No data moved, no app switched on for any organization, no funnel tables yet (they come with the stage 2 code that uses them). Rollback: `drop schema fmp cascade; delete from permissions where key like 'fmp.%'; update apps set name='Funnel Mapper Pro' where key='funnel_mapper_pro';`.
+- **0052** (local only, not applied live): `apps.name` → "Funnel Mapper"; permissions `fmp.funnel.view/create/edit/delete/share`; schema `fmp` with `client_commercial` (Funnel Mapper's own pricing fields with the same names and values as its clients table, so the move loses nothing; row security: Funnel Mapper access AND the client in scope AND the organization; audited) and `id_map` (no access for the app role). No data moved, no app switched on for any organization, no funnel tables yet (they come with the stage 2 code that uses them). Rollback: `drop schema fmp cascade; delete from permissions where key like 'fmp.%'; update apps set name='Funnel Mapper Pro' where key='funnel_mapper_pro';`.
 - **Funnel Mapper's own database** (local migration, not applied live): nullable `clients.ecosystem_client_id`.
 - New API operations listed above; every refusal reads as "not found".
 
@@ -40,6 +40,8 @@ Plan: `FUNNEL_MAPPER_PLAN.md`. Design decisions: `FUNNEL_MAPPER_DESIGN_DECISIONS
 | Browser suite `e2e-ui` (fresh local database, migrations 0001–0052) | – | **242/242** |
 | API end-to-end `test:e2e` | – | **71/71** |
 | Mutation controls (FX ×3) | – | 3/3 caught |
+| Migration rehearsal `dryrun:fmp` on the real 0052 tables (synthetic data: 60 clients, 250 funnels, 1,500 versions) | – | **12/12** |
+| Ecosystem tests on both engines (`DRIVERS=pglite,pg npm test`) | – | **102/102 groups** |
 
 **Not verified yet:** Funnel Mapper creating a client in the live Clients app end to end (needs the stage 2 sign-in bridge; covered today at API level: FM6/FM7 prove a client made through the Funnel Mapper operation appears in Clients and the other way round). Funnel Mapper's full 195-test browser suite (runs monthly in CI and on demand). The real-PostgreSQL driver run happens in CI.
 
