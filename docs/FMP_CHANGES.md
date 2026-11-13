@@ -8,11 +8,11 @@ Rules that still apply: code only; no real data; no connection to any live proje
 
 | File | Change | Reason |
 |---|---|---|
-| `.env.example` | Product name; the unused Launcher variable from step 1 removed. Stage 2: ecosystem API and web addresses; the service key and independent sign-up code removed. | V7 rename; stage 2. |
-| `app/(app)/actions.ts` | Every action runs an ecosystem API operation (`fmp.*`, `profile.update`). "New client" creates the shared client and asks the person to decide on possible duplicates (never linked automatically). Team, invitations and branding point to Office › Admin. | Shared clients (V7 03 §3, 16 §4); stage 2. |
+| `.env.example` | Product name. Stage 2: the ecosystem's public sign-in key (renewal and sign-out only), ecosystem API/web addresses and the shared cookie domain; no service key, no sign-up code. | V7 rename; stage 2. |
+| `app/(app)/actions.ts` | Every action runs an ecosystem API operation (`fmp.*`). "New client" creates the shared client and asks the person to decide on possible duplicates (never linked automatically). Template screenshots are accepted only from this organization's Funnel Mapper captures. Organization switching uses `org.switch`. | Shared clients (V7 03 §3, 16 §4); stage 2. |
 | `app/(app)/clients/[id]/page.tsx` | Fixed-size text classes (`text-[N px]`) one step up (+1 px). V7 16 §4: "Open in Clients" link to the client in the Clients app. | FM-7 sizes. |
 | `app/(app)/clients/clients-browser.tsx` | Fixed-size text classes (`text-[N px]`) one step up (+1 px). | FM-7 sizes. |
-| `app/(app)/clients/page.tsx` | "Shared with the Clients app" note; reads through the ecosystem API. | V7 16 §4; stage 2. |
+| `app/(app)/clients/page.tsx` | "Shared with the Clients app" note with "Open Clients"; reads through the ecosystem API. | V7 16 §4; stage 2. |
 | `app/(app)/settings/page.tsx` | Fixed-size text classes (`text-[N px]`) one step up (+1 px). Stage 2: only Funnel Mapper's own settings (default currency, appearance); profile, account, organization and team are the ecosystem's and are not shown here. | FM-7 sizes; stage 2 (owner, 13 Nov). |
 | `app/(app)/settings/settings-nav.tsx` | Fixed-size text classes (`text-[N px]`) one step up (+1 px). | FM-7 sizes. |
 | `app/(app)/templates/templates-browser.tsx` | Fixed-size text classes (`text-[N px]`) one step up (+1 px). | FM-7 sizes. |
@@ -34,7 +34,7 @@ Rules that still apply: code only; no real data; no connection to any live proje
 | `components/editor/forecast-charts.tsx` | Fixed-size text classes (`text-[N px]`) one step up (+1 px). | FM-7 sizes. |
 | `components/editor/kpi-bar.tsx` | Each model check in the checks popover is a button: it selects and zooms to its block, or opens the funnel panel. | Audit P0 "make warnings clickable". |
 | `components/page-header.tsx` | Fixed-size text classes (`text-[N px]`) one step up (+1 px). | FM-7 sizes. |
-| `components/theme-toggle.tsx` | Fixed-size text classes (`text-[N px]`) one step up (+1 px). | FM-7 sizes. |
+| `components/theme-toggle.tsx` | Fixed-size text classes (`text-[N px]`) one step up (+1 px). Light/dark is remembered per device (it was saved on the old Funnel Mapper account, which no longer exists). | FM-7 sizes. |
 | `components/top-strip.tsx` | Fixed-size text classes (`text-[N px]`) one step up (+1 px). | FM-7 sizes. |
 | `components/workspace-switcher.tsx` | Organization switcher the same as the ecosystem's (organization mark, "Your organizations", role, "Current", same footer); switching uses the ecosystem rule (`org.switch`): the ecosystem remembers the choice for every app, the same page is kept, a client or funnel never comes along, and "isn't set up" when Funnel Mapper is off there. "All apps" back to the Launcher. | V7 16 §2; owner, 13 Nov: switching the same as other apps. |
 | `lib/ecosystem/clients.ts` | Added: duplicate-decision helpers for the ecosystem Client service (`fmp.clients.*`). | Shared clients; always on since stage 2. |
@@ -56,7 +56,7 @@ Every read and write goes through the ecosystem API as the signed-in person; the
 | `app/(app)/clients/[id]/portfolio-bits.tsx` | Client logo saves a stored file path (`logo_path`) through `fmp.clients.update`. | Stage 2. |
 | `app/(app)/clients/new/page.tsx` | Reads through the ecosystem API (`lib/eco/data.ts`). | Stage 2. |
 | `app/(app)/funnels/page.tsx` | Reads funnels, clients and actuals through the ecosystem API. | Stage 2. |
-| `app/(app)/layout.tsx` | Organization, role and counts come from the ecosystem (`org.list`, `fmp.settings.get`, `fmp.funnels.counts`). "All apps" address for the sidebar. | Stage 2. |
+| `app/(app)/layout.tsx` | Organization, role and counts come from the ecosystem; "All apps" and profile addresses; no account-based theme sync. | Stage 2. |
 | `app/(app)/page.tsx` | Home reads through the ecosystem API. | Stage 2. |
 | `app/(app)/settings/settings-forms.tsx` | Only the default-currency form remains. | Stage 2 (owner, 13 Nov). |
 | `app/(app)/templates/page.tsx` | Templates (built-in and the organization's) read through `fmp.templates.list`. | Stage 2. |
@@ -84,8 +84,8 @@ Every read and write goes through the ecosystem API as the signed-in person; the
 | `lib/queries.ts` | Template options read through the ecosystem API. | Stage 2. |
 | `lib/schemas.ts` | Row types follow the ecosystem's `fmp` records. | Stage 2. |
 | `lib/share/server.ts` | Share pages read through the ecosystem's public share endpoint. | Stage 2. |
-| `lib/supabase/proxy.ts` | `/join/` no longer public (independent sign-up removed). | Stage 2. |
-| `lib/supabase/server.ts` | `requireUser` uses the ecosystem: organization from `org.list`, role, profile; `/unavailable` when Funnel Mapper isn't switched on. An organization where it is off (API "not found") also goes to `/unavailable` instead of an error page. | Stage 2. |
+| `lib/supabase/proxy.ts` | Every private page needs the shared ecosystem session: renewed shortly before it expires (written back for the other apps); without one, the ecosystem sign-in page, which brings the person back to the same page (built from `NEXT_PUBLIC_SITE_URL`). | Stage 2. |
+| `lib/supabase/server.ts` | `requireUser` uses the shared session (no Supabase client): organization from the ecosystem, profile from `profile.get`; no session or an ended one → the ecosystem sign-in. An organization where Funnel Mapper is off → `/unavailable`; a busy service → the error page. | Stage 2. |
 | `package-lock.json` | Follows `package.json`. | Stage 2. |
 | `package.json` | `sharp` removed (images are shrunk in the browser); Next 16.4.6 (needed by the Cloudflare adapter); `@opennextjs/cloudflare` and `wrangler` (dev only); scripts `cf:build`, `cf:size`. | Stage 2; owner decision: Cloudflare hosting. |
 | `app/(auth)/join/[code]/join-form.tsx` | Deleted: independent sign-up retired (owner decision). | Stage 2. |
@@ -97,12 +97,12 @@ Every read and write goes through the ecosystem API as the signed-in person; the
 | `lib/supabase/admin.ts` | Deleted: no service key in Funnel Mapper; people are managed in Office › Admin. | Stage 2. |
 | `scripts/recompress-images.mts` | Deleted: maintenance script for the old storage buckets. | Stage 2. |
 | `tests/unit/image-pipeline.test.ts` | Deleted with the sharp pipeline. | Stage 2. |
-| `app/(auth)/unavailable/page.tsx` | Added: "Funnel Mapper isn't set up for …" with "Switch to …" for the person's organizations where it is on (same switch as the sidebar). | Stage 2; V7 16 §4. |
+| `app/(auth)/unavailable/page.tsx` | Added: "Funnel Mapper isn't set up for …" with "Switch to …" for the person's organizations where it is on; without a session, the ecosystem sign-in. | Stage 2; V7 16 §4. |
 | `app/api/eco/[op]/route.ts` | Added: same-site relay from the browser to the ecosystem API (allow-listed `fmp.*` and `org.list`, same-origin check). | Stage 2. |
 | `lib/eco/browser.ts` | Added: `ecoCall` for components. | Stage 2. |
 | `lib/eco/core.ts` | Added: ecosystem API call with the person's token and organization; "no organization" marker for `org.list`; Launcher, Clients-app and profile addresses. | Stage 2. |
 | `lib/eco/data.ts` | Added: server reads in the shapes the screens use; client logos signed for one hour. | Stage 2. |
-| `lib/eco/server.ts` | Added: session token, the current organization as the ecosystem remembers it (same for every app; same default as the web app), `eco` / `ecoRows`. A failed organization list is reported as such, never as "no access". | Stage 2. |
+| `lib/eco/server.ts` | Added: the token from the shared session cookie, the current organization as the ecosystem remembers it (same default as the web app), `eco` / `ecoRows`. A failed organization list is reported as such, never as "no access". | Stage 2. |
 | `lib/eco/upload.ts` | Added: image upload to the organization's files, signed addresses, page capture storage. | Stage 2. |
 | `.gitignore` | Cloudflare build folders (`.open-next/`, `.wrangler/`) ignored. | Stage 2: Cloudflare hosting. |
 | `eslint.config.mjs` | Lint skips the Cloudflare build folders. | Stage 2: Cloudflare hosting. |
@@ -114,3 +114,21 @@ Every read and write goes through the ecosystem API as the signed-in person; the
 | `AGENTS.md` | Added: the note `next dev` 16.4 writes for coding assistants (kept so the tree stays clean). | Stage 2: Next 16.4.6. |
 | `app/error.tsx` | Added: "This page couldn't load … Try again" when the ecosystem service is busy or out of reach (nothing changed). | Stage 2: same error state as the other apps. |
 | `components/switch-org-button.tsx` | Added: "Switch to …" button for the not-available page. | Stage 2. |
+
+## One sign-in for every app, fresh start (owner decisions, 13 Nov 2026)
+
+Owner: "only one sign-in, the main ecosystem sign-in, to access any app" (chosen: Funnel Mapper on the same domain, one shared session cookie); "I don't want old data … it's a fresh start"; templates: only the 13 built-in ones (unchanged, `lib/templates13.ts`).
+
+| File | Change | Why |
+|---|---|---|
+| `lib/eco/shared-session.ts` | Added: reads the ecosystem's shared session cookie (`l2f-session`), renews it with the public key and writes it back, the ecosystem sign-in address, token claims for display. | One sign-in. |
+| `app/auth/signout/route.ts` | Signs out everywhere: ends the session at the sign-in service, removes the shared cookie, opens the ecosystem sign-in page. | One sign-in. |
+| `app/(auth)/login/login-form.tsx` | Deleted: Funnel Mapper has no sign-in page. | One sign-in. |
+| `app/(auth)/login/page.tsx` | Deleted: Funnel Mapper has no sign-in page. | One sign-in. |
+| `app/(auth)/reset-password/page.tsx` | Deleted: passwords are reset on the ecosystem sign-in page. | One sign-in. |
+| `app/(auth)/update-password/page.tsx` | Deleted: passwords are changed in the ecosystem. | One sign-in. |
+| `app/auth/accept/page.tsx` | Deleted: invitations are accepted in the ecosystem. | One sign-in. |
+| `app/auth/callback/route.ts` | Deleted: e-mail links go to the ecosystem. | One sign-in. |
+| `app/auth/confirm/route.ts` | Deleted: e-mail links go to the ecosystem. | One sign-in. |
+| `app/auth/removed/route.ts` | Deleted: removal is handled by the ecosystem. | One sign-in. |
+| `lib/supabase/client.ts` | Deleted: no Supabase sign-in client in Funnel Mapper. | One sign-in. |

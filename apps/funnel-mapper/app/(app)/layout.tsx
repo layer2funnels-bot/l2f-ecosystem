@@ -1,5 +1,4 @@
 import { AppNav } from "@/components/app-nav";
-import { ThemeSync } from "@/components/theme-toggle";
 import { TopStrip } from "@/components/top-strip";
 import { templateOptions } from "@/lib/queries";
 import { roleLabel } from "@/lib/roles";
@@ -19,7 +18,6 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   const niches = [...new Set((nr.data ?? []).map((c) => c.niche).filter(Boolean))];
   return (
     <div className="min-h-full lg:flex">
-      <ThemeSync saved={user.user_metadata?.theme === "light" || user.user_metadata?.theme === "dark" ? user.user_metadata.theme : null} at={Number(user.user_metadata?.theme_at) || 0} />
       <AppNav agency={workspace.agency_name || "Layer2Funnels"} user={profile.full_name || user.email || ""} role={roleLabel(role)} logo={workspace.agency_logo_url} team={isTeam} workspaceId={workspace.id} workspaces={workspaces} appsUrl={launcherUrl()} profileUrl={profileUrl()} trash={counts.trashed + counts.trashed_clients} pinned={pin.data ?? []} counts={{ "/clients": live.length, "/funnels": counts.active }} />
       <div className="min-w-0 flex-1">
         <TopStrip canEdit={canEdit} clients={clients} templates={templates} defaultCurrency={workspace.default_currency} niches={niches} />

@@ -1,6 +1,6 @@
 # Funnel Mapper: stage 2 report (13 Nov 2026)
 
-Stage 2 makes Funnel Mapper a real ecosystem app: one sign-in, one database, one permission system. Owner decisions (13 Nov): **retire independent accounts**, **host on Cloudflare**, the owner restores access to the old database, and **only the owner's account switches first**.
+Stage 2 makes Funnel Mapper a real ecosystem app: one sign-in, one database, one permission system. Owner decisions (13 Nov): **retire independent accounts**, **host on Cloudflare**, **a fresh start** (no old data; only the 13 built-in templates, DECISIONS FM-9) and **one sign-in for every app** (FM-10).
 
 ## 1. Already present before this stage
 Stage 1 (PR #47): code copy in `apps/funnel-mapper`, rename, original theme, migration 0052 (shared clients), `fmp.clients.*` operations, matching tool, dry run.
@@ -24,13 +24,13 @@ Checked against `docs/EXTERNAL_APP_ONBOARDING.md` (14-point checklist) and the V
 - **Open in Clients** on each client page (V7 16 §4). Settings › Team links to Office › Admin.
 - App manifest: reuses Clients; storage through the shared storage adapter.
 
-Checklist items still open (each listed in §5): the ecosystem's own rail with search and notifications is not drawn inside Funnel Mapper (it runs as its own app at its own address; it has its own search, and notifications are off ecosystem-wide); Funnel Mapper items are not in the ecosystem's shared search yet; one sign-in across both addresses (today a person signs in once in each, with the same account).
+Checklist items still open (each listed in §5): the ecosystem's own rail with search and notifications is not drawn inside Funnel Mapper (it runs as its own app at its own address; it has its own search, and notifications are off ecosystem-wide); Funnel Mapper items are not in the ecosystem's shared search yet. (One sign-in is done: §3.)
 
-## 3. Old database (read-only look, nothing changed)
-Owner reset the password; queried read-only on 13 Nov:
-- 4 workspaces: **Layer2Funnels** (team) and 3 personal ("Aurj", "Live check …", "Hammad Workspave"). The 3 personal ones hold **no clients, funnels, products or templates**, so retiring them loses nothing; there is nothing to export for them.
-- Layer2Funnels: 4 clients, 7 funnels, 54 versions, 28 real-number rows, 3 products, 1 saved template, 0 share links, 0 comments; 37 stored images (2 logos, 1 thumbnail, 34 page captures).
-- **Matching report** (exact e-mail only; names only for review): all **4 clients are new** to the shared list (the live shared list holds 2 unrelated clients). No duplicates, nothing ambiguous. The report with names is kept outside the repository (private data).
+## 3. Fresh start and one sign-in (owner, 13 Nov)
+- **No old data.** Nothing is copied from the old Funnel Mapper Pro database: Funnel Mapper starts empty on the shared client list. (A read-only look on 13 Nov found 4 clients and 7 funnels in Layer2Funnels and 3 empty personal workspaces; they stay in the old project, untouched, until you decide what to do with it.)
+- **Templates:** the 13 built-in templates the old app showed, unchanged (`lib/templates13.ts` is byte-for-byte the original). The one saved team template in the old database ("L2F PT tripwire funnel") was a test copy and is not brought over.
+- **One sign-in:** Funnel Mapper has no sign-in, password or invitation pages any more. It uses the ecosystem's session (one shared cookie for every app on the domain). Without it, Funnel Mapper opens the ecosystem sign-in page, which brings you back to the same page; signing out anywhere signs you out everywhere. Needs Funnel Mapper on the same domain as the web app at go-live (a sub-domain or path; free on Cloudflare).
+- The monthly job that compared the copy with the original Funnel Mapper Pro (3 hours of CI each month) was retired: it tested the old database and sign-in, which Funnel Mapper no longer uses.
 
 ## 4. Tests (actual results, 13 Nov 2026)
 | Check | Result |
@@ -46,17 +46,20 @@ Owner reset the password; queried read-only on 13 Nov:
 | Browser walkthrough on the local ecosystem (sign in → home → new shared client → new funnel → editor "Saved" → funnels, clients, templates, trash, settings) | pass, no server errors; funnel stored in `fmp.funnels` on the shared client |
 | Second walkthrough: opened in Aurj → "not set up" → switch; organization from the Launcher; forged organization ignored; Open in Clients; logo upload (shrunk in the browser, stored, shown); editor All apps; Settings → Office › Admin | all pass, no errors |
 | Mutation check after the storage change | 116/116 caught |
+| One sign-in, browser test (web app 127.0.0.1:8788 + Funnel Mapper 127.0.0.1:3000): Funnel Mapper → ecosystem sign-in → back to the same page; the web app is signed in too; Funnel Mapper's renewal is used by the web app; sign-out in Funnel Mapper signs out everywhere; old sign-in pages gone; a foreign return address is ignored | 8/8 |
+| Web unit tests for the shared session (W14a–e: old sessions moved, cookie scope, renewals shared, sign-out, return addresses) | pass |
+| Ecosystem browser suites after the session change: API e2e 71/71, browser e2e 242/242, onboarding 22/22, gallery 77/77, docs 95/95, drive 64/64, media 48/48, sheets 70/70 | pass |
+| Planner browser suite | PB1b fails, the same on the code before this change (not part of CI; a Planner header check, unrelated) |
 | Third walkthrough: switcher like the shared one; switch to Aurj with Funnel Mapper off → "not set up" and the ecosystem remembers Aurj; switch back; same page kept (Templates); a client page → client list with the note; a switch made in another app shows in Funnel Mapper; Settings without profile/team/account; name opens the ecosystem profile | all pass, no errors |
 
 **Not verified yet:** the long Funnel Mapper browser suite (≈195 tests) against the ecosystem; it was written for the old database and needs updating. Share links and image upload were tested at API level, not yet clicked through in a browser.
 
 ## 5. Remaining work (each needs the owner's go-ahead)
-1. **Live ecosystem database is far behind** (it has no `fmp` schema and an early `clients` table). Moving Funnel Mapper data first needs the ecosystem go-live: apply the pending migrations to the live project (or the planned new project), with the guarded scripts. This is the go-live step, not a Funnel Mapper step.
-2. **Data move** (after 1): rehearsed `migrate.sql`, 4 clients created as new shared clients (matching report above), 7 funnels with versions, real numbers, products, template; 37 images copied; `id_map` for rollback; the old project kept read-only. Only the owner's account first.
-3. **Cloudflare deploy**: needs a Cloudflare login on this session (or the owner's account) and the ecosystem addresses as settings. Free plan; nothing to buy.
-4. Close the 3 empty personal workspaces in the old project after the move (nothing in them).
-5. Update Funnel Mapper's own browser suite to the ecosystem setup.
-6. One sign-in across the ecosystem and Funnel Mapper addresses (host Funnel Mapper under the same domain, or a sign-in hand-off), and Funnel Mapper items in the ecosystem's shared search. Both are design decisions for the go-live step.
+1. **Go-live of the ecosystem database** (the live one has no `fmp` schema yet): apply the pending migrations with the guarded scripts. Funnel Mapper then starts empty; nothing is moved.
+2. **Cloudflare deploy** of Funnel Mapper on the same domain as the web app (needs your domain on Cloudflare and a Cloudflare login on this session or your account). Free plan; nothing to buy. Set `cookieDomain` / `appOrigins` in `apps/web/config.js` and Funnel Mapper's `ECOSYSTEM_*` and `NEXT_PUBLIC_SITE_URL` (go-live runbook).
+3. Funnel Mapper's own long browser suite and its old database tests (`tests/e2e`, `tests/integration`) still target the old setup; rewrite them for the ecosystem (not run in CI).
+4. Funnel Mapper items in the ecosystem's shared search.
+5. What to do with the old Funnel Mapper Pro project (Supabase + Vercel): untouched; your decision.
 
 ## 6. Statement
-No live database was changed, nothing was deployed, the original Funnel-Mapper repository and its live Supabase/Vercel projects were not touched. The old database was only read.
+No live database was changed, nothing was deployed, the original Funnel-Mapper repository and its live Supabase/Vercel projects were not touched. The old database was only read (counts and the template list).

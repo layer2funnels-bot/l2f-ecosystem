@@ -4,6 +4,7 @@ import { money } from "@/lib/format";
 import { monthlyValue } from "@/lib/pricing";
 import { requireUser } from "@/lib/supabase/server";
 import { listClients, listFunnels } from "@/lib/eco/data";
+import { ecoWebUrl } from "@/lib/eco/core";
 import { ClientsBrowser, type ClientListItem } from "./clients-browser";
 
 export const metadata: Metadata = { title: "Clients" };
@@ -50,12 +51,12 @@ export default async function ClientsPage({
         Shared with the Clients app: a client added here also appears in
         Clients, and the other way round. Pricing, notes and funnels stay in
         Funnel Mapper.
-        {process.env.ECOSYSTEM_CLIENTS_APP_URL ? (
+        {ecoWebUrl() ? (
           <>
             {" "}
             <a
               className="text-brand underline-offset-2 hover:underline"
-              href={process.env.ECOSYSTEM_CLIENTS_APP_URL}
+              href={`${ecoWebUrl()}/#/clients`}
             >
               Open Clients
             </a>

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { SwitchOrgButton } from "@/components/switch-org-button";
 import { ECO_API, ecoFetch, launcherUrl } from "@/lib/eco/core";
 import { accessToken, currentOrg } from "@/lib/eco/server";
+import { signInUrl } from "@/lib/eco/shared-session";
 
 export const metadata: Metadata = { title: "Funnel Mapper isn’t available" };
 
@@ -12,7 +13,7 @@ export const metadata: Metadata = { title: "Funnel Mapper isn’t available" };
  */
 export default async function UnavailablePage() {
   const token = await accessToken();
-  if (!token) redirect("/login");
+  if (!token) redirect(signInUrl(`${(process.env.NEXT_PUBLIC_SITE_URL ?? "").replace(/\/$/, "")}/`) ?? "/");
   const { org, orgs } = await currentOrg();
   const usable = [];
   for (const o of orgs) {

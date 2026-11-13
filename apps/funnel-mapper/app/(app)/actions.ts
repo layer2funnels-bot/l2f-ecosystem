@@ -226,7 +226,7 @@ const customSchema = z.object({
 });
 
 export async function createFunnelAction(_: ActionResult, fd: FormData): Promise<ActionResult> {
-  const { user, canEdit } = await requireUser();
+  const { workspace, canEdit } = await requireUser();
   if (!canEdit) return { error: VIEWER };
   const p = newFunnelSchema.safeParse(formObject(fd));
   if (!p.success) return { error: p.error.issues[0].message };
@@ -248,8 +248,8 @@ export async function createFunnelAction(_: ActionResult, fd: FormData): Promise
         return { error: "The template form couldn’t be read. Try again." };
       }
     }
-    // screenshots may only come from this person's own folder (the capture route stores them there)
-    const shots = Object.fromEntries(Object.entries(c.shots).filter(([, v]) => v.startsWith(`${user.id}/`)));
+    // screenshots may only be this organization's Funnel Mapper captures (where page captures are stored; the API signs nothing else)
+    const shots = Object.fromEntries(Object.entries(c.shots).filter(([, v]) => v.startsWith(`${workspace.id}/fmp/shot/`) && !v.includes("..")));
     graph = reidGraph(template13Graph(key, { ...c, shots }), newId);
     name = TEMPLATE13_BY_KEY[key].name;
     description = TEMPLATE13_BY_KEY[key].description;

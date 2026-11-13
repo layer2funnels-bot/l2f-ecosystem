@@ -33,7 +33,7 @@ export default async function SettingsPage() {
             <h2 id="look-h" className="mb-1 font-display text-lg font-bold">
               Appearance
             </h2>
-            <p className="mb-4 text-sm text-muted">Choose how Funnel Mapper looks. It is remembered for you on every device.</p>
+            <p className="mb-4 text-sm text-muted">Choose how Funnel Mapper looks on this device.</p>
             <AppearancePicker />
           </section>
         </div>

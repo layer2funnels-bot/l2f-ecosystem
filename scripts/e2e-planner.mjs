@@ -33,7 +33,7 @@ const owner = await signUp('owner'), aurj = await signUp('aurj'), noapp = await 
 await q("insert into memberships (workspace_id,user_id,kind,role) values ($1,$2,'staff','owner'),($3,$2,'staff','owner'),($3,$4,'staff','owner'),($1,$5,'staff','editor') on conflict do nothing", [L, owner.uid, A, aurj.uid, noapp.uid]);
 
 const api = (page, org, op, args) => page.evaluate(async ([org, op, args]) => {
-  const t = JSON.parse(localStorage.getItem('l2f.session.v1')).access;
+  const t = JSON.parse(decodeURIComponent(document.cookie.split('; ').find((c) => c.startsWith('l2f-session=')).slice(12))).access;
   const r = await fetch(`/api/${op}`, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${t}`, 'x-org-id': org }, body: JSON.stringify({ args }) });
   const j = await r.json(); return j.data?.[0]?.r ?? j;
 }, [org, op, args]);
@@ -45,7 +45,7 @@ const plan = (await api(owner.page, L, 'planner.strategy.save_plan', { p_workspa
 check('PB0', 'Setup: an owner of two organizations, an Aurj-only owner, an editor without the Planner grant; a plan in Layer2Funnels', !!plan);
 
 // the owner works in Layer2Funnels: the ecosystem's own switch operation makes it the active organization (what the shell's switcher does)
-const sw = (pg, org) => pg.evaluate(async (org) => { const t = JSON.parse(localStorage.getItem('l2f.session.v1')).access;
+const sw = (pg, org) => pg.evaluate(async (org) => { const t = JSON.parse(decodeURIComponent(document.cookie.split('; ').find((c) => c.startsWith('l2f-session=')).slice(12))).access;
   const r = await fetch('/api/org.switch', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${t}`, 'x-org-id': '00000000-0000-0000-0000-000000000000' }, body: JSON.stringify({ org, app: 'planner' }) }); return (await r.json()).data?.[0]?.outcome; }, org);
 check('PB0b', 'The ecosystem switch makes Layer2Funnels the active organization', (await sw(owner.page, L)) === 'same_page');
 
@@ -123,11 +123,11 @@ await page.setViewportSize({ width: 1366, height: 860 });
 
 // ---- C. token expiry: the token ran out while away
 await page.goto(`${base}/#/planner/plans`); await ready(page);
-const before = await page.evaluate(() => JSON.parse(localStorage.getItem('l2f.session.v1')));
-await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('l2f.session.v1')); s.expiresAt = Date.now() - 5000; localStorage.setItem('l2f.session.v1', JSON.stringify(s)); });
+const before = await page.evaluate(() => JSON.parse(decodeURIComponent(document.cookie.split('; ').find((c) => c.startsWith('l2f-session=')).slice(12))));
+await page.evaluate(() => { const s = JSON.parse(decodeURIComponent(document.cookie.split('; ').find((c) => c.startsWith('l2f-session=')).slice(12))); s.expiresAt = Date.now() - 5000; document.cookie = `l2f-session=${encodeURIComponent(JSON.stringify(s))}; Path=/; SameSite=Lax; Max-Age=2592000`; });   // the shared session cookie (one sign-in for every app)
 let refreshed = false; page.on('request', (r) => { if (/\/auth\/v1\/token\?grant_type=refresh_token/.test(r.url())) refreshed = true; });
 await page.reload(); await ready(page); await page.waitForTimeout(1800);
-const after = await page.evaluate(() => JSON.parse(localStorage.getItem('l2f.session.v1')));
+const after = await page.evaluate(() => JSON.parse(decodeURIComponent(document.cookie.split('; ').find((c) => c.startsWith('l2f-session=')).slice(12))));
 check('PB9', 'An expired token is refreshed (by the shell, for Planner too) and Planner loads without a manual refresh', refreshed && after.expiresAt > Date.now() && after.access !== before.access && (await pl(page)).includes(`Q4 social ${stamp}`), `refreshed=${refreshed}`);
 
 // ---- C2. switching organization with the shell's own switcher

@@ -29,7 +29,7 @@ await page.goto(`${base}/#/signup`); await page.fill('#nm', 'Sheets Tester'); aw
 const uid = (await q('select id from auth.users where email=$1', [email]))[0].id;
 await q("insert into memberships (workspace_id,user_id,kind,role) values ($1,$2,'staff','owner') on conflict do nothing", [L, uid]);
 const api = (op, args) => page.evaluate(async ([org, op, args]) => {
-  const t = JSON.parse(localStorage.getItem('l2f.session.v1')).access;
+  const t = JSON.parse(decodeURIComponent(document.cookie.split('; ').find((c) => c.startsWith('l2f-session=')).slice(12))).access;
   const r = await fetch(`/api/${op}`, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${t}`, 'x-org-id': org }, body: JSON.stringify(args) }); const j = await r.json(); return j.data?.[0] ?? j;
 }, [L, op, args]);
 await page.reload(); await page.waitForTimeout(1200);
