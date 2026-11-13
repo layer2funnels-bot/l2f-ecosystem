@@ -1,4 +1,5 @@
 "use client";
+import { withBase } from "@/lib/base-path";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -93,7 +94,7 @@ export function AppNav({ agency, user, role, logo, team, workspaceId, workspaces
           <Icon name="moon" size={16} />
           <span className="sr-only">Light / dark</span>
         </button>
-        <form action="/auth/signout" method="post">
+        <form action={withBase("/auth/signout")} method="post">
           <button className={`${quiet} flex`} title="Sign out">
             <Icon name="logout" size={16} />
             <span className="lg:max-xl:sr-only">Sign out</span>

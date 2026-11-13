@@ -11,6 +11,8 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // one address for every app: live, Funnel Mapper is office.example.com/fmp (NEXT_PUBLIC_BASE_PATH=/fmp, wrangler.production.jsonc)
+  ...(process.env.NEXT_PUBLIC_BASE_PATH ? { basePath: process.env.NEXT_PUBLIC_BASE_PATH } : {}),
   // Tidy Up's layout engine only runs in the browser; the server gets a stub (keeps the server bundle within Cloudflare's free limit)
   turbopack: { resolveAlias: { "elkjs/lib/elk.bundled.js": { browser: "elkjs/lib/elk.bundled.js", default: "./lib/elk-server-stub.ts" } } },
   async headers() {

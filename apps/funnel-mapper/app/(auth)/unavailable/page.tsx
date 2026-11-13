@@ -1,3 +1,4 @@
+import { withBase } from "@/lib/base-path";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { SwitchOrgButton } from "@/components/switch-org-button";
@@ -39,7 +40,7 @@ export default async function UnavailablePage() {
             All apps
           </a>
         )}
-        <form action="/auth/signout" method="post">
+        <form action={withBase("/auth/signout")} method="post">
           <button className="btn">Sign out</button>
         </form>
       </div>
