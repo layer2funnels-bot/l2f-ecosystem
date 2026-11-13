@@ -8,12 +8,12 @@ Rules that still apply: code only; no real data; no connection to any live proje
 
 | File | Change | Reason |
 |---|---|---|
-| `.env.example` | Product name; the unused Launcher variable from step 1 removed; three server-only switches for shared clients (empty = off). | V7 rename; shared clients (stage 1, off until the ecosystem sign-in exists). |
-| `app/(app)/actions.ts` | "New client" can create the client in the shared ecosystem list first (only when switched on); asks the person to decide on possible duplicates; never saves a local-only client when the shared list cannot be reached. | Shared clients (V7 03 §3, 16 §4). |
+| `.env.example` | Product name; the unused Launcher variable from step 1 removed. Stage 2: ecosystem API and web addresses; the service key and independent sign-up code removed. | V7 rename; stage 2. |
+| `app/(app)/actions.ts` | Every action runs an ecosystem API operation (`fmp.*`, `profile.update`). "New client" creates the shared client and asks the person to decide on possible duplicates (never linked automatically). Team, invitations and branding point to Office › Admin. | Shared clients (V7 03 §3, 16 §4); stage 2. |
 | `app/(app)/clients/[id]/page.tsx` | Fixed-size text classes (`text-[N px]`) one step up (+1 px). | FM-7 sizes. |
 | `app/(app)/clients/clients-browser.tsx` | Fixed-size text classes (`text-[N px]`) one step up (+1 px). | FM-7 sizes. |
-| `app/(app)/clients/page.tsx` | "Shared with the Clients app" note when shared clients are on. | V7 16 §4. |
-| `app/(app)/settings/page.tsx` | Fixed-size text classes (`text-[N px]`) one step up (+1 px). | FM-7 sizes. |
+| `app/(app)/clients/page.tsx` | "Shared with the Clients app" note; reads through the ecosystem API. | V7 16 §4; stage 2. |
+| `app/(app)/settings/page.tsx` | Fixed-size text classes (`text-[N px]`) one step up (+1 px). Stage 2: profile, default currency, appearance and account only; team and branding are in Office › Admin. | FM-7 sizes; stage 2. |
 | `app/(app)/settings/settings-nav.tsx` | Fixed-size text classes (`text-[N px]`) one step up (+1 px). | FM-7 sizes. |
 | `app/(app)/templates/templates-browser.tsx` | Fixed-size text classes (`text-[N px]`) one step up (+1 px). | FM-7 sizes. |
 | `app/(auth)/layout.tsx` | "Funnel Mapper Pro V2" → "Funnel Mapper". | V7 rename (user-facing only). |
@@ -37,8 +37,7 @@ Rules that still apply: code only; no real data; no connection to any live proje
 | `components/theme-toggle.tsx` | Fixed-size text classes (`text-[N px]`) one step up (+1 px). | FM-7 sizes. |
 | `components/top-strip.tsx` | Fixed-size text classes (`text-[N px]`) one step up (+1 px). | FM-7 sizes. |
 | `components/workspace-switcher.tsx` | Fixed-size text classes (`text-[N px]`) one step up (+1 px). | FM-7 sizes. |
-| `lib/ecosystem/clients.ts` | Added: client for the ecosystem Client service (`fmp.clients.*`). | Shared clients, stage 1; off by default. |
-| `lib/ecosystem/session.ts` | Added: ecosystem session placeholder (returns none until the identity bridge). | Stage 2 replaces it; until then shared clients refuse to save. |
+| `lib/ecosystem/clients.ts` | Added: duplicate-decision helpers for the ecosystem Client service (`fmp.clients.*`). | Shared clients; always on since stage 2. |
 | `lib/supabase/database.types.ts` | Regenerated: `clients.ecosystem_client_id`. | Follows the new migration. |
 | `supabase/migrations/20261113000000_ecosystem_client_ref.sql` | Added: nullable `clients.ecosystem_client_id` (unique when set). | Funnel Mapper's own row points at the shared client; null for every existing row. |
 | `supabase/templates/invite.html` | "Funnel Mapper Pro V2" → "Funnel Mapper". | V7 rename (e-mails). |
@@ -47,3 +46,61 @@ Rules that still apply: code only; no real data; no connection to any live proje
 | `tests/e2e/workspaces.spec.ts` | Expected invitation text uses "Funnel Mapper". | Follows the e-mail template rename. |
 | `tests/unit/branding.test.ts` | Added: no "Funnel Mapper Pro" in UI, metadata or e-mail templates. | V7 acceptance (grep test). |
 | `tests/unit/ecosystem-clients.test.ts` | Added: shared-client calls (token and organization sent, duplicates returned for a decision, failures never save locally). | Shared clients. |
+
+## Stage 2: Funnel Mapper on the ecosystem (sign-in, data, files)
+
+Every read and write goes through the ecosystem API as the signed-in person; the API and database decide access (organization, role, client scope). Owner decisions of 13 Nov: independent accounts retired, Cloudflare hosting, only the owner switches first.
+
+| File | Change | Why |
+|---|---|---|
+| `app/(app)/clients/[id]/portfolio-bits.tsx` | Client logo saves a stored file path (`logo_path`) through `fmp.clients.update`. | Stage 2. |
+| `app/(app)/clients/new/page.tsx` | Reads through the ecosystem API (`lib/eco/data.ts`). | Stage 2. |
+| `app/(app)/funnels/page.tsx` | Reads funnels, clients and actuals through the ecosystem API. | Stage 2. |
+| `app/(app)/layout.tsx` | Organization, role and counts come from the ecosystem (`org.list`, `fmp.settings.get`, `fmp.funnels.counts`). | Stage 2. |
+| `app/(app)/page.tsx` | Home reads through the ecosystem API. | Stage 2. |
+| `app/(app)/settings/settings-forms.tsx` | Only profile and default currency remain; team, invitations, branding and independent accounts moved to Office › Admin. | Stage 2. |
+| `app/(app)/templates/page.tsx` | Templates (built-in and the organization's) read through `fmp.templates.list`. | Stage 2. |
+| `app/(app)/trash/page.tsx` | Trash reads through the ecosystem API; delete forever is owner-only. | Stage 2. |
+| `app/(auth)/actions.ts` | Independent-user sign-up removed (owner decision: retire independent accounts). Sign-in, magic link and password reset unchanged (now the ecosystem sign-in). | Stage 2. |
+| `app/api/capture/route.ts` | Returns the captured image to the browser instead of re-encoding it with sharp and storing it; the browser shrinks and stores it. | Stage 2. |
+| `app/api/share/[token]/comments/route.ts` | Public share comments go through the ecosystem's `/api/public/fmp-share` (token hashed there). | Stage 2. |
+| `app/api/share/[token]/route.ts` | Public share reads and saves go through the ecosystem's `/api/public/fmp-share`. | Stage 2. |
+| `app/funnels/[id]/page.tsx` | Funnel, client, products, last version and open comments read through the ecosystem API. | Stage 2. |
+| `components/editor/actuals-entry.tsx` | Real numbers save through `fmp.actuals.save` (CSV imports in batches of 500). | Stage 2. |
+| `components/editor/actuals-host.tsx` | Real numbers load and save through `fmp.actuals.list` / `fmp.actuals.save`. | Stage 2. |
+| `components/editor/actuals.tsx` | Real numbers load and save through `fmp.actuals.list` / `fmp.actuals.save`. | Stage 2. |
+| `components/editor/assets.ts` | Saved styles and blocks through `fmp.assets.*`. | Stage 2. |
+| `components/editor/comments.tsx` | Comments through `fmp.comments.*`. | Stage 2. |
+| `components/editor/editor.tsx` | Status, saves, autosave versions and thumbnails through the ecosystem API and file storage. | Stage 2. |
+| `components/editor/exporters.ts` | Stored images signed through `fmp.files.url`. | Stage 2. |
+| `components/editor/share-dialog.tsx` | Share links through `fmp.links.*`; a new link's address is shown once (only its hash is stored). | Stage 2. |
+| `components/editor/template-dialog.tsx` | Save as template through `fmp.templates.create`. | Stage 2. |
+| `components/editor/thumbnail-field.tsx` | Page capture stored from the browser (`captureAndStore`). | Stage 2. |
+| `components/editor/versions.tsx` | Version history through `fmp.versions.*`. | Stage 2. |
+| `components/logo-upload.tsx` | Images shrunk in the browser (WebP under 100 KB) and stored in the organization's files; preview through a signed address. | Stage 2. |
+| `components/signed-image.tsx` | Signed addresses from `fmp.files.url`. | Stage 2. |
+| `components/template-customize.tsx` | Page capture stored from the browser (`captureAndStore`). | Stage 2. |
+| `lib/image-client.ts` | Browser image pipeline for stored images (`optimiseForStorage`, `pictureForBlock`, `sizeLine`), replacing the sharp server pipeline. | Stage 2. |
+| `lib/queries.ts` | Template options read through the ecosystem API. | Stage 2. |
+| `lib/schemas.ts` | Row types follow the ecosystem's `fmp` records. | Stage 2. |
+| `lib/share/server.ts` | Share pages read through the ecosystem's public share endpoint. | Stage 2. |
+| `lib/supabase/proxy.ts` | `/join/` no longer public (independent sign-up removed). | Stage 2. |
+| `lib/supabase/server.ts` | `requireUser` uses the ecosystem: organization from `org.list`, role, profile; `/unavailable` when Funnel Mapper isn't switched on. | Stage 2. |
+| `package-lock.json` | Follows `package.json`. | Stage 2. |
+| `package.json` | `sharp` removed (images are shrunk in the browser; keeps the server bundle small for Cloudflare). | Stage 2. |
+| `app/(auth)/join/[code]/join-form.tsx` | Deleted: independent sign-up retired (owner decision). | Stage 2. |
+| `app/(auth)/join/[code]/page.tsx` | Deleted: independent sign-up retired (owner decision). | Stage 2. |
+| `app/api/image/route.ts` | Deleted: images are shrunk in the browser and stored through `fmp.files.upload`. | Stage 2. |
+| `lib/image-optimise.ts` | Deleted: sharp pipeline replaced by the browser pipeline in `lib/image-client.ts`. | Stage 2. |
+| `lib/image-pipeline.ts` | Deleted with `lib/image-optimise.ts`. | Stage 2. |
+| `lib/independent.ts` | Deleted: independent accounts retired. | Stage 2. |
+| `lib/supabase/admin.ts` | Deleted: no service key in Funnel Mapper; people are managed in Office › Admin. | Stage 2. |
+| `scripts/recompress-images.mts` | Deleted: maintenance script for the old storage buckets. | Stage 2. |
+| `tests/unit/image-pipeline.test.ts` | Deleted with the sharp pipeline. | Stage 2. |
+| `app/(auth)/unavailable/page.tsx` | Added: explains when Funnel Mapper isn't switched on for the person's organization or role. | Stage 2. |
+| `app/api/eco/[op]/route.ts` | Added: same-site relay from the browser to the ecosystem API (allow-listed `fmp.*` and `org.list`, same-origin check). | Stage 2. |
+| `lib/eco/browser.ts` | Added: `ecoCall` for components. | Stage 2. |
+| `lib/eco/core.ts` | Added: ecosystem API call with the person's token and organization. | Stage 2. |
+| `lib/eco/data.ts` | Added: server reads in the shapes the screens use; client logos signed for one hour. | Stage 2. |
+| `lib/eco/server.ts` | Added: session token, current organization (cookie `fm-org`), `eco` / `ecoRows`. | Stage 2. |
+| `lib/eco/upload.ts` | Added: image upload to the organization's files, signed addresses, page capture storage. | Stage 2. |

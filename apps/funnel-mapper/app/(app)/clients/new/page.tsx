@@ -5,14 +5,15 @@ import { ClientForm } from "@/components/client-form";
 import { Icon } from "@/components/icon";
 import { PageHeader } from "@/components/page-header";
 import { requireUser } from "@/lib/supabase/server";
+import { listClients } from "@/lib/eco/data";
 import { createClientAction } from "../../actions";
 
 export const metadata: Metadata = { title: "New client" };
 
 export default async function NewClientPage() {
-  const { sb, workspace, canEdit } = await requireUser();
+  const { workspace, canEdit } = await requireUser();
   if (!canEdit) redirect("/clients");
-  const { data } = await sb.from("clients").select("niche");
+  const data = await listClients();
   const niches = [...new Set((data ?? []).map((c) => c.niche).filter(Boolean))];
   return (
     <div className="max-w-[760px]">

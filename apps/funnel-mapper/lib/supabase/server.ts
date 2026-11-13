@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { cache } from "react";
 import type { Database } from "./database.types";
 import type { Role } from "../roles";
+import { currentOrg, ecoRows } from "../eco/server";
 
 /** Server Supabase client bound to the request's auth cookies. */
 export async function supabaseServer() {
@@ -23,15 +24,15 @@ export async function supabaseServer() {
   });
 }
 
-export type Workspace = Database["public"]["Tables"]["workspaces"]["Row"];
-
+/** Funnel Mapper's view of the organization it works in (the ecosystem organization; default currency is Funnel Mapper's own setting). */
+export type Workspace = { id: string; agency_name: string; agency_logo_url: string | null; default_currency: string; kind: "team"; slug: string };
 export type WorkspaceOption = { id: string; name: string; kind: string; role: string };
+export type Profile = { id: string; full_name: string; email: string };
 
 /**
- * Current member, their profile, the workspace they're working in (the Layer2Funnels team workspace or another one
- * they belong to) and the workspaces they can switch to; or redirect to /login. Someone who is no longer an active
- * member of the workspace they were in is moved to another workspace they belong to, else signed out.
- * Cached per request. RLS scopes every query to the current workspace; `isTeam` only drives the UI.
+ * The signed-in person (ecosystem account), the organization they work in and the ones they can switch to; or redirect to /login.
+ * When Funnel Mapper is not available to them in this organization, /unavailable explains why (no data is shown).
+ * The role here only shapes the interface: every read and write is decided by the ecosystem API and database.
  */
 export const requireUser = cache(async () => {
   const sb = await supabaseServer();
@@ -39,26 +40,15 @@ export const requireUser = cache(async () => {
     data: { user },
   } = await sb.auth.getUser();
   if (!user) redirect("/login");
-  const [{ data, error }, { data: memberships, error: mErr }] = await Promise.all([
-    sb.from("profiles").select("*, workspace:workspaces!profiles_workspace_id_fkey(*)").eq("id", user.id).maybeSingle(),
-    sb.from("workspace_members").select("workspace_id, role, active, workspace:workspaces(id, agency_name, kind)").eq("user_id", user.id).order("created_at"),
-  ]);
-  // a failed query (e.g. a migration not yet applied) is an error, not a removed member: never sign people out for it
-  if (error || mErr) throw new Error(`Couldn't load your workspace: ${(error ?? mErr)!.message}`);
-  if (!data) redirect("/auth/removed");
-  const mine = (memberships ?? []).filter((m) => m.active && m.workspace);
-  const current = mine.find((m) => m.workspace_id === data.workspace_id);
-  const { workspace, ...profile } = data;
-  if (!current || !workspace) {
-    if (mine[0]) {
-      await sb.rpc("switch_workspace", { p_workspace: mine[0].workspace_id });
-      redirect("/");
-    }
-    redirect("/auth/removed");
-  }
-  const workspaces: WorkspaceOption[] = mine.map((m) => ({ id: m.workspace_id, name: m.workspace!.agency_name, kind: m.workspace!.kind, role: m.role }));
-  // the role in the workspace being worked in (workspace_members.role; profiles.role is legacy)
-  const role = current.role as Role;
+  const { org, orgs } = await currentOrg();
+  if (!org) redirect("/unavailable");
+  const settings = (await ecoRows<{ id: string; name: string; slug: string; default_currency: string; is_admin: boolean }>("fmp.settings.get"))[0];
+  if (!settings) redirect("/unavailable");
+  const me = (await ecoRows<{ id: string; display_name: string; email: string }>("profile.get"))[0];
+  const role = org.role as Role;
+  const workspace: Workspace = { id: org.org_id, agency_name: org.name, agency_logo_url: null, default_currency: settings.default_currency, kind: "team", slug: org.slug };
+  const profile: Profile = { id: user.id, full_name: me?.display_name || "", email: me?.email || user.email || "" };
+  const workspaces: WorkspaceOption[] = orgs.map((o) => ({ id: o.org_id, name: o.name, kind: "team", role: o.role }));
   return {
     sb,
     user,
@@ -66,11 +56,11 @@ export const requireUser = cache(async () => {
     workspace,
     workspaces,
     role,
-    /** Owner or admin: manages members and branding. */
+    /** Owner or admin: manages organization settings. */
     isAdmin: role === "owner" || role === "admin",
     isOwner: role === "owner",
-    /** Everyone but viewers may change data (RLS enforces the same rule). */
+    /** Everyone but viewers may change data (the database enforces the same rule). */
     canEdit: role !== "viewer",
-    isTeam: workspace.kind === "team",
+    isTeam: true,
   };
 });

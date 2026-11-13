@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createSharedClient, decisionMessage, listSharedClients, sharedClientsEnabled } from "@/lib/ecosystem/clients";
+import { createSharedClient, decisionMessage, listSharedClients } from "@/lib/ecosystem/clients";
 
 const fake = (status: number, body: unknown, seen: { url?: string; init?: RequestInit }[] = []) =>
   (async (url: string, init?: RequestInit) => { seen.push({ url, init }); return new Response(JSON.stringify(body), { status }); }) as unknown as typeof fetch;
@@ -7,11 +7,6 @@ const cfg = (f: typeof fetch) => ({ url: "https://eco.example/", token: "tok", o
 const SAM = { id: "c1", name: "Sam Carter", email: "sam@x.test", business_name: null, status: "active" };
 
 describe("shared clients (Funnel Mapper ↔ Clients)", () => {
-  it("is off unless switched on with a service address", () => {
-    expect(sharedClientsEnabled({})).toBe(false);
-    expect(sharedClientsEnabled({ ECOSYSTEM_CLIENTS: "1" })).toBe(false);
-    expect(sharedClientsEnabled({ ECOSYSTEM_CLIENTS: "1", ECOSYSTEM_API_URL: "https://eco.example" })).toBe(true);
-  });
   it("sends the person's token and organization; trims input; never sends empty fields", async () => {
     const seen: { url?: string; init?: RequestInit }[] = [];
     const o = await createSharedClient(cfg(fake(200, { ok: true, data: [{ outcome: "created", client: SAM }] }, seen)), { name: " Sam Carter ", email: " sam@x.test ", business_name: "" });

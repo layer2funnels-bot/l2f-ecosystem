@@ -7,6 +7,10 @@ import { useState } from "react";
 import { validateCaptureUrl } from "@/lib/capture";
 import { templatePages } from "@/lib/templates13";
 
+import { captureAndStore } from "@/lib/eco/upload";
+
+
+
 export interface TemplateCustom {
   empty: boolean;
   names: Record<string, string>;
@@ -27,8 +31,8 @@ export function TemplateFields({ templateKey, value, onChange }: { templateKey: 
     if (!check.ok) return setCap((c) => ({ ...c, [id]: { state: "error", msg: check.reason } }));
     setCap((c) => ({ ...c, [id]: { state: "loading" } }));
     try {
-      const r = await fetch("/api/capture", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ url, nodeId: `tpl-${id}` }) });
-      const j = (await r.json().catch(() => ({}))) as { path?: string; bytes?: number; message?: string; error?: string };
+      const j = await captureAndStore(url, `tpl-${id}`);
+      const r = { status: j.status, ok: j.status === 200 };
       if (r.status === 503 || j.error === "unavailable") return setCap((c) => ({ ...c, [id]: { state: "unavailable", msg: "Automatic capture isn’t set up here. Add a screenshot later from the block." } }));
       if (!r.ok || !j.path) return setCap((c) => ({ ...c, [id]: { state: "error", msg: j.message ?? "The page couldn’t be captured. The page keeps its wireframe." } }));
       onChange({ ...value, urls: { ...value.urls, [id]: url }, shots: { ...value.shots, [id]: j.path } });

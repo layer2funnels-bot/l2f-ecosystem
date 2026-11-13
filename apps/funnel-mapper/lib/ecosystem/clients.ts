@@ -3,10 +3,8 @@
  * ecosystem Client service (operations `fmp.clients.*` in packages/core/fmp-operations.mjs), so a client made here appears in the
  * Clients app and the other way round.
  *
- * Off by default. `ECOSYSTEM_CLIENTS=1` (server-only) switches "New client" to the shared service. The switch only chooses the code
- * path: every read and write is authorised by the ecosystem API and database for the signed-in person (app access, client scope,
- * organization), so turning it on can never show or change more than that person may.
- * It needs the ecosystem sign-in (stage 2: the identity bridge) to supply `token`; until then it stays off.
+ * Since stage 2 this is always the path (Funnel Mapper signs in with the ecosystem). Every read and write is authorised by the
+ * ecosystem API and database for the signed-in person (app access, client scope, organization).
  *
  * Duplicates are never linked automatically. The service answers "needs_decision" with candidates; the person chooses
  * "link" (to one candidate) or "new". If the service cannot be reached nothing is created locally ("never a local-only client").
@@ -20,7 +18,6 @@ export type CreateOutcome =
 export type CreateInput = { name: string; email?: string | null; business_name?: string | null; status?: string | null; decision?: "new" | "link"; link_to?: string | null };
 export type ServiceConfig = { url: string; token: string; orgId: string; fetchImpl?: typeof fetch; timeoutMs?: number };
 
-export const sharedClientsEnabled = (env: Record<string, string | undefined> = process.env) => env.ECOSYSTEM_CLIENTS === "1" && !!env.ECOSYSTEM_API_URL;
 
 const UNAVAILABLE = "The Clients app could not be reached, so nothing was saved. Try again in a minute.";
 

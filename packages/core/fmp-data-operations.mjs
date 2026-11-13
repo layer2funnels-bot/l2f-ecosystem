@@ -4,6 +4,7 @@
 // Funnel Mapper: these operations only store and return its records.
 import { createHash, randomBytes } from 'node:crypto';
 import { defineOperation } from './define.mjs';
+import { pathBelongsTo } from './storage.mjs';
 
 const T = (max = 8000) => ({ type: 'text', min: 0, max });
 const ID = { type: 'uuid', required: true };
@@ -100,10 +101,16 @@ export const fmpDataOperations = [
         const num = (v) => (v === null || v === undefined || v === '' ? null : Number.isFinite(Number(v)) ? Number(v) : null);
         out.push(...await q(`insert into fmp.funnel_actuals (workspace_id, funnel_id, period_start, period_end, node_id, visitors, conversions, revenue, spend, source, source_ref)
           values ($1, $2, $3, $4, $5, $6, $7, $8, $9, coalesce($10, 'manual'), $11)
-          on conflict (funnel_id, period_start, period_end, node_id) do update set visitors = excluded.visitors, conversions = excluded.conversions, revenue = excluded.revenue,
-            spend = excluded.spend, source = excluded.source, source_ref = excluded.source_ref returning id`,
+          on conflict (funnel_id, period_start, period_end, node_id) do update set
+            visitors = case when $12 then excluded.visitors else fmp.funnel_actuals.visitors end,
+            conversions = case when $13 then excluded.conversions else fmp.funnel_actuals.conversions end,
+            revenue = case when $14 then excluded.revenue else fmp.funnel_actuals.revenue end,
+            spend = case when $15 then excluded.spend else fmp.funnel_actuals.spend end,
+            source = excluded.source, source_ref = excluded.source_ref returning id`,
+          // a field left out of the row keeps its saved value (one cell typed in the grid must not wipe the others)
           [ctx.orgId, i.funnel, r.period_start, r.period_end, String(r.node_id).slice(0, 100), num(r.visitors), num(r.conversions), num(r.revenue), num(r.spend),
-            typeof r.source === 'string' ? r.source.slice(0, 40) : null, typeof r.source_ref === 'string' ? r.source_ref.slice(0, 400) : null]));
+            typeof r.source === 'string' ? r.source.slice(0, 40) : null, typeof r.source_ref === 'string' ? r.source_ref.slice(0, 400) : null,
+            'visitors' in r, 'conversions' in r, 'revenue' in r, 'spend' in r]));
       }
       const c = i.clear;
       if (c && typeof c === 'object' && /^\d{4}-\d{2}-\d{2}$/.test(c.period_start) && /^\d{4}-\d{2}-\d{2}$/.test(c.period_end) && Array.isArray(c.node_ids) && c.node_ids.length) {
@@ -255,6 +262,38 @@ export const fmpDataOperations = [
     },
   }),
 
+  // ---------------------------------------------------------------- images (logos, thumbnails, page screenshots) in the ecosystem file storage
+  // The browser shrinks images first (WebP, at most 100 KB, Funnel Mapper's rule); these only sign short-lived addresses.
+  // Paths: <organization>/fmp/<kind>/<random>.webp, never chosen by the caller.
+  defineOperation({
+    name: 'fmp.files.upload', class: 'write', single: true,
+    input: { kind: { type: 'enum', values: ['logo', 'thumb', 'shot', 'pic'], required: true }, size_bytes: { type: 'int', required: true, min: 1, max: 600000 },
+      mime_type: { type: 'enum', values: ['image/webp', 'image/png', 'image/jpeg', 'image/svg+xml', 'image/gif'], required: true }, of: { type: 'text', max: 200 } },
+    run: async (q, ctx, i) => {
+      if (!ctx.storage) throw { code: 'STORAGE_OFF' };
+      if (!(await q('select private.has_permission($1, $2) ok', [ctx.orgId, 'fmp.funnel.edit']))[0]?.ok) return [];
+      if (i.kind === 'pic' && !(typeof i.of === 'string' && pathBelongsTo(i.of, ctx.orgId) && i.of.startsWith(`${ctx.orgId}/fmp/shot/`))) return [];
+      const ext = { 'image/webp': 'webp', 'image/png': 'png', 'image/jpeg': 'jpg', 'image/svg+xml': 'svg', 'image/gif': 'gif' }[i.mime_type];
+      // the block's 208 x 256 picture sits next to its capture (Funnel Mapper's lib/shot-path.ts picPath)
+      const path = i.kind === 'pic' ? (/\.webp$/.test(i.of) ? i.of.replace(/\.webp$/, '-pic.webp') : `${i.of}-pic.webp`) : `${ctx.orgId}/fmp/${i.kind}/${randomBytes(16).toString('hex')}.${ext}`;
+      const r = await ctx.storage.signUpload({ path, size: i.size_bytes, contentType: i.mime_type });
+      return [{ path, url: r.url, method: r.method ?? 'PUT', headers: r.headers ?? {} }];
+    },
+  }),
+  defineOperation({
+    name: 'fmp.files.url', class: 'read', input: { paths: { type: 'list', items: 'text', max: 100, itemMax: 300, itemMin: 1 } },
+    run: async (q, ctx, i) => {
+      if (!ctx.storage) throw { code: 'STORAGE_OFF' };
+      if (!(await q('select private.has_permission($1, $2) ok', [ctx.orgId, 'fmp.funnel.view']))[0]?.ok) return [];
+      const out = [];
+      for (const path of i.paths ?? []) {
+        if (!pathBelongsTo(path, ctx.orgId) || !path.startsWith(`${ctx.orgId}/fmp/`)) continue;   // only this organization's Funnel Mapper images
+        out.push({ path, url: (await ctx.storage.signDownload({ path, seconds: 3600 })).url });
+      }
+      return out;
+    },
+  }),
+
   // ---------------------------------------------------------------- Funnel Mapper's trash for clients (the Clients app archive is separate)
   defineOperation({
     name: 'fmp.clients.trash', class: 'write', single: true, input: { client: ID },
@@ -272,6 +311,22 @@ export const fmpDataOperations = [
       if (!c) return [];
       await q('update fmp.funnels set trashed_at = null where client_id = $1 and trashed_at = $2', [i.client, c.trashed_at]);   // only the funnels trashed with it
       return q('update fmp.client_commercial set trashed_at = null, trashed_by = null where client_id = $1 returning client_id', [i.client]);
+    },
+  }),
+  defineOperation({
+    // Delete for good from Funnel Mapper's trash: the client's funnels, products, pricing and notes in Funnel Mapper. The shared client itself
+    // stays in the Clients app (no hard delete across apps, V7 03 §3). Owner-only through the row policies (fmp.funnel.delete).
+    name: 'fmp.clients.purge', class: 'sensitive', input: { client: { type: 'uuid' } },
+    run: async (q, _c, i) => {
+      const cs = await q('select client_id from fmp.client_commercial where trashed_at is not null and ($1::uuid is null or client_id = $1)', [i.client ?? null]);
+      const out = [];
+      for (const { client_id: c } of cs) {
+        await q('delete from fmp.funnels where client_id = $1 and trashed_at is not null', [c]);
+        if ((await q('select 1 from fmp.funnels where client_id = $1 limit 1', [c])).length) continue;   // something could not be deleted: keep the rest
+        await q('delete from fmp.products where client_id = $1', [c]);
+        out.push(...await q('delete from fmp.client_commercial where client_id = $1 and trashed_at is not null returning client_id', [c]));
+      }
+      return out;
     },
   }),
   defineOperation({

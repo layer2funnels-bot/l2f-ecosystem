@@ -2,60 +2,37 @@
 import { useRef, useState } from "react";
 import { Icon } from "./icon";
 import { useSignedUrl } from "./signed-image";
+import { optimiseForStorage, sizeLine } from "@/lib/image-client";
+import { storeShot, uploadImage } from "@/lib/eco/upload";
 
 /**
- * Big pictures (a whole page screenshot, a phone photo) are shrunk in the browser first: the server only accepts a few MB per request,
- * and it stores every image under 100 KB anyway. Anything the browser can't decode goes up as it is.
+ * Uploads an image to the organization's file storage: shrunk in the browser to WebP under 100 KB (V2 F7), then stored privately.
+ * `url` and `onChange` carry the stored path; the preview uses a short-lived address signed for people allowed to see it.
+ * Page captures (`bucket="screenshots"`) also store the block's 208 x 256 picture.
  */
-async function shrink(f: File, maxW: number, maxSide: number): Promise<File> {
-  if (!/^image\/(png|jpe?g|webp)$/.test(f.type)) return f;
-  try {
-    const bmp = await createImageBitmap(f);
-    const k = Math.min(1, maxW / bmp.width, maxSide / Math.max(bmp.width, bmp.height));
-    if (k === 1 && f.size <= 2_000_000) return (bmp.close(), f);
-    const w = Math.max(1, Math.round(bmp.width * k)),
-      h = Math.max(1, Math.round(bmp.height * k));
-    const c = document.createElement("canvas");
-    c.width = w;
-    c.height = h;
-    c.getContext("2d")!.drawImage(bmp, 0, 0, w, h);
-    bmp.close();
-    const blob = await new Promise<Blob | null>((r) => c.toBlob(r, "image/webp", 0.85));
-    return blob ? new File([blob], `${f.name.replace(/\.\w+$/, "")}.webp`, { type: "image/webp" }) : f;
-  } catch {
-    return f;
-  }
-}
-
-/**
- * Uploads an image to Storage. `logos` is public (logos appear on client share links) and hands back a public URL;
- * `screenshots` is private to the team and hands back the file path, previewed through a signed URL.
- */
-export function LogoUpload({ url, name, onChange, label = "Logo", bucket = "logos" }: { url: string | null; name: string; onChange: (url: string | null) => Promise<void>; label?: string; bucket?: "logos" | "screenshots" }) {
+export function LogoUpload({ url, onChange, label = "Logo", bucket = "logos" }: { url: string | null; name: string; onChange: (path: string | null) => Promise<void>; label?: string; bucket?: "logos" | "screenshots" }) {
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const isPrivate = bucket === "screenshots";
-  const signed = useSignedUrl("screenshots", isPrivate ? url : null);
-  const preview = isPrivate ? signed : url;
+  const preview = useSignedUrl(isPrivate ? "screenshots" : "logos", url);
   const [done, setDone] = useState("");
   async function pick(f: File) {
     setErr("");
     setDone("");
-    if (f.size > 80 * 1024 * 1024) return setErr(`${label} must be under 80 MB`);
+    if (f.size > 25 * 1024 * 1024) return setErr(`${label} must be under 25 MB`);
     if (!(bucket === "logos" ? /^image\/(png|jpe?g|webp|svg\+xml|gif)$/ : /^image\/(png|jpe?g|webp)$/).test(f.type)) return setErr(bucket === "logos" ? "Use a PNG, JPG, WebP, SVG or GIF" : "Use a PNG, JPG or WebP");
     setBusy(true);
     try {
-      // V2 F7: the server optimises every image to under 100 KB (WebP) before storing it
-      const fd = new FormData();
-      fd.set("file", await shrink(f, isPrivate ? 1600 : 1024, isPrivate ? 9000 : 1024));
-      fd.set("target", isPrivate ? "shot" : "logo");
-      fd.set("name", name.replace(/[^A-Za-z0-9_-]/g, "-").slice(0, 80) || "image");
-      const res = await fetch("/api/image", { method: "POST", body: fd });
-      const out = (await res.json().catch(() => ({}))) as { path?: string; url?: string | null; line?: string; message?: string };
-      if (!res.ok || !out.path) throw new Error(out.message || (res.status === 413 ? "That image is too large to upload. Try a smaller one." : "Upload failed. Try again, or use a smaller image."));
-      await onChange(isPrivate ? out.path : out.url!);
-      setDone(out.line ?? "");
+      if (isPrivate) {
+        const r = await storeShot(f);
+        await onChange(r.path);
+        setDone(sizeLine(f.size, r.bytes));
+      } else {
+        const img = await optimiseForStorage(f, "logo");
+        await onChange(await uploadImage(img, "logo"));
+        setDone(sizeLine(f.size, img.size));
+      }
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Upload failed");
     } finally {

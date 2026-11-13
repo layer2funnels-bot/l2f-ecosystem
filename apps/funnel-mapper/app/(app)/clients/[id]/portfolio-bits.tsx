@@ -17,14 +17,14 @@ import { FUNNEL_STATUSES, STATUS_LABEL } from "@/lib/schemas";
 import { archiveClientAction, duplicateFunnelAction, setFunnelStatusAction, trashClientAction, trashFunnelAction, updateClientFields } from "../../actions";
 import { useConfirm } from "@/components/confirm-dialog";
 
-export function ClientLogo({ id, url }: { id: string; url: string | null }) {
-  const [u, setU] = useState(url);
+export function ClientLogo({ id, path }: { id: string; path: string | null; url?: string | null }) {
+  const [u, setU] = useState(path);
   return (
     <LogoUpload
       url={u}
       name={`client-${id}`}
       onChange={async (next) => {
-        await updateClientFields(id, { logo_url: next });
+        await updateClientFields(id, { logo_path: next });
         setU(next);
       }}
     />

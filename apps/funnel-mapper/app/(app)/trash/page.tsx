@@ -1,17 +1,18 @@
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/page-header";
 import { requireUser } from "@/lib/supabase/server";
+import { listClients, listFunnels } from "@/lib/eco/data";
 import { TrashList, type TrashItem } from "./trash-list";
 
 export const metadata: Metadata = { title: "Trash" };
 
 /** Trash (V2 F6): clients and funnels moved to Trash. No time limit; nothing is removed automatically. */
 export default async function TrashPage() {
-  const { sb, canEdit, isAdmin } = await requireUser();
-  const [{ data: clients }, { data: funnels }, { data: allClients }] = await Promise.all([
-    sb.from("clients").select("id, name, deleted_at").not("deleted_at", "is", null).order("deleted_at", { ascending: false }),
-    sb.from("funnels").select("id, name, client_id, deleted_at").not("deleted_at", "is", null).order("deleted_at", { ascending: false }),
-    sb.from("clients").select("id, name, deleted_at"),
+  const { canEdit, isOwner: isAdmin } = await requireUser();
+  const [clients, funnels, allClients] = await Promise.all([
+    listClients({ trashed: true }),
+    listFunnels({ trashed: true }),
+    Promise.all([listClients(), listClients({ trashed: true })]).then(([a, b]) => [...a, ...b]),
   ]);
   const clientName = new Map((allClients ?? []).map((c) => [c.id, c.name]));
   const trashedClient = new Map((clients ?? []).map((c) => [c.id, c.deleted_at]));

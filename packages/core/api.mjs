@@ -64,7 +64,10 @@ export function createApi({ executor, logger, limiter = createRateLimiter(), ope
         if (action === 'get') {
           const [r] = await executor.withPublic((q) => fmpPublic.get(q, token));
           if (!r?.data) return fail(requestId, op, t0, NOT_FOUND);
-          return done(requestId, op, t0, 200, 'ok', null, false, { ok: true, data: [r.data] });
+          const d = r.data; const logo = d.client?.logo_path;
+          if (d.client) delete d.client.logo_path;   // never hand out a storage path; a short-lived address instead
+          if (logo && storage && /^[0-9a-f-]{36}\/fmp\/logo\//.test(logo)) d.client.logo_url = (await storage.signDownload({ path: logo, seconds: 3600 })).url;
+          return done(requestId, op, t0, 200, 'ok', null, false, { ok: true, data: [d] });
         }
         if (action === 'save') {
           const g = body?.graph, st = body?.settings;

@@ -2,7 +2,6 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { startIndependentSignup, validJoinCode } from "@/lib/independent";
 import { supabaseServer } from "@/lib/supabase/server";
 
 export type AuthState = { error?: string; message?: string } | undefined;
@@ -57,17 +56,4 @@ export async function updatePassword(_: AuthState, fd: FormData): Promise<AuthSt
   const { error } = await sb.auth.updateUser({ password: pw.data });
   if (error) return { error: error.message };
   redirect("/");
-}
-
-/** Private, unlisted sign-up for independent users (/join/<code>): creates an account with its own private workspace. */
-export async function joinAction(code: string, _: AuthState, fd: FormData): Promise<AuthState> {
-  if (!validJoinCode(code)) return { error: "This sign-up link isn’t valid." };
-  const p = z
-    .object({ email: z.email("Enter a valid email"), full_name: z.string().trim().min(1, "Enter your name").max(120), workspace_name: z.string().trim().max(120).default("") })
-    .safeParse({ email: fd.get("email"), full_name: fd.get("full_name") ?? "", workspace_name: fd.get("workspace_name") ?? "" });
-  if (!p.success) return { error: p.error.issues[0].message };
-  const r = await startIndependentSignup(p.data, await siteUrl());
-  if (r.error) return { error: "Couldn’t create the account. Try again in a minute." };
-  // Same answer whether or not the email already had an account, so the form can't be used to discover accounts.
-  return { message: "Check your email: we’ve sent a link to choose your password. Already have an account? Sign in instead." };
 }

@@ -1,30 +1,43 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { compute, summary } from "@/lib/funnel-math";
 import { blankGraph, blankSettings, importFunnelFile, isCurrency, parseGraph, parseSettings, type CurrencyCode } from "@/lib/graph";
-import { clearPendingSignup, startIndependentSignup } from "@/lib/independent";
 import { normalisePricing } from "@/lib/pricing";
 import { clientFormSchema, FUNNEL_STATUSES, type ClientForm } from "@/lib/schemas";
-import { supabaseAdmin } from "@/lib/supabase/admin";
 import { requireUser } from "@/lib/supabase/server";
-import { createSharedClient, decisionMessage, sharedClientsEnabled, type SharedClient } from "@/lib/ecosystem/clients";
-import { ecosystemSession } from "@/lib/ecosystem/session";
+import { eco, ORG_COOKIE, currentOrg } from "@/lib/eco/server";
+import { decisionMessage, type SharedClient } from "@/lib/ecosystem/clients";
 import { builtinTemplate, reidGraph } from "@/lib/templates";
 import { TEMPLATE13_BY_KEY, template13Graph } from "@/lib/templates13";
+
+// Funnel Mapper on the ecosystem (stage 2): every read and write below is an ecosystem API operation run as the signed-in person;
+// the API and database decide (organization, client scope, fmp.* permissions). "Not found" from the API means "not allowed or gone".
 
 export type ActionResult = { error?: string; ok?: boolean; id?: string; added?: boolean; candidates?: SharedClient[] } | undefined;
 const uuid = z.uuid();
 const newId = () => "n" + crypto.randomUUID().replace(/-/g, "").slice(0, 12);
 
 const VIEWER = "Viewers can look but not change anything. Ask an admin for edit access.";
-/** Signed-in member who may change data (owner, admin or editor). RLS enforces the same rule. */
+const MANAGED = "Team, invitations, roles, branding and organizations are managed in the ecosystem: Office › Admin.";
+const NOT_ALLOWED = "That isn’t available to you (it may have been removed, or you don’t have access).";
+/** Signed-in member who may change data (owner, admin or editor). The database enforces the same rule. */
 async function requireEditor() {
   const ctx = await requireUser();
   if (!ctx.canEdit) throw new Error(VIEWER);
   return ctx;
+}
+/** One operation; its rows, or a plain-language error (never database text). */
+async function run<T = Record<string, unknown>>(op: string, input: unknown): Promise<{ rows: T[]; error?: string }> {
+  const r = await eco<T>(op, input);
+  return r.ok ? { rows: r.data } : { rows: [], error: r.message };
+}
+async function must<T = Record<string, unknown>>(op: string, input: unknown): Promise<T[]> {
+  const r = await run<T>(op, input);
+  if (r.error) throw new Error(r.error);
+  return r.rows;
 }
 
 function formObject(fd: FormData) {
@@ -43,70 +56,89 @@ function clientValues(fd: FormData): { error: string } | { data: ClientForm } {
   return { data: d };
 }
 
+/** The client form's values for the shared client (identity) and Funnel Mapper's own terms. */
+function clientPayload(d: ClientForm, withNotes: boolean) {
+  return {
+    name: d.name, business_name: d.business_name, niche: d.niche, email: d.email, phone: d.phone, website: d.website, country: d.country,
+    ...(isCurrency(d.currency) ? { currency: d.currency } : {}), status: d.status, tags: d.tags.slice(0, 20),
+    monthly_retainer: d.monthly_retainer, pricing_model: d.pricing_model, pricing_amount: d.pricing_amount, billing_frequency: d.billing_frequency,
+    hours_per_month: d.hours_per_month, commission_pct: d.commission_pct, pricing_notes: d.pricing_notes,
+    ...(d.project_start ? { project_start: d.project_start } : {}), ...(d.project_end ? { project_end: d.project_end } : {}),
+    ...(!d.project_start && !d.project_end ? { clear_project_dates: true } : {}),
+    ...(withNotes ? { notes: d.notes } : {}),
+  };
+}
+
+/**
+ * New client: created in (or, after the person chose, linked to) the shared client list (Clients app), then Funnel Mapper's own
+ * pricing and notes are saved. Possible duplicates are never linked automatically: the form shows them and the person decides.
+ */
 export async function createClientAction(_: ActionResult, fd: FormData): Promise<ActionResult> {
-  const { sb, user, canEdit } = await requireUser();
+  const { canEdit } = await requireUser();
   if (!canEdit) return { error: VIEWER };
   const p = clientValues(fd);
   if ("error" in p) return { error: p.error };
-  // Shared clients (off by default; see lib/ecosystem/clients.ts): the client is created in, or linked to, the ecosystem list
-  // FIRST; only then is Funnel Mapper's own row (pricing, notes, funnels) written, carrying the shared id. Never a local-only client.
-  let ecosystemClientId: string | null = null;
-  if (sharedClientsEnabled()) {
-    const session = await ecosystemSession();
-    if (!session) return { error: "Shared clients need the ecosystem sign-in, which is not connected yet. Nothing was saved." };
-    const decision = fd.get("shared_decision"); const linkTo = fd.get("shared_link_to");
-    const o = await createSharedClient(session, {
-      name: p.data.name, email: p.data.email || null, business_name: p.data.business_name || null,
-      decision: decision === "new" || decision === "link" ? decision : undefined, link_to: typeof linkTo === "string" ? linkTo : null,
-    });
-    if (o.kind === "needs_decision") return { error: decisionMessage(o), candidates: o.candidates };
-    if (o.kind === "denied") return { error: "You can't add clients to the shared list. Ask an admin for access." };
-    if (o.kind === "unavailable") return { error: o.message };
-    ecosystemClientId = o.client.id;
+  const decision = fd.get("shared_decision"); const linkTo = fd.get("shared_link_to");
+  const r = await run<{ outcome: string; client?: SharedClient; reason?: string; candidates?: SharedClient[] }>("fmp.clients.create", {
+    name: p.data.name, ...(p.data.email ? { email: p.data.email } : {}), ...(p.data.business_name ? { business_name: p.data.business_name } : {}), status: p.data.status,
+    ...(decision === "new" || decision === "link" ? { decision } : {}), ...(typeof linkTo === "string" && decision === "link" ? { link_to: linkTo } : {}),
+  });
+  if (r.error) return { error: r.error };
+  const o = r.rows[0];
+  if (!o) return { error: "You can’t add clients here. Ask an admin for access." };
+  if (o.outcome === "needs_decision") {
+    return { error: decisionMessage({ kind: "needs_decision", reason: (o.reason ?? "possible_duplicate") as "email_exact", candidates: o.candidates ?? [] }), candidates: o.candidates ?? [] };
   }
-  const { data, error } = await sb.from("clients").insert({ ...p.data, owner_id: user.id, ...(ecosystemClientId ? { ecosystem_client_id: ecosystemClientId } : {}) }).select("id").single();
-  if (error) return { error: error.message };
+  const id = o.client!.id;
+  // linking keeps the existing client's details as they are; only Funnel Mapper's own terms are added
+  const payload = clientPayload(p.data, true);
+  const own = o.outcome === "linked"
+    ? Object.fromEntries(Object.entries(payload).filter(([k]) => !["name", "business_name", "niche", "email", "phone", "website", "country", "currency", "status", "tags"].includes(k)))
+    : payload;
+  const u = await run("fmp.clients.update", { id, ...own });
+  if (u.error) return { error: `The client was saved, but its Funnel Mapper details weren’t: ${u.error}` };
   revalidatePath("/clients");
   revalidatePath("/");
-  redirect(`/clients/${data.id}`);
+  redirect(`/clients/${id}`);
 }
 
 export async function updateClientAction(id: string, _: ActionResult, fd: FormData): Promise<ActionResult> {
-  const { sb, canEdit } = await requireUser();
+  const { canEdit } = await requireUser();
   if (!canEdit) return { error: VIEWER };
   if (!uuid.safeParse(id).success) return { error: "Unknown client" };
   const p = clientValues(fd);
   if ("error" in p) return { error: p.error };
   // notes autosave separately on the portfolio page; the details form must never overwrite them
-  const { notes: _notes, ...fields } = p.data; // eslint-disable-line @typescript-eslint/no-unused-vars
-  const { error } = await sb.from("clients").update(fd.has("notes") ? p.data : fields).eq("id", id);
-  if (error) return { error: error.message };
+  const r = await run("fmp.clients.update", { id, ...clientPayload(p.data, fd.has("notes")) });
+  if (r.error) return { error: r.error };
+  if (!r.rows.length) return { error: NOT_ALLOWED };
   revalidatePath(`/clients/${id}`);
   revalidatePath("/clients");
   return { ok: true };
 }
 
-export async function updateClientFields(id: string, fields: { notes?: string; logo_url?: string | null; status?: string }) {
-  const { sb } = await requireEditor();
-  const p = clientFormSchema.pick({ notes: true, status: true }).partial().extend({ logo_url: z.url().nullable().optional() }).parse(fields);
-  const { error } = await sb.from("clients").update(p).eq("id", uuid.parse(id));
-  if (error) throw new Error(error.message);
+export async function updateClientFields(id: string, fields: { notes?: string; logo_path?: string | null; status?: string }) {
+  await requireEditor();
+  const p = clientFormSchema.pick({ notes: true, status: true }).partial().extend({ logo_path: z.string().max(400).nullable().optional() }).parse(fields);
+  const rows = await must("fmp.clients.update", { id: uuid.parse(id), ...(p.notes !== undefined ? { notes: p.notes } : {}), ...(p.status ? { status: p.status } : {}),
+    ...(p.logo_path !== undefined ? { logo_path: p.logo_path ?? "" } : {}) });
+  if (!rows.length) throw new Error(NOT_ALLOWED);
   revalidatePath(`/clients/${id}`);
   revalidatePath("/clients");
 }
 
-/** Archive (or restore) a client: it leaves the active portfolio and dashboard; nothing is deleted. */
+/** Archive (or restore) a client: it leaves the active portfolio and dashboard (also in the Clients app, same client); nothing is deleted. */
 export async function archiveClientAction(id: string, archive: boolean) {
-  const { sb } = await requireEditor();
-  const { error } = await sb.from("clients").update({ archived_at: archive ? new Date().toISOString() : null }).eq("id", uuid.parse(id));
-  if (error) throw new Error(error.message);
+  await requireEditor();
+  const rows = await must("fmp.clients.update", { id: uuid.parse(id), archived: archive });
+  if (!rows.length) throw new Error(NOT_ALLOWED);
   revalidatePath(`/clients/${id}`);
   revalidatePath("/clients");
   revalidatePath("/");
 }
 
 /* ---------------- trash (V2 F6): no time limit, nothing removed automatically ---------------- */
-const ADMINS_ONLY = "Only the workspace owner or an admin can delete forever. Ask one of them, or keep it in Trash.";
+const ADMINS_ONLY = "Only the organization owner can delete forever. Ask them, or keep it in Trash.";
 function revalidateLists(clientId?: string) {
   revalidatePath("/clients");
   revalidatePath("/funnels");
@@ -115,71 +147,65 @@ function revalidateLists(clientId?: string) {
   if (clientId) revalidatePath(`/clients/${clientId}`);
 }
 
-/** Move a client to Trash. Its funnels go with it (same moment), so restoring the client brings them back. */
+/** Move a client to Funnel Mapper's Trash. Its funnels go with it (same moment), so restoring the client brings them back. The client stays in the Clients app. */
 export async function trashClientAction(id: string) {
-  const { sb, user } = await requireEditor();
+  await requireEditor();
   const cid = uuid.parse(id);
-  const at = new Date().toISOString();
-  const { error } = await sb.from("clients").update({ deleted_at: at, deleted_by: user.id }).eq("id", cid).is("deleted_at", null);
-  if (error) throw new Error(error.message);
-  const { error: fErr } = await sb.from("funnels").update({ deleted_at: at, deleted_by: user.id }).eq("client_id", cid).is("deleted_at", null);
-  if (fErr) throw new Error(fErr.message);
+  const rows = await must("fmp.clients.trash", { client: cid });
+  if (!rows.length) throw new Error(NOT_ALLOWED);
   revalidateLists(cid);
   redirect("/clients?trashed=1");
 }
 
 /** Move a funnel to Trash (its share links stop working until it is restored). */
 export async function trashFunnelAction(id: string) {
-  const { sb, user } = await requireEditor();
-  const { data, error } = await sb.from("funnels").update({ deleted_at: new Date().toISOString(), deleted_by: user.id }).eq("id", uuid.parse(id)).select("client_id").single();
-  if (error) throw new Error(error.message);
-  revalidateLists(data.client_id);
+  await requireEditor();
+  const rows = await must<{ client_id: string }>("fmp.funnels.trash", { id: uuid.parse(id) });
+  if (!rows.length) throw new Error(NOT_ALLOWED);
+  revalidateLists(rows[0].client_id);
 }
 
 /** Restore from Trash. A client brings back the funnels that went to Trash with it; a funnel of a client in Trash brings its client back too. */
 export async function restoreAction(kind: "client" | "funnel", id: string): Promise<ActionResult> {
-  const { sb } = await requireEditor();
+  await requireEditor();
   const rid = uuid.parse(id);
   if (kind === "client") {
-    const { data: c, error } = await sb.from("clients").select("id, deleted_at").eq("id", rid).single();
-    if (error) return { error: error.message };
-    if (c.deleted_at) await sb.from("funnels").update({ deleted_at: null, deleted_by: null }).eq("client_id", rid).eq("deleted_at", c.deleted_at);
-    const { error: e2 } = await sb.from("clients").update({ deleted_at: null, deleted_by: null }).eq("id", rid);
-    if (e2) return { error: e2.message };
+    const r = await run("fmp.clients.restore", { client: rid });
+    if (r.error) return { error: r.error };
+    if (!r.rows.length) return { error: NOT_ALLOWED };
     revalidateLists(rid);
     return { ok: true };
   }
-  const { data: f, error } = await sb.from("funnels").update({ deleted_at: null, deleted_by: null }).eq("id", rid).select("client_id").single();
-  if (error) return { error: error.message };
-  await sb.from("clients").update({ deleted_at: null, deleted_by: null }).eq("id", f.client_id).not("deleted_at", "is", null);
-  revalidateLists(f.client_id);
+  const r = await run<{ client_id: string }>("fmp.funnels.restore", { id: rid });
+  if (r.error) return { error: r.error };
+  if (!r.rows.length) return { error: NOT_ALLOWED };
+  const cid = r.rows[0].client_id;
+  const trashedClient = (await run<{ id: string }>("fmp.clients.trashed", {})).rows.some((c) => c.id === cid);
+  if (trashedClient) await run("fmp.clients.restore", { client: cid });
+  revalidateLists(cid);
   return { ok: true };
 }
 
-/** Delete one item forever (owner / admin only; the database refuses anyone else). Only items already in Trash. */
+/** Delete one item forever (owner only; the database refuses anyone else). Only items already in Trash. A client's shared record stays in Clients. */
 export async function deleteForeverAction(kind: "client" | "funnel", id: string): Promise<ActionResult> {
-  const { sb, isAdmin } = await requireEditor();
-  if (!isAdmin) return { error: ADMINS_ONLY };
+  const { isOwner } = await requireEditor();
+  if (!isOwner) return { error: ADMINS_ONLY };
   const rid = uuid.parse(id);
-  const { error, count } = await sb
-    .from(kind === "client" ? "clients" : "funnels")
-    .delete({ count: "exact" })
-    .eq("id", rid)
-    .not("deleted_at", "is", null);
-  if (error) return { error: error.message };
-  if (!count) return { error: "That item isn’t in Trash any more." };
+  const r = await run(kind === "client" ? "fmp.clients.purge" : "fmp.funnels.purge", kind === "client" ? { client: rid } : { id: rid });
+  if (r.error) return { error: r.error };
+  if (!r.rows.length) return { error: "That item isn’t in Trash any more, or only the owner can delete it forever." };
   revalidateLists();
   return { ok: true };
 }
 
-/** Empty Trash: every client and funnel in Trash in this workspace (owner / admin only). */
+/** Empty Trash: every funnel and client in Funnel Mapper's Trash in this organization (owner only). */
 export async function emptyTrashAction(): Promise<ActionResult> {
-  const { sb, isAdmin } = await requireEditor();
-  if (!isAdmin) return { error: ADMINS_ONLY };
-  const { error: fErr } = await sb.from("funnels").delete().not("deleted_at", "is", null);
-  if (fErr) return { error: fErr.message };
-  const { error } = await sb.from("clients").delete().not("deleted_at", "is", null);
-  if (error) return { error: error.message };
+  const { isOwner } = await requireEditor();
+  if (!isOwner) return { error: ADMINS_ONLY };
+  const f = await run("fmp.funnels.purge", {});
+  if (f.error) return { error: f.error };
+  const c = await run("fmp.clients.purge", {});
+  if (c.error) return { error: c.error };
   revalidateLists();
   return { ok: true };
 }
@@ -201,11 +227,11 @@ const customSchema = z.object({
 });
 
 export async function createFunnelAction(_: ActionResult, fd: FormData): Promise<ActionResult> {
-  const { sb, user, canEdit } = await requireUser();
+  const { user, canEdit } = await requireUser();
   if (!canEdit) return { error: VIEWER };
   const p = newFunnelSchema.safeParse(formObject(fd));
   if (!p.success) return { error: p.error.issues[0].message };
-  const { data: client } = await sb.from("clients").select("id, currency").eq("id", p.data.client_id).single();
+  const client = (await run<{ id: string; currency: string }>("fmp.clients.full", { id: p.data.client_id })).rows[0];
   if (!client) return { error: "Client not found" };
   const currency: CurrencyCode = isCurrency(client.currency) ? client.currency : "GBP";
   let graph = blankGraph(),
@@ -234,7 +260,7 @@ export async function createFunnelAction(_: ActionResult, fd: FormData): Promise
     name = t.name;
     description = t.description;
   } else if (p.data.source.startsWith("template:")) {
-    const { data: t } = await sb.from("templates").select("*").eq("id", uuid.parse(p.data.source.slice(9))).single();
+    const t = (await run<{ graph: unknown; settings: unknown; name: string; description: string }>("fmp.templates.get", { id: uuid.parse(p.data.source.slice(9)) })).rows[0];
     if (!t) return { error: "Template not found" };
     graph = reidGraph(parseGraph(t.graph), newId);
     settings = { ...parseSettings(t.settings), currency };
@@ -242,255 +268,100 @@ export async function createFunnelAction(_: ActionResult, fd: FormData): Promise
     description = t.description;
   }
   if (p.data.name) name = p.data.name;
-  const { data, error } = await sb
-    .from("funnels")
-    .insert({ client_id: client.id, owner_id: user.id, name, description, graph: graph as never, settings: settings as never, summary: summary(compute(graph, settings)) as never })
-    .select("id")
-    .single();
-  if (error) return { error: error.message };
+  const r = await run<{ id: string }>("fmp.funnels.create", { client: client.id, name, description, graph, settings, summary: summary(compute(graph, settings)) });
+  if (r.error) return { error: r.error };
+  if (!r.rows.length) return { error: NOT_ALLOWED };
   revalidatePath(`/clients/${client.id}`);
-  redirect(`/funnels/${data.id}`);
+  redirect(`/funnels/${r.rows[0].id}`);
 }
 
 export async function duplicateFunnelAction(id: string) {
-  const { sb, user } = await requireEditor();
-  const { data: f } = await sb.from("funnels").select("*").eq("id", uuid.parse(id)).single();
+  await requireEditor();
+  const f = (await must<{ client_id: string; name: string; description: string; graph: unknown; settings: Record<string, unknown>; summary: Record<string, unknown> }>("fmp.funnels.get", { id: uuid.parse(id) }))[0];
   if (!f) throw new Error("Funnel not found");
   const graph = reidGraph(parseGraph(f.graph), newId);
-  const { error } = await sb.from("funnels").insert({
-    client_id: f.client_id,
-    owner_id: user.id,
-    name: `${f.name} (copy)`,
-    description: f.description,
-    status: "draft",
-    graph: graph as never,
-    settings: f.settings,
-    summary: f.summary,
-  });
-  if (error) throw new Error(error.message);
+  const rows = await must("fmp.funnels.create", { client: f.client_id, name: `${f.name} (copy)`.slice(0, 200), description: f.description, status: "draft", graph, settings: f.settings, summary: f.summary });
+  if (!rows.length) throw new Error(NOT_ALLOWED);
   revalidateLists(f.client_id);
 }
 
 /** Rename a funnel from the list (F2 inline rename). */
 export async function renameFunnelAction(id: string, name: string): Promise<ActionResult> {
-  const { sb } = await requireEditor();
+  await requireEditor();
   const n = name.trim().slice(0, 120);
   if (!n) return { error: "A funnel needs a name" };
-  const { data, error } = await sb.from("funnels").update({ name: n }).eq("id", uuid.parse(id)).select("client_id").single();
-  if (error) return { error: error.message };
-  revalidateLists(data.client_id);
+  const r = await run<{ client_id: string }>("fmp.funnels.update", { id: uuid.parse(id), name: n });
+  if (r.error) return { error: r.error };
+  if (!r.rows.length) return { error: NOT_ALLOWED };
+  revalidateLists(r.rows[0].client_id);
   return { ok: true };
 }
 
 /** Move a funnel to another client of the same workspace (RLS rejects any other client). */
 export async function moveFunnelAction(id: string, clientId: string): Promise<ActionResult> {
-  const { sb } = await requireEditor();
+  await requireEditor();
   const fid = uuid.parse(id);
   const cid = uuid.parse(clientId);
-  const { data: before } = await sb.from("funnels").select("client_id").eq("id", fid).single();
-  const { data: client } = await sb.from("clients").select("id").eq("id", cid).is("deleted_at", null).single();
-  if (!client) return { error: "That client isn’t available" };
-  const { error } = await sb.from("funnels").update({ client_id: cid }).eq("id", fid);
-  if (error) return { error: error.message };
+  const before = (await run<{ client_id: string }>("fmp.funnels.get", { id: fid })).rows[0];
+  const client = (await run<{ id: string; trashed_at: string | null }>("fmp.clients.full", { id: cid })).rows[0];
+  if (!client || client.trashed_at) return { error: "That client isn’t available" };
+  const r = await run("fmp.funnels.update", { id: fid, client: cid });
+  if (r.error) return { error: r.error };
+  if (!r.rows.length) return { error: NOT_ALLOWED };
   revalidateLists(cid);
   if (before?.client_id) revalidatePath(`/clients/${before.client_id}`);
   return { ok: true };
 }
 
 export async function setFunnelStatusAction(id: string, status: string) {
-  const { sb } = await requireEditor();
+  await requireEditor();
   const s = z.enum(FUNNEL_STATUSES).parse(status);
-  const { data, error } = await sb.from("funnels").update({ status: s }).eq("id", uuid.parse(id)).select("client_id").single();
-  if (error) throw new Error(error.message);
-  revalidateLists(data.client_id);
+  const rows = await must<{ client_id: string }>("fmp.funnels.update", { id: uuid.parse(id), status: s });
+  if (!rows.length) throw new Error(NOT_ALLOWED);
+  revalidateLists(rows[0].client_id);
 }
 
 /* ---------------- templates ---------------- */
 export async function deleteTemplateAction(id: string) {
-  const { sb } = await requireEditor();
-  const { error } = await sb.from("templates").delete().eq("id", uuid.parse(id));
-  if (error) throw new Error(error.message);
+  await requireEditor();
+  await must("fmp.templates.delete", { id: uuid.parse(id) });
   revalidatePath("/templates");
 }
 
-/* ---------------- profile & workspace ---------------- */
+/* ---------------- profile, organization settings ---------------- */
+/** Your name (the same ecosystem profile every app uses). */
 export async function updateProfileAction(_: ActionResult, fd: FormData): Promise<ActionResult> {
-  const { sb, user } = await requireUser();
+  await requireUser();
   const p = z.object({ full_name: z.string().trim().max(120) }).safeParse({ full_name: fd.get("full_name") ?? "" });
   if (!p.success) return { error: p.error.issues[0].message };
-  const { error } = await sb.from("profiles").update(p.data).eq("id", user.id);
-  if (error) return { error: error.message };
-  revalidatePath("/", "layout");
-  return { ok: true };
-}
-
-async function requireAdmin() {
-  const ctx = await requireUser();
-  if (!ctx.isAdmin) throw new Error("Only workspace admins can do that");
-  return ctx;
-}
-
-export async function updateWorkspaceAction(_: ActionResult, fd: FormData): Promise<ActionResult> {
-  const { sb, isAdmin, workspace } = await requireUser();
-  if (!isAdmin) return { error: "Only workspace admins can change branding" };
-  const p = z
-    .object({ agency_name: z.string().trim().min(1, "Enter the agency name").max(120), default_currency: z.string().refine(isCurrency, "Pick a currency") })
-    .safeParse({ agency_name: fd.get("agency_name"), default_currency: fd.get("default_currency") });
-  if (!p.success) return { error: p.error.issues[0].message };
-  const { error } = await sb.from("workspaces").update(p.data).eq("id", workspace.id);
-  if (error) return { error: error.message };
-  revalidatePath("/", "layout");
-  return { ok: true };
-}
-
-export async function updateAgencyLogo(url: string | null) {
-  const { sb, workspace } = await requireAdmin();
-  const { error } = await sb.from("workspaces").update({ agency_logo_url: z.url().nullable().parse(url) }).eq("id", workspace.id);
-  if (error) throw new Error(error.message);
-  revalidatePath("/", "layout");
-}
-
-const ASSIGNABLE = ["admin", "editor", "viewer"] as const;
-export type AssignableRole = (typeof ASSIGNABLE)[number];
-
-/** Change a member's role (admin / editor / viewer) or activation in this workspace. The owner is changed only by handover. */
-export async function setMemberAction(id: string, patch: { role?: AssignableRole; active?: boolean }): Promise<ActionResult> {
-  const { sb, workspace } = await requireAdmin();
-  const p = z.object({ role: z.enum(ASSIGNABLE).optional(), active: z.boolean().optional() }).parse(patch);
-  const { error } = await sb.from("workspace_members").update(p).eq("workspace_id", workspace.id).eq("user_id", uuid.parse(id));
-  if (error)
-    return {
-      error: error.message.includes("at least one active admin")
-        ? "The workspace needs at least one active admin."
-        : error.message.includes("ownership")
-          ? "The owner’s role can’t be changed. The owner can hand over ownership instead."
-          : error.message,
-    };
-  revalidatePath("/settings");
-  return { ok: true };
-}
-
-/** The owner hands this workspace to another active member (the owner becomes an admin). */
-export async function transferOwnershipAction(id: string): Promise<ActionResult> {
-  const { sb, isOwner } = await requireUser();
-  if (!isOwner) return { error: "Only the owner can hand over the workspace." };
-  const { error } = await sb.rpc("transfer_ownership", { p_to: uuid.parse(id) });
-  if (error) return { error: error.message };
-  revalidatePath("/", "layout");
-  revalidatePath("/settings");
-  return { ok: true };
-}
-
-/**
- * Remove a teammate from the current workspace. Everything they created here is first handed to the admin removing
- * them. If they belong to no other workspace, their account (and email) is deleted too; otherwise they keep access
- * to their other workspaces. Workspace admins only, never yourself.
- */
-export async function removeMemberAction(id: string): Promise<ActionResult> {
-  const { sb, user, workspace } = await requireAdmin();
-  const target = uuid.parse(id);
-  if (target === user.id) return { error: "You can’t remove yourself." };
-  const { data: member } = await sb.from("workspace_members").select("user_id, role").eq("workspace_id", workspace.id).eq("user_id", target).maybeSingle();
-  if (!member) return { error: "That person isn’t in this workspace." };
-  if (member.role === "owner") return { error: "The owner can’t be removed. The owner can hand over ownership first." };
-  const admin = supabaseAdmin();
-  if (!admin) return { error: "Removing teammates needs SUPABASE_SERVICE_ROLE_KEY on the server. Until then, deactivate them." };
-  for (const t of ["clients", "funnels", "funnel_versions", "funnel_actuals", "share_links", "share_comments", "templates", "products"] as const) {
-    const { error } = await admin.from(t).update({ owner_id: user.id }).eq("owner_id", target).eq("workspace_id", workspace.id);
-    if (error) return { error: `Couldn’t transfer their work (${t}): ${error.message}. Nothing was removed.` };
-  }
-  const left = await admin.from("workspace_members").delete().eq("workspace_id", workspace.id).eq("user_id", target);
-  if (left.error) return { error: `Their work is now yours, but they couldn’t be removed: ${left.error.message}` };
-  // still in other workspaces: keep the account and move them out of this one; otherwise delete the account
-  const { data: others } = await admin.from("workspace_members").select("workspace_id, active").eq("user_id", target).order("active", { ascending: false });
-  if (others?.length) {
-    await admin.from("profiles").update({ workspace_id: others[0].workspace_id }).eq("id", target).eq("workspace_id", workspace.id);
-  } else {
-    const { error } = await admin.auth.admin.deleteUser(target);
-    if (error) return { error: `Removed from the workspace, but the account couldn’t be deleted: ${error.message}` };
-  }
-  revalidatePath("/settings");
-  return { ok: true };
-}
-
-/** Where invite links send people back to: NEXT_PUBLIC_SITE_URL, else the address this request came in on. */
-async function siteUrl() {
-  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "");
-  const h = await headers();
-  return `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host")}`;
-}
-
-/** Invite a teammate into the current workspace (its admins only). Someone who already has an account is added directly. */
-export async function inviteMemberAction(_: ActionResult, fd: FormData): Promise<ActionResult> {
-  const { isTeam, workspace } = await requireAdmin();
-  const p = z
-    .object({ email: z.email("Enter a valid email"), full_name: z.string().trim().max(120).default(""), role: z.enum(ASSIGNABLE).default("editor") })
-    .safeParse({ email: fd.get("email"), full_name: fd.get("full_name") ?? "", role: fd.get("role") || undefined });
-  if (!p.success) return { error: p.error.issues[0].message };
-  const admin = supabaseAdmin();
-  if (!admin) return { error: "In-app invites need SUPABASE_SERVICE_ROLE_KEY on the server. Until then, invite from Supabase → Authentication → Users → Invite user." };
-  const email = p.data.email.trim().toLowerCase();
-  // the team workspace is where new accounts land by default; any other workspace needs a pending row naming it
-  if (isTeam) await clearPendingSignup(email);
-  else {
-    const pending = await admin.from("workspace_signups").upsert({ email, full_name: p.data.full_name, workspace_name: "", join_workspace_id: workspace.id });
-    if (pending.error) return { error: pending.error.message };
-  }
-  const site = await siteUrl();
-  const { data: invited, error } = await admin.auth.admin.inviteUserByEmail(email, { data: { full_name: p.data.full_name }, redirectTo: site ? `${site}/auth/callback?next=/update-password` : undefined });
-  if (!isTeam) await clearPendingSignup(email);
-  if (error && /already/i.test(error.message)) {
-    const { data: existing } = await admin.from("profiles").select("id").eq("email", email).maybeSingle();
-    if (!existing) return { error: error.message };
-    const { data: had } = await admin.from("workspace_members").select("active").eq("workspace_id", workspace.id).eq("user_id", existing.id).maybeSingle();
-    if (had) return { error: had.active ? "That person is already in this workspace." : "That person is in the list below: reactivate them." };
-    const added = await admin.from("workspace_members").insert({ workspace_id: workspace.id, user_id: existing.id, role: p.data.role, active: true });
-    if (added.error) return { error: added.error.message };
-    revalidatePath("/settings");
-    return { ok: true, added: true };
-  }
-  if (error) return { error: error.message };
-  // new accounts join as editors; give them the chosen role in this workspace straight away (service role)
-  if (p.data.role !== "editor" && invited.user) await admin.from("workspace_members").update({ role: p.data.role }).eq("workspace_id", workspace.id).eq("user_id", invited.user.id);
-  revalidatePath("/settings");
-  return { ok: true };
-}
-
-const independentSchema = z.object({
-  email: z.email("Enter a valid email"),
-  full_name: z.string().trim().max(120).default(""),
-  workspace_name: z.string().trim().max(120).default(""),
-});
-
-/** Create an independent account with its own private workspace (the team workspace's owner only). */
-export async function createIndependentAccountAction(_: ActionResult, fd: FormData): Promise<ActionResult> {
-  const { isTeam, isOwner } = await requireUser();
-  if (!isTeam || !isOwner) return { error: "Only the owner of the Layer2Funnels workspace can create independent accounts." };
-  const p = independentSchema.safeParse({ email: fd.get("email"), full_name: fd.get("full_name") ?? "", workspace_name: fd.get("workspace_name") ?? "" });
-  if (!p.success) return { error: p.error.issues[0].message };
-  const r = await startIndependentSignup(p.data, await siteUrl());
-  if (r.exists) return { error: "That email already has an account." };
+  const r = await run("profile.update", { name: p.data.full_name });
   if (r.error) return { error: r.error };
+  revalidatePath("/", "layout");
   return { ok: true };
 }
 
-/* ---------------- workspaces ---------------- */
-/** Switch to another workspace you're an active member of (checked by the database). */
-export async function switchWorkspaceAction(id: string) {
-  const { sb } = await requireUser();
-  const { error } = await sb.rpc("switch_workspace", { p_workspace: uuid.parse(id) });
-  if (error) throw new Error(error.message);
+/** Funnel Mapper's own organization setting: the default currency for new clients and funnels (admins). Name and logo live in Office › Admin › Branding. */
+export async function updateWorkspaceAction(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const { isAdmin } = await requireUser();
+  if (!isAdmin) return { error: "Only admins can change this." };
+  const p = z.object({ default_currency: z.string().refine(isCurrency, "Pick a currency") }).safeParse({ default_currency: fd.get("default_currency") });
+  if (!p.success) return { error: p.error.issues[0].message };
+  const r = await run("fmp.settings.set", { default_currency: p.data.default_currency });
+  if (r.error) return { error: r.error };
   revalidatePath("/", "layout");
-  redirect("/");
+  return { ok: true };
 }
 
-/** Admins create a new, empty workspace with its own data and teammates, and switch to it. */
-export async function createWorkspaceAction(_: ActionResult, fd: FormData): Promise<ActionResult> {
-  const { sb } = await requireAdmin();
-  const p = z.string().trim().min(1, "Name the workspace").max(120).safeParse(fd.get("name") ?? "");
-  if (!p.success) return { error: p.error.issues[0].message };
-  const { error } = await sb.rpc("create_workspace", { p_name: p.data });
-  if (error) return { error: error.message };
+// Team, invitations, roles, ownership, branding and independent accounts are managed by the ecosystem now (Office › Admin);
+// these keep their names so older screens compile, and say where to go.
+export async function createWorkspaceAction(_s: ActionResult, _fd: FormData): Promise<ActionResult> { return { error: MANAGED }; }   // eslint-disable-line @typescript-eslint/no-unused-vars
+
+/** Switch to another organization you work in (only ones the ecosystem lists for you; the API checks every call anyway). */
+export async function switchWorkspaceAction(id: string) {
+  const oid = uuid.parse(id);
+  const { orgs } = await currentOrg();
+  if (!orgs.some((o) => o.org_id === oid)) throw new Error(NOT_ALLOWED);
+  (await cookies()).set(ORG_COOKIE, oid, { httpOnly: true, sameSite: "lax", secure: true, path: "/", maxAge: 60 * 60 * 24 * 365 });
   revalidatePath("/", "layout");
   redirect("/");
 }
@@ -522,29 +393,29 @@ const productSchema = z.object({
 export type ProductInput = z.input<typeof productSchema>;
 
 export async function saveProductAction(input: ProductInput): Promise<ActionResult> {
-  const { sb, user, canEdit } = await requireUser();
+  const { canEdit } = await requireUser();
   if (!canEdit) return { error: VIEWER };
   const p = productSchema.safeParse(input);
   if (!p.success) return { error: p.error.issues[0].message };
-  const { id, ...row } = p.data;
-  const q = id ? sb.from("products").update(row).eq("id", id) : sb.from("products").insert({ ...row, owner_id: user.id });
-  const { error } = await q;
-  if (error) return { error: error.message };
-  if (row.client_id) revalidatePath(`/clients/${row.client_id}`);
+  const { id, client_id, ...row } = p.data;
+  const r = await run("fmp.products.save", { ...(id ? { id } : {}), ...(client_id ? { client: client_id } : {}), name: row.name, type: row.type, params: row.params, notes: row.notes });
+  if (r.error) return { error: r.error };
+  if (!r.rows.length) return { error: NOT_ALLOWED };
+  const row2 = { client_id };
+  if (row2.client_id) revalidatePath(`/clients/${row2.client_id}`);
   return { ok: true };
 }
 
 export async function deleteProductAction(id: string, clientId: string | null) {
-  const { sb } = await requireEditor();
-  const { error } = await sb.from("products").delete().eq("id", uuid.parse(id));
-  if (error) throw new Error(error.message);
+  await requireEditor();
+  await must("fmp.products.delete", { id: uuid.parse(id) });
   if (clientId) revalidatePath(`/clients/${clientId}`);
 }
 
 /* ---------------- import ---------------- */
 /** Create a new funnel for a client from an exported .json file (this app's format or the prototype's). */
 export async function importFunnelAction(clientId: string, json: string): Promise<ActionResult> {
-  const { sb, user, canEdit } = await requireUser();
+  const { canEdit } = await requireUser();
   if (!canEdit) return { error: VIEWER };
   if (!uuid.safeParse(clientId).success) return { error: "Unknown client" };
   if (json.length > 5_000_000) return { error: "That file is too large" };
@@ -555,12 +426,9 @@ export async function importFunnelAction(clientId: string, json: string): Promis
     return { error: "That file isn’t a Funnel Mapper .json file" };
   }
   const graph = reidGraph(d.graph, newId);
-  const { data, error } = await sb
-    .from("funnels")
-    .insert({ client_id: clientId, owner_id: user.id, name: d.name || "Imported funnel", description: d.description ?? "", graph: graph as never, settings: d.settings as never, summary: summary(compute(graph, d.settings)) as never })
-    .select("id")
-    .single();
-  if (error) return { error: error.message };
+  const r = await run<{ id: string }>("fmp.funnels.create", { client: clientId, name: (d.name || "Imported funnel").slice(0, 200), description: d.description ?? "", graph, settings: d.settings, summary: summary(compute(graph, d.settings)) });
+  if (r.error) return { error: r.error };
+  if (!r.rows.length) return { error: NOT_ALLOWED };
   revalidatePath(`/clients/${clientId}`);
-  return { ok: true, id: data.id };
+  return { ok: true, id: r.rows[0].id };
 }

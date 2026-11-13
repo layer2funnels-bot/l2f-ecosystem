@@ -7,6 +7,7 @@ import { createApi } from '../packages/core/api.mjs';
 import { createPgExecutor } from '../packages/core/pg-executor.mjs';
 import { createRateLimiter } from '../packages/core/rate-limit.mjs';
 import { createSafeLogger } from '../packages/core/safe-log.mjs';
+import { createMemoryStorage } from '../packages/core/storage-adapter.mjs';
 
 const db = await openDb(); await migrate(db);
 const { asUser, asSuper } = session(db); const { results, check, errCode } = recorder();
@@ -14,7 +15,7 @@ const rows = async (s, p = []) => (await db.query(s, p)).rows;
 let chain = Promise.resolve();
 const acquire = () => { const prev = chain; let release; chain = new Promise((r) => { release = r; }); return prev.then(() => ({ query: (s, p) => db.query(s, p), release })); };
 const BIG = { read: { max: 1e6, windowMs: 6e4 }, write: { max: 1e6, windowMs: 6e4 }, sensitive: { max: 1e6, windowMs: 6e4 } };
-const api = createApi({ executor: createPgExecutor({ acquire, role: 'app_user' }), logger: createSafeLogger(() => {}), limiter: createRateLimiter({ limits: BIG }) });
+const api = createApi({ executor: createPgExecutor({ acquire, role: 'app_user' }), logger: createSafeLogger(() => {}), limiter: createRateLimiter({ limits: BIG }), storage: createMemoryStorage() });
 const call = (op, input, user, org = L) => api.handle({ operation: op, input, auth: { userId: user, email: 'x@example.com' }, headers: { 'x-org-id': org } });
 const data = (r) => r.body?.data ?? [];
 const pub = (action, token, body) => api.publicFmpShare({ action, token, ip: '1.2.3.4', body });
@@ -64,7 +65,8 @@ check('FD8', 'Versions are added by editors, listed by viewers, refused for view
   && data(await call('fmp.versions.add', { funnel: F1, graph: GRAPH }, U.VW)).length === 0 && data(await call('fmp.versions.list', { funnel: F2 }, U.SCOPED)).length === 0);
 r = await call('fmp.actuals.save', { funnel: F1, rows: [{ period_start: '2026-11-01', period_end: '2026-11-30', node_id: 'a', visitors: 2300, spend: 660 }] }, U.ED);
 await call('fmp.actuals.save', { funnel: F1, rows: [{ period_start: '2026-11-01', period_end: '2026-11-30', node_id: 'a', visitors: 2400, spend: 700 }] }, U.ED);
-check('FD9', 'Actuals save as one row per block and period (saving again updates it), and can be cleared', (await rows('select visitors from fmp.funnel_actuals where funnel_id=$1', [F1])).map((x) => Number(x.visitors)).join() === '2400'
+await call('fmp.actuals.save', { funnel: F1, rows: [{ period_start: '2026-11-01', period_end: '2026-11-30', node_id: 'a', revenue: 90 }] }, U.ED);
+check('FD9', 'Actuals save as one row per block and period (saving again updates it, a field left out keeps its value), and can be cleared', (await rows('select visitors, spend, revenue from fmp.funnel_actuals where funnel_id=$1', [F1])).map((x) => [Number(x.visitors), Number(x.spend), Number(x.revenue)].join('/')).join() === '2400/700/90'
   && data(await call('fmp.actuals.list', { funnels: [F1, F2] }, U.VW)).length === 1
   && data(await call('fmp.actuals.save', { funnel: F1, clear: { period_start: '2026-11-01', period_end: '2026-11-30', node_ids: ['a'] } }, U.ED)).length === 1
   && (await rows('select count(*)::int n from fmp.funnel_actuals'))[0].n === 0);
@@ -126,6 +128,18 @@ check('FD23', 'Restoring the client brings back only the funnels trashed with it
 r = await call('fmp.funnels.purge', { id: F2 }, U.ED);
 check('FD24', 'Delete for good: an editor cannot; the owner can, and only for trashed funnels', data(r).length === 0 && data(await call('fmp.funnels.purge', { id: F1 }, U.OWN)).length === 0
   && data(await call('fmp.funnels.purge', { id: F2 }, U.OWN)).length === 1 && (await rows('select count(*)::int n from fmp.funnels where id=$1', [F2]))[0].n === 0);
+await call('fmp.clients.trash', { client: C2 }, U.ED);
+check('FD32', 'Deleting a trashed client for good removes its Funnel Mapper data (owner only) but keeps the shared client in Clients', data(await call('fmp.clients.purge', { client: C2 }, U.ED)).length === 0
+  && data(await call('fmp.clients.purge', { client: C2 }, U.OWN)).length === 1 && (await rows('select count(*)::int n from fmp.products where client_id=$1', [C2]))[0].n === 0
+  && (await rows('select count(*)::int n from clients where id=$1', [C2]))[0].n === 1);
+const up = (input, u = U.ED, org = L) => call('fmp.files.upload', { size_bytes: 1000, mime_type: 'image/webp', ...input }, u, org).then(data);
+const [shot] = await up({ kind: 'shot' });
+const [pic] = shot ? await up({ kind: 'pic', of: shot.path }) : [];
+check('FD33', 'Images go to the organization\'s Funnel Mapper folder; the block picture sits next to its capture; viewers and other organizations cannot add or sign them',
+  !!shot && shot.path.startsWith(`${L}/fmp/shot/`) && pic?.path === shot.path.replace(/\.webp$/, '-pic.webp')
+  && (await up({ kind: 'logo' }, U.VW)).length === 0 && (await up({ kind: 'pic', of: `${A}/fmp/shot/x.webp` })).length === 0
+  && data(await call('fmp.files.url', { paths: [shot.path] }, U.VW)).length === 1 && data(await call('fmp.files.url', { paths: [shot.path] }, U.AOWN, A)).length === 0
+  && data(await call('fmp.files.url', { paths: [`${L}/drive/x.pdf`] }, U.VW)).length === 0);
 await asSuper();
 check('FD25', 'Funnel and share-link changes are in the audit log', (await rows("select count(*)::int n from audit_events where workspace_id=$1 and action like 'funnels.%'", [L]))[0].n >= 3
   && (await rows("select count(*)::int n from audit_events where workspace_id=$1 and action like 'share_links.%'", [L]))[0].n >= 1);

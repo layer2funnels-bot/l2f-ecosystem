@@ -5,16 +5,17 @@ import type { FunnelSummary } from "@/lib/funnel-math";
 import { parseGraph, parseSettings } from "@/lib/graph";
 import { healthChecks } from "@/lib/health";
 import { requireUser } from "@/lib/supabase/server";
+import { listClients, listFunnels } from "@/lib/eco/data";
 import { FunnelsBrowser, type FunnelListItem } from "./funnels-browser";
 
 export const metadata: Metadata = { title: "Funnels" };
 
 export default async function FunnelsPage({ searchParams }: PageProps<"/funnels">) {
-  const { sb, workspace, canEdit } = await requireUser();
+  const { workspace, canEdit } = await requireUser();
   const sp = await searchParams;
-  const [{ data: funnels }, { data: clients }] = await Promise.all([
-    sb.from("funnels").select("id, name, status, client_id, summary, settings, graph, updated_at").is("deleted_at", null).order("updated_at", { ascending: false }),
-    sb.from("clients").select("id, name, currency, archived_at").is("deleted_at", null).order("name"),
+  const [funnels, clients] = await Promise.all([
+    listFunnels({ withGraph: true }),
+    listClients(),
   ]);
   const byClient = Object.fromEntries((clients ?? []).map((c) => [c.id, c]));
   const items: FunnelListItem[] = (funnels ?? [])

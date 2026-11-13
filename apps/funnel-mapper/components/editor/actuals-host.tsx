@@ -3,15 +3,16 @@
 // entry dialog, and the block's Actual tab saves one row for the dates on the calendar. Everything writes funnel_actuals.
 import { useCallback, useEffect, useState } from "react";
 import type { ActualRowDb } from "@/lib/schemas";
-import { supabaseBrowser } from "@/lib/supabase/client";
+import { ecoCall } from "@/lib/eco/browser";
 import { closeActualsEntry, setActuals, showToast, useEditor } from "@/lib/editor/store";
 import { ActualsEntry } from "./actuals-entry";
 
 /** Re-read this funnel's actuals; the map's Actual view and the strip follow. */
 export async function reloadActuals(): Promise<ActualRowDb[]> {
   const s = useEditor.getState();
-  const { data, error } = await supabaseBrowser().from("funnel_actuals").select("*").eq("funnel_id", s.funnelId).order("period_start", { ascending: false });
-  if (error) {
+  const r = await ecoCall<ActualRowDb>("fmp.actuals.list", { funnel: s.funnelId });
+  const data = r.ok ? r.data : null;
+  if (!r.ok) {
     showToast("Couldn’t load the real numbers");
     return s.actuals ?? [];
   }
@@ -22,12 +23,11 @@ export async function reloadActuals(): Promise<ActualRowDb[]> {
 /** Save (or clear) one step's real numbers for exactly these dates. Empty values delete the row. */
 export async function saveActual(nodeId: string, range: { start: string; end: string }, v: { visitors?: number | null; conversions?: number | null; revenue?: number | null; spend?: number | null }): Promise<boolean> {
   const s = useEditor.getState();
-  const sb = supabaseBrowser();
   const empty = Object.values(v).every((x) => x == null);
   const q = empty
-    ? await sb.from("funnel_actuals").delete().eq("funnel_id", s.funnelId).eq("period_start", range.start).eq("period_end", range.end).eq("node_id", nodeId)
-    : await sb.from("funnel_actuals").upsert({ funnel_id: s.funnelId, period_start: range.start, period_end: range.end, node_id: nodeId, visitors: v.visitors ?? null, conversions: v.conversions ?? null, revenue: v.revenue ?? null, spend: v.spend ?? null }, { onConflict: "funnel_id,period_start,period_end,node_id" });
-  if (q.error) {
+    ? await ecoCall("fmp.actuals.save", { funnel: s.funnelId, clear: { period_start: range.start, period_end: range.end, node_ids: [nodeId] } })
+    : await ecoCall("fmp.actuals.save", { funnel: s.funnelId, rows: [{ period_start: range.start, period_end: range.end, node_id: nodeId, visitors: v.visitors ?? null, conversions: v.conversions ?? null, revenue: v.revenue ?? null, spend: v.spend ?? null }] });
+  if (!q.ok) {
     showToast("Couldn’t save that number");
     return false;
   }
