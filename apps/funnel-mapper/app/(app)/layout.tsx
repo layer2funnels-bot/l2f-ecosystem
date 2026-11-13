@@ -5,7 +5,7 @@ import { templateOptions } from "@/lib/queries";
 import { roleLabel } from "@/lib/roles";
 import { requireUser } from "@/lib/supabase/server";
 import { funnelCounts, listClients } from "@/lib/eco/data";
-import { launcherUrl } from "@/lib/eco/core";
+import { launcherUrl, profileUrl } from "@/lib/eco/core";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const { user, profile, workspace, workspaces, role, isTeam, canEdit } = await requireUser();
@@ -20,7 +20,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   return (
     <div className="min-h-full lg:flex">
       <ThemeSync saved={user.user_metadata?.theme === "light" || user.user_metadata?.theme === "dark" ? user.user_metadata.theme : null} at={Number(user.user_metadata?.theme_at) || 0} />
-      <AppNav agency={workspace.agency_name || "Layer2Funnels"} user={profile.full_name || user.email || ""} role={roleLabel(role)} logo={workspace.agency_logo_url} team={isTeam} workspaceId={workspace.id} workspaces={workspaces} appsUrl={launcherUrl()} trash={counts.trashed + counts.trashed_clients} pinned={pin.data ?? []} counts={{ "/clients": live.length, "/funnels": counts.active }} />
+      <AppNav agency={workspace.agency_name || "Layer2Funnels"} user={profile.full_name || user.email || ""} role={roleLabel(role)} logo={workspace.agency_logo_url} team={isTeam} workspaceId={workspace.id} workspaces={workspaces} appsUrl={launcherUrl()} profileUrl={profileUrl()} trash={counts.trashed + counts.trashed_clients} pinned={pin.data ?? []} counts={{ "/clients": live.length, "/funnels": counts.active }} />
       <div className="min-w-0 flex-1">
         <TopStrip canEdit={canEdit} clients={clients} templates={templates} defaultCurrency={workspace.default_currency} niches={niches} />
         <main id="main" className="px-4 py-6 pb-24 sm:px-6 sm:pb-6 lg:px-10 lg:pt-7 lg:pb-10">

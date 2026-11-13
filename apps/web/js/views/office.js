@@ -3,7 +3,6 @@
 import { h, put, icon, btn, chip, dialog, drawer, toast, field, skeleton, emptyState, errorState, readOnlyNotice, initials, avatar, roleLabel } from '../ui.js';
 import { hrefFor } from './../routes.js';
 import { plateOf } from '../registry.js';
-import { withOrg } from './launcher.js';
 import { emptyDoc, serialize } from '../modules/docmodel.js';
 
 const DOC_MIME = 'application/vnd.l2f.doc+json'; const BOARD_MIME = 'application/vnd.excalidraw+json';
@@ -68,7 +67,7 @@ export function appsView({ catalog, registry, org, orgs, onSwitch }) {
   const reason = { locked: 'Locked: an owner turns it on when ready', coming_soon: 'Coming soon', not_set_up: `Not set up for ${org.name}` };
   const rows = catalog.map((a) => {
     const man = registry?.get(a.app_key); const open = a.state === 'available';
-    const href = a.app_key === 'office' ? hrefFor.office() : a.app_key === 'funnel_mapper_pro' && a.launch_url ? withOrg(a.launch_url, org.org_id) : hrefFor.app(a.app_key);
+    const href = a.app_key === 'office' ? hrefFor.office() : a.app_key === 'funnel_mapper_pro' && a.launch_url ? a.launch_url : hrefFor.app(a.app_key);
     return h('li', { class: 'app-row' }, plateOf(man ?? { id: a.app_key }, 40, a.state), h('div', { class: 'grow' }, h('b', {}, a.name), h('div', { class: 'fine muted' }, man?.description ?? '')),
       open ? h('a', { class: 'btn', href }, ['Open ', h('span', { class: 'sr' }, a.name)]) : chip(reason[a.state] ?? 'Unavailable', a.state === 'locked' ? 'warn' : ''));
   });

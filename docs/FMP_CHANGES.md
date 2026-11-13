@@ -13,7 +13,7 @@ Rules that still apply: code only; no real data; no connection to any live proje
 | `app/(app)/clients/[id]/page.tsx` | Fixed-size text classes (`text-[N px]`) one step up (+1 px). V7 16 §4: "Open in Clients" link to the client in the Clients app. | FM-7 sizes. |
 | `app/(app)/clients/clients-browser.tsx` | Fixed-size text classes (`text-[N px]`) one step up (+1 px). | FM-7 sizes. |
 | `app/(app)/clients/page.tsx` | "Shared with the Clients app" note; reads through the ecosystem API. | V7 16 §4; stage 2. |
-| `app/(app)/settings/page.tsx` | Fixed-size text classes (`text-[N px]`) one step up (+1 px). Stage 2: profile, default currency, appearance and account only; team and branding are in Office › Admin. | FM-7 sizes; stage 2. |
+| `app/(app)/settings/page.tsx` | Fixed-size text classes (`text-[N px]`) one step up (+1 px). Stage 2: only Funnel Mapper's own settings (default currency, appearance); profile, account, organization and team are the ecosystem's and are not shown here. | FM-7 sizes; stage 2 (owner, 13 Nov). |
 | `app/(app)/settings/settings-nav.tsx` | Fixed-size text classes (`text-[N px]`) one step up (+1 px). | FM-7 sizes. |
 | `app/(app)/templates/templates-browser.tsx` | Fixed-size text classes (`text-[N px]`) one step up (+1 px). | FM-7 sizes. |
 | `app/(auth)/layout.tsx` | "Funnel Mapper Pro V2" → "Funnel Mapper". | V7 rename (user-facing only). |
@@ -28,7 +28,7 @@ Rules that still apply: code only; no real data; no connection to any live proje
 | `app/fonts/jetbrains-mono-latin-500-normal.woff2` | Added (latin subset, unmodified from the `@fontsource` npm package). | Self-hosted font: the build must never fetch fonts. SIL OFL 1.1. |
 | `app/globals.css` | Original theme (dark navy + emerald, with light as an option). Text 10–17 px one step up (+1 px) and control heights 30–38 px +2 px; Tailwind `text-xs` 13 px, `text-sm` 14.5 px. | FM-7: V7 sizes one step up; owner feedback "too small". |
 | `app/layout.tsx` | Title and application name "Funnel Mapper"; fonts self-hosted (`next/font/local`, same families and weights). The dark default and the light/dark choice are the original's again. | V7 rename; builds never fetch fonts; design decision FM-7 (docs/implementation/FUNNEL_MAPPER_DESIGN_DECISIONS.md). |
-| `components/app-nav.tsx` | Brand text "Funnel Mapper"; bigger text classes. Stage 2: passes the "All apps" address instead of workspace creation. | V7 rename; FM-7 sizes. |
+| `components/app-nav.tsx` | Brand text "Funnel Mapper"; bigger text classes. Stage 2: "All apps" address; your name opens your ecosystem profile. | V7 rename; FM-7 sizes; stage 2. |
 | `components/client-form.tsx` | Duplicate decision step ("Link to the selected client" / "Create a new client"), shown only when the shared list found possible matches. Bigger text classes. | V7 16 §4; never link automatically (owner, 13 Nov). |
 | `components/editor/editor.css` | Editor panels, toolbars, inspector, KPI bar and library text +1 px. Map blocks, lines, frames and notes unchanged. Clickable check rows (`.fm-kcheck`). | FM-7 sizes (maps and exports must look exactly as before); audit P0 clickable checks. |
 | `components/editor/forecast-charts.tsx` | Fixed-size text classes (`text-[N px]`) one step up (+1 px). | FM-7 sizes. |
@@ -36,7 +36,7 @@ Rules that still apply: code only; no real data; no connection to any live proje
 | `components/page-header.tsx` | Fixed-size text classes (`text-[N px]`) one step up (+1 px). | FM-7 sizes. |
 | `components/theme-toggle.tsx` | Fixed-size text classes (`text-[N px]`) one step up (+1 px). | FM-7 sizes. |
 | `components/top-strip.tsx` | Fixed-size text classes (`text-[N px]`) one step up (+1 px). | FM-7 sizes. |
-| `components/workspace-switcher.tsx` | Fixed-size text classes (`text-[N px]`) one step up (+1 px). Stage 2 (V7 16 §2): shows the ecosystem organization and the others to switch to, plus "All apps" back to the Launcher; creating workspaces removed (Office › Admin). | FM-7 sizes. |
+| `components/workspace-switcher.tsx` | Organization switcher the same as the ecosystem's (organization mark, "Your organizations", role, "Current", same footer); switching uses the ecosystem rule (`org.switch`): the ecosystem remembers the choice for every app, the same page is kept, a client or funnel never comes along, and "isn't set up" when Funnel Mapper is off there. "All apps" back to the Launcher. | V7 16 §2; owner, 13 Nov: switching the same as other apps. |
 | `lib/ecosystem/clients.ts` | Added: duplicate-decision helpers for the ecosystem Client service (`fmp.clients.*`). | Shared clients; always on since stage 2. |
 | `lib/supabase/database.types.ts` | Regenerated: `clients.ecosystem_client_id`. | Follows the new migration. |
 | `supabase/migrations/20261113000000_ecosystem_client_ref.sql` | Added: nullable `clients.ecosystem_client_id` (unique when set). | Funnel Mapper's own row points at the shared client; null for every existing row. |
@@ -58,7 +58,7 @@ Every read and write goes through the ecosystem API as the signed-in person; the
 | `app/(app)/funnels/page.tsx` | Reads funnels, clients and actuals through the ecosystem API. | Stage 2. |
 | `app/(app)/layout.tsx` | Organization, role and counts come from the ecosystem (`org.list`, `fmp.settings.get`, `fmp.funnels.counts`). "All apps" address for the sidebar. | Stage 2. |
 | `app/(app)/page.tsx` | Home reads through the ecosystem API. | Stage 2. |
-| `app/(app)/settings/settings-forms.tsx` | Only profile and default currency remain; team, invitations, branding and independent accounts moved to Office › Admin. | Stage 2. |
+| `app/(app)/settings/settings-forms.tsx` | Only the default-currency form remains. | Stage 2 (owner, 13 Nov). |
 | `app/(app)/templates/page.tsx` | Templates (built-in and the organization's) read through `fmp.templates.list`. | Stage 2. |
 | `app/(app)/trash/page.tsx` | Trash reads through the ecosystem API; delete forever is owner-only. | Stage 2. |
 | `app/(auth)/actions.ts` | Independent-user sign-up removed (owner decision: retire independent accounts). Sign-in, magic link and password reset unchanged (now the ecosystem sign-in). | Stage 2. |
@@ -84,7 +84,7 @@ Every read and write goes through the ecosystem API as the signed-in person; the
 | `lib/queries.ts` | Template options read through the ecosystem API. | Stage 2. |
 | `lib/schemas.ts` | Row types follow the ecosystem's `fmp` records. | Stage 2. |
 | `lib/share/server.ts` | Share pages read through the ecosystem's public share endpoint. | Stage 2. |
-| `lib/supabase/proxy.ts` | `/join/` no longer public (independent sign-up removed). Opened from the Launcher with `?org=`: remembers that organization (a preference; membership is checked on use) and drops the parameter. | Stage 2. |
+| `lib/supabase/proxy.ts` | `/join/` no longer public (independent sign-up removed). | Stage 2. |
 | `lib/supabase/server.ts` | `requireUser` uses the ecosystem: organization from `org.list`, role, profile; `/unavailable` when Funnel Mapper isn't switched on. An organization where it is off (API "not found") also goes to `/unavailable` instead of an error page. | Stage 2. |
 | `package-lock.json` | Follows `package.json`. | Stage 2. |
 | `package.json` | `sharp` removed (images are shrunk in the browser); Next 16.4.6 (needed by the Cloudflare adapter); `@opennextjs/cloudflare` and `wrangler` (dev only); scripts `cf:build`, `cf:size`. | Stage 2; owner decision: Cloudflare hosting. |
@@ -97,12 +97,12 @@ Every read and write goes through the ecosystem API as the signed-in person; the
 | `lib/supabase/admin.ts` | Deleted: no service key in Funnel Mapper; people are managed in Office › Admin. | Stage 2. |
 | `scripts/recompress-images.mts` | Deleted: maintenance script for the old storage buckets. | Stage 2. |
 | `tests/unit/image-pipeline.test.ts` | Deleted with the sharp pipeline. | Stage 2. |
-| `app/(auth)/unavailable/page.tsx` | Added: explains when Funnel Mapper isn't switched on for the person's organization or role. Offers "Switch to …" for the person's organizations where Funnel Mapper is on (V7 16 §4). | Stage 2. |
+| `app/(auth)/unavailable/page.tsx` | Added: "Funnel Mapper isn't set up for …" with "Switch to …" for the person's organizations where it is on (same switch as the sidebar). | Stage 2; V7 16 §4. |
 | `app/api/eco/[op]/route.ts` | Added: same-site relay from the browser to the ecosystem API (allow-listed `fmp.*` and `org.list`, same-origin check). | Stage 2. |
 | `lib/eco/browser.ts` | Added: `ecoCall` for components. | Stage 2. |
-| `lib/eco/core.ts` | Added: ecosystem API call with the person's token and organization. "No organization" marker for `org.list`; Launcher and Clients-app addresses. | Stage 2. |
+| `lib/eco/core.ts` | Added: ecosystem API call with the person's token and organization; "no organization" marker for `org.list`; Launcher, Clients-app and profile addresses. | Stage 2. |
 | `lib/eco/data.ts` | Added: server reads in the shapes the screens use; client logos signed for one hour. | Stage 2. |
-| `lib/eco/server.ts` | Added: session token, current organization (cookie `fm-org`), `eco` / `ecoRows`. | Stage 2. |
+| `lib/eco/server.ts` | Added: session token, the current organization as the ecosystem remembers it (same for every app; same default as the web app), `eco` / `ecoRows`. A failed organization list is reported as such, never as "no access". | Stage 2. |
 | `lib/eco/upload.ts` | Added: image upload to the organization's files, signed addresses, page capture storage. | Stage 2. |
 | `.gitignore` | Cloudflare build folders (`.open-next/`, `.wrangler/`) ignored. | Stage 2: Cloudflare hosting. |
 | `eslint.config.mjs` | Lint skips the Cloudflare build folders. | Stage 2: Cloudflare hosting. |
@@ -112,3 +112,5 @@ Every read and write goes through the ecosystem API as the signed-in person; the
 | `scripts/cf-size.mjs` | Added: `npm run cf:size` checks the compressed Worker against the free 3 MiB limit (2.76 MiB on 13 Nov). | Stage 2: Cloudflare hosting. |
 | `wrangler.jsonc` | Added: Cloudflare Worker settings (name `funnel-mapper`, Node compatibility). No account, domain or secret in it. | Stage 2: Cloudflare hosting. |
 | `AGENTS.md` | Added: the note `next dev` 16.4 writes for coding assistants (kept so the tree stays clean). | Stage 2: Next 16.4.6. |
+| `app/error.tsx` | Added: "This page couldn't load … Try again" when the ecosystem service is busy or out of reach (nothing changed). | Stage 2: same error state as the other apps. |
+| `components/switch-org-button.tsx` | Added: "Switch to …" button for the not-available page. | Stage 2. |

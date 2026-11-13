@@ -385,3 +385,18 @@ revoke all on function public.storage_usage() from public;
 grant execute on function public.storage_usage() to app_user;
 revoke all on function private.storage_used_bytes() from public;
 grant execute on function private.storage_used_bytes() to app_user;
+
+-- ------------------------------------------------------------------ organization switching (0005): Funnel Mapper's pages
+-- Switching organization inside Funnel Mapper uses the same rule as every app (resolve_org_switch): stay on the same page when it exists,
+-- a client or funnel never comes along (its list instead), and "isn't available" when Funnel Mapper is off in the other organization.
+-- No page permission here: the pages show only what the person may see (a person limited to some clients keeps the same page).
+insert into public.app_pages (app_key, page_key, title, kind, permission_key, parent_page_key) values
+  ('funnel_mapper_pro', 'home',      'Home',      'home',   null,              null),
+  ('funnel_mapper_pro', 'clients',   'Clients',   'page',   null,              'home'),
+  ('funnel_mapper_pro', 'client',    'Client',    'record', null,              'clients'),
+  ('funnel_mapper_pro', 'funnels',   'Funnels',   'page',   null,              'home'),
+  ('funnel_mapper_pro', 'funnel',    'Funnel',    'record', null,              'funnels'),
+  ('funnel_mapper_pro', 'templates', 'Templates', 'page',   null,              'home'),
+  ('funnel_mapper_pro', 'trash',     'Trash',     'page',   null,              'home'),
+  ('funnel_mapper_pro', 'settings',  'Settings',  'page',   null,              'home')
+on conflict do nothing;

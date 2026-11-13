@@ -1842,12 +1842,8 @@ dialog.fm-sheetdlg > .body {
 .fm-panes[data-pane] > .fm-pane {
   display: none;
 }
-.fm-panes[data-pane="profile"] > #profile,
-.fm-panes[data-pane="workspace"] > #workspace,
-.fm-panes[data-pane="team"] > #team,
-.fm-panes[data-pane="independent"] > #independent,
-.fm-panes[data-pane="appearance"] > #appearance,
-.fm-panes[data-pane="account"] > #account {
+.fm-panes[data-pane="funnel-mapper"] > #funnel-mapper,
+.fm-panes[data-pane="appearance"] > #appearance {
   display: block;
 }
 .fm-pane > h2 {

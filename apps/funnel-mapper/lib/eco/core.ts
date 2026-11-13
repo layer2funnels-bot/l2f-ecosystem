@@ -37,3 +37,5 @@ export const ecoWebUrl = () => (process.env.ECOSYSTEM_WEB_URL ?? "").replace(/\/
 export const launcherUrl = () => (ecoWebUrl() ? `${ecoWebUrl()}/#/` : undefined);
 /** A client's page in the Clients app. */
 export const clientsAppUrl = (clientId: string) => (ecoWebUrl() ? `${ecoWebUrl()}/#/clients/c/${clientId}` : undefined);
+/** Your profile in the ecosystem (one profile for every app). */
+export const profileUrl = () => (ecoWebUrl() ? `${ecoWebUrl()}/#/profile` : undefined);

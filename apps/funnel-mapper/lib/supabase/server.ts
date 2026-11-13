@@ -26,7 +26,7 @@ export async function supabaseServer() {
 
 /** Funnel Mapper's view of the organization it works in (the ecosystem organization; default currency is Funnel Mapper's own setting). */
 export type Workspace = { id: string; agency_name: string; agency_logo_url: string | null; default_currency: string; kind: "team"; slug: string };
-export type WorkspaceOption = { id: string; name: string; kind: string; role: string };
+export type WorkspaceOption = { id: string; name: string; slug: string; kind: string; role: string };
 export type Profile = { id: string; full_name: string; email: string };
 
 /**
@@ -40,18 +40,20 @@ export const requireUser = cache(async () => {
     data: { user },
   } = await sb.auth.getUser();
   if (!user) redirect("/login");
-  const { org, orgs } = await currentOrg();
+  const { org, orgs, failed } = await currentOrg();
+  if (failed) throw new Error(failed);   // the page's error state with "Try again"; nothing is shown from a guess
   if (!org) redirect("/unavailable");
   // Funnel Mapper not switched on here (or not in this person's access): the API answers "not found" or nothing; show /unavailable
   const st = await eco<{ id: string; name: string; slug: string; default_currency: string; is_admin: boolean }>("fmp.settings.get");
   if (!st.ok && st.code === "session_expired") redirect("/login");
+  if (!st.ok && st.code !== "not_found" && st.code !== "forbidden") throw new Error(st.message);   // busy or offline, not "no access"
   const settings = st.ok ? st.data[0] : undefined;
   if (!settings) redirect("/unavailable");
   const me = (await ecoRows<{ id: string; display_name: string; email: string }>("profile.get"))[0];
   const role = org.role as Role;
   const workspace: Workspace = { id: org.org_id, agency_name: org.name, agency_logo_url: null, default_currency: settings.default_currency, kind: "team", slug: org.slug };
   const profile: Profile = { id: user.id, full_name: me?.display_name || "", email: me?.email || user.email || "" };
-  const workspaces: WorkspaceOption[] = orgs.map((o) => ({ id: o.org_id, name: o.name, kind: "team", role: o.role }));
+  const workspaces: WorkspaceOption[] = orgs.map((o) => ({ id: o.org_id, name: o.name, slug: o.slug, kind: "team", role: o.role }));
   return {
     sb,
     user,

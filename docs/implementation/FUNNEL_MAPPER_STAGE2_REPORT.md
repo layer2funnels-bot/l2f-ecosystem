@@ -17,7 +17,9 @@ Stage 1 (PR #47): code copy in `apps/funnel-mapper`, rename, original theme, mig
 ## 2a. Ecosystem-rule check (13 Nov, after the owner asked that Funnel Mapper follow every ecosystem rule)
 Checked against `docs/EXTERNAL_APP_ONBOARDING.md` (14-point checklist) and the V7 brief `16_FUNNEL_MAPPER.md`. Fixed in this round:
 - **Storage limit**: Funnel Mapper's images now count toward the one 8 GB limit like every other stored file (register `fmp.images`, same lock as Drive), show in Office › Admin › Storage as "Funnel Mapper images", and are known to the nightly file backup. Uploads are refused when the store is full (FD34; two new deliberate-break checks caught).
-- **Way in and out like other apps**: the Launcher opens Funnel Mapper in the organization you are in (`?org=`; ignored unless you belong to it); the sidebar shows the organization (switch between yours) and **All apps** back to the Launcher; the editor has an **All apps** button (V7 16 §2).
+- **Organization switching, the same as every app** (owner, 13 Nov): Funnel Mapper uses the organization the ecosystem remembers for you (switch anywhere, it switches everywhere) and switches with the same rule (`org.switch`): you stay on the same page where it exists, a client or funnel never comes along (you land on its list with a note), and "isn't set up" when Funnel Mapper is off there. The switcher looks like the shared one (organization mark, "Your organizations", your role, "Current"). "All apps" goes back to the Launcher, from the sidebar and the editor (V7 16 §2). FD35 tests the rule.
+- **Settings** (owner, 13 Nov): only Funnel Mapper's own settings (default currency, appearance). Profile, account, organization and team are the ecosystem's; your name in the sidebar opens your ecosystem profile.
+- **Error state**: when the service is busy or out of reach, "This page couldn't load … Try again" (nothing changed), never "you have no access".
 - **Aurj / organizations without Funnel Mapper**: "Funnel Mapper isn't set up for Aurj" with **Switch to Layer2Funnels** (V7 16 §4). Before this fix that case showed an error page.
 - **Open in Clients** on each client page (V7 16 §4). Settings › Team links to Office › Admin.
 - App manifest: reuses Clients; storage through the shared storage adapter.
@@ -44,6 +46,7 @@ Owner reset the password; queried read-only on 13 Nov:
 | Browser walkthrough on the local ecosystem (sign in → home → new shared client → new funnel → editor "Saved" → funnels, clients, templates, trash, settings) | pass, no server errors; funnel stored in `fmp.funnels` on the shared client |
 | Second walkthrough: opened in Aurj → "not set up" → switch; organization from the Launcher; forged organization ignored; Open in Clients; logo upload (shrunk in the browser, stored, shown); editor All apps; Settings → Office › Admin | all pass, no errors |
 | Mutation check after the storage change | 116/116 caught |
+| Third walkthrough: switcher like the shared one; switch to Aurj with Funnel Mapper off → "not set up" and the ecosystem remembers Aurj; switch back; same page kept (Templates); a client page → client list with the note; a switch made in another app shows in Funnel Mapper; Settings without profile/team/account; name opens the ecosystem profile | all pass, no errors |
 
 **Not verified yet:** the long Funnel Mapper browser suite (≈195 tests) against the ecosystem; it was written for the old database and needs updating. Share links and image upload were tested at API level, not yet clicked through in a browser.
 

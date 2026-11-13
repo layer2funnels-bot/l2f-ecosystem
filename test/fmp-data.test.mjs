@@ -147,6 +147,11 @@ check('FD34', 'Funnel Mapper images are registered and count toward the one stor
   && await (async () => { await db.query('update storage_settings set cap_bytes = private.storage_used_bytes() + 500'); const r = await call('fmp.files.upload', { kind: 'logo', size_bytes: 1000, mime_type: 'image/webp' }, U.ED);
     await db.query('update storage_settings set cap_bytes = 8000000000'); return r.status === 507 && r.body?.error?.code === 'storage_limit'; })()
   && await imgBytes() === 2000);
+const sw = async (page, user = U.ED, org = L) => data(await call('org.switch', { org, app: 'funnel_mapper_pro', page }, user, org))[0] ?? {};
+const [a1, a2, a3, a4] = [await sw('templates'), await sw('funnel'), await sw('client'), await sw('home', U.ED, A)];
+check('FD35', 'Switching organization in Funnel Mapper follows the ecosystem rule: same page kept, a funnel or client never comes along, other organizations refused',
+  a1.outcome === 'same_page' && a1.page_key === 'templates' && a2.outcome === 'record_not_carried' && a2.page_key === 'funnels'
+  && a3.outcome === 'record_not_carried' && a3.page_key === 'clients' && a4.outcome === 'not_available');
 await asSuper();
 check('FD25', 'Funnel and share-link changes are in the audit log', (await rows("select count(*)::int n from audit_events where workspace_id=$1 and action like 'funnels.%'", [L]))[0].n >= 3
   && (await rows("select count(*)::int n from audit_events where workspace_id=$1 and action like 'share_links.%'", [L]))[0].n >= 1);

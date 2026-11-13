@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { switchWorkspaceAction } from "@/app/(app)/actions";
+import { SwitchOrgButton } from "@/components/switch-org-button";
 import { ECO_API, ecoFetch, launcherUrl } from "@/lib/eco/core";
 import { accessToken, currentOrg } from "@/lib/eco/server";
 
@@ -31,9 +31,7 @@ export default async function UnavailablePage() {
       </p>
       <div className="flex flex-wrap gap-2">
         {usable.map((o) => (
-          <form key={o.org_id} action={switchWorkspaceAction.bind(null, o.org_id)}>
-            <button className="btn primary">Switch to {o.name}</button>
-          </form>
+          <SwitchOrgButton key={o.org_id} orgId={o.org_id} name={o.name} />
         ))}
         {apps && (
           <a className="btn" href={apps}>

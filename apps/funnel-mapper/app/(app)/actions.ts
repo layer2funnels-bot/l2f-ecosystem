@@ -1,6 +1,5 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { compute, summary } from "@/lib/funnel-math";
@@ -8,7 +7,7 @@ import { blankGraph, blankSettings, importFunnelFile, isCurrency, parseGraph, pa
 import { normalisePricing } from "@/lib/pricing";
 import { clientFormSchema, FUNNEL_STATUSES, type ClientForm } from "@/lib/schemas";
 import { requireUser } from "@/lib/supabase/server";
-import { eco, ORG_COOKIE, currentOrg } from "@/lib/eco/server";
+import { eco } from "@/lib/eco/server";
 import { decisionMessage, type SharedClient } from "@/lib/ecosystem/clients";
 import { builtinTemplate, reidGraph } from "@/lib/templates";
 import { TEMPLATE13_BY_KEY, template13Graph } from "@/lib/templates13";
@@ -329,16 +328,6 @@ export async function deleteTemplateAction(id: string) {
 }
 
 /* ---------------- profile, organization settings ---------------- */
-/** Your name (the same ecosystem profile every app uses). */
-export async function updateProfileAction(_: ActionResult, fd: FormData): Promise<ActionResult> {
-  await requireUser();
-  const p = z.object({ full_name: z.string().trim().max(120) }).safeParse({ full_name: fd.get("full_name") ?? "" });
-  if (!p.success) return { error: p.error.issues[0].message };
-  const r = await run("profile.update", { name: p.data.full_name });
-  if (r.error) return { error: r.error };
-  revalidatePath("/", "layout");
-  return { ok: true };
-}
 
 /** Funnel Mapper's own organization setting: the default currency for new clients and funnels (admins). Name and logo live in Office › Admin › Branding. */
 export async function updateWorkspaceAction(_: ActionResult, fd: FormData): Promise<ActionResult> {
@@ -355,14 +344,26 @@ export async function updateWorkspaceAction(_: ActionResult, fd: FormData): Prom
 // Team, invitations, roles, ownership, branding and independent accounts are managed by the ecosystem now (Office › Admin);
 // these keep their names so older screens compile, and say where to go.
 
-/** Switch to another organization you work in (only ones the ecosystem lists for you; the API checks every call anyway). */
-export async function switchWorkspaceAction(id: string) {
+/** Funnel Mapper's pages as the ecosystem's switching rule knows them (migration 0053 app_pages). */
+const PAGE_OF = (path: string): string =>
+  path === "/" ? "home" : /^\/clients\/[0-9a-f-]{36}/.test(path) ? "client" : /^\/funnels\/[0-9a-f-]{36}/.test(path) ? "funnel"
+    : (["clients", "funnels", "templates", "trash", "settings"].find((k) => path === `/${k}` || path.startsWith(`/${k}/`)) ?? "home");
+const PATH_OF: Record<string, string> = { home: "/", clients: "/clients", funnels: "/funnels", templates: "/templates", trash: "/trash", settings: "/settings" };
+export type SwitchResult = { to: string; message?: string; error?: string };
+
+/**
+ * Switch organization exactly as every ecosystem app does (`org.switch`, design 01): the ecosystem remembers it for all apps; you stay on
+ * the same page when it exists; a client or funnel never comes along (you land on its list); if Funnel Mapper isn't on there, you are told.
+ */
+export async function switchWorkspaceAction(id: string, path = "/"): Promise<SwitchResult> {
   const oid = uuid.parse(id);
-  const { orgs } = await currentOrg();
-  if (!orgs.some((o) => o.org_id === oid)) throw new Error(NOT_ALLOWED);
-  (await cookies()).set(ORG_COOKIE, oid, { httpOnly: true, sameSite: "lax", secure: true, path: "/", maxAge: 60 * 60 * 24 * 365 });
+  const r = await eco<{ outcome: string; org_id: string | null; org_name: string | null; page_key: string | null; message: string | null }>("org.switch", { org: oid, app: "funnel_mapper_pro", page: PAGE_OF(path) });
+  const x = r.ok ? r.data[0] : undefined;
+  if (!x) return { to: path, error: `Couldn’t switch. The connection dropped before your access was confirmed. Nothing was changed.` };
+  if (x.outcome === "not_available") return { to: path, error: x.message ?? "You don’t have access to that organization. Nothing was changed." };
   revalidatePath("/", "layout");
-  redirect("/");
+  if (x.outcome === "app_unavailable") return { to: "/unavailable" };
+  return { to: PATH_OF[x.page_key ?? "home"] ?? "/", message: x.message ?? `Now in ${x.org_name}.` };
 }
 
 /* ---------------- products (reusable offers) ---------------- */
