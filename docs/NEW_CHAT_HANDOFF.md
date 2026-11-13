@@ -1,5 +1,7 @@
 # Handoff for the next chat (updated 2 Nov 2026, after the onboarding work)
 
+> **13 Nov 2026: Design V7 is the current reference.** Start with `docs/design/v7/CLAUDE_CODE_NEXT_CHAT_HANDOFF.md` (V7 package, Funnel Mapper migration stage 1, how to build each app). This file stays as the history of the earlier rounds.
+
 Read this first, then `docs/ONBOARDING.md`. Facts marked **verified** were checked in the repository or on the live systems on 2 Nov 2026.
 
 ## 1. Who you work for and how
