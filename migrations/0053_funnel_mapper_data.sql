@@ -316,6 +316,7 @@ begin
   returning id into new_id;
   return new_id;
 end $$;
+revoke all on function private.fmp_share_safe_graph(jsonb, boolean) from public;
 revoke all on function private.fmp_share_link(text), private.fmp_shared_get(text), private.fmp_shared_save(text, jsonb, jsonb),
   private.fmp_shared_comment(text, text, text, text) from public;
 grant execute on function private.fmp_shared_get(text), private.fmp_shared_save(text, jsonb, jsonb), private.fmp_shared_comment(text, text, text, text) to app_user;
