@@ -41,7 +41,9 @@ const cfg = window.L2F_CONFIG;
 const root = document.getElementById('app');
 const store = (() => { try { localStorage.setItem('l2f.t', '1'); localStorage.removeItem('l2f.t'); return localStorage; } catch { const m = new Map(); return { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => m.set(k, v), removeItem: (k) => m.delete(k) }; } })();
 const tabStore = (() => { try { sessionStorage.setItem('l2f.t', '1'); sessionStorage.removeItem('l2f.t'); return sessionStorage; } catch { return store; } })();
-const session = createSession({ storage: sharedSessionStore({ fallback: store, domain: cfg.cookieDomain || '' }) });   // one sign-in for every app on the domain
+// one sign-in for every app on the domain; the shared domain applies only when the site is opened on it (l2f-ecosystem.pages.dev keeps a host-only cookie)
+const onDomain = (d) => Boolean(d) && (location.hostname === d.replace(/^\./, '') || location.hostname.endsWith(d.startsWith('.') ? d : `.${d}`));
+const session = createSession({ storage: sharedSessionStore({ fallback: store, domain: onDomain(cfg.cookieDomain) ? cfg.cookieDomain : '' }) });
 // A pending invitation must survive the e-mail confirmation step: the confirmation link opens in a new tab (often another browser), so it is kept in
 // local storage as well as in the tab, and it also rides on the confirmation link itself (?invite=...).
 const inviteStore = {

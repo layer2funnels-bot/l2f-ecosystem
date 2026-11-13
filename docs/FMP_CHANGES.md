@@ -87,7 +87,7 @@ Every read and write goes through the ecosystem API as the signed-in person; the
 | `lib/supabase/proxy.ts` | Every private page needs the shared ecosystem session: renewed shortly before it expires (written back for the other apps); without one, the ecosystem sign-in page, which brings the person back to the same page (built from `NEXT_PUBLIC_SITE_URL`). | Stage 2. |
 | `lib/supabase/server.ts` | `requireUser` uses the shared session (no Supabase client): organization from the ecosystem, profile from `profile.get`; no session or an ended one → the ecosystem sign-in. An organization where Funnel Mapper is off → `/unavailable`; a busy service → the error page. | Stage 2. |
 | `package-lock.json` | Follows `package.json`. | Stage 2. |
-| `package.json` | `sharp` removed (images are shrunk in the browser); Next 16.4.6 (needed by the Cloudflare adapter); `@opennextjs/cloudflare` and `wrangler` (dev only); scripts `cf:build`, `cf:size`. | Stage 2; owner decision: Cloudflare hosting. |
+| `package.json` | `sharp` removed (images are shrunk in the browser); Next 16.4.6 (needed by the Cloudflare adapter); `@opennextjs/cloudflare` and `wrangler` (dev only); scripts `cf:build`, `cf:size`, `cf:deploy`. | Stage 2; owner decision: Cloudflare hosting. |
 | `app/(auth)/join/[code]/join-form.tsx` | Deleted: independent sign-up retired (owner decision). | Stage 2. |
 | `app/(auth)/join/[code]/page.tsx` | Deleted: independent sign-up retired (owner decision). | Stage 2. |
 | `app/api/image/route.ts` | Deleted: images are shrunk in the browser and stored through `fmp.files.upload`. | Stage 2. |
@@ -132,3 +132,5 @@ Owner: "only one sign-in, the main ecosystem sign-in, to access any app" (chosen
 | `app/auth/confirm/route.ts` | Deleted: e-mail links go to the ecosystem. | One sign-in. |
 | `app/auth/removed/route.ts` | Deleted: removal is handled by the ecosystem. | One sign-in. |
 | `lib/supabase/client.ts` | Deleted: no Supabase sign-in client in Funnel Mapper. | One sign-in. |
+| `wrangler.production.jsonc` | Added: the live Worker (fmp.tabishriaz.com, same domain as the ecosystem for the one sign-in); public values only. | Go-live, owner approval 13 Nov 2026. |
+| `scripts/cf-deploy.mjs` | Added: `npm run cf:deploy` builds with the live public values, checks the free-plan size, publishes. | Go-live. |

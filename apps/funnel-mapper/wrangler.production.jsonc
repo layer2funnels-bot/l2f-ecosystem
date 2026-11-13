@@ -1,0 +1,20 @@
+// Funnel Mapper on Cloudflare, live (owner approval 13 Nov 2026). Public values only: addresses and the publishable sign-in key.
+// No secret belongs here. Deploy: `npm run cf:deploy` (builds with the NEXT_PUBLIC_* values below, then publishes this Worker).
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "funnel-mapper",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
+  "routes": [{ "pattern": "fmp.tabishriaz.com", "custom_domain": true }],
+  "workers_dev": false,
+  "vars": {
+    "ECOSYSTEM_API_URL": "https://office.tabishriaz.com",
+    "ECOSYSTEM_WEB_URL": "https://office.tabishriaz.com",
+    "ECOSYSTEM_COOKIE_DOMAIN": ".tabishriaz.com",
+    "NEXT_PUBLIC_SITE_URL": "https://fmp.tabishriaz.com",
+    "NEXT_PUBLIC_SUPABASE_URL": "https://dfitnxilkezepkhdmzuh.supabase.co",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_086jMHSlwdsjwrFy5eWjkA_UjuKZrox"
+  }
+}
