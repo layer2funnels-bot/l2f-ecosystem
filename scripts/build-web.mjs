@@ -56,7 +56,12 @@ cpSync(at('packages/ui'), out + '/packages/ui', { recursive: true });
 rmSync(out + '/gallery.html', { force: true }); rmSync(out + '/js/gallery.js', { force: true });         // the component gallery is for development and tests only
 writeFileSync(out + '/app-manifests.json', JSON.stringify(loadManifests().map(({ dir, ...m }) => m)));
 cpSync(at('packages/core/org-switch.mjs'), out + '/packages/core/org-switch.mjs');
-writeFileSync(out + '/config.js', `window.L2F_CONFIG = ${JSON.stringify({ supabaseUrl: url, publishableKey: key, googleEnabled: process.env.GOOGLE_ENABLED === 'true', showDesignStatus: process.env.SHOW_DESIGN_STATUS === 'true' }, null, 2)};\n`);
+// One sign-in for every app (DECISIONS FM-10): COOKIE_DOMAIN (e.g. ".example.com") lets apps on sister addresses share the session; APP_ORIGINS
+// (comma-separated https addresses, e.g. "https://fmp.example.com") are the only places the sign-in page may send people back to.
+const cookieDomain = (process.env.COOKIE_DOMAIN || '').trim();
+const appOrigins = (process.env.APP_ORIGINS || '').split(',').map((o) => o.trim()).filter((o) => /^https?:\/\/[a-z0-9.-]+(:\d+)?$/i.test(o));
+if (cookieDomain && !/^\.[a-z0-9-]+(\.[a-z0-9-]+)+$/i.test(cookieDomain)) { console.error(`Refusing: COOKIE_DOMAIN must look like ".example.com" (got "${cookieDomain}").`); process.exit(1); }
+writeFileSync(out + '/config.js', `window.L2F_CONFIG = ${JSON.stringify({ supabaseUrl: url, publishableKey: key, googleEnabled: process.env.GOOGLE_ENABLED === 'true', showDesignStatus: process.env.SHOW_DESIGN_STATUS === 'true', cookieDomain, appOrigins }, null, 2)};\n`);
 // Files in Cloudflare R2: the browser uploads and previews straight to the bucket through short-lived signed addresses, so the page policy must allow that ONE origin
 // (STORAGE_CONNECT_ORIGIN=https://<account id>.r2.cloudflarestorage.com, build-time). Anything else is refused, so a typo cannot widen the policy.
 const storageOrigin = process.env.STORAGE_CONNECT_ORIGIN || '';
