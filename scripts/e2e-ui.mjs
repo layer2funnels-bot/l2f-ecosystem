@@ -409,7 +409,9 @@ check('U16', 'A missing page and a missing record show the same "We couldn’t f
 
 // =============================================================== D. Funnels (design 06)
 await visit(page, base + '/#/office/funnels'); await wait('Recently changed');
-check('U17', 'Funnels home: four counts, the section pills, and the "Link design pending" note for funnel maps', (await page.locator('.tile2').count()) === 4 && await page.getByText('Link design pending').isVisible());
+await page.waitForSelector('.v8p-office .fn-node b', { timeout: 9000 });
+check('U17', 'Funnels overview (V8): the flow Customer Avatars → Offers & Products → Stories → Brand Kits → Funnel Strategies with counts, each a real link', (await page.locator('.v8p-office .fn-map .fn-node:not(.fmp)').count()) === 5
+  && (await page.locator('.v8p-office .fn-node:not(.fmp) span:not(.wic)').allInnerTexts()).join() === 'Customer Avatars,Offers & Products,Stories,Brand Kits,Funnel Strategies' && (await page.locator('.v8p-office .fn-node[href]').count()) >= 5);
 await page.locator('.nav .sub a', { hasText: 'Avatars' }).click(); await wait('No avatars yet');
 check('U18', 'First-use empty list has the V4 stack illustration, a create action for owners', await page.getByRole('link', { name: 'New avatar' }).first().isVisible() && (await page.locator('.empty .stack').count()) > 0);
 await page.getByRole('link', { name: 'New avatar' }).first().click(); await page.locator('main h1', { hasText: 'New avatar' }).waitFor({ timeout: 9000 }); await page.waitForSelector('#r-client');
@@ -858,7 +860,8 @@ await rm.close();
   await page.goto(`${base}/#/office/funnels/strategies`); await page.waitForSelector('.tbl', { timeout: 9000 });
   check('O13', 'The list shows the strategy with its status and a "Linked" map badge', (await page.locator('.tbl tr', { hasText: SN }).innerText()).includes('In review') && (await page.locator('.tbl tr', { hasText: SN }).innerText()).includes('Linked'));
   await page.goto(`${base}/#/office/funnels`); await page.waitForSelector('text=See all Funnel Strategies', { timeout: 9000 });
-  check('O14', 'Funnels home shows the Funnel Strategies summary and keeps its four record tiles', (await page.locator('.tile2').count()) === 4 && (await page.locator('main').innerText()).includes(SN));
+  await page.waitForSelector('.v8p-office .fn-node b', { timeout: 9000 });
+  check('O14', 'Funnels overview shows the strategy in "Funnel strategies" with its status, and the five steps of the flow', (await page.locator('.v8p-office .fn-map .fn-node:not(.fmp)').count()) === 5 && (await page.locator('.v8p-office .split').innerText()).includes(SN));
   await page.goto(`${base}/#/office/admin/access/history`); await page.waitForSelector('text=Access history', { timeout: 9000 }); await page.waitForSelector('.tbl, .empty', { timeout: 9000 });
   check('O9', 'Admin › Access › Access history shows who changed what and when, with names, never content', (await page.locator('.tbl thead th').allInnerTexts()).join().toLowerCase() === 'when,who,what' && !(await page.locator('main').innerText()).includes('{'));
   await page.goto(`${base}/#/launcher`); await wait('The sky follows your time of day');

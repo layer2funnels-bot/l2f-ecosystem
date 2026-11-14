@@ -3,6 +3,7 @@
 // buttons only follow `ctx.can`, which comes from the same permission engine (organization-wide or on one client).
 import { h, put, icon, pill, btn, link, dialog, toast, field, notice, skeleton, errorState, emptyState, notFoundState, readOnlyNotice, plate, initials } from '../ui.js';
 import { FUNNEL_TYPES, hrefFor } from '../routes.js';
+import { plateOf, loadRegistry } from '../registry.js';
 import { fieldLabel, messageFor } from '../messages.js';
 import { dirty } from '../dirty.js';
 
@@ -82,27 +83,44 @@ function portrait(r, clientName) {
 }
 
 // ---- Funnels home
+// V8 Funnels overview (prototype office5.js `funnels`): the flow Avatars → Offers → Stories → Brand Kits → Strategies → Map it,
+// then Funnel strategies and Recently changed. Markup and classes from the prototype; styles from pages/office.css.
+const FLOW = [['avatars', 'Customer Avatars', 'avatar', '#FF8A6B', 'Who it’s for'], ['offers', 'Offers & Products', 'offer', '#E8B820', 'What you sell'], ['stories', 'Stories', 'story', '#A898FF', 'Proof that sells'],
+  ['brand_kits', 'Brand Kits', 'brand', '#13A592', 'How it looks and sounds'], ['strategies', 'Funnel Strategies', 'strategy', '#2B63F6', 'The written plan']];
+const ST_LABEL = { draft: 'Draft', in_review: 'In Review', approved: 'Approved', archived: 'Archived' };
+export const v8head = (title, lede, acts = []) => h('div', { class: 'pagehead' }, h('div', {}, h('h1', { class: 'h1', 'data-page-title': true }, title), lede ? h('p', { class: 'lede' }, lede) : null), acts.length ? h('div', { class: 'acts' }, ...acts) : null);
+const stPill = (s) => { const l = ST_LABEL[s] ?? s; return h('span', { class: `pill ${l === 'Approved' ? 'blue' : l === 'In Review' ? 'warn' : ''}`.trim() }, l); };
+
 export function funnelsHomeView(ctx) {
-  const box = h('div', {}, skeleton(3));
-  const stratBox = h('section', { class: 'card pad', 'aria-labelledby': 'fs-h' }, h('h3', { id: 'fs-h' }, 'Funnel Strategies'), skeleton(1));
-  run(ctx, 'funnels.strategies.list', { library: true }).then((r) => { if (!ctx.live()) return; const list = r.ok ? r.data.slice(0, 4) : [];
-    put(stratBox, h('h3', { id: 'fs-h' }, 'Funnel Strategies'), list.length ? h('ul', { class: 'rows', style: 'margin:var(--space-2) calc(var(--space-5)*-1) 0' }, ...list.map((x) => h('li', {}, h('a', { href: `#/office/funnels/strategy/${x.id}` }, x.name), pill(x.status === 'approved' ? 'Approved' : x.status === 'in_review' ? 'In review' : 'Draft')))) : h('p', { class: 'fine', style: 'margin:var(--space-2) 0' }, 'No strategies yet. Write one per funnel.'), h('a', { class: 'btn link', href: '#/office/funnels/strategies' }, 'See all Funnel Strategies')); });
+  const root = h('div', { class: 'v8p-office' });
+  const map = h('div', { class: 'fn-map' }, skeleton(1));
+  const strat = h('div', { class: 'rows' }, skeleton(2)); const recent = h('div', { class: 'rows' }, skeleton(2));
+  const canNew = ctx.canAnywhere?.('funnels.strategy.create');
+  put(root, v8head('Funnels', 'Everything your funnels are built from: who they’re for, what you sell, the proof, the brand and the written strategy.',
+    canNew ? [h('a', { class: 'btn primary', href: '#/office/funnels/strategies?new=1' }, icon('plus'), 'New funnel strategy')] : []),
+  map, h('div', { class: 'split', style: 'margin-top:22px' },
+    h('section', { class: 'panel' }, h('div', { class: 'sec-h' }, h('h2', {}, 'Funnel strategies'), h('a', { class: 'linkbtn', href: '#/office/funnels/strategies' }, 'All')), strat),
+    h('section', { class: 'panel' }, h('div', { class: 'sec-h' }, h('h2', {}, 'Recently changed')), recent)));
   (async () => {
-    const [ov, ...lists] = await Promise.all([run(ctx, 'funnels.overview'), ...FUNNEL_TYPES.map((t) => run(ctx, `funnels.${t.key}.list`, {}).then((r) => [t, r]))]);
+    const [regs, ov, st, ...lists] = await Promise.all([loadRegistry(), run(ctx, 'funnels.overview'), run(ctx, 'funnels.strategies.list', { library: true }), ...FUNNEL_TYPES.map((t) => run(ctx, `funnels.${t.key}.list`, {}).then((r) => [t, r]))]);
     if (!ctx.live()) return;
-    if (!ov.ok) return put(box, errorState(() => ctx.rerender()));
-    const n = Object.fromEntries(ov.data.map((x) => [x.type, x.n]));
-    const recent = lists.flatMap(([t, r]) => (r.ok ? r.data.map((x) => ({ t, x })) : [])).sort((a, b) => new Date(b.x.updated_at) - new Date(a.x.updated_at)).slice(0, 4);
-    put(box, h('div', { class: 'grid g4' }, ...FUNNEL_TYPES.map((t) => h('a', { class: 'tile2', href: hrefFor.list(t.key), style: 'text-decoration:none;color:inherit' },
-      h('span', { class: 'fine' }, t.full), h('span', { class: 'num' }, String(n[t.key] ?? 0)), h('span', { class: 'link', style: 'min-height:0' }, `Open ${t.label}`)))),
-    h('div', { class: 'split', style: 'margin-top:var(--space-4)' },
-      h('section', { class: 'card' }, h('h3', { style: 'padding:var(--space-4) var(--space-5) 0' }, 'Recently changed'),
-        recent.length ? h('ul', { class: 'rows' }, ...recent.map(({ t, x }) => h('li', {}, h('span', {}, h('b', {}, nameOf(t.key, x) || '(untitled)'), h('br'), h('span', { class: 'fine' }, `${t.one.toLowerCase()} · ${when(x.updated_at)}`)), h('a', { class: 'btn', href: hrefFor.record(t.key, x.id) }, 'Open'))))
-          : emptyState({ title: 'Nothing here yet', body: 'Records you create appear here.', ic: 'doc' })),
-      stratBox,
-      h('section', { class: 'card pad' }, h('h3', {}, 'Funnel maps'), h('p', { class: 'fine', style: 'margin:var(--space-2) 0 var(--space-3)' }, 'Funnel maps live in the Funnel Mapper app. How they appear here needs a deliberate design first.'), pill('Link design pending', 'warn'))));
+    if (!ov.ok) return put(root, errorState(() => ctx.rerender()));
+    const n = Object.fromEntries(ov.data.map((x) => [x.type, x.n])); n.strategies = st.ok ? st.data.length : 0;
+    const fmpHref = (ctx.catalog ?? []).some((a) => a.app_key === 'funnel_mapper_pro' && a.state === 'available') ? hrefFor.app('funnel_mapper_pro') : null;
+    const arrow = () => h('span', { class: 'fn-arrow', 'aria-hidden': 'true' }, icon('arrow'));
+    map.replaceChildren(...FLOW.flatMap(([k, l, ic, c, sub], j) => [...(j ? [arrow()] : []), h('a', { class: 'fn-node', href: k === 'strategies' ? '#/office/funnels/strategies' : hrefFor.list(k), style: `--i:${j}` },
+      h('span', { class: 'wic', style: `--c:${c}` }, icon(ic)), h('b', {}, String(n[k] ?? 0)), h('span', {}, l), h('small', {}, sub))]),
+    ...(fmpHref ? [arrow(), h('a', { class: 'fn-node fmp', href: fmpHref }, h('span', {}, plateOf(regs?.get('funnel_mapper_pro') ?? { id: 'funnel_mapper_pro' }, 40)), h('b', {}, 'Map it'), h('span', {}, 'Funnel Mapper'), h('small', {}, 'Visual map and numbers'))] : []));
+    if (!st.ok) strat.replaceChildren(h('p', { class: 'hint', style: 'padding:14px 20px' }, 'Strategies couldn’t load.'));
+    else strat.replaceChildren(...(st.data.length ? st.data.slice(0, 4).map((x) => h('a', { class: 'linkrow', href: `#/office/funnels/strategy/${x.id}` }, icon('strategy'),
+      h('span', { class: 'main' }, h('b', {}, x.name), h('small', {}, `Updated ${when(x.updated_at)} · ${x.map_url ? 'map linked' : 'no map yet'}`)), stPill(x.status)))
+      : [h('p', { class: 'hint', style: 'padding:14px 20px' }, 'No funnel strategies yet.')]));
+    const rec = lists.flatMap(([t, r]) => (r.ok ? r.data.map((x) => ({ t, x })) : [])).sort((a, b) => new Date(b.x.updated_at) - new Date(a.x.updated_at)).slice(0, 4);
+    const ICO = { avatars: 'avatar', offers: 'offer', stories: 'story', brand_kits: 'brand' };
+    recent.replaceChildren(...(rec.length ? rec.map(({ t, x }) => h('a', { class: 'linkrow', href: hrefFor.record(t.key, x.id) }, icon(ICO[t.key]), h('span', { class: 'main' }, h('b', {}, nameOf(t.key, x) || '(untitled)'), h('small', {}, `${t.one} · ${when(x.updated_at)}`))))
+      : [h('p', { class: 'hint', style: 'padding:14px 20px' }, 'Records you create appear here.')]));
   })();
-  return h('section', {}, subnav('home'), ...pageHead('Office · Funnels', 'Funnels', `Your ${ctx.orgName} funnel assets in one place.`), box);
+  return root;
 }
 
 // ---- list

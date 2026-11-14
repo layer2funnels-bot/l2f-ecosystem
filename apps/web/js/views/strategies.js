@@ -39,6 +39,7 @@ export function strategiesListView(ctx) {
   const sh = h('select', { 'aria-label': 'Show' }, h('option', { value: 'active' }, 'Active'), h('option', { value: 'archived' }, 'Archived')); sh.addEventListener('change', () => { show = sh.value; load(); });
   put(root, h('div', { class: 'crumb' }, 'Office · Funnels'), h('div', { class: 'pj-head' }, h('div', {}, h('h1', { 'data-page-title': true }, 'Funnel Strategies'), h('p', { class: 'sub' }, 'One written strategy per funnel. Maps stay in Funnel Mapper.')), canNew ? btn('New Funnel Strategy', create, 'primary') : null),
     h('div', { class: 'toolbar' }, search, st, sh), body);
+  if (canNew && /[?&]new=1\b/.test(location.hash)) { history.replaceState(null, '', location.hash.replace(/[?&]new=1\b/, '')); create(); }   // Funnels overview › New funnel strategy
   load(); return root;
 }
 
