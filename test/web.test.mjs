@@ -41,7 +41,9 @@ const codes = Object.values(errors).filter((e) => e && typeof e === 'object' && 
 check('W7', 'Every API error code in the contract has a plain-words message in the browser', codes.length >= 9 && codes.every((c) => MESSAGES[c]));
 check('W8', 'Messages never contain technical words', Object.values(MESSAGES).every((m) => !/constraint|policy|rls|postgres|sql|jwt|token|42501|uuid/i.test(m)) && messageFor('weird') === MESSAGES.failed && fieldLabel('zzz') === 'a field');
 // ---- UI field definitions vs server specs (no field the server would refuse, none missing)
-const NOT_YET = { brand_kits: ['logo_file_id'] };   // logos are Drive files; the picker arrives with Drive
+const V8_FORM = { offers: ['offer_type', 'status', 'billing', 'guarantee', 'delivery_time', 'included', 'bonuses', 'avatar_ids', 'ladder_step', 'internal_notes'],   // 0056 fields: edited by the V8 New/Edit forms
+  stories: ['before_text', 'after_text', 'best_quote', 'permission', 'consent_file_id', 'use_in'], brand_kits: ['is_main', 'logo_dark_file_id', 'icon_file_id', 'voice_say', 'voice_never', 'asset_file_ids', 'color_names'] };
+const NOT_YET = Object.fromEntries(Object.keys(V8_FORM).map((k) => [k, [...V8_FORM[k], ...(k === 'brand_kits' ? ['logo_file_id'] : [])]]));   // logos are Drive files; the picker arrives with Drive
 const sameFields = Object.entries(SERVER_TYPES).every(([k, spec]) => JSON.stringify(Object.keys(spec.fields).filter((f) => !(NOT_YET[k] ?? []).includes(f)).sort()) === JSON.stringify(FIELD_DEFS[k].map((f) => f.k).sort()));
 check('W9', 'The UI edits exactly the fields the server accepts (logo waits for Drive), for all four record types', sameFields);
 check('W10', 'Every UI route type has all eight server operations', FUNNEL_TYPES.every((t) => ['list', 'get', 'create', 'update', 'archive', 'restore', 'share', 'delete'].every((a) => operations[`funnels.${t.key}.${a}`])));
