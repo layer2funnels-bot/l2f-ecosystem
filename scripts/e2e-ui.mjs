@@ -834,8 +834,11 @@ for (const [w, label] of [[1280, 'desktop'], [768, 'tablet'], [390, 'phone']]) {
     check('R-tiles', 'On a phone the Launcher shows three columns of plates with names only (descriptions hidden), as in the design', (await p.locator('.tile').first().evaluate((e) => getComputedStyle(e.querySelector('.t-desc')).display)) === 'none' && new Set(await p.locator('.tile').evaluateAll((els) => els.slice(0, 6).map((e) => Math.round(e.getBoundingClientRect().left / 12)))).size === 3);
     await shot(p, 'i1-phone-launcher'); await p.goto(base + '/#/office/admin/members'); await p.reload(); await wait('Joining is by invitation only.', p); await shot(p, 'i2-phone-members');
     await p.goto(base + '/#/office/funnels/avatars'); await p.reload(); await wait('Avatar for C1', p); await p.evaluate(() => document.querySelector('.hdr .iconbtn')?.focus());
-    await p.click('#org-switcher'); const sheet = await p.locator('#org-menu').boundingBox();
-    check('R-sheet', 'On a phone the organization menu opens as a bottom sheet', sheet.y + sheet.height > 780 && sheet.width > 330);
+    // V8 (02_GLOBAL_SHELL §1): on a phone the rail is hidden; the organization mark in the app bar opens the apps-and-account sheet,
+    // which holds the Launcher, notifications, both organizations, the apps, the profile and Sign out
+    await p.click('#acct-sheet-btn'); await wait('Apps and account', p); const sheet = await p.locator('.dlg').boundingBox();
+    const sheetText = await p.locator('.dlg').innerText();
+    check('R-sheet', 'On a phone the organization mark opens the apps-and-account sheet with both organizations, the Launcher and Sign out', sheet.width > 330 && /Layer2Funnels/.test(sheetText) && /Aurj/.test(sheetText) && /Launcher/.test(sheetText) && /Sign out/.test(sheetText) && !(await p.locator('.rail').isVisible()), sheetText.slice(0, 200));
     await shot(p, 'i3-phone-switcher');
   }
   await p.context().close();

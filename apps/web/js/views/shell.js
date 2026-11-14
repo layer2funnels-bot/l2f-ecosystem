@@ -17,11 +17,15 @@ const trap = (menu, button, onClose) => {                 // arrow keys move, Es
   });
 };
 
-function switcher({ orgs, active, onPick }) {
+function switcher({ orgs, active, onPick, compact = false }) {
   const menuId = 'org-menu';
-  const sw = h('button', { type: 'button', class: 'orgbtn orgsw', id: 'org-switcher', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-controls': menuId, 'data-pending': 'false' },
-    orgMarkEl(active, 28),
-    h('span', { class: 't' }, h('strong', {}, active.name)), icon('chev', 'chev'), h('span', { class: 'spin', 'aria-hidden': 'true' }));
+  // V8 rail: the organization's logo alone, its name in the accessible label and tooltip; the Launcher keeps the wide button
+  const sw = compact
+    ? h('button', { type: 'button', class: 'orgbtn orgsw r-org', id: 'org-switcher', title: `${active.name} · switch organization`, 'aria-label': `${active.name}: switch organization`, 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-controls': menuId, 'data-pending': 'false' },
+      orgMarkEl(active, 34), h('strong', { class: 'sr' }, active.name), h('span', { class: 'spin', 'aria-hidden': 'true' }))
+    : h('button', { type: 'button', class: 'orgbtn orgsw', id: 'org-switcher', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-controls': menuId, 'data-pending': 'false' },
+      orgMarkEl(active, 28),
+      h('span', { class: 't' }, h('strong', {}, active.name)), icon('chev', 'chev'), h('span', { class: 'spin', 'aria-hidden': 'true' }));
   const menu = h('div', { class: 'menu', id: menuId, role: 'menu', 'aria-label': 'Switch organization', 'data-open': 'false' });
   const note = h('div', { id: 'org-note' });
   const close = (refocus) => { menu.dataset.open = 'false'; sw.setAttribute('aria-expanded', 'false'); if (refocus) sw.focus(); };
@@ -109,6 +113,44 @@ function profile({ email, name, photo, onSignOut, theme, weather }) {
   return h('div', { class: 'swwrap profile-wrap' }, btn, menu);
 }
 
+/** V8 ecosystem rail (02_GLOBAL_SHELL §1): organization, all apps, pinned apps, then search, notifications and the profile at the bottom.
+ * The same in every app. Every app link is a real <a href> so Ctrl-click, middle-click and "Open in new tab" work. */
+const PINNED = ['office', 'projects', 'tasks', 'clients', 'drive', 'planner'];
+const appHref = (k) => (k === 'office' ? hrefFor.office() : hrefFor.app(k));
+function rail({ sw, catalog = [], registry, currentApp, bellEl, who }) {
+  const usable = new Map(catalog.filter((a) => a.state === 'available').map((a) => [a.app_key, a]));
+  const keys = PINNED.filter((k) => usable.has(k)); if (currentApp && usable.has(currentApp) && !keys.includes(currentApp)) keys.push(currentApp);
+  const search = h('button', { type: 'button', class: 'r-btn', id: 'rail-search', 'aria-disabled': 'true', 'aria-describedby': 'search-why', title: 'Search everything (Ctrl K): arrives with global search', 'aria-label': 'Search everything' }, icon('search'));
+  return h('nav', { class: 'rail', 'aria-label': 'Ecosystem' },
+    h('div', { class: 'r-wrap' }, sw),
+    h('div', { class: 'r-wrap' }, appSwitcher({ catalog, registry, launcherCurrent: false })),
+    h('span', { class: 'r-div', 'aria-hidden': 'true' }),
+    h('div', { class: 'r-apps' }, ...keys.map((k) => { const a = usable.get(k); return h('a', { class: 'r-app', href: appHref(k), title: a.name, 'aria-label': a.name, 'data-app': k, ...(k === currentApp ? { 'aria-current': 'page' } : {}) }, plateOf(registry?.get(k) ?? { id: k }, 30)); })),
+    h('span', { class: 'r-sp' }),
+    search, h('span', { class: 'sr', id: 'search-why' }, 'Search is not available yet. It arrives with the apps it searches.'),
+    h('div', { class: 'r-wrap r-bell' }, bellEl),
+    h('div', { class: 'r-wrap r-me' }, who));
+}
+
+/** Phone (≤760 px): the rail is hidden; the organization mark in the app bar opens this sheet with everything the rail holds. */
+function accountSheet({ orgs, active, catalog = [], registry, notifications, app, theme, email, name }) {
+  const close = dialog({ title: 'Apps and account', wide: false, body: h('div', { class: 'acct-sheet' },
+    h('a', { class: 'btn', href: '#/launcher', onclick: () => close() }, icon('home'), 'Launcher'),
+    notifications ? h('a', { class: 'btn', href: '#/profile', onclick: () => close() }, icon('bell'), 'Notifications') : null,
+    h('h3', { class: 'over' }, 'Your organizations'),
+    ...orgs.map((o) => h('button', { type: 'button', class: 'btn opt-org', 'aria-pressed': String(o.org_id === active.org_id), onclick: () => { close(); if (o.org_id !== active.org_id) app.switchOrg(o.org_id); } }, orgMarkEl(o, 24), h('span', {}, o.name), h('small', {}, roleLabel(o.role)))),
+    h('h3', { class: 'over' }, 'Apps'),
+    h('div', { class: 'acct-apps' }, ...catalog.filter((a) => a.state === 'available').map((a) => h('a', { class: 'appitem', 'data-app': a.app_key, href: appHref(a.app_key), onclick: () => close() }, plateOf(registry?.get(a.app_key) ?? { id: a.app_key }, 34), a.name))),
+    h('h3', { class: 'over' }, email || name || 'Account'),
+    h('a', { class: 'btn', href: '#/profile', onclick: () => close() }, icon('user'), 'Your profile'),
+    theme ? h('div', { class: 'seg-theme', role: 'group', 'aria-label': 'Appearance' }, ...['system', 'light', 'dark'].map((v) => h('button', { type: 'button', 'aria-pressed': String((theme.pref?.() ?? 'system') === v), onclick: () => { theme.set(v); close(); } }, { system: 'System', light: 'Light', dark: 'Dark' }[v]))) : null,
+    h('button', { type: 'button', class: 'btn', onclick: () => { close(); app.signOut(); } }, 'Sign out')),
+  actions: [{ label: 'Close', focus: true }] });
+}
+
+const SIDECOL = 'l2f.sidecol';
+const sideCollapsed = () => { try { return localStorage.getItem(SIDECOL) === '1'; } catch { return false; } };
+
 const sideLink = (it, current) => {
   const a = h('a', { href: it.href, 'data-key': it.key, ...(it.key === current && !it.kids ? { 'aria-current': 'page' } : {}), ...(it.kids && it.key === current ? { 'aria-expanded': 'true' } : {}) }, icon(it.icon), h('span', {}, it.label));
   if (!it.kids) return a;
@@ -130,7 +172,7 @@ function bottomBar(items, current, appName = '') {
 export function shellView({ app, orgs, active, email, name, route, content, banner, isAdmin, inOffice, launcherCurrent, catalog, registry, currentApp, theme, weather, me = null, notifications = null }) {
   offs.forEach((f) => f()); offs = [];
   document.body.classList.remove('hasb');
-  const sw = switcher({ orgs, active, onPick: (id) => app.switchOrg(id) });
+  const sw = launcherCurrent ? switcher({ orgs, active, onPick: (id) => app.switchOrg(id) }) : null;
   const who = profile({ email, name, photo: me?.photo, onSignOut: () => app.signOut(), theme, weather });
   const skip = h('a', { class: 'skip', href: '#main', onclick: (e) => { e.preventDefault(); const m = document.getElementById('main'); m.setAttribute('tabindex', '-1'); m.focus(); } }, 'Skip to content');      // not a hash link: the address is the route
   if (launcherCurrent) {
@@ -140,7 +182,7 @@ export function shellView({ app, orgs, active, email, name, route, content, bann
       const dark = () => document.documentElement.dataset.theme === 'dark';
       const tb = h('button', { type: 'button', class: 'themebtn', 'aria-label': dark() ? 'Switch to light theme' : 'Switch to dark theme', onclick: () => { theme.set(dark() ? 'light' : 'dark'); paint(); } });
       const paint = () => { tb.replaceChildren(icon(dark() ? 'sun' : 'moon')); tb.setAttribute('aria-label', dark() ? 'Switch to light theme' : 'Switch to dark theme'); }; paint();
-      whoSlot.replaceWith(h('span', { class: 'l-right' }, tb, who));
+      whoSlot.replaceWith(h('span', { class: 'l-right' }, tb, notifications ? bell(notifications) : null, who));
     } else whoSlot?.replaceWith(who);
     return h('div', { class: 'app in-launcher', 'data-org': active.slug ?? '' }, skip, content, banner ?? null);
   }
@@ -151,13 +193,13 @@ export function shellView({ app, orgs, active, email, name, route, content, bann
   const full = Boolean(content.__fullApp);
   const { items, current } = full ? { items: [], current: null } : appNav(currentApp, route, { isAdmin });
   const here = items.find((i) => i.key === current);
-  const search = h('label', { class: 'search' }, icon('search'), h('span', { class: 'sr' }, 'Search this organization'),
-    h('input', { type: 'search', placeholder: `Search ${active.name}`, disabled: true, 'aria-describedby': 'search-why', autocomplete: 'off' }));
-  const side = h('aside', { class: 'side' },
-    h('div', { class: 'side-top' }, appSwitcher({ catalog, registry, launcherCurrent: false }), plateOf(manifest ?? { id: currentApp }, 34), h('b', {}, appName)),
+  // V8: the organization switcher, app switcher, notifications and profile live in the rail (no profile footer in the sidebar: it looked clickable and wasn't)
+  const swRail = switcher({ orgs, active, onPick: (id) => app.switchOrg(id), compact: true });
+  const theRail = rail({ sw: swRail, catalog, registry, currentApp, bellEl: notifications ? bell(notifications) : h('span', { class: 'r-btn', role: 'img', 'aria-label': 'Notifications are not available yet', 'aria-disabled': 'true', title: 'Notifications are not available yet' }, icon('bell')), who });
+  const side = h('aside', { class: 'side', 'aria-label': `${appName} menu` },
+    h('div', { class: 'side-top' }, plateOf(manifest ?? { id: currentApp }, 30), h('b', {}, appName)),
     items.length ? h('nav', { class: 'nav', 'aria-label': appName }, ...items.map((i) => sideLink(i, current))) : null,
-    content.__side ?? null,                  // an app may lift its own list (Projects: the project list) into the rail
-    h('div', { class: 'side-foot' }, h('span', { class: 'avatar', 'aria-hidden': 'true' }, initials(name || email)), h('div', {}, h('b', {}, name || email || ''), h('small', {}, `${roleLabel(active.role)} · ${active.name}`))));
+    content.__side ?? null);                 // an app may lift its own list (Projects: the project list) into the sidebar
   const crumb = h('div', { class: 'crumb', 'aria-label': 'You are here' });
   const paintCrumb = () => {
     // V4: the app's first page shows the app name alone ("Clients"); Office and deeper pages add the page ("Office / Home", "Drive / Trash")
@@ -167,17 +209,16 @@ export function shellView({ app, orgs, active, email, name, route, content, bann
   paintCrumb();
   const onCrumbs = (e) => { if (e.detail.root === content) paintCrumb(); };
   document.addEventListener('l2f:crumbs', onCrumbs); offs.push(() => document.removeEventListener('l2f:crumbs', onCrumbs));
-  const header = h('header', { class: full ? 'hdr is-full' : 'hdr' },
-    full ? h('span', { class: 'hdr-app' }, appSwitcher({ catalog, registry, launcherCurrent: false, suffix: '-f' }), plateOf(manifest ?? { id: currentApp }, 30))
-      : h('span', { class: 'only-m' }, appSwitcher({ catalog, registry, launcherCurrent: false, suffix: '-m' })),
-    crumb,
-    search, h('span', { class: 'sr', id: 'search-why' }, 'Search is not available yet. It arrives with the apps it searches.'),
-    notifications ? bell(notifications) : h('span', { class: 'iconbtn hide-s', role: 'img', 'aria-label': 'Notifications are not available yet', 'aria-disabled': 'true', title: 'Notifications are not available yet' }, icon('bell')),
-    sw, who);
-  return h('div', { class: 'app', 'data-org': active.slug ?? '' }, skip,
-    full ? h('div', { class: 'shell is-full' }, h('div', { class: 'main' }, header, h('main', { class: 'content flush wide is-full', id: 'main', 'aria-busy': 'false' }, banner ?? null, content)))
-      : h('div', { class: 'shell' }, side, h('div', { class: 'main' }, header, h('main', { class: 'content', id: 'main', 'aria-busy': 'false' }, banner ?? null, content))),
-    items.length ? bottomBar(items, current, appName) : null);
+  // V8 app bar (52 px): phone organization mark (apps-and-account sheet), collapse sidebar, crumbs. Search, bell, organization and profile are in the rail.
+  const shellEl = h('div', { class: full ? 'shell v8 is-full' : `shell v8${sideCollapsed() ? ' sidecol' : ''}`, 'data-app': currentApp ?? '' });
+  const collapse = full ? null : h('button', { type: 'button', class: 'iconbtn hide-m sidetoggle', 'aria-label': 'Collapse sidebar', title: 'Collapse sidebar', 'aria-pressed': String(sideCollapsed()),
+    onclick: (e) => { const on = !shellEl.classList.contains('sidecol'); shellEl.classList.toggle('sidecol', on); e.currentTarget.setAttribute('aria-pressed', String(on)); try { localStorage.setItem(SIDECOL, on ? '1' : '0'); } catch { /* private window: not remembered */ } } }, icon('layers'));
+  const sheetBtn = h('button', { type: 'button', class: 'iconbtn only-m acct-btn', id: 'acct-sheet-btn', 'aria-haspopup': 'dialog', 'aria-label': `Apps and account (${active.name})`,
+    onclick: () => accountSheet({ orgs, active, catalog, registry, notifications, app, theme, email, name }) }, orgMarkEl(active, 26));
+  const header = h('header', { class: full ? 'hdr bar is-full' : 'hdr bar' }, sheetBtn, collapse,
+    full ? h('span', { class: 'hdr-app' }, plateOf(manifest ?? { id: currentApp }, 26)) : null, crumb);
+  shellEl.append(theRail, ...(full ? [] : [side]), h('div', { class: 'main' }, header, h('main', { class: full ? 'content flush wide is-full' : 'content', id: 'main', 'aria-busy': 'false' }, banner ?? null, content)));
+  return h('div', { class: 'app', 'data-org': active.slug ?? '' }, skip, shellEl, items.length ? bottomBar(items, current, appName) : null);
 }
 
 /** Moves the current-page mark of the app menu on screen (Planner routes its own pages, so the shell does not re-render). */

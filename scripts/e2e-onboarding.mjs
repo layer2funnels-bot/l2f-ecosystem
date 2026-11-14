@@ -54,7 +54,7 @@ await q("insert into memberships (workspace_id,user_id,kind,role) values ($1,$2,
 const switchOrg = (p, org) => p.evaluate(async (org) => { const t = JSON.parse(decodeURIComponent(document.cookie.split('; ').find((c) => c.startsWith('l2f-session=')).slice(12))).access; await fetch('/api/org.switch', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${t}`, 'x-org-id': '00000000-0000-0000-0000-000000000000' }, body: JSON.stringify({ org, app: 'office' }) }); }, org);
 await switchOrg(op, L);      // the owner works in Layer2Funnels (an owner of two organizations invites into the one in the header)
 await op.goto(`${base}/#/office/admin/members`); await op.reload(); await until(op, 'Joining is by invitation only.');
-check('ON0', 'Setup: the owner is in Layer2Funnels', (await op.locator('.hdr').innerText()).includes('Layer2Funnels'));
+check('ON0', 'Setup: the owner is in Layer2Funnels', (await op.locator('#org-switcher').textContent()).includes('Layer2Funnels'));
 
 async function inviteStaff(email, level = 'editor') {
   await op.goto(`${base}/#/office/admin/members`); await op.reload(); await until(op, 'Joining is by invitation only.');
