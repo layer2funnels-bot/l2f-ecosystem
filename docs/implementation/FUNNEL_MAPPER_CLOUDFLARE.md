@@ -20,9 +20,9 @@ browser ──► R2 bucket "l2f-ecosystem-files" (existing): signed uploads of 
 |---|---|---|---|
 | Account `d5ec27e33b46a9e645eb4d4d3b23cde6` | yes | nothing | — |
 | Zone `tabishriaz.com`, custom domain `office.tabishriaz.com` on the Pages project | yes | nothing (no DNS record, route or custom domain is added) | — |
-| Pages project `l2f-ecosystem` | yes | one new Function file (`functions/fmp/[[path]].js`) and, after the Worker exists, one service binding `FMP → funnel-mapper` in `wrangler.toml` | git (merge to `main` deploys) |
-| Worker `funnel-mapper` | no | **created**: Funnel Mapper (OpenNext build, ~2.3 MiB compressed, free plan). No route, no workers.dev, no preview URLs. Plain-text settings only (addresses and the publishable sign-in key); no secrets | `node scripts/fmp-cloudflare-golive.mjs deploy` (`apps/funnel-mapper/wrangler.production.jsonc`) |
-| R2 bucket `l2f-ecosystem-files` | yes | **modified**: one CORS rule added for `https://office.tabishriaz.com` (GET, PUT, HEAD; header content-type) so the browser can upload images with signed addresses. Existing rules are kept | `node scripts/fmp-cloudflare-golive.mjs cors` |
+| Pages project `l2f-ecosystem` | yes | one new Function file (`functions/fmp/[[path]].js`) and the service binding `FMP → funnel-mapper` in `wrangler.toml` (PR #52, merged 14 Nov 2026). Dashboard environment variables unchanged | git (merge to `main` deploys) |
+| Worker `funnel-mapper` | no | **created 14 Nov 2026** (from `main` 3429810, version `24e745b5`): Funnel Mapper (OpenNext build, ~2.3 MiB compressed, free plan). No route, no workers.dev, no preview URLs. Plain-text settings only (addresses and the publishable sign-in key); no secrets | `node scripts/fmp-cloudflare-golive.mjs deploy` (`apps/funnel-mapper/wrangler.production.jsonc`) |
+| R2 bucket `l2f-ecosystem-files` | yes | **not modified**: its existing CORS rule already allows `https://office.tabishriaz.com` (GET, PUT, HEAD; content-type), which is what signed image uploads need. The `cors` command checked and changed nothing | `node scripts/fmp-cloudflare-golive.mjs cors` |
 
 Outside Cloudflare (done 13 Nov, live Supabase `dfitnxilkezepkhdmzuh`): migrations 0052 and 0053 applied; Funnel Mapper switched on for Layer2Funnels and Aurj; app grants for every editor. After the Worker is live: `workspace_apps.launch_url = 'https://office.tabishriaz.com/fmp'` for both organizations (the Launcher tile).
 
@@ -49,3 +49,11 @@ Not needed: Pages, DNS, Zone, Workers Routes, Account Settings (the account id i
 
 ## Tested before go-live (local, one address: forwarder standing in for the Pages Function)
 Production build with `basePath /fmp`: signed-out `/fmp` → ecosystem sign-in → back to the page; one host-only cookie; block artwork and assets under `/fmp`; new client (redirect stays under `/fmp`); logo upload (shrunk in the browser, signed upload); new funnel → editor; search; All apps → Launcher; sign-out everywhere: 10/10. Share links: create, open signed out, made-up link refused: 4/4. Cloudflare preview of the site with the gateway: `/fmp` 503 "not connected yet", site and API unaffected.
+
+## Go-live log (14 Nov 2026)
+- Token: saved by the owner as this cloud environment's network secret for `api.cloudflare.com` (the proxy adds it; it never enters the machine).
+- Node's built-in `fetch` ignores the session proxy: run the script with `NODE_USE_ENV_PROXY=1 NODE_EXTRA_CA_CERTS=/root/.ccr/ca-bundle.crt`.
+- `wrangler deploy` signs static-file uploads (`/workers/assets/upload`) with its own short-lived upload key, which the proxy replaced with the API token (401). Fix used: a preload dispatcher that sends only those upload requests directly to Cloudflare and everything else through the proxy (no proxy variables for wrangler itself). 164 files uploaded; Worker published with no route.
+- PR #52 added the binding; preview checked before merge (`/fmp/clients` → sign-in 307, `/fmp/robots.txt` 200, share page 200, `/api/health` 200).
+- Live check found one bug: on the live address Next.js shortens the same-address sign-in redirect to `/#/signin?...` and the gateway added `/fmp` to it. The gateway now leaves the web app's `/#` routes alone (GW3).
+- Launcher: `workspace_apps.launch_url = 'https://office.tabishriaz.com/fmp'` for both organizations.

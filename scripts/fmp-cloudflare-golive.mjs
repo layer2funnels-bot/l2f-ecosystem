@@ -64,7 +64,7 @@ async function verify() {
   const get = (u) => fetch(u, { redirect: 'manual' });
   const a = await get(`${SITE}/fmp/clients`);
   const loc = a.headers.get('location') ?? '';
-  say(a.status === 307 && loc.startsWith(`${SITE}/#/signin?return=`), `signed out, /fmp/clients → ecosystem sign-in (${a.status} ${loc.slice(0, 80)})`);
+  say(a.status === 307 && (loc.startsWith(`${SITE}/#/signin?return=`) || loc.startsWith('/#/signin?return=')), `signed out, /fmp/clients → ecosystem sign-in (${a.status} ${loc.slice(0, 80)})`);
   const s = await get(`${SITE}/fmp/s/${'0'.repeat(48)}`);
   say(s.status < 500 && s.status !== 503, `share-link page answers (${s.status}); a made-up link opens nothing`);
   const r = await get(`${SITE}/fmp/robots.txt`);

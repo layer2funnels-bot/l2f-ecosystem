@@ -4,11 +4,12 @@ export const FMP_BASE = '/fmp';
 /**
  * Every Funnel Mapper page lives under /fmp, so a redirect from Funnel Mapper to a path on this site without /fmp is one of its own pages.
  * Next.js leaves the base path off when a form is sent as a plain page submission (before its scripts have loaded); this puts it back.
- * Full addresses (the ecosystem sign-in) and paths already under /fmp are left as they are.
+ * Full addresses, paths already under /fmp and the ecosystem web app's own routes (`/#/...`, e.g. the sign-in: on the live address
+ * Next.js shortens its same-address sign-in redirect to `/#/signin?...`) are left as they are. Funnel Mapper has no `/#` routes.
  */
 export function withBaseLocation(res) {
   const loc = res.headers.get('location');
-  if (!loc || !loc.startsWith('/') || loc.startsWith('//') || loc === FMP_BASE || loc.startsWith(`${FMP_BASE}/`) || loc.startsWith(`${FMP_BASE}?`)) return res;
+  if (!loc || !loc.startsWith('/') || loc.startsWith('//') || loc.startsWith('/#') || loc === FMP_BASE || loc.startsWith(`${FMP_BASE}/`) || loc.startsWith(`${FMP_BASE}?`)) return res;
   const headers = new Headers(res.headers); headers.set('location', `${FMP_BASE}${loc}`);
   return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
 }
