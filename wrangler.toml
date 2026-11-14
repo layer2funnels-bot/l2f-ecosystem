@@ -4,3 +4,9 @@ name = "l2f-ecosystem"
 pages_build_output_dir = "dist/web"
 compatibility_date = "2026-10-01"
 compatibility_flags = ["nodejs_compat"]
+
+# Funnel Mapper (office.tabishriaz.com/fmp): functions/fmp/[[path]].js forwards to the Worker "funnel-mapper" through this binding.
+# The Worker exists (published 14 Nov 2026); removing this block makes /fmp answer "not connected yet". docs/implementation/FUNNEL_MAPPER_CLOUDFLARE.md
+[[services]]
+binding = "FMP"
+service = "funnel-mapper"
