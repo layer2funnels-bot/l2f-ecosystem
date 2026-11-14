@@ -5,6 +5,8 @@
 // Same rules as the v4 build: colour tokens belong to packages/ui/tokens.css (built from tokens.json, contrast-checked), so the
 // prototype's colour blocks are dropped; demo-only controls are dropped. Funnel Mapper styles are confined to `.fmpx` exactly as the
 // prototype's own build does (port of prototype-source/scope.py), so they can never leak into other apps (V8_BUG_FIXES #1).
+// NOT loaded by the app as a whole: the prototype's class names (.shell, .main, .qa, .bar, .side…) collide with the live app's own markup,
+// which is exactly how the v7 defects happened (V8_BUG_FIXES). Each P00–P13 step adopts the rules for the markup it rebuilds, deliberately.
 // Run: node scripts/build-v8css.mjs   (--check: fail if apps/web/v8.css is stale)
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 
