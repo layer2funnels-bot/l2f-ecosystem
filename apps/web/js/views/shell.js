@@ -118,25 +118,27 @@ function profile({ email, name, photo, onSignOut, theme, weather, snow }) {
  * The same in every app. Every app link is a real <a href> so Ctrl-click, middle-click and "Open in new tab" work. */
 const PINNED = ['office', 'projects', 'tasks', 'clients', 'drive', 'planner'];
 const appHref = (k) => (k === 'office' ? hrefFor.office() : hrefFor.app(k));
-function rail({ sw, catalog = [], registry, currentApp, bellEl, who }) {
+function rail({ sw, catalog = [], registry, currentApp, bellEl, who, onSearch }) {
   const usable = new Map(catalog.filter((a) => a.state === 'available').map((a) => [a.app_key, a]));
   const keys = PINNED.filter((k) => usable.has(k)); if (currentApp && usable.has(currentApp) && !keys.includes(currentApp)) keys.push(currentApp);
-  const search = h('button', { type: 'button', class: 'r-btn', id: 'rail-search', 'aria-disabled': 'true', 'aria-describedby': 'search-why', title: 'Search everything (Ctrl K): arrives with global search', 'aria-label': 'Search everything' }, icon('search'));
+  const search = onSearch ? h('button', { type: 'button', class: 'r-btn', id: 'rail-search', title: 'Search everything (Ctrl K)', 'aria-label': 'Search everything', 'aria-keyshortcuts': 'Control+K', onclick: () => onSearch() }, icon('search'))
+    : h('button', { type: 'button', class: 'r-btn', id: 'rail-search', 'aria-disabled': 'true', 'aria-describedby': 'search-why', title: 'Search is not available for client accounts', 'aria-label': 'Search everything' }, icon('search'));
   return h('nav', { class: 'rail', 'aria-label': 'Ecosystem' },
     h('div', { class: 'r-wrap' }, sw),
     h('div', { class: 'r-wrap' }, appSwitcher({ catalog, registry, launcherCurrent: false })),
     h('span', { class: 'r-div', 'aria-hidden': 'true' }),
     h('div', { class: 'r-apps' }, ...keys.map((k) => { const a = usable.get(k); return h('a', { class: 'r-app', href: appHref(k), title: a.name, 'aria-label': a.name, 'data-app': k, ...(k === currentApp ? { 'aria-current': 'page' } : {}) }, plateOf(registry?.get(k) ?? { id: k }, 30)); })),
     h('span', { class: 'r-sp' }),
-    search, h('span', { class: 'sr', id: 'search-why' }, 'Search is not available yet. It arrives with the apps it searches.'),
+    search, h('span', { class: 'sr', id: 'search-why' }, 'Search is not available for client accounts.'),
     h('div', { class: 'r-wrap r-bell' }, bellEl),
     h('div', { class: 'r-wrap r-me' }, who));
 }
 
 /** Phone (≤760 px): the rail is hidden; the organization mark in the app bar opens this sheet with everything the rail holds. */
-function accountSheet({ orgs, active, catalog = [], registry, notifications, app, theme, email, name }) {
+function accountSheet({ orgs, active, catalog = [], registry, notifications, app, theme, email, name, onSearch }) {
   const close = dialog({ title: 'Apps and account', wide: false, body: h('div', { class: 'acct-sheet' },
     h('a', { class: 'btn', href: '#/launcher', onclick: () => close() }, icon('home'), 'Launcher'),
+    onSearch ? h('button', { type: 'button', class: 'btn', onclick: () => { close(); onSearch(); } }, icon('search'), 'Search everything') : null,
     notifications ? h('a', { class: 'btn', href: '#/profile', onclick: () => close() }, icon('bell'), 'Notifications') : null,
     h('h3', { class: 'over' }, 'Your organizations'),
     ...orgs.map((o) => h('button', { type: 'button', class: 'btn opt-org', 'aria-pressed': String(o.org_id === active.org_id), onclick: () => { close(); if (o.org_id !== active.org_id) app.switchOrg(o.org_id); } }, orgMarkEl(o, 24), h('span', {}, o.name), h('small', {}, roleLabel(o.role)))),
@@ -170,7 +172,7 @@ function bottomBar(items, current, appName = '') {
       } }, h('span', { class: 'pillic' }, icon('more')), 'More') : null);
 }
 
-export function shellView({ app, orgs, active, email, name, route, content, banner, isAdmin, inOffice, launcherCurrent, catalog, registry, currentApp, theme, weather, snow, me = null, notifications = null }) {
+export function shellView({ onSearch = null, app, orgs, active, email, name, route, content, banner, isAdmin, inOffice, launcherCurrent, catalog, registry, currentApp, theme, weather, snow, me = null, notifications = null }) {
   offs.forEach((f) => f()); offs = [];
   document.body.classList.remove('hasb');
   const sw = launcherCurrent ? switcher({ orgs, active, onPick: (id) => app.switchOrg(id) }) : null;
@@ -183,7 +185,8 @@ export function shellView({ app, orgs, active, email, name, route, content, bann
       const dark = () => document.documentElement.dataset.theme === 'dark';
       const tb = h('button', { type: 'button', class: 'themebtn', 'aria-label': dark() ? 'Switch to light theme' : 'Switch to dark theme', onclick: () => { theme.set(dark() ? 'light' : 'dark'); paint(); } });
       const paint = () => { tb.replaceChildren(icon(dark() ? 'sun' : 'moon')); tb.setAttribute('aria-label', dark() ? 'Switch to light theme' : 'Switch to dark theme'); }; paint();
-      whoSlot.replaceWith(h('span', { class: 'l-right' }, tb, notifications ? bell(notifications) : null, who));
+      const sbtn = onSearch ? h('button', { type: 'button', class: 'themebtn', id: 'launcher-search', 'aria-label': 'Search everything', title: 'Search everything (Ctrl K)', onclick: () => onSearch() }, icon('search')) : null;
+      whoSlot.replaceWith(h('span', { class: 'l-right' }, sbtn, tb, notifications ? bell(notifications) : null, who));
     } else whoSlot?.replaceWith(who);
     return h('div', { class: 'app in-launcher', 'data-org': active.slug ?? '' }, skip, content, banner ?? null);
   }
@@ -196,7 +199,7 @@ export function shellView({ app, orgs, active, email, name, route, content, bann
   const here = items.find((i) => i.key === current);
   // V8: the organization switcher, app switcher, notifications and profile live in the rail (no profile footer in the sidebar: it looked clickable and wasn't)
   const swRail = switcher({ orgs, active, onPick: (id) => app.switchOrg(id), compact: true });
-  const theRail = rail({ sw: swRail, catalog, registry, currentApp, bellEl: notifications ? bell(notifications) : h('span', { class: 'r-btn', role: 'img', 'aria-label': 'Notifications are not available yet', 'aria-disabled': 'true', title: 'Notifications are not available yet' }, icon('bell')), who });
+  const theRail = rail({ onSearch, sw: swRail, catalog, registry, currentApp, bellEl: notifications ? bell(notifications) : h('span', { class: 'r-btn', role: 'img', 'aria-label': 'Notifications are not available yet', 'aria-disabled': 'true', title: 'Notifications are not available yet' }, icon('bell')), who });
   const side = h('aside', { class: 'side', 'aria-label': `${appName} menu` },
     h('div', { class: 'side-top' }, plateOf(manifest ?? { id: currentApp }, 30), h('b', {}, appName)),
     items.length ? h('nav', { class: 'nav', 'aria-label': appName }, ...items.map((i) => sideLink(i, current))) : null,
@@ -215,7 +218,7 @@ export function shellView({ app, orgs, active, email, name, route, content, bann
   const collapse = full ? null : h('button', { type: 'button', class: 'iconbtn hide-m sidetoggle', 'aria-label': 'Collapse sidebar', title: 'Collapse sidebar', 'aria-pressed': String(sideCollapsed()),
     onclick: (e) => { const on = !shellEl.classList.contains('sidecol'); shellEl.classList.toggle('sidecol', on); e.currentTarget.setAttribute('aria-pressed', String(on)); try { localStorage.setItem(SIDECOL, on ? '1' : '0'); } catch { /* private window: not remembered */ } } }, icon('layers'));
   const sheetBtn = h('button', { type: 'button', class: 'iconbtn only-m acct-btn', id: 'acct-sheet-btn', 'aria-haspopup': 'dialog', 'aria-label': `Apps and account (${active.name})`,
-    onclick: () => accountSheet({ orgs, active, catalog, registry, notifications, app, theme, email, name }) }, orgMarkEl(active, 26));
+    onclick: () => accountSheet({ orgs, active, catalog, registry, notifications, app, theme, email, name, onSearch }) }, orgMarkEl(active, 26));
   const header = h('header', { class: full ? 'hdr bar is-full' : 'hdr bar' }, sheetBtn, collapse,
     full ? h('span', { class: 'hdr-app' }, plateOf(manifest ?? { id: currentApp }, 26)) : null, crumb);
   shellEl.append(theRail, ...(full ? [] : [side]), h('div', { class: 'main' }, header, h('main', { class: full ? 'content flush wide is-full' : 'content', id: 'main', 'aria-busy': 'false' }, banner ?? null, content)));

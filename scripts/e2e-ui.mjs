@@ -137,7 +137,17 @@ await page.fill('#app-find', ''); await page.keyboard.press('Escape');
 await page.goto(`${base}/#/office`); await wait('Your work in'); await page.locator('#app-switcher:visible, #app-switcher-m:visible').first().click();
 const swApps = await page.locator('#apps-menu .appitem').evaluateAll((els) => els.map((e) => e.dataset.app));
 check('V6', 'The app switcher offers Back to Launcher and the apps this person may open here (not the locked or coming-soon ones)', (await page.locator('#apps-menu .back').innerText()).includes('Back to Launcher') && swApps.includes('office') && !swApps.includes('portal') && !swApps.includes('forms'), swApps.join());
-await page.keyboard.press('Escape'); await page.goto(`${base}/#/launcher`); await wait('The sky follows your time of day');
+await page.keyboard.press('Escape');
+// global search (V8 02 §5): Ctrl K opens it scoped to the current app; pages and menus are found; Enter opens; Esc closes
+await page.keyboard.press('Control+k'); await page.waitForSelector('#gsq');
+const gsScope = await page.locator('.gsx-scope button[aria-pressed=true]').innerText();
+await page.keyboard.type('Requests'); await page.waitForSelector('.gsx-row:has-text("Requests & Approvals")'); await page.waitForFunction(() => !/Searching/.test(document.querySelector('.gsx-res')?.innerText ?? '')); await shot(page, 'b2-search');
+check('GS-UI1', 'Ctrl K opens global search scoped to the current app (Office); typing finds apps, pages and menus; the server search answers', gsScope === 'Office' && (await page.locator('.gsx-row').count()) >= 1 && !(await page.getByText('Search couldn’t reach the server').count()));
+await page.keyboard.press('Enter'); await page.waitForFunction(() => location.hash.startsWith('#/clients/requests'));
+check('GS-UI2', 'Enter opens the selected result and the search closes', (await page.locator('.gsx-scrim').count()) === 0);
+await page.locator('#rail-search').click(); await page.waitForSelector('#gsq'); await page.keyboard.press('Escape');
+check('GS-UI3', 'The rail\'s search button opens it too, and Escape closes it', (await page.locator('.gsx-scrim').count()) === 0);
+await page.goto(`${base}/#/launcher`); await wait('The sky follows your time of day');
 // weather opt-out: profile menu, no new location use, no new server call; the chip goes; switching it on again brings it back
 const callsBefore = metCalls.length;
 await page.locator('.who').click(); await page.getByRole('menuitemcheckbox', { name: /Weather on the Launcher/ }).click();

@@ -67,3 +67,33 @@
 .acct-apps .appitem{display:grid;justify-items:center;gap:6px;padding:10px 2px;border-radius:10px;font-size:12.5px;font-weight:550;color:var(--text2);text-align:center;text-decoration:none;min-height:44px}
 .acct-apps .appitem:hover{background:var(--surface2);color:var(--text)}
 @media (prefers-reduced-motion:reduce){.shell.v8 .rail *{transition:none!important}}
+
+/* ---- global search (V8 02 §5): dialog 680 px, scope row, grouped results with app marks, key hints; full screen on phones ---- */
+.gsx-scrim{position:fixed;inset:0;z-index:calc(var(--z-dialog) + 5);background:rgba(10,11,14,.42);display:flex;justify-content:center;align-items:flex-start;padding:10vh 16px 16px;animation:fade 160ms}
+.gsx{width:min(680px,100%);max-height:76vh;display:flex;flex-direction:column;background:var(--surface);color:var(--text);border:var(--bw) solid var(--line);border-radius:10px;box-shadow:var(--sh3);overflow:hidden;font:400 14.5px/1.45 var(--font)}
+.gsx-in{display:flex;align-items:center;gap:10px;padding:0 16px;min-height:56px;border-bottom:var(--bw) solid var(--line)}
+.gsx-in svg.i{width:20px;height:20px;color:var(--muted)}
+.gsx-in input{flex:1;min-width:0;border:0;outline:0;background:none;color:var(--text);font:400 16px/1.4 var(--font);min-height:44px}
+.gsx kbd{font:500 11.5px/1 var(--mono);padding:3px 6px;border-radius:5px;background:var(--sunk);color:var(--text2)}
+.gsx-scopes{display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:var(--bw) solid var(--line);overflow-x:auto}
+.gsx-lbl{font:600 12.5px/1 var(--font);color:var(--muted);white-space:nowrap}
+.gsx-scope{display:flex;gap:6px}
+.gsx-scope button{white-space:nowrap;min-height:32px;padding:0 10px;border-radius:6px;border:var(--bw) solid var(--line2);background:var(--surface);color:var(--text2);font:550 13px/1 var(--font);cursor:pointer}
+.gsx-scope button[aria-pressed="true"]{background:var(--action-tint);border-color:var(--action);color:var(--action)}
+.gsx-res{overflow-y:auto;padding:6px 8px 10px;flex:1;min-height:120px}
+.gsx-h{font:600 12.5px/1.3 var(--font);color:var(--muted);margin:10px 8px 4px}
+.gsx-row{display:flex;align-items:center;gap:12px;min-height:48px;padding:6px 8px;border-radius:8px;color:var(--text);text-decoration:none}
+.gsx-row:hover,.gsx-row[aria-selected="true"]{background:var(--action-tint)}
+.gsx-row .plate{box-shadow:none;flex:none}.gsx-row .plate::before{display:none}
+.gsx-main{display:grid;min-width:0;flex:1}
+.gsx-main b{font:550 14.5px/1.3 var(--font);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gsx-main b mark{background:var(--brand-soft);color:inherit;border-radius:3px;padding:0 1px}
+.gsx-main small{font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gsx-row .pill{flex:none}
+.gsx-hint{margin:10px 8px;font-size:13.5px;color:var(--muted)}
+.gsx-empty{display:grid;gap:4px;padding:24px 8px;text-align:center}.gsx-empty span{color:var(--muted);font-size:13.5px}
+.gsx-ai{display:flex;align-items:center;gap:10px;margin:8px;padding:10px 12px;border:var(--bw) dashed var(--line2);border-radius:8px;color:var(--muted);font-size:13.5px}.gsx-ai span:nth-child(2){flex:1}
+.gsx-foot{display:flex;flex-wrap:wrap;align-items:center;gap:14px;padding:8px 16px;border-top:var(--bw) solid var(--line);background:var(--surface2);font-size:12.5px;color:var(--muted)}
+.gsx-foot .grow{flex:1}.gsx-foot .btn.link{min-height:32px;font-size:13px}
+@media (max-width:760px){.gsx-scrim{padding:0}.gsx{width:100%;max-height:none;height:100dvh;border-radius:0;border:0}.gsx-foot>span:not(.grow){display:none}}
+@media (prefers-reduced-motion:reduce){.gsx-scrim{animation:none}}
