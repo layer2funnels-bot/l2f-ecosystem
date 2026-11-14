@@ -110,3 +110,19 @@ begin
 end $$;
 drop trigger if exists drive_share_notice on public.drive_shares;
 create trigger drive_share_notice after insert on public.drive_shares for each row execute function private.drive_share_notice();
+
+-- Supabase grants EXECUTE on new functions to its Data API roles by default: take that away again (nothing of ours is reachable
+-- through the Data API; the app reaches the database only as app_user). Same lockdown as every earlier migration.
+revoke all on function private.drive_share_notice() from public;
+do $$
+declare r text;
+begin
+  foreach r in array array['anon', 'authenticated'] loop
+    if exists (select 1 from pg_roles where rolname = r) then
+      execute format('revoke all on function public.my_inbox(int, text, text) from %I', r);
+      execute format('revoke all on function private.notify(uuid, uuid, text, text, text, text, text, uuid) from %I', r);
+      execute format('revoke all on function private.drive_share_notice() from %I', r);
+      execute format('revoke all on table public.notification_prefs from %I', r);
+    end if;
+  end loop;
+end $$;
