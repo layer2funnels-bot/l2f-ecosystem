@@ -92,3 +92,5 @@ h3{font:650 16px/1.25 var(--font);letter-spacing:-.005em}                      /
   .btn,.btn.sm,.btn.link,.chip,.seg button,.tabs button,.tabs a,.fld input,.fld select{min-height:44px}
   .iconbtn{width:44px;height:44px}.btn,.btn.link,.seg button,.vsw button{min-width:44px}
 }
+/* rebuilt V8 pages (root class v8p-*): the app's older global .sub spacing must not leak in (V8 sets only margin-top) */
+[class^="v8p-"] .sub{margin-bottom:0;padding:0;max-width:none}
