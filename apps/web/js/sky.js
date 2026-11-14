@@ -65,7 +65,6 @@ export function getLocation({ geo = (typeof navigator !== 'undefined' ? navigato
 }
 /** The weather for the sky, or null (opted out, offline, server says unavailable): the sky then shows time of day and the season's light only. */
 export async function loadWeather({ api, store, geo, session = (typeof sessionStorage !== 'undefined' ? sessionStorage : null), now = Date.now }) {
-  if (weatherOff(store)) return null;
   try { const c = JSON.parse(session?.getItem('l2f.wx') ?? 'null'); if (c && now() - c.at < 30 * 60_000) return c.w; } catch { /* no cache */ }
   // Khushab unless this person chose their own location on this device (and the browser allows it)
   let device = false; try { device = store?.getItem(WXPLACE_KEY) === 'device'; } catch { /* blocked store: Khushab */ }

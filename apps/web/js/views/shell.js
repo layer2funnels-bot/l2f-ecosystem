@@ -64,37 +64,59 @@ function appSwitcher({ catalog = [], registry, launcherCurrent, suffix = '' }) {
   return h('div', { class: `appsw swwrap apps-wrap apps-wrap${suffix}` }, btn, menu);
 }
 
-/** The header bell (migration 0034): what needs you in this organization. notifications: { count() -> n|null, list() -> rows|null, read(ids|'all'), href(row) }. */
-const KIND = { assigned: 'assigned you', mentioned: 'mentioned you on', commented: 'commented on', completed: 'completed' };
-const noteText = (r) => (r.kind === 'unblocked' ? `“${r.title}” can start: ${r.actor_name} finished what it was waiting on` : `${r.actor_name} ${KIND[r.kind] ?? 'updated'} “${r.title}”`);
-function bell(notifications) {
+/** V8 notifications (02_GLOBAL_SHELL §6, migration 0054): the bell opens one inbox for every app, in this organization only.
+ * notifications: { count(fresh) -> n|null, list(group, app) -> rows|null, read(ids|'all'), href(row) }. */
+const KIND = { assigned: 'assigned you', mentioned: 'mentioned you on', commented: 'commented on', completed: 'completed', unblocked: 'unblocked', due_changed: 'changed the due date of' };
+const GROUPS = [['all', 'All'], ['mentions', 'Mentions'], ['assigned', 'Assigned'], ['approvals', 'Approvals'], ['updates', 'Updates']];
+const APP_NAME = { projects: 'Projects', drive: 'Drive', clients: 'Clients', planner: 'Planner', tasks: 'Tasks', forms: 'Forms', social: 'Social Planner', office: 'Office' };
+const noteText = (r) => (r.title && !KIND[r.kind] ? [h('b', {}, r.actor_name), ` ${r.title}`] : [h('b', {}, r.actor_name), ` ${KIND[r.kind] ?? 'updated'} “${r.title}”`]);
+const ago = (iso) => { const s = (Date.now() - new Date(iso)) / 1000; return s < 60 ? 'just now' : s < 3600 ? `${Math.round(s / 60)} min ago` : s < 86400 ? `${Math.round(s / 3600)} h ago` : new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }); };
+function bell(notifications, registry) {
   const badge = h('span', { class: 'badge', hidden: true, 'aria-hidden': 'true' });
-  const b = h('button', { type: 'button', class: 'iconbtn', id: 'bell', 'aria-haspopup': 'true', 'aria-expanded': 'false', 'aria-controls': 'bell-menu', 'aria-label': 'Notifications' }, icon('bell'), badge);
-  const menu = h('div', { class: 'menu bell-menu', id: 'bell-menu', role: 'region', 'aria-label': 'Notifications', 'data-open': 'false' });
+  const b = h('button', { type: 'button', class: 'iconbtn', id: 'bell', 'aria-haspopup': 'dialog', 'aria-expanded': 'false', 'aria-label': 'Notifications' }, icon('bell'), badge);
   const paintCount = (n) => { badge.hidden = !n; badge.textContent = n > 99 ? '99+' : String(n ?? ''); b.setAttribute('aria-label', n ? `Notifications, ${n} unread` : 'Notifications'); };
-  const close = (refocus) => { menu.dataset.open = 'false'; b.setAttribute('aria-expanded', 'false'); if (refocus) b.focus(); };
   notifications.count().then(paintCount);
-  b.addEventListener('click', async () => {
-    if (menu.dataset.open === 'true') return close(true);
-    menu.replaceChildren(h('div', { class: 'mh' }, 'Notifications'), h('p', { class: 'mfoot' }, 'Loading…'));
-    menu.dataset.open = 'true'; b.setAttribute('aria-expanded', 'true');
-    const rows = await notifications.list();
-    const unread = (rows ?? []).filter((r) => !r.read_at).map((r) => r.id);
-    const item = (r) => h('a', { class: `opt bell-item${r.read_at ? '' : ' unread'}`, href: notifications.href(r), tabindex: '0', onclick: () => { close(false); if (!r.read_at) notifications.read([r.id]).then(() => notifications.count(true).then(paintCount)); } },
-      h('span', { class: 'tx' }, h('strong', {}, noteText(r)), h('small', {}, `${r.project_name} · ${new Date(r.created_at).toLocaleString()}`)));
-    menu.replaceChildren(h('div', { class: 'mh bell-head' }, 'Notifications', unread.length ? h('button', { type: 'button', class: 'btn link', onclick: async () => { await notifications.read('all'); paintCount(0); menu.querySelectorAll('.unread').forEach((x) => x.classList.remove('unread')); } }, 'Mark all read') : null),
-      ...(rows == null ? [h('p', { class: 'mfoot' }, 'Notifications couldn’t be loaded.')] : rows.length ? rows.map(item) : [h('p', { class: 'mfoot' }, 'You’re all caught up.')]));
-    (menu.querySelector('a.opt') ?? menu).focus?.();
+  let panel = null;
+  const close = () => { if (!panel) return; panel.remove(); panel = null; b.setAttribute('aria-expanded', 'false'); b.focus(); };
+  b.addEventListener('click', () => {
+    if (panel) return close();
+    let group = 'all', app = null;
+    const list = h('div', { class: 'nfx-list', role: 'list' });
+    const kinds = h('div', { class: 'nfx-kinds', role: 'tablist', 'aria-label': 'Kind' });
+    const apps = h('div', { class: 'nfx-apps', role: 'group', 'aria-label': 'App' });
+    const markAll = h('button', { type: 'button', class: 'btn link', onclick: async () => { await notifications.read('all'); paintCount(0); list.querySelectorAll('.unread').forEach((x) => x.classList.remove('unread')); } }, 'Mark all read');
+    const load = async () => {
+      kinds.replaceChildren(...GROUPS.map(([k, l]) => h('button', { type: 'button', role: 'tab', 'aria-selected': String(k === group), onclick: () => { group = k; load(); } }, l)));
+      list.replaceChildren(h('p', { class: 'nfx-hint', role: 'status' }, 'Loading…'));
+      const rows = await notifications.list(group, app);
+      if (!panel) return;
+      const seen = [...new Set((rows ?? []).map((r) => r.app))];
+      apps.replaceChildren(...(seen.length > 1 || app ? [h('button', { type: 'button', 'aria-pressed': String(!app), onclick: () => { app = null; load(); } }, 'All apps'),
+        ...[...new Set([...seen, ...(app ? [app] : [])])].map((k) => h('button', { type: 'button', 'aria-pressed': String(app === k), onclick: () => { app = k; load(); } }, plateOf(registry?.get(k) ?? { id: k }, 16), APP_NAME[k] ?? k))] : []));
+      if (rows == null) return list.replaceChildren(h('p', { class: 'nfx-hint' }, 'Notifications couldn’t be loaded. Try again in a moment.'));
+      if (!rows.length) return list.replaceChildren(h('div', { class: 'nfx-empty' }, icon('bell'), h('b', {}, group === 'all' ? 'You’re all caught up' : 'Nothing here'), h('span', {}, 'New mentions, assignments, approvals and shares appear here.')));
+      list.replaceChildren(...rows.map((r) => h('a', { class: `nfx-item${r.read_at ? '' : ' unread'}`, role: 'listitem', href: notifications.href(r),
+        onclick: () => { close(); if (!r.read_at) notifications.read([r.id]).then(() => notifications.count(true).then(paintCount)); } },
+        h('span', { class: 'avatar', 'aria-hidden': 'true' }, initials(r.actor_name)),
+        h('span', { class: 'nfx-tx' }, h('span', { class: 'nfx-line' }, ...noteText(r)),
+          h('small', {}, plateOf(registry?.get(r.app) ?? { id: r.app }, 16), ` ${APP_NAME[r.app] ?? r.app}${r.context ? ` · ${r.context}` : ''} · ${ago(r.created_at)}`)),
+        r.read_at ? null : h('i', { class: 'nfx-dot', 'aria-label': 'Unread' }))));
+    };
+    panel = h('aside', { class: 'nfx', role: 'dialog', 'aria-modal': 'false', 'aria-label': 'Notifications', onkeydown: (e) => { if (e.key === 'Escape') { e.preventDefault(); close(); } } },
+      h('header', { class: 'nfx-head' }, h('h2', {}, 'Notifications'), markAll, h('button', { type: 'button', class: 'iconbtn', 'aria-label': 'Close notifications', onclick: close }, icon('x'))),
+      kinds, apps, list,
+      h('footer', { class: 'nfx-foot' }, h('a', { href: '#/profile', onclick: () => close() }, 'Notification settings')));
+    document.body.append(panel); b.setAttribute('aria-expanded', 'true'); load();
+    panel.querySelector('[role=tab]')?.focus();
   });
-  menu.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); close(true); } });
-  onDocClick((e) => { if (menu.dataset.open === 'true' && !e.target.closest('.bell-wrap')) close(false); });
-  return h('div', { class: 'swwrap bell-wrap' }, b, menu);
+  onDocClick((e) => { if (panel && !panel.contains(e.target) && !b.contains(e.target)) close(); });
+  return h('div', { class: 'swwrap bell-wrap' }, b);
 }
 
 const avatarBits = (text, photo) => (photo ? [h('img', { src: photo, alt: '' })] : [initials(text)]);
 /** Updates the header avatar in place after a photo or name change (no re-render of the page the person is on). */
 export function setHeaderAvatar(me) { for (const b of document.querySelectorAll('.profile-wrap .who')) b.replaceChildren(...avatarBits(me?.name || b.getAttribute('aria-label') || '?', me?.photo)); }
-function profile({ email, name, photo, onSignOut, theme, weather, snow }) {
+function profile({ email, name, photo, onSignOut, theme }) {
   const btn = h('button', { type: 'button', class: 'who avatar', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-controls': 'profile-menu', 'aria-label': `Your profile: ${name || email}` }, ...avatarBits(name || email, photo));
   const menu = h('div', { class: 'menu profile-menu', id: 'profile-menu', role: 'menu', 'aria-label': 'Your profile', 'data-open': 'false' });
   const close = (refocus) => { menu.dataset.open = 'false'; btn.setAttribute('aria-expanded', 'false'); if (refocus) btn.focus(); };
@@ -103,8 +125,6 @@ function profile({ email, name, photo, onSignOut, theme, weather, snow }) {
     const pref = theme?.pref?.() ?? 'system';
     const choose = (v) => h('button', { type: 'button', role: 'menuitemradio', 'aria-checked': String(pref === v), tabindex: '-1', onclick: () => { theme.set(v); close(false); } }, { system: 'System', light: 'Light', dark: 'Dark' }[v]);
     menu.replaceChildren(...[h('a', { class: 'opt opt-plain', role: 'menuitem', href: '#/profile', tabindex: '-1', onclick: () => close(false) }, h('span', { class: 'tx' }, h('strong', {}, 'Your profile'), h('small', {}, 'Name, photo, email, password'))), h('div', { class: 'mh' }, 'Signed in as'), h('div', { class: 'mfoot', style: 'border:0;margin:0;color:var(--text);overflow-wrap:anywhere' }, email ?? ''),
-      weather ? h('button', { type: 'button', role: 'menuitemcheckbox', class: 'opt opt-plain', 'aria-checked': String(weather.on()), tabindex: '-1', onclick: () => { close(false); weather.set(!weather.on()); } }, h('span', { class: 'tx' }, h('strong', {}, 'Weather on the Launcher'), h('small', {}, weather.on() ? 'On. Uses your location when you allow it.' : 'Off'))) : null,
-      snow ? h('button', { type: 'button', role: 'menuitemcheckbox', class: 'opt opt-plain', 'aria-checked': String(snow.on()), tabindex: '-1', onclick: () => { close(false); snow.set(!snow.on()); } }, h('span', { class: 'tx' }, h('strong', {}, 'Snowfall on the Launcher'), h('small', {}, snow.on() ? 'On in winter and on cold days. Just for fun: not a weather report.' : 'Off'))) : null,
       theme ? [h('div', { class: 'mh' }, 'Appearance'), h('div', { class: 'seg-theme', role: 'group', 'aria-label': 'Appearance' }, choose('system'), choose('light'), choose('dark'))] : null,
       h('button', { type: 'button', role: 'menuitem', class: 'opt opt-plain', tabindex: '-1', onclick: () => { close(false); onSignOut(); } }, h('span', { class: 'tx' }, h('strong', {}, 'Sign out')))].flat().filter(Boolean));
     menu.dataset.open = 'true'; btn.setAttribute('aria-expanded', 'true'); menu.querySelector('[role=menuitem]').focus();
@@ -172,11 +192,11 @@ function bottomBar(items, current, appName = '') {
       } }, h('span', { class: 'pillic' }, icon('more')), 'More') : null);
 }
 
-export function shellView({ onSearch = null, app, orgs, active, email, name, route, content, banner, isAdmin, inOffice, launcherCurrent, catalog, registry, currentApp, theme, weather, snow, me = null, notifications = null }) {
+export function shellView({ onSearch = null, app, orgs, active, email, name, route, content, banner, isAdmin, inOffice, launcherCurrent, catalog, registry, currentApp, theme, me = null, notifications = null }) {
   offs.forEach((f) => f()); offs = [];
   document.body.classList.remove('hasb');
   const sw = launcherCurrent ? switcher({ orgs, active, onPick: (id) => app.switchOrg(id) }) : null;
-  const who = profile({ email, name, photo: me?.photo, onSignOut: () => app.signOut(), theme, weather, snow });
+  const who = profile({ email, name, photo: me?.photo, onSignOut: () => app.signOut(), theme });
   const skip = h('a', { class: 'skip', href: '#main', onclick: (e) => { e.preventDefault(); const m = document.getElementById('main'); m.setAttribute('tabindex', '-1'); m.focus(); } }, 'Skip to content');      // not a hash link: the address is the route
   if (launcherCurrent) {
     // Design v4 section 8: the Launcher is the sky itself. Its top row carries the organization switcher and the profile; there is no header bar.
@@ -186,7 +206,7 @@ export function shellView({ onSearch = null, app, orgs, active, email, name, rou
       const tb = h('button', { type: 'button', class: 'themebtn', 'aria-label': dark() ? 'Switch to light theme' : 'Switch to dark theme', onclick: () => { theme.set(dark() ? 'light' : 'dark'); paint(); } });
       const paint = () => { tb.replaceChildren(icon(dark() ? 'sun' : 'moon')); tb.setAttribute('aria-label', dark() ? 'Switch to light theme' : 'Switch to dark theme'); }; paint();
       const sbtn = onSearch ? h('button', { type: 'button', class: 'themebtn', id: 'launcher-search', 'aria-label': 'Search everything', title: 'Search everything (Ctrl K)', onclick: () => onSearch() }, icon('search')) : null;
-      whoSlot.replaceWith(h('span', { class: 'l-right' }, sbtn, tb, notifications ? bell(notifications) : null, who));
+      whoSlot.replaceWith(h('span', { class: 'l-right' }, sbtn, tb, notifications ? bell(notifications, registry) : null, who));
     } else whoSlot?.replaceWith(who);
     return h('div', { class: 'app in-launcher', 'data-org': active.slug ?? '' }, skip, content, banner ?? null);
   }
@@ -199,7 +219,7 @@ export function shellView({ onSearch = null, app, orgs, active, email, name, rou
   const here = items.find((i) => i.key === current);
   // V8: the organization switcher, app switcher, notifications and profile live in the rail (no profile footer in the sidebar: it looked clickable and wasn't)
   const swRail = switcher({ orgs, active, onPick: (id) => app.switchOrg(id), compact: true });
-  const theRail = rail({ onSearch, sw: swRail, catalog, registry, currentApp, bellEl: notifications ? bell(notifications) : h('span', { class: 'r-btn', role: 'img', 'aria-label': 'Notifications are not available yet', 'aria-disabled': 'true', title: 'Notifications are not available yet' }, icon('bell')), who });
+  const theRail = rail({ onSearch, sw: swRail, catalog, registry, currentApp, bellEl: notifications ? bell(notifications, registry) : h('span', { class: 'r-btn', role: 'img', 'aria-label': 'Notifications are not available yet', 'aria-disabled': 'true', title: 'Notifications are not available yet' }, icon('bell')), who });
   const side = h('aside', { class: 'side', 'aria-label': `${appName} menu` },
     h('div', { class: 'side-top' }, plateOf(manifest ?? { id: currentApp }, 30), h('b', {}, appName)),
     items.length ? h('nav', { class: 'nav', 'aria-label': appName }, ...items.map((i) => sideLink(i, current))) : null,

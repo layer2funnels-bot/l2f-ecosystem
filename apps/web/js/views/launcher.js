@@ -3,7 +3,7 @@
 import { h, icon, dialog, toast, emptyState, errorState, designBadge, roleLabel } from '../ui.js';
 import { hrefFor } from '../routes.js';
 import { plateOf } from '../registry.js';
-import { partOfDay, greeting, chipText, groupCatalog, findApps, atmosphere, weatherOff, snowOff, showSnow } from '../sky.js';
+import { partOfDay, greeting, chipText, groupCatalog, findApps, atmosphere, showSnow } from '../sky.js';
 
 const META = {
   office: ['off', 'Home, plans, funnels, documents, team and admin for this organization.'],
@@ -54,7 +54,7 @@ function snowfall() {
 }
 /** The sky layers on their own (the component gallery draws them inside a small `.lx` box). */
 export const skyScene = () => h('div', { class: 'skyset', 'aria-hidden': 'true' }, h('div', { class: 'sky' }), h('div', { class: 'orb' }), h('div', { class: 'tint' }), h('div', { class: 'wx' }));
-export const weatherChip = (w) => h('span', { class: 'wxchip', 'data-wx-chip': w.condition, title: `Weather in ${w.place ?? 'Khushab'}. You can turn this off in your profile.` }, icon(FXICON[atmosphere({ symbol: w.symbol, tempC: w.tempC, windMs: w.windMs }).effect] ?? 'sun'), chipText(w));
+export const weatherChip = (w) => h('span', { class: 'wxchip', 'data-wx-chip': w.condition, title: `Weather in ${w.place ?? 'Khushab'}. Changes with the weather on its own.` }, icon(FXICON[atmosphere({ symbol: w.symbol, tempC: w.tempC, windMs: w.windMs }).effect] ?? 'sun'), chipText(w));
 const GREET = { morning: 'Good morning', afternoon: 'Good afternoon', evening: 'Good evening', night: 'Working late' };
 const LINE = { morning: 'Fresh start. ', afternoon: '', evening: 'Winding down. ', night: 'It’s late, so only what matters. ' };
 
@@ -77,8 +77,7 @@ export function launcherView({ catalog, error, org, orgs, role, name, registry, 
   if (getWeather) getWeather().then((w) => {
     if (!root.isConnected) return;
     if (!w) {   // no weather data (offline or the service is down): the season's calm light only, never fog, rain or wind; nothing when switched off
-      let off = true; try { off = weatherOff(localStorage); } catch { off = false; }
-      if (!off) { const atm = atmosphere({ month: now().getMonth() }); root.dataset.fx = atm.effect; root.classList.add(`w-${FXCLASS[atm.effect]}`); if (!reduceMotion()) wxLayer.replaceChildren(...particles(atm)); }
+      { const atm = atmosphere({ month: now().getMonth() }); root.dataset.fx = atm.effect; root.classList.add(`w-${FXCLASS[atm.effect]}`); if (!reduceMotion()) wxLayer.replaceChildren(...particles(atm)); }
       winter(null, null);
       return;
     }
@@ -92,8 +91,7 @@ export function launcherView({ catalog, error, org, orgs, role, name, registry, 
   // snowfall: its own layer and switch, independent of the weather switch (the weather chip stays accurate)
   const snowLayer = h('div', { class: 'snowlayer', 'aria-hidden': 'true' }); root.append(snowLayer);
   function winter(tempC, effect) {
-    let on = true; try { on = !snowOff(localStorage); } catch { on = true; }
-    const yes = showSnow({ on, month: now().getMonth(), tempC, effect });
+    const yes = showSnow({ month: now().getMonth(), tempC, effect });
     root.dataset.snow = String(yes); root.classList.toggle('w-snow', yes);
     snowLayer.replaceChildren(...(yes && !reduceMotion() ? snowfall() : []));
   }

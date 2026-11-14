@@ -99,3 +99,30 @@
 .gsx-foot .grow{flex:1}.gsx-foot .btn.link{min-height:32px;font-size:13px}
 @media (max-width:760px){.gsx-scrim{padding:0}.gsx{width:100%;max-height:none;height:100dvh;border-radius:0;border:0}.gsx-foot>span:not(.grow){display:none}}
 @media (prefers-reduced-motion:reduce){.gsx-scrim{animation:none}}
+
+/* ---- notifications drawer (V8 02 §6): 520 px from the right, kind tabs, app chips, rows with avatar, app mark, time and unread dot ---- */
+.nfx{position:fixed;top:0;right:0;bottom:0;z-index:calc(var(--z-dialog) + 4);width:min(520px,100vw);display:flex;flex-direction:column;background:var(--surface);color:var(--text);border-left:var(--bw) solid var(--line);box-shadow:var(--sh3);font:400 14.5px/1.45 var(--font);animation:nfxin 260ms var(--e-out)}
+@keyframes nfxin{from{transform:translateX(24px);opacity:0}}
+.nfx-head{display:flex;align-items:center;gap:8px;min-height:56px;padding:8px 12px 8px 20px;border-bottom:var(--bw) solid var(--line)}
+.nfx-head h2{flex:1;margin:0;font:650 18px/1.2 var(--font)}
+.nfx-kinds{display:flex;gap:2px;padding:0 12px;border-bottom:var(--bw) solid var(--line);overflow-x:auto}
+.nfx-kinds button{min-height:42px;padding:0 10px;border:0;background:none;color:var(--text2);font:550 14px/1 var(--font);box-shadow:inset 0 -2px 0 transparent;cursor:pointer;white-space:nowrap}
+.nfx-kinds button[aria-selected="true"]{color:var(--text);box-shadow:inset 0 -2px 0 var(--text)}
+.nfx-apps{display:flex;gap:6px;flex-wrap:wrap;padding:10px 16px 0}
+.nfx-apps:empty{display:none}
+.nfx-apps button{display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:0 10px 0 8px;border-radius:999px;border:var(--bw) solid var(--line2);background:var(--surface);color:var(--text2);font:550 13px/1 var(--font);cursor:pointer}
+.nfx-apps button[aria-pressed="true"]{background:var(--text);border-color:var(--text);color:var(--surface)}
+.nfx-apps .plate,.nfx-item .plate{box-shadow:none;border-radius:5px;display:inline-grid;vertical-align:-3px}.nfx-apps .plate::before,.nfx-item .plate::before{display:none}
+.nfx-list{flex:1;overflow-y:auto;padding:8px}
+.nfx-item{display:flex;align-items:flex-start;gap:12px;padding:12px;border-radius:10px;color:var(--text);text-decoration:none}
+.nfx-item:hover{background:var(--surface2)}
+.nfx-item .avatar{--s:34px;flex:none}
+.nfx-tx{display:grid;gap:4px;min-width:0;flex:1}
+.nfx-line{font-size:14.5px;line-height:1.4;overflow-wrap:anywhere}
+.nfx-item small{font-size:13px;color:var(--muted)}
+.nfx-item.unread .nfx-line{color:var(--text)}.nfx-item:not(.unread) .nfx-line{color:var(--text2)}
+.nfx-dot{flex:none;width:8px;height:8px;margin-top:8px;border-radius:50%;background:var(--action)}
+.nfx-hint{margin:16px 12px;color:var(--muted);font-size:13.5px}
+.nfx-empty{display:grid;justify-items:center;gap:6px;padding:48px 16px;text-align:center}.nfx-empty svg.i{width:28px;height:28px;color:var(--muted)}.nfx-empty span{color:var(--muted);font-size:13.5px}
+.nfx-foot{padding:12px 20px;border-top:var(--bw) solid var(--line);font-size:13.5px}.nfx-foot a{color:var(--action)}
+@media (prefers-reduced-motion:reduce){.nfx{animation:none}}

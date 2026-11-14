@@ -147,20 +147,17 @@ await page.keyboard.press('Enter'); await page.waitForFunction(() => location.ha
 check('GS-UI2', 'Enter opens the selected result and the search closes', (await page.locator('.gsx-scrim').count()) === 0);
 await page.locator('#rail-search').click(); await page.waitForSelector('#gsq'); await page.keyboard.press('Escape');
 check('GS-UI3', 'The rail\'s search button opens it too, and Escape closes it', (await page.locator('.gsx-scrim').count()) === 0);
+// notifications (V8 02 §6): the bell opens one inbox for every app, with kind tabs; Escape closes it
+await page.locator('#bell').click(); await page.waitForSelector('.nfx [role=tab]'); await page.waitForFunction(() => !/Loading/.test(document.querySelector('.nfx-list')?.innerText ?? 'Loading'));
+check('NF-UI1', 'The bell opens the notifications drawer with All, Mentions, Assigned, Approvals and Updates, Mark all read and a settings link; nothing fails to load',
+  (await page.locator('.nfx [role=tab]').allInnerTexts()).join() === 'All,Mentions,Assigned,Approvals,Updates' && (await page.getByRole('button', { name: 'Mark all read' }).count()) === 1 && !(await page.getByText('couldn’t be loaded').count()));
+await shot(page, 'b3-notifications'); await page.keyboard.press('Escape');
+check('NF-UI2', 'Escape closes the drawer', (await page.locator('.nfx').count()) === 0);
 await page.goto(`${base}/#/launcher`); await wait('The sky follows your time of day');
-// weather opt-out: profile menu, no new location use, no new server call; the chip goes; switching it on again brings it back
-const callsBefore = metCalls.length;
-await page.locator('.who').click(); await page.getByRole('menuitemcheckbox', { name: /Weather on the Launcher/ }).click();
-await page.waitForFunction(() => !document.querySelector('.wxchip'));
-check('V7', 'Switching weather off in the profile menu removes the chip and the weather tint, and stops all weather calls', (await page.locator('.launcher').getAttribute('data-wx')) === 'none' && metCalls.length === callsBefore);
-await page.locator('.who').click(); await page.getByRole('menuitemcheckbox', { name: /Weather on the Launcher/ }).click(); await wait('· Khushab');
-// snowfall: its own switch in the profile menu; turning it off removes the flakes and leaves the (accurate) weather chip alone
-{ const flakesBefore = await page.locator('.snowlayer .snowf').count(); const snowAttr = await page.locator('.launcher').getAttribute('data-snow');
-  await page.locator('.who').click(); await page.getByRole('menuitemcheckbox', { name: /Snowfall on the Launcher/ }).click();
-  await page.waitForFunction(() => document.querySelector('.launcher')?.dataset.snow === 'false');
-  check('V7s', 'Snowfall has its own switch: off removes every flake and keeps the weather chip; the setting is remembered on this device',
-    (await page.locator('.snowlayer .snowf').count()) === 0 && (await page.locator('.wxchip').count()) === 1 && (await page.evaluate(() => localStorage.getItem('l2f.snow'))) === 'off', `${snowAttr} ${flakesBefore}`);
-  await page.locator('.who').click(); await page.getByRole('menuitemcheckbox', { name: /Snowfall on the Launcher/ }).click(); await wait('· Khushab'); }
+// owner (14 Nov): weather and snowfall change on their own; the profile menu has no switch for either
+await page.locator('.who').click();
+check('V7', 'The profile menu has no weather or snowfall switch (they change automatically)', (await page.getByRole('menuitemcheckbox', { name: /Weather on the Launcher|Snowfall on the Launcher/ }).count()) === 0 && (await page.locator('.wxchip').count()) === 1);
+await page.keyboard.press('Escape');
 await page.context().clearPermissions(); await page.evaluate(() => sessionStorage.clear()); await page.reload(); await wait('The sky follows your time of day');
 await wait('· Khushab');
 check('V8', 'Without any location permission the Launcher still shows Khushab weather (no prompt, no error)', (await page.locator('.wxchip').innerText()).includes('Khushab'));
