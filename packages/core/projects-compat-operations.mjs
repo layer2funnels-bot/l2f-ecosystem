@@ -28,6 +28,14 @@ export const projectsCompatOperations = [
       and ($3::text is null or p.name ilike $3) and ($4::text is null or $4 = 'all' or ($4 = 'client' and p.client_id is not null) or ($4 = 'internal' and p.client_id is null)) order by p.name limit 200`,
     [i.client ?? null, i.archived ?? false, i.q ? like(i.q) : null, i.scope ?? null, i.templates ?? false]),
   }),
+  // Office Home (V8) "Projects" card: live projects with colour, V8 status and progress; light on purpose (row rules still decide visibility)
+  defineOperation({
+    name: 'office.projects.list', class: 'read',
+    run: (q) => q(`select p.id, p.name, p.color, p.status, coalesce(round(100.0 * count(t.id) filter (where t.status = 'done') / nullif(count(t.id), 0))::int, 0) as progress
+      from pm_projects p left join pm_tasks t on t.project_id = p.id and t.deleted_at is null and t.parent_id is null
+      where p.deleted_at is null and p.archived_at is null and not p.is_template and not p.is_personal
+      group by p.id order by p.updated_at desc limit 8`),
+  }),
   defineOperation({ name: 'projects.get', class: 'read', single: true, input: { id: { type: 'uuid', required: true } }, run: (q, _c, i) => q(`${PSELECT} where p.id = $1 and p.deleted_at is null`, [i.id]) }),
   defineOperation({
     name: 'projects.people', class: 'read',

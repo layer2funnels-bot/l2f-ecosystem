@@ -41,7 +41,9 @@ const SHELL = [['rail', '.shell.v8 .rail', '.rail'], ['sidebar', '.shell.v8 > .s
 const click = (ours, proto) => async (p, side) => { const sel = side === 'ours' ? ours : proto; if (sel) await p.locator(sel).first().click().catch(() => {}); await p.waitForTimeout(500); };
 const PAGES = [
   ['launcher', '#/launcher', '#/launcher', null, [['top row', '.l-top', '.l-top'], ['weather chip', '.wxchip', '.wxchip'], ['hero', '.l-hero h1', '.l-hero h1'], ['line under hero', '.l-hero .sub', '.l-hero .sub'], ['find an app', '.l-find', '.l-find'], ['shelf', '.shelf', '.shelf'], ['tile', '.tile', '.tile'], ['tile name', '.tile .t-name', '.tile .t-name'], ['tile text', '.tile .t-desc', '.tile .t-desc']]],
-  ['office-home', '#/office', '#/office/home', null, SHELL],
+  ['office-home', '#/office', '#/office/home', null, [...SHELL.slice(0, 6), ...[['date line', '.o-hero .over'], ['greeting', '.o-hero h1'], ['summary', '.o-hero .sub'], ['view switch', '.o-hero .vsw'], ['view button', '.o-hero .vsw button'],
+    ['ask bar', '.askbar'], ['ask pill', '.askbar .pill'], ['grid', '.o-grid'], ['left column', '.o-grid > .stackcol'], ['panel', '.o-grid .panel'], ['panel header', '.o-grid .sec-h'], ['panel title', '.o-grid .sec-h h2'],
+    ['count', '.o-grid .sec-h .n'], ['day switch', '.o-grid .sec-h .vsw'], ['right panel', '.o-grid > .stackcol:last-child .panel'], ['link button', '.o-grid .linkbtn']].map(([l, sel]) => [l, `.v8p-oh ${sel}`, `.content ${sel}`])]],
   ['apps-menu', '#/office', '#/office/home', click('#app-switcher', '.rail button[title="All apps"]'), [['menu', '.menu.appmenu', '.appmenu'], ['launcher row', '.appmenu .home', '.appmenu .home'], ['app tile', '.appmenu .grid a', '.appmenu .grid a'], ['hint', '.appmenu .hint', '.appmenu .hint']]],
   ['org-menu', '#/office', '#/office/home', click('#org-switcher', '.rail .r-org'), [['menu', '#org-menu', '.menu.railmenu:not([hidden])']]],
   ['profile-menu', '#/office', '#/office/home', click('.profile-wrap .who', '.rail .r-me, .rail .me, .rail button:last-child'), [['menu', '#profile-menu', '.menu:not([hidden])']]],

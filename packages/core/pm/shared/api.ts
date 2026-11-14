@@ -210,6 +210,7 @@ export interface GalleryItem {
 }
 export type FeedType = 'tasks' | 'comments' | 'status' | 'assignments' | 'files' | 'project';
 export const FEED_TYPES: FeedType[] = ['tasks', 'comments', 'status', 'assignments', 'files', 'project'];
+export interface OrgFeedItem { id: number; actor: Person | null; kind: string; data: Record<string, unknown>; createdAt: string; taskId: string | null; taskTitle: string | null; projectId: string; projectName: string; clientId: string | null }
 export interface FeedItem { id: number; actor: Person | null; kind: string; data: Record<string, unknown>; createdAt: string; taskId: string | null; taskTitle: string | null }
 
 // op name -> [args, result]
@@ -242,6 +243,8 @@ export interface Ops {
   'gallery.list': [{ projectId: string }, GalleryItem[]];
   /** from / to are UTC dates (YYYY-MM-DD, inclusive); before = id of the last item already shown. */
   'activity.feed': [{ projectId: string; type?: FeedType; personId?: string; from?: string; to?: string; before?: number; limit?: number }, { items: FeedItem[]; next: number | null }];
+  // Office Home "What's happening" (V8): recent activity across every project the person can open; scope all | mine (projects I'm on) | clients
+  'activity.org.feed': [{ scope?: 'all' | 'mine' | 'clients'; limit?: number }, { items: OrgFeedItem[] }];
 
   'session.me': [{}, { user: Person; orgs: Org[] }];
   'people.list': [{}, OrgMember[]];
