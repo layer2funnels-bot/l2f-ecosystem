@@ -111,9 +111,9 @@ const strategyOps = [
   }),
   defineOperation({ name: 'funnels.strategies.get', class: 'read', single: true, input: sid, run: (q, _c, i) => q(`select ${STRATEGY_COLS} from funnel_strategies s where s.id = $1`, [i.id]) }),
   defineOperation({
-    name: 'funnels.strategies.create', class: 'write', single: true, input: { name: { type: 'text', required: true, max: 200 }, file: { type: 'uuid', required: true }, client: { type: 'uuid' } },
+    name: 'funnels.strategies.create', class: 'write', single: true, input: { name: { type: 'text', required: true, max: 200 }, file: { type: 'uuid', required: true }, client: { type: 'uuid' }, template_version: { type: 'int', min: 1, max: 100000 } },
     run: async (q, ctx, i) => {
-      const [r] = await q('insert into funnel_strategies (workspace_id, client_id, name, file_id) values ($1,$2,$3,$4) returning id', [ctx.orgId, i.client ?? null, i.name, i.file]);
+      const [r] = await q('insert into funnel_strategies (workspace_id, client_id, name, file_id, template_version) values ($1,$2,$3,$4,$5) returning id', [ctx.orgId, i.client ?? null, i.name, i.file, i.template_version ?? null]);
       return q(`select ${STRATEGY_COLS} from funnel_strategies s where s.id = $1`, [r.id]);
     },
   }),

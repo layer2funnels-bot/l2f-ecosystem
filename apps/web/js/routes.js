@@ -78,6 +78,7 @@ export function parseRoute(hash) {
   if (a === 'office' && b === 'funnels') {
     if (seg.length === 2) return r('funnels');
     if (c === 'strategies' && seg.length === 3) return r('strategies');
+    if (c === 'strategies' && d === 'template' && seg.length === 4) return r('strategies', { template: true });
     if (c === 'strategy' && d && seg.length === 4) return r('strategy', { id: d });
     if (byKey[c] && seg.length === 3) return r('funnel-list', { type: c });
     if (byKey[c] && d === 'new' && seg.length === 4) return r('funnel-record', { type: c, id: 'new' });

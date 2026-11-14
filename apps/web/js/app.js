@@ -24,7 +24,7 @@ import { sheetView } from './modules/sheets.js';
 import { imageView } from './modules/imageeditor.js';
 import { pdfView } from './modules/pdfeditor.js';
 import { plannerView, unmountPlanner, plannerMountedFor, plannerSection, PLANNER_PAGES } from './modules/planner.js';
-import { strategiesListView, strategyView } from './views/strategies.js';
+import { strategiesListView, strategyTemplateView, strategyView } from './views/strategies.js';
 import { documentsView, teamView, appsView } from './views/office.js';
 import { loadWeather } from './sky.js';
 import { permissionSet, canWith, canAnywhereWith } from './perm.js';
@@ -447,7 +447,7 @@ async function render(opts = {}) {
         break;
       }
       case 'funnels': content = funnelsHomeView(c); break;
-      case 'strategies': content = strategiesListView(c); break;
+      case 'strategies': content = route.params.template ? strategyTemplateView(c) : strategiesListView(c); break;
       case 'strategy': content = strategyView(c, route.params.id); break;
       case 'funnel-list': { const v = V8REC[route.params.type]; content = v ? v[0](c) : funnelListView(c, route.params.type); break; }
       case 'funnel-record': { const v = V8REC[route.params.type]; const { id } = route.params;
