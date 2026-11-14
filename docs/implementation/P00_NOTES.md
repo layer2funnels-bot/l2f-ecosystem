@@ -31,3 +31,12 @@ Launcher summary line with real counts (needs P01 Office data); shared context m
 - Page method: prototype markup + `scripts/build-page-css.mjs` (add the page's classes and its real ancestor chain to PAGES) + compare with
   `scripts/v8-compare.mjs <page>`. Dump a prototype page: see the probe in the session (Chromium, computed styles).
 - Owner decisions: one PR per complete app; Client Access Matrix = owners AND admins; no merge/deploy/production DB without approval.
+
+## P01 Office progress (branch p01-office, local)
+Done: Home (views/home.js) · menu (V8) · Funnels overview (views/funnels.js funnelsHomeView) · migration 0056 + rollback (offer/story/brand-kit
+fields, strategy_templates, doc_sections) · operations: funnel field defs extended; packages/core/office-operations.mjs (office.template.*,
+office.sections.*) · test/office.test.mjs 18/18 · one generated stylesheet apps/web/pages/office.css (root `.v8p-office`).
+Next UI (prototype office5.js/office6.js markup): Offers list/detail + New offer · Stories + New story · Brand Kits list/detail/new ·
+Strategies list (+ "Default template" button) + template editor · Documents sections · Team/Member · Apps · Projects · Notification settings
+(reuse profile table) · then Avatar studio (avatar5.js, office6.js avatarNew/avatarEdit; migration 0057) · then Admin (office6.js adminPage, from
+line ~50; migration 0058; client access = owners AND admins).
