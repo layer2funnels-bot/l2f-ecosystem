@@ -234,7 +234,7 @@ details.support{margin-top:12px;font-size:13px;color:var(--muted)}
 .pf8-cam{position:absolute;right:-4px;bottom:-4px;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:transparent}.pf8-cam::before{content:"";position:absolute;inset:8px;border-radius:50%;background:var(--text);box-shadow:0 0 0 2px var(--surface)}.pf8-cam .i{position:relative;width:15px;height:15px;color:var(--bg)}
 .pf8-who{flex:1;min-width:200px}.pf8-name{margin:0;font:620 24px/1.2 var(--font);letter-spacing:-.022em;overflow-wrap:anywhere}.pf8-roles{margin:0;color:var(--text2);font-size:14.5px;line-height:1.5}
 .pf8-work{display:inline-flex;align-items:center;gap:8px}.pf8-work .plate{flex:none}
-.pf8-tabs{display:flex;gap:4px;margin:20px 0 16px;overflow-x:auto;scrollbar-width:none}.pf8-tabs a{flex:none;min-height:32px;padding:0 12px;border-radius:8px;display:inline-flex;align-items:center;font:550 13.5px/1.5 var(--font);color:var(--text2);text-decoration:none}@media (pointer:coarse){.pf8-tabs a{min-height:44px}}.pf8-tabs a:hover{color:var(--text);background:var(--sunk)}.pf8-tabs a[aria-current=page]{background:var(--text);color:var(--bg)}
+.pf8-tabs{display:flex;gap:4px;margin:16px 0;overflow-x:auto;scrollbar-width:none}.pf8-tabs a{flex:none;min-height:32px;padding:0 12px;border-radius:8px;display:inline-flex;align-items:center;font:550 13.5px/1.5 var(--font);color:var(--text2);text-decoration:none}@media (pointer:coarse){.pf8-tabs a{min-height:44px}}.pf8-tabs a:hover{color:var(--text);background:var(--sunk)}.pf8-tabs a[aria-current=page]{background:var(--text);color:var(--bg)}
 .pf8-card{padding:18px;display:grid;gap:12px;align-content:start}.pf8-card h3{margin:0}.pf8-card .fld{margin-bottom:0}
 .pf8-split{display:grid;grid-template-columns:minmax(0,1fr) 376px;gap:20px;align-items:start}
 .pf8-two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 14px;align-items:start}
@@ -253,7 +253,7 @@ details.support{margin-top:12px;font-size:13px;color:var(--muted)}
 @media (max-width:900px){.pf8-split,.pf8-grid{grid-template-columns:minmax(0,1fr)}}
 @media (max-width:560px){.pf8-two{grid-template-columns:minmax(0,1fr)}.pf8-row{padding:0 20px 16px}}
 /* V8: controls are 38 px (small 32) with a mouse; every one of them is at least 44 px on a touch screen */
-@media (pointer:coarse){.side .nav a,.hdr .search,.seg-theme button,.btn.link,.link,.rows a,.rows button.lnk,.chk,.tools select,.tbl select,.tools .search,.vsw button,.subnav button,.inp input,.inp,.office-docs .findwrap input,.office-team .findwrap input,.toolbar>input[type=search],.toolbar>input[type=text],.toolbar>select,.toolbar select{min-height:44px}.pw button{width:40px;height:40px}}
+@media (pointer:coarse){.side .nav a,.hdr .search,.seg-theme button,.btn.link,.link,.rows a,.rows button.lnk,.chk,.tools select,.tbl select,.tools .search,.vsw button,.subnav button,.inp input,.inp,.office-docs .findwrap input,.office-team .findwrap input,.toolbar>input[type=search],.toolbar>input[type=text],.toolbar>select,.toolbar select{min-height:44px}.pw button{width:44px;height:44px;top:0;right:0}}
 /* full-screen apps (Projects): no rail, the app fills the page under the header (moved from the retired v4.css) */
 .shell.is-full{grid-template-columns:minmax(0,1fr)}
 .content.is-full{padding:0;max-width:none;min-height:0}

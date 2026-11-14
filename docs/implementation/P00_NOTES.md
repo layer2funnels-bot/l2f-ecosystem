@@ -10,8 +10,13 @@ Branch `claude/epic-bohr-nc9jar`, draft PR #56. Reference docs: `V8_IMPLEMENTATI
 - Search: `packages/core/search-operations.mjs`, `apps/web/js/views/search.js` (`.gsx-*`). Client spaces never searched.
 - Notifications: migration 0054 (`my_inbox`, `private.notify`, `notification_prefs`, Drive share trigger), drawer `.nfx-*`.
 
+## Done (14 Nov, later)
+- V4 removed: `v8-ledger.css` (prototype cascade, `npm run css:ledger`), V8 icons (`npm run icons`), V8 tokens, `v8-base.css`. Report: `V8_FIDELITY_REPORT.md`.
+- Profile page (4 tabs, 0055), apps and profile menus to V8, G L and ? shortcuts, notifications/search fixes, Planner retry, migration rollbacks (`MIGRATIONS_0054_0055.md`).
+- Fidelity check: `node scripts/v8-compare.mjs [page]` (local stack) -> `e2e-shots/v8cmp/`.
+
 ## Remaining in P00
-Profile page (`#/profile/{about,account,notifications,appearance}`, notification prefs UI), organization branding (Office › Admin › Branding + logo columns), shared components (single-instance dialog, drawer with independent scroll, context menu, 10 s error state, request de-duplication in `apps/web/js/api.js`), P00 report.
+Launcher summary line with real counts (needs P01 Office data); shared context menu (adopted per app); P00 report. Branding is P01 (Office › Admin › Branding). 0054/0055 wait for the owner's approval to apply to production.
 
 ## Working rules (owner, 14 Nov)
 - Before every push: `npm test` + the browser suite the change touches (`npm run test:e2e:ui`; `test:e2e` for migrations/grants). New SQL functions: revoke from anon/authenticated and add RPC names to `test/audit.test.mjs` F4c.
