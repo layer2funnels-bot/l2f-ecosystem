@@ -15,6 +15,10 @@ export const FUNNEL_TYPES = Object.freeze({
     fields: {
       kind: { type: 'enum', values: ['offer', 'product'] }, name: { type: 'text', required: true, max: 200 }, promise: T(4000), description: T(),
       price_amount: { type: 'number' }, currency: { type: 'currency' }, avatar_id: { type: 'uuid' },
+      // V8 New offer (0056)
+      offer_type: { type: 'enum', values: ['service', 'course', 'coaching', 'digital', 'physical'] }, status: { type: 'enum', values: ['draft', 'active'] },
+      billing: { type: 'enum', values: ['one_off', 'recurring', 'payment_plan'] }, guarantee: T(300), delivery_time: T(120),
+      included: { type: 'list', items: 'text', max: 50, itemMax: 300 }, bonuses: T(2000), avatar_ids: { type: 'list', items: 'uuid', max: 20 }, ladder_step: T(120), internal_notes: T(8000),
     },
   },
   stories: {
@@ -22,6 +26,9 @@ export const FUNNEL_TYPES = Object.freeze({
     fields: {
       kind: { type: 'enum', values: ['origin', 'case_study', 'testimonial', 'analogy', 'other'] }, title: { type: 'text', required: true, max: 200 },
       body: T(20000), avatar_id: { type: 'uuid' }, offer_id: { type: 'uuid' },
+      // V8 New story (0056)
+      before_text: T(500), after_text: T(500), best_quote: T(1000), permission: { type: 'enum', values: ['given', 'ask', 'anonymous'] }, consent_file_id: { type: 'uuid' },
+      use_in: { type: 'list', items: 'text', max: 12, itemMax: 40 },
     },
   },
   brand_kits: {
@@ -29,10 +36,13 @@ export const FUNNEL_TYPES = Object.freeze({
     fields: {
       name: { type: 'text', required: true, max: 200 }, voice: T(), colors: { type: 'list', items: 'hex', max: 24 },
       fonts: { type: 'list', items: 'text', max: 12, itemMax: 100 }, logo_file_id: { type: 'uuid' }, notes: T(),
+      // V8 Brand Kits, many (0056)
+      is_main: { type: 'bool' }, logo_dark_file_id: { type: 'uuid' }, icon_file_id: { type: 'uuid' }, voice_say: T(2000), voice_never: T(2000),
+      asset_file_ids: { type: 'list', items: 'uuid', max: 50 }, color_names: { type: 'list', items: 'text', max: 24, itemMax: 40 },
     },
   },
 });
-const JSON_COLS = new Set(['colors', 'fonts']);
+const JSON_COLS = new Set(['colors', 'fonts', 'included']);
 const val = (col, v) => (JSON_COLS.has(col) ? JSON.stringify(v) : v);
 
 const makeOps = (plural, { table, order, fields }) => {

@@ -6,7 +6,7 @@ drop table if exists public.doc_sections;
 alter table public.funnel_strategies drop column if exists template_version;
 drop table if exists public.strategy_templates;
 drop index if exists public.funnel_brand_kits_one_main;
-alter table public.funnel_brand_kits drop column if exists asset_file_ids, drop column if exists voice_never, drop column if exists voice_say,
+alter table public.funnel_brand_kits drop column if exists color_names, drop column if exists asset_file_ids, drop column if exists voice_never, drop column if exists voice_say,
   drop column if exists icon_file_id, drop column if exists logo_dark_file_id, drop column if exists is_main;
 alter table public.funnel_stories drop column if exists use_in, drop column if exists consent_file_id, drop column if exists permission,
   drop column if exists best_quote, drop column if exists after_text, drop column if exists before_text;

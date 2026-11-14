@@ -32,7 +32,8 @@ alter table public.funnel_brand_kits
   add column if not exists icon_file_id uuid,
   add column if not exists voice_say text check (length(voice_say) <= 2000),
   add column if not exists voice_never text check (length(voice_never) <= 2000),
-  add column if not exists asset_file_ids uuid[] not null default '{}' check (cardinality(asset_file_ids) <= 50);
+  add column if not exists asset_file_ids uuid[] not null default '{}' check (cardinality(asset_file_ids) <= 50),
+  add column if not exists color_names text[] not null default '{}' check (cardinality(color_names) <= 24);   -- the role of each colour (Primary, Accent…), same order as colors
 create unique index if not exists funnel_brand_kits_one_main on public.funnel_brand_kits (workspace_id) where is_main and client_id is null and archived_at is null;
 
 -- ---- default strategy template: versioned; a strategy keeps the version it was made from (new documents only)
