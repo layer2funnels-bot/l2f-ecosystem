@@ -1,6 +1,8 @@
 # Handoff for the next chat (updated 2 Nov 2026, after the onboarding work)
 
-> **13 Nov 2026: Design V7 is the current reference.** Start with `docs/design/v7/CLAUDE_CODE_NEXT_CHAT_HANDOFF.md` (V7 package, Funnel Mapper migration stage 1, how to build each app). This file stays as the history of the earlier rounds.
+> **14 Nov 2026: start with `docs/START_HERE_NEXT_CHAT.md`.** Design **V8** replaces V7 (V7 had many mistakes); the live software uses the **V4** design.
+
+> **14 Nov 2026: Funnel Mapper is live at office.tabishriaz.com/fmp. Design V7 is the current reference.** Start with `docs/design/v7/CLAUDE_CODE_NEXT_CHAT_HANDOFF.md` (V7 package, Funnel Mapper migration stage 1, how to build each app). This file stays as the history of the earlier rounds.
 
 Read this first, then `docs/ONBOARDING.md`. Facts marked **verified** were checked in the repository or on the live systems on 2 Nov 2026.
 
