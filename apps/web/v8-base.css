@@ -94,3 +94,4 @@ h3{font:650 16px/1.25 var(--font);letter-spacing:-.005em}                      /
 }
 /* rebuilt V8 pages (root class v8p-*): the app's older global .sub spacing must not leak in (V8 sets only margin-top) */
 [class^="v8p-"] .sub{margin-bottom:0;padding:0;max-width:none}
+@media (pointer:coarse){[class^="v8p-"] .linkbtn{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px}}   /* touch: short link buttons ("Team") reach 44 px */
