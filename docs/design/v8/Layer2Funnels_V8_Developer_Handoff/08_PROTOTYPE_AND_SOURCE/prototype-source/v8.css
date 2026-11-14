@@ -1,0 +1,399 @@
+
+/* =================== v8 "WORKBENCH" — VISUAL + UX REDESIGN ===================
+   Structure, routes, menus and functions are untouched (see docs/V8_INVENTORY_CHECK.md).
+   This layer only changes how things look and read. Principles:
+   1. Flat, hairline surfaces. No resting shadows, no glossy/extruded tiles inside work
+      screens, no decorative gradients. Hover = tint, not lift.
+   2. One sizing system. Text never below 12px. Right panels read at 15px with 14px
+      labels and 34–40px controls (v7 was 13–13.5 / 26–36).
+   3. Sentence-case section titles at 15–16px instead of tiny tracked uppercase overlines.
+   4. Numbers in the UI font with tabular figures; monospace only for shortcuts and clocks.
+   5. Every list is a real column grid: name, people, date, status line up row to row.
+   6. Root-cause fixes for v7 bugs: CSS class collisions between apps (.fcard, .rec, .qa,
+      .slides, .sheet, .bar) and descendant selectors that hit avatars (.sub6 span). */
+
+:root{
+  --r-ctl:8px;--r-card:10px;
+  --sh1:0 0 0 0 transparent;
+  --sh2:0 6px 20px -8px rgba(28,24,14,.16);
+  --sh3:0 18px 50px -12px rgba(28,24,14,.28);
+  --fs:14.5px;--ctl:38px;--ctl-sm:32px;
+}
+
+/* ---------- 1. Global type and surface rules ---------- */
+.mono,.pj-c,.pg-n,.sec-h .n,.cnt,.c-due,.pgc{font-family:var(--font)!important;font-variant-numeric:tabular-nums;letter-spacing:0}
+kbd,.tpill b,#tpclock{font-family:var(--mono)!important}
+.over{font:600 12.5px/1.3 var(--font);letter-spacing:.02em;text-transform:none;color:var(--muted)}
+.hint{font-size:13.5px;line-height:1.5}
+.panel,.card6,.card{border-radius:var(--r-card);box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+.card6>header{padding:14px 18px 10px}
+.card6>header h2,.sec-h h2{font:650 16px/1.25 var(--font);letter-spacing:-.005em}
+.sec-h{padding:16px 18px 8px}
+.card6>header .lk,.card6>header .muted,.sec-h .linkbtn{font-size:13.5px}
+.avatar{box-shadow:none}
+.av-stack .avatar{width:26px;height:26px;font-size:10.5px;margin-left:-6px;box-shadow:0 0 0 2px var(--surface)}
+.av-stack .avatar:first-child{margin-left:0}
+.pill,.tag,.cpill,.psp,.kst{font-size:12.5px}
+.stp{height:24px;border-radius:6px;padding:0 8px;font-size:12.5px}
+.tabs6 a,.tabs6 button{font-size:14.5px;min-height:42px;padding:0 12px}
+.btn{border-radius:var(--r-ctl)}
+.t1{letter-spacing:-.02em}
+.fcard:hover,.folder:hover,.docc:hover,.rp:hover,.kpi6:hover,.card:hover{transform:none}
+/* flat app marks inside work screens (launcher + rail keep their 3D plates) */
+.content .plate,.drawer .plate,.dlg .plate{box-shadow:none}
+.content .plate::before,.drawer .plate::before,.dlg .plate::before{display:none}
+.content .plate .gl{filter:none}
+.docic,.cav,.cav.sm{background:var(--c);box-shadow:none}
+.avc-stage{box-shadow:none}
+
+/* ---------- 2. Collision fixes (v7 bugs) ---------- */
+.tpill .rec{display:block;padding:0;width:8px;height:8px;min-height:0;border-radius:50%;background:#E5482F;gap:0}
+.tpill{border-width:1px;border-radius:8px;padding:0 4px 0 10px;min-height:32px}
+.bar .qa{display:inline-flex;grid-template-columns:none;gap:2px;padding:0 0 0 8px;border-top:0;border-left:var(--bw) solid var(--line);font-size:inherit}
+.ft.slides{display:grid;grid-template-columns:none;gap:0;padding:0}
+.ft.sheet{border-collapse:separate;font-size:9.5px;background:#14A493}
+.storage .bar{min-height:0;height:6px;padding:0;border:0;border-radius:3px;background:var(--sunk);display:block;margin:10px 0 8px;overflow:hidden;position:static}
+.storage .bar i{display:block;height:100%;width:64%;border-radius:3px;background:#6B4FF0}
+.sub6 span{flex:none}.sub6>span:not(.avatar){flex:1;min-width:0}
+.sub6 .avatar{width:24px;height:24px;font-size:10px}
+.side{overflow-y:auto;overflow-x:hidden}
+.pside,.pside>*{min-width:0}
+.pside .inp{width:100%}
+.pseg button{min-width:0;padding:0 2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.grid-h .card6 .tlist6 .trow6{grid-template-columns:14px 24px 26px minmax(0,1fr) 64px 76px 28px;gap:8px}
+
+/* ---------- 3. Right-side panels: one readable size system ---------- */
+.drawer{font-size:15px;padding:22px 26px 120px}
+.drawer h2{font:650 21px/1.25 var(--font-d);letter-spacing:-.015em}
+.drawer .hint,.drawer small{font-size:13.5px}
+.drawer.task6{padding:0}
+.tp-head{padding:10px 18px;gap:6px;min-height:56px}
+.mc{min-height:34px;font-size:14px;padding:0 14px;border-radius:8px}
+.tp-body{padding:16px 28px 24px}
+.tp-crumb{font-size:13.5px}
+.tp-title{font-size:24px;line-height:1.25;margin:6px 0 14px}
+.tfields{gap:4px}
+.tf{grid-template-columns:150px minmax(0,1fr);min-height:44px;gap:12px}
+.tf-l{font-size:14px;color:var(--text2);gap:10px}
+.tf-l svg{width:17px;height:17px;color:var(--muted)}
+.tf-v{font-size:15px;gap:8px}
+.tf-v small{font-size:13px;color:var(--muted)}
+.tf-v .btn,.tf-v .sel,.tf-v>button{min-height:34px;font-size:14px}
+.achip{height:30px;font-size:14px;padding:0 6px 0 4px;border-radius:8px}
+.tf-act{padding:8px 0 4px 162px;gap:18px;font-size:14px}
+.tps{padding:18px 0}
+.tps h3{font:650 16px/1.25 var(--font);margin-bottom:12px}
+.tps h3 .lk,.tps .lk{font-size:14px}
+.tps .cnt{font-size:12.5px;font-weight:600;padding:2px 7px;border-radius:6px;background:var(--sunk)}
+.tp-desc{font-size:15px;line-height:1.6;padding:12px 14px;min-height:88px}
+.sub6{min-height:42px;font-size:15px;gap:12px;padding:0 6px;border-radius:8px}
+.sub6:hover{background:var(--surface2)}
+.tps .chk,.tps label{font-size:15px}
+.tps .hint{font-size:14px}
+.drop6{font-size:14px;min-height:56px}
+.time6 .tt{font-size:24px}.time6 small{font-size:13px}
+.tentry{font-size:14px;min-height:38px}
+.comment .bub{font-size:15px;line-height:1.5}
+.sth div{font-size:14px}
+.tp-foot{padding:12px 18px;gap:12px}
+.tp-foot textarea,.tp-foot [contenteditable]{font-size:15px}
+.drawer .tbl td{font-size:14.5px}
+.field label{font-size:13.5px;font-weight:550;color:var(--text2)}
+.field input,.field select,.field textarea{font-size:15px;min-height:40px}
+.kv2{font-size:15px;gap:12px 18px}
+.kv2 dt{font-size:14px}
+
+/* ---------- 4. Office ---------- */
+.askbar{border-radius:var(--r-card);box-shadow:none}
+.o-grid{gap:20px}
+.o-grid .rows{padding:0 0 6px}
+.o-grid .row{display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:12px;min-height:60px;padding:8px 18px 8px 10px;border-radius:0;border-top:var(--bw) solid var(--line)}
+.o-grid .row:first-child{border-top:0}
+.o-grid .row:hover{background:var(--surface2)}
+.o-grid .row .cbx{margin:0;width:40px;height:40px}
+.o-grid .row .cbx i{width:20px;height:20px;border-width:1.6px}
+.o-grid .row b{font-size:15px;font-weight:600}
+.o-grid .row small{display:flex;align-items:center;gap:6px;font-size:13.5px;margin-top:2px}
+.o-grid .row small .plate{--s:16px!important;margin:0;border-radius:4px}
+.o-grid .row small .plate svg{width:10px;height:10px}
+.o-grid .row .due{font-size:13.5px;min-width:72px;text-align:right}
+.o-grid .row .tic{width:36px;height:36px;border-radius:8px}
+.okr b{font-size:14.5px}
+.prog{border-radius:3px}
+.docsec>header{padding:14px 18px 10px}
+.docsec>header h2{font-size:16px}
+.docrow{grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px;padding:0 18px 18px}
+.docc{min-height:64px;padding:10px 12px;border-radius:8px;gap:12px;min-width:0}
+.docc>*:not(.docic){min-width:0}
+.docc b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:14.5px}
+.docc small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}
+.docc .docic{width:34px;height:34px;border-radius:8px}
+.docc.drop{min-height:64px;margin:0;background:transparent;font-size:14px}
+.tm-cover{display:none}
+.team .tm{padding:22px 16px 18px;gap:4px}
+.team .tm .photo,.team .tm>.avatar{box-shadow:none;margin-bottom:8px}
+.studio .sp{box-shadow:none;border-radius:var(--r-card)}
+.studio .sp h3{letter-spacing:.02em;text-transform:none;font-size:13px}
+
+/* ---------- 5. Projects ---------- */
+.kpirow{gap:10px}
+.kpi6{padding:12px 14px;gap:4px;border-radius:var(--r-card)}
+.kpi6 .kl{font-size:13px;color:var(--text2)}
+.kpi6 b{font:650 24px/1.1 var(--font);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.trow6{gap:8px;padding:0 12px}
+.trow6.hd{font:600 12px/1 var(--font);letter-spacing:.02em;text-transform:none}
+.c-as{display:flex;align-items:center;min-width:0;overflow:hidden}
+.rpgrid{gap:10px;padding:0 16px 16px}
+.rp{padding:14px 14px 12px 16px;gap:8px}
+.rp b{font-size:15px;line-height:1.3}
+.rp small{font-size:13px}
+.rp-f{font-size:13px}
+.pj-c{font-size:12.5px}
+.pg>summary{font-size:13px}
+.pg-note,.pg-e{font-size:12.5px}
+
+/* ---------- 6. Tasks ---------- */
+[data-app="tasks"] .content{background:none}
+.tdoc{max-width:980px;box-shadow:none;border-radius:12px;padding:22px 30px 24px}
+.tb-h h2{font:650 19px/1.25 var(--font)}
+.ol-row{min-height:44px}
+.ol-t{font-size:15.5px}
+.due-c{font-size:13.5px}
+.addblock{color:var(--text2);font-weight:550;font-size:14px}
+.showdone{font-size:14.5px;min-height:44px;border-radius:8px}
+
+/* ---------- 7. Clients ---------- */
+.chead6 .cav{border-radius:12px}
+.stagebar6{gap:0;border:var(--bw) solid var(--line);border-radius:var(--r-card);background:var(--surface);overflow:hidden;margin-bottom:18px}
+.stagebar6 a{border:0;border-radius:0;border-left:var(--bw) solid var(--line);padding:12px 16px 14px;gap:4px;background:transparent}
+.stagebar6 a:first-child{border-left:0}
+.stagebar6 a small{font-size:12.5px;font-weight:550}
+.stagebar6 a b{font-size:15px}
+.stagebar6 a::after{height:3px}
+.stagebar6 a.now::after{background:var(--brand)}
+.stagebar6 a.done small{color:var(--action)}
+.stagebar6 a[aria-current="page"]{box-shadow:none;background:var(--surface2)}
+.nextc{border-left-width:3px}
+.nextc h2{font:650 20px/1.25 var(--font)}
+
+/* ---------- 8. Drive ---------- */
+.typechips{gap:6px;margin-bottom:18px}
+.typechips button{min-height:34px;border-radius:8px;font-size:13.5px;padding:0 12px 0 6px}
+.dtools{margin-bottom:20px}
+.dtools h1{font:650 26px/1.15 var(--font-d);letter-spacing:-.02em}
+[data-app="drive"] .content>p.over{font:650 15px/1.3 var(--font);letter-spacing:0;color:var(--text);margin:0 0 12px!important}
+.sugg{gap:14px;margin-bottom:30px}
+.sugg .fcard{display:block;padding:0;border-radius:var(--r-card);background:var(--surface);border:var(--bw) solid var(--line);color:var(--text);box-shadow:none;overflow:hidden}
+.sugg .fcard:hover{border-color:var(--line2)}
+.sugg .fcard .thumb{aspect-ratio:16/9;border-bottom:var(--bw) solid var(--line)}
+.sugg .fcard .meta{display:flex;align-items:center;gap:12px;padding:12px 14px}
+.sugg .fcard .meta b{display:block;font-size:14.5px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sugg .fcard .meta small{display:block;font-size:13px;color:var(--muted);margin-top:2px}
+.sugg .fcard .ft{width:32px;height:32px;border-radius:8px}
+.folders{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;margin-bottom:30px}
+.folder{min-height:52px;border-radius:var(--r-card);box-shadow:none;font-weight:550;font-size:14.5px;padding:0 14px;gap:12px}
+.folder:hover{background:var(--surface2);border-color:var(--line2)}
+.folder svg{color:#6B4FF0;flex-shrink:0}
+.folder svg+svg{color:var(--muted);margin-left:auto}
+.tblwrap{border-radius:var(--r-card);box-shadow:none}
+.ftab th{font:600 12.5px/1 var(--font);letter-spacing:0;text-transform:none;padding:12px}
+.ftab td{height:54px;font-size:14px}
+.fname{font-size:14.5px}
+.fname .ft{width:30px;height:30px;border-radius:7px}
+.selbar{border-radius:12px}
+.storage{display:block;border-radius:var(--r-card);padding:12px 14px;font-size:13.5px;text-decoration:none;box-shadow:none}
+
+/* ---------- 9. Planner, small apps ---------- */
+.at-box,.sroot,.kcard,.bcard{box-shadow:none}
+
+/* ---------- 10. Launcher (kept): even grid so no app sits alone on a row ---------- */
+@media (min-width:1101px){.lx .l-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}}
+
+/* ---------- 11. Phones and tablets ---------- */
+@media (max-width:760px){
+  .tf{grid-template-columns:120px minmax(0,1fr)}.tf-act{padding-left:0}
+  .tp-body{padding:12px 16px 20px}
+  .docrow{grid-template-columns:1fr;padding:0 12px 12px}
+  .folders{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .tdoc{padding:14px 12px}
+  .stagebar6{grid-auto-columns:minmax(132px,1fr);overflow-x:auto}
+  .o-grid .row{grid-template-columns:36px minmax(0,1fr);padding:8px 12px 8px 6px}
+  .grid-h .card6 .tlist6 .trow6{grid-template-columns:24px minmax(0,1fr) 76px}
+}
+@media (pointer:coarse){.tf-v .btn,.tf-v .sel,.tf-v>button,.sub6{min-height:44px}}
+/* Avatar root-belief button was white on white */
+.rootbelief .btn{color:#fff;background:transparent;border:1px solid rgba(255,255,255,.35)}
+.rootbelief .btn:hover{background:rgba(255,255,255,.1)}
+.sugg .fcard .thumb{aspect-ratio:2/1}
+/* Text floor: nothing readable below 12px (initials in small avatars and file-type badges excepted) */
+.pg-n,.cnt,.tag.sm,.objhd span,.nb,.kchip,.bd,.wk span,.g-sec,.lv,.fitem small,.hc small{font-size:12px!important}
+.thd>span,.thd span,.tbl6 .thd{font-size:12.5px}
+figcaption,.dl-row small,.cal .dh,.sn-add{font-size:12.5px}
+.fmpx .fth-r,.fmpx .fsec,.fmpx .fnode small,.fmpx em,.fmpx small{font-size:12px}
+.dflt{font-size:11px}
+.sn-k{font-size:11.5px}
+/* Projects › Workload: the heat map had no layout in v7 (rows rendered as run-on text) */
+.heat{border:var(--bw) solid var(--line);border-radius:var(--r-card);background:var(--surface);overflow-x:auto}
+.heat .hr{display:grid;grid-template-columns:minmax(200px,1.4fr) 84px 84px;grid-auto-flow:column;grid-auto-columns:minmax(78px,1fr);align-items:center;min-width:max-content;border-top:var(--bw) solid var(--line);font-size:14.5px}
+.heat .hr.hd{border-top:0;min-height:40px;font-size:12.5px;font-weight:600;color:var(--muted);background:var(--surface2)}
+.heat .hr>span{padding:0 12px}
+.heat .hr>span:nth-child(2),.heat .hr>span:nth-child(3){text-align:center;font-variant-numeric:tabular-nums}
+.heat .hp{display:flex;align-items:center;gap:10px;min-height:52px;font-weight:550}
+.heat .hc{display:grid;place-content:center;justify-items:center;gap:1px;height:40px;margin:6px 4px;border-radius:6px;font-size:13.5px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--text)}
+.heat .hc small{font-size:11px;font-weight:600;letter-spacing:.02em;text-transform:none}
+.heat .hc.low{background:var(--sunk);color:var(--text2)}
+.heat .hc.mid{background:#DCE7FF}
+.heat .hc.high{background:#FFE7B0}
+.heat .hc.over{background:#FFD3CB;color:#8A1F10}
+.heat .hc:hover{outline:2px solid var(--action);outline-offset:-2px}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--text2)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:12px;height:12px;border-radius:3px;background:var(--c)}
+/* Funnel Mapper › Clients: name/business no longer wrap word by word */
+.fmpx .fccard{display:grid;grid-template-columns:36px minmax(0,1fr) auto;grid-template-rows:auto auto;align-items:center;gap:4px 12px;padding:14px;flex-wrap:nowrap}
+.fmpx .fccard .fav{grid-row:1/3;width:36px;height:36px}
+.fmpx .fccard>span:nth-child(2){min-width:0}
+.fmpx .fccard>span:nth-child(2) b{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fmpx .fccard>span:nth-child(2) small{display:block;font-size:13px;color:var(--fmu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fmpx .fccard>.fst{grid-column:3;grid-row:1;justify-self:end}
+.fmpx .fccard>.fmu{grid-column:2/4;grid-row:2;font-size:13px}
+.fmpx .fgrid2>*{min-width:0}
+.stagebar6 a[aria-current="page"]{border-color:var(--line)}
+.stagebar6 a:first-child[aria-current="page"]{border-left:0}
+/* checklists read as a vertical list everywhere */
+label.chk{display:flex;align-items:center;gap:10px;min-height:38px;font-size:14.5px}
+section>label.chk,.panel>label.chk{width:100%}
+label.chk input{width:18px;height:18px;accent-color:var(--action);margin:0}
+/* Client Portal top navigation: real tabs instead of run-together underlined links */
+.pnav .links{display:flex;gap:4px;align-items:center}
+.pnav .links a{display:inline-flex;align-items:center;gap:8px;min-height:38px;padding:0 12px;border-radius:8px;font-size:14.5px;font-weight:550;color:var(--text2);text-decoration:none;flex-direction:row}
+.pnav .links a:hover{background:var(--sunk);color:var(--text)}
+.pnav .links a[aria-current="page"]{background:var(--surface);color:var(--text);box-shadow:inset 0 0 0 1px var(--line)}
+.pnav .links a svg{width:17px;height:17px}
+.pnav .links .bd{position:static;display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--brand);color:var(--brand-ink,#1C1504);font-size:12px;font-weight:650}
+@media (max-width:760px){.pnav .links{overflow-x:auto;max-width:100%}.pnav .links a{padding:0 10px;white-space:nowrap}}
+/* Right panels in editors, builders and inspectors: same reading sizes as the task panel */
+.propbox,.ipanel6,.sbinsp,.edx-panel{font-size:14.5px}
+.propbox .field label,.ipanel6 label,.sbinsp label,.edx-panel label{font-size:13.5px}
+.propbox input,.propbox select,.propbox textarea,.ipanel6 input,.ipanel6 select,.sbinsp input,.sbinsp select,.edx-panel input,.edx-panel select{font-size:14.5px;min-height:38px}
+.propbox .chip,.ipanel6 .filters button,.ipanel6 button{font-size:13.5px;min-height:34px}
+.propbox .over,.ipanel6 .over,.sbinsp .over,.edx-panel .over{font:650 13.5px/1.3 var(--font);letter-spacing:0;color:var(--text);margin:16px 0 8px}
+.sbinsp .sec-t,.sbinsp .kh{font-size:13.5px}
+.sn-add{font-size:12.5px}
+.krow{font-size:14px}.krow kbd{font-size:12px}
+.fmpx .finsp{font-size:14.5px;padding:16px 18px}
+.fmpx .finsp .fsec,.fmpx .finsp .fover{font-size:12.5px}
+.fmpx .finsp .fkv,.fmpx .finsp .fkv b,.fmpx .finsp .fkv span{font-size:14.5px}
+.fmpx .finsp .fitabs button{font-size:13.5px;min-height:36px}
+.fmpx .finsp .fseg button{font-size:13px;min-height:30px}
+.fmpx .finsp .fmu,.fmpx .finsp small{font-size:13px}
+@media (min-width:1280px){.fmpx .fed{grid-template-columns:44px 240px minmax(0,1fr) 340px}}
+
+/* =====================================================================
+   v8 VISUAL LANGUAGE — "LEDGER"
+   A new look, not a v7 polish. Think of a well-kept work ledger: stone paper,
+   black ink, hairline rules, one family of type, colour only where it carries
+   meaning (brand action, selection, status). Replaces v7's warm-cream SaaS look,
+   chunky display headlines, glossy 3D tiles, pill-everything and floating cards.
+   ===================================================================== */
+:root{--font-d:"Geist",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+[data-theme="light"]{--bg:#F3F4F1;--surface:#FDFDFC;--surface2:#F7F8F5;--sunk:#EBEDE8;--line:rgba(22,26,22,.09);--line2:rgba(22,26,22,.17);--text:#141614;--text2:#454A46;--muted:#6A706B}
+[data-org="aurj"][data-theme="light"]{--bg:#F5F2EF;--surface:#FEFCFB;--surface2:#F9F6F3;--sunk:#EDE7E2}
+[data-theme="dark"]{--bg:#0E0F0E;--surface:#161816;--surface2:#121412;--sunk:#1E211E}
+
+/* Type: one family. Titles are set, not shouted. */
+.t1,.ph6 .t1,.pagehead h1,.h1,.dtools h1,.tl-head .t1,.chead6 .t1,.phd-t h1{font-family:var(--font);font-weight:620;font-size:24px;line-height:1.2;letter-spacing:-.022em}
+.o-hero h1,.pg-h h1{font:620 30px/1.15 var(--font);letter-spacing:-.025em;max-width:none}
+.o-hero h1 em,.o-hero h1 b{font-style:normal}
+.lede,.o-hero .sub{font-size:15px;color:var(--text2)}
+h2,h3{font-family:var(--font)}
+.lx .l-hero h1{font-family:"Bricolage Grotesque",var(--font)} /* launcher keeps its voice */
+
+/* App bar: a ruled header line, no blur glass */
+.bar{background:var(--bg);-webkit-backdrop-filter:none;backdrop-filter:none;border-bottom:var(--bw) solid var(--line);min-height:52px}
+.crumb{font-size:14px}
+.content{padding-top:26px}
+
+/* Sidebar: same structure and text sizes (approved), quieter surface */
+.side{background:var(--surface2);border-right:var(--bw) solid var(--line)}
+.nav a[aria-current="page"],.side-list a[aria-current="page"]{background:var(--sunk);box-shadow:none}
+.nav a[aria-current="page"]::before{left:-10px;width:2px;top:8px;bottom:8px}
+.side-top .plate,.side .plate{box-shadow:none}
+.side-top .plate::before,.side .plate::before{display:none}
+.pj[aria-current="page"]{background:var(--sunk);box-shadow:none}
+
+/* Rail: flat app marks (same icons, colours, order, behaviour) */
+.rail .plate{box-shadow:none;border-radius:9px}
+.rail .plate::before{display:none}
+.rail .plate .gl{filter:none}
+
+/* Buttons: flat, 6px, no extruded bottom edge */
+.btn{border-radius:6px;font-weight:560;box-shadow:none!important;transform:none}
+.btn:active{transform:translateY(.5px)}
+.btn.primary{background:var(--brand);color:var(--brand-ink)}
+.btn.primary:hover{background:color-mix(in srgb,var(--brand) 88%,#000)}
+.btn.ink{background:var(--text);color:var(--bg)}
+.btn.ghost{background:var(--surface);border:var(--bw) solid var(--line2)}
+.btn.ghost:hover{background:var(--surface2);border-color:color-mix(in srgb,var(--text) 30%,transparent)}
+.btn.quiet:hover{background:var(--sunk)}
+.iconbtn{border-radius:6px}
+.inp,.sel,.field input,.field select,.field textarea{border-radius:6px}
+:focus-visible{outline:2px solid var(--action);outline-offset:2px}
+
+/* Containers: ruled panels. Header sits on a hairline, body below. */
+.card6,.panel,.card,.tblwrap,.docsec{border-radius:8px;background:var(--surface);border:var(--bw) solid var(--line)}
+.card6>header,.docsec>header{border-bottom:var(--bw) solid var(--line);padding:12px 18px;min-height:50px}
+.card6>header+*{margin-top:6px}
+.panel>.sec-h{border-bottom:var(--bw) solid var(--line);padding:14px 18px;margin-bottom:6px}
+.docsec>header+.docrow{padding-top:14px}
+
+/* KPI strip: one ruled band with dividers instead of a row of boxes */
+.kpirow{gap:0;border:var(--bw) solid var(--line);border-radius:8px;background:var(--surface);overflow:hidden}
+.kpirow .kpi6{border:0;border-radius:0;border-left:var(--bw) solid var(--line);background:transparent;padding:14px 18px}
+.kpirow .kpi6:first-child{border-left:0}
+a.kpi6:hover{background:var(--surface2)}
+
+/* Status: a word with a dot, on neutral ground (never a coloured blob) */
+.stp,.psp,.kst,.cpill{background:var(--sunk)!important;color:var(--text2)!important;border-radius:5px;font-weight:550;border:0}
+.stp i,.psp i,.kst i,.cpill i{width:7px;height:7px}
+.pill{border-radius:5px;font-weight:550}
+
+/* Tables: tinted header band, generous rows, sentence-case headers */
+.tbl th,.ftab th,.tbl6 .thd,.trow6.hd,.fth-r{background:var(--surface2)}
+.tbl th{font:600 12.5px/1 var(--font);letter-spacing:0;text-transform:none}
+.tbl td{font-size:14.5px;padding:12px}
+.tbl6 .thd{text-transform:none;letter-spacing:0}
+
+/* Tabs: ink underline in the app colour, no pill segment look */
+.tabs6 [aria-selected="true"]::after,.vtabs [aria-current="page"]::after{height:2px;left:12px;right:12px;border-radius:0}
+.vsw,.seg3{border-radius:7px;background:var(--sunk);padding:2px}
+.vsw button,.seg3 button{border-radius:5px}
+.vsw button[aria-pressed="true"],.seg3 [aria-pressed="true"]{background:var(--surface);box-shadow:0 0 0 1px var(--line)}
+
+/* Avatars and app marks inside content: flat */
+.avatar{font-weight:650}
+.cav,.chead6 .cav{border-radius:8px}
+.docic{border-radius:6px}
+
+/* Office home: a working page, not a greeting card */
+.o-hero{margin-bottom:22px}
+.askbar{background:var(--surface);border:var(--bw) solid var(--line)}
+/* Team / member */
+.team .tm{background:var(--surface)}
+/* Tasks: the list is the page; the document card is a ruled sheet */
+.tdoc{border-radius:8px;border:var(--bw) solid var(--line);background:var(--surface)}
+/* Drive tiles and folder rows */
+.typechips button{border-radius:6px}
+.typechips button[aria-selected="true"]{background:var(--text);color:var(--bg)}
+.sugg .fcard,.folder{border-radius:8px}
+/* Clients stage stepper */
+.stagebar6{border-radius:8px}
+/* Planner and boards */
+.kcol,.bcol{border-radius:8px;background:var(--surface2)}
+.kcard,.bcard{border-radius:6px}
+/* Dialogs and drawers */
+.dlg{border-radius:10px;box-shadow:var(--sh3)}
+.drawer{box-shadow:-20px 0 50px -30px rgba(20,24,20,.35)}
+.ctx,.menu,.pop{border-radius:8px}
+/* Selection bar */
+.selbar{border-radius:8px}

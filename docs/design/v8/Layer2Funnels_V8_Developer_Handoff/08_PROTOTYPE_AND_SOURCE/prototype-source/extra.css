@@ -1,0 +1,9 @@
+.only-mb{display:none}
+.snav .th{container-type:inline-size}
+@media (max-width:760px){.only-mb{display:block}.pipe{grid-auto-flow:row;grid-auto-columns:auto}.pipe .kcol:not(.sel){display:none}}
+.inp input{min-width:0}.toolbar .inp.grow{flex:1 1 200px}
+.side{z-index:35}
+.demo-fab{left:auto;right:14px}
+.demo{left:auto;right:14px;transform-origin:bottom right}
+@media (max-width:760px){.demo-fab{right:10px}}
+@media (max-width:760px){.pnav{-webkit-backdrop-filter:none;backdrop-filter:none;background:var(--bg)}.pnav .links .bd{position:absolute;top:2px;right:8px}.tasklist .trow.hd{display:none}.portal{padding-bottom:110px}}
