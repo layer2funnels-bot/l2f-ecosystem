@@ -31,6 +31,7 @@ jobs:
       - run: npm run check:secrets
       - run: npm run check:licences
       - run: npm run check:tokens
+      - run: npm run check:v8css
       - run: npm run check:fmp-copy
 
   test:
@@ -61,6 +62,7 @@ jobs:
       - run: npm run check:secrets
       - run: npm run check:licences
       - run: npm run check:tokens
+      - run: npm run check:v8css
       - run: npm run check:fmp-copy
       - run: DRIVERS=pglite,pg npm test
       - run: npm run drill:restore

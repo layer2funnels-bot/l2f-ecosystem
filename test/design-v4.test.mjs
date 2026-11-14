@@ -12,7 +12,7 @@ const { results, check } = recorder();
 // ---- tokens
 check('DV1', 'Every contrast pair meets its minimum in light and dark, for Layer2Funnels and Aurj', failures().length === 0);
 const m = resolve('l2f', 'light');
-check('DV2', 'Muted text is the corrected #626674 and Aurj action is #0A7388 (DESIGN_SYSTEM section 10)', m.muted === '#626674' && resolve('aurj', 'light').action === '#0A7388');
+check('DV2', 'Design V8 colours, with the two V8 values darkened ~5 % to pass 4.5:1: muted #646965 (V8 #6A706B), Aurj action #0B798E (V8 #0C7F95)', m.muted === '#646965' && m.bg === '#F3F4F1' && resolve('aurj', 'light').action === '#0B798E');
 check('DV3', 'Muted text on the page background is at least 4.5:1 in all four sets (the prototype value failed at 4.19)',
   ORGS.every((o) => THEMES.every((t) => { const r = resolve(o, t); return ratio(solid(r.muted, r.surface), solid(r.bg, r.surface)) >= 4.5; })));
 const dark = { ...resolve('l2f', 'light'), muted: '#6F7380' };

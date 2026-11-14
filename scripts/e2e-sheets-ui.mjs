@@ -10,7 +10,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE ?? 'playwright');
 const web = fileURLToPath(new URL('../apps/web/', import.meta.url)), ui = fileURLToPath(new URL('../packages/ui/', import.meta.url));
 const TYPES = { '.js': 'text/javascript', '.css': 'text/css', '.html': 'text/html', '.woff2': 'font/woff2', '.json': 'application/json', '.svg': 'image/svg+xml' };
 const PAGE = `<!doctype html><html lang="en" data-theme="light" data-org="l2f"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="/packages/ui/tokens.css"><link rel="stylesheet" href="/fonts.css"><link rel="stylesheet" href="/v4.css"><link rel="stylesheet" href="/ui.css"><link rel="stylesheet" href="/docs.css"><link rel="stylesheet" href="/sheets.css"></head>
+<link rel="stylesheet" href="/packages/ui/tokens.css"><link rel="stylesheet" href="/fonts.css"><link rel="stylesheet" href="/v4.css"><link rel="stylesheet" href="/v8.css"><link rel="stylesheet" href="/ui.css"><link rel="stylesheet" href="/docs.css"><link rel="stylesheet" href="/sheets.css"></head>
 <body><div class="app"><div class="shell"><main class="main"><div class="hdr" style="height:56px"></div><div class="content" id="c"></div></main></div></div><script type="module" src="/harness.js"></script></body></html>`;
 const HARNESS = `import { sheetView } from '/js/modules/sheets.js';
 const cells = {}; for (let r = 1; r <= 60; r++) { cells['A' + r] = 'Item ' + r; cells['B' + r] = String(r * 10); cells['C' + r] = '=B' + r + '*2'; }
