@@ -98,7 +98,7 @@ Every read and write goes through the ecosystem API as the signed-in person; the
 | `scripts/recompress-images.mts` | Deleted: maintenance script for the old storage buckets. | Stage 2. |
 | `tests/unit/image-pipeline.test.ts` | Deleted with the sharp pipeline. | Stage 2. |
 | `app/(auth)/unavailable/page.tsx` | Added: "Funnel Mapper isn't set up for …" with "Switch to …" for the person's organizations where it is on; without a session, the ecosystem sign-in. Sign-out form carries the base path. | Stage 2; V7 16 §4. |
-| `app/api/eco/[op]/route.ts` | Added: same-site relay from the browser to the ecosystem API (allow-listed `fmp.*` and `org.list`, same-origin check). | Stage 2. |
+| `app/api/eco/[op]/route.ts` | Added: same-site relay from the browser to the ecosystem API (allow-listed `fmp.*` and `org.list`, same-origin check). The same-origin check also accepts Funnel Mapper's configured public address (behind the /fmp gateway the server can see itself under another host). | Stage 2. |
 | `lib/eco/browser.ts` | Added: `ecoCall` for components. Calls carry the base path. | Stage 2. |
 | `lib/eco/core.ts` | Added: ecosystem API call with the person's token and organization; "no organization" marker for `org.list`; Launcher, Clients-app and profile addresses. | Stage 2. |
 | `lib/eco/data.ts` | Added: server reads in the shapes the screens use; client logos signed for one hour. | Stage 2. |
