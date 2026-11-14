@@ -14,6 +14,10 @@ export const DEFAULT_SECTIONS = [['Approved SOPs', 'everyone', true], ['Policies
 
 const section = { name: { type: 'text', required: true, min: 1, max: 80 }, visibility: { type: 'enum', values: ['everyone', 'admins'] }, owner_protected: { type: 'bool' } };
 
+// the section's Drive folder: an existing top-level shared folder with that name is reused (folder names are unique per place)
+const folderFor = async (q, ctx, name) => (await q(`select id from drive_folders where workspace_id = $1 and space = 'shared' and client_id is null and parent_id is null and lower(name) = lower($2) and archived_at is null limit 1`, [ctx.orgId, name]))[0]
+  ?? (await q("insert into drive_folders (workspace_id, space, name, created_by) values ($1, 'shared', $2, $3) returning id", [ctx.orgId, name, ctx.userId]))[0];
+
 export const officeOperations = [
   defineOperation({
     name: 'office.template.get', class: 'read', single: true,
@@ -45,7 +49,10 @@ export const officeOperations = [
       if (!rows.length) {
         const [{ admin } = {}] = await q("select private.has_role($1, 'admin') as admin", [ctx.orgId]);
         if (admin) {
-          for (const [n, [name, vis, prot]] of DEFAULT_SECTIONS.entries()) await q('insert into doc_sections (workspace_id, name, visibility, owner_protected, position, created_by) values ($1, $2, $3, $4, $5, $6)', [ctx.orgId, name, vis, prot, n, ctx.userId]);
+          for (const [n, [name, vis, prot]] of DEFAULT_SECTIONS.entries()) {
+            const f = await folderFor(q, ctx, name);
+            await q('insert into doc_sections (workspace_id, name, visibility, owner_protected, folder_id, position, created_by) values ($1, $2, $3, $4, $5, $6, $7)', [ctx.orgId, name, vis, prot, f.id, n, ctx.userId]);
+          }
           rows = await q('select id, name, visibility, owner_protected, folder_id, position from doc_sections where workspace_id = $1 order by position, created_at', [ctx.orgId]);
         }
       }
@@ -55,7 +62,7 @@ export const officeOperations = [
   defineOperation({
     name: 'office.sections.create', class: 'write', single: true, input: section,
     run: async (q, ctx, i) => {
-      const [f] = await q("insert into drive_folders (workspace_id, space, name, created_by) values ($1, 'shared', $2, $3) returning id", [ctx.orgId, i.name.trim(), ctx.userId]);
+      const f = await folderFor(q, ctx, i.name.trim());
       return q(`insert into doc_sections (workspace_id, name, visibility, owner_protected, folder_id, position, created_by)
         values ($1, $2, $3, $4, $5, coalesce((select max(position) + 1 from doc_sections where workspace_id = $1), 0), $6) returning id, name, visibility, owner_protected, folder_id, position`,
       [ctx.orgId, i.name.trim(), i.visibility ?? 'everyone', i.owner_protected ?? false, f.id, ctx.userId]);

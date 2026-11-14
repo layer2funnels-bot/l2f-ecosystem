@@ -37,6 +37,7 @@ import { launcherView, appNotBuiltView } from './views/launcher.js';
 import { officeHomeView } from './views/home.js';
 import { adminView } from './views/admin.js';
 import { funnelsHomeView, funnelListView, funnelRecordView } from './views/funnels.js';
+import { documentsView as documentsV8 } from './views/office-docs.js';
 import { offersListView, offerView, offerFormView } from './views/office-offers.js';
 import { storiesListView, storyView, storyFormView, brandKitsListView, brandKitView, brandKitFormView } from './views/office-records.js';
 const V8REC = { offers: [offersListView, offerView, offerFormView], stories: [storiesListView, storyView, storyFormView], brand_kits: [brandKitsListView, brandKitView, brandKitFormView] };
@@ -420,7 +421,7 @@ async function render(opts = {}) {
   theme.setOrg(org);
   const role = org.role; const isAdmin = role === 'owner' || role === 'admin';
   const c = {
-    api, orgName: org.name, isOwner: role === 'owner', userId: session.get()?.userId, userName: session.get()?.name, clients: ctx.clients, catalog: ctx.catalog, live, announce, go, guard, rerender: () => render(),
+    api, orgName: org.name, isOwner: role === 'owner', isAdmin, userId: session.get()?.userId, userName: session.get()?.name, clients: ctx.clients, catalog: ctx.catalog, live, announce, go, guard, rerender: () => render(),
     can: (p, clientId) => canWith(ctx.mine, p, clientId), canAnywhere: (p) => canAnywhereWith(ctx.mine, p),
     clientsWhere: (p) => [...ctx.clients].filter(([cid]) => canWith(ctx.mine, p, cid)),
   };
@@ -440,7 +441,7 @@ async function render(opts = {}) {
       case 'office': content = officeHomeView({ org, role, isAdmin, api, live, portalState: ctx.catalog.find((a) => a.app_key === 'portal')?.state, name: me?.name ?? session.get()?.name, catalog: ctx.catalog }); break;
       case 'office-page': {
         const pg = route.params.page;
-        if (pg === 'documents') content = documentsView({ api, ctx: c });
+        if (pg === 'documents') content = documentsV8({ api, ctx: c });
         else if (pg === 'team') content = teamView({ api, ctx: c });
         else if (pg === 'apps') content = appsView({ catalog: ctx.catalog, registry, org, orgs: ctx.orgs });
         else content = appNotBuiltView(OFFICE_PAGES.find((p) => p.key === pg)?.label ?? 'This page');
