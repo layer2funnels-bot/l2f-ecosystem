@@ -97,6 +97,6 @@ For every app: `APP_OVERVIEW.md`, `FEATURES_AND_FUNCTIONALITY.md` (§1 change re
 ## 8. Owner answers (14 Nov 2026)
 
 1. Client Portal Messages and Files (C1): **remove as V8 says.**
-2. Dream 100 workbook: **the owner will upload the .xlsx**; only the spreadsheet acceptance test (OR-37) waits for it.
+2. Dream 100 workbook: **received 14 Nov**, stored as `test/fixtures/Aurj_Dream100_Tracker.xlsx` for the spreadsheet acceptance test (OR-37).
 3. "Pro notification" (C10): **the notification inbox (bell).**
 4. D6 (client's own Office content) and D9 (version thinning 30/90 days): the documented assumptions are used unless the owner says otherwise.
