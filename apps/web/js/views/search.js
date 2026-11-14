@@ -59,6 +59,10 @@ export function pageEntries(catalog = [], isAdmin = false) {
 const matches = (text, q) => String(text).toLowerCase().includes(q.toLowerCase());
 const mark = (text, q) => { const s = String(text ?? ''); const i = q ? s.toLowerCase().indexOf(q.toLowerCase()) : -1; return i < 0 ? [s] : [s.slice(0, i), h('mark', {}, s.slice(i, i + q.length)), s.slice(i + q.length)]; };
 
+const RECENT = 'l2f.recent';
+const recent = () => { try { return JSON.parse(localStorage.getItem(RECENT) ?? '[]').slice(0, 5); } catch { return []; } };
+const remember = (r) => { try { const list = [r, ...recent().filter((x) => x.href !== r.href)].slice(0, 5); localStorage.setItem(RECENT, JSON.stringify(list)); } catch { /* private window: not remembered */ } };
+const SCOPE_APP = { projects: 'projects', tasks: 'projects', clients: 'clients', files: 'drive', office: 'office', planner: 'planner', funnels: 'funnel_mapper_pro' };
 let open = null;       // one search window at a time (a second Ctrl K focuses the open one)
 export function openSearch({ api, registry, catalog = [], isAdmin = false, currentApp = null, initial = '' }) {
   if (open) { open.focus(); return; }
@@ -77,11 +81,16 @@ export function openSearch({ api, registry, catalog = [], isAdmin = false, curre
   const pages = pageEntries(catalog, isAdmin);
   let seq = 0, timer = null, sel = 0;
 
-  const paintChips = () => chips.replaceChildren(...SCOPES.map(([k, l]) => h('button', { type: 'button', 'aria-pressed': String(k === scope), onclick: () => { scope = k; paintChips(); run(); input.focus(); } }, l)));
+  const paintChips = () => {
+    chips.replaceChildren(...SCOPES.map(([k, l]) => h('button', { type: 'button', 'aria-pressed': String(k === scope), onclick: () => { scope = k; paintChips(); run(); input.focus(); } },
+      k === 'all' ? icon('globe') : plateOf(registry?.get(SCOPE_APP[k]) ?? { id: SCOPE_APP[k] }, 16), l)));
+    input.placeholder = scope === 'all' ? 'Search everything you can open' : `Search ${SCOPES.find(([k]) => k === scope)[1]}`;
+  };
   const rows = () => [...res.querySelectorAll('a.gsx-row')];
   const select = (i) => { const r = rows(); if (!r.length) return; sel = (i + r.length) % r.length; r.forEach((x, n) => x.setAttribute('aria-selected', String(n === sel))); r[sel].scrollIntoView({ block: 'nearest' }); };
   const row = (r, q) => {
-    const a = h('a', { class: 'gsx-row', role: 'option', href: r.href ?? resultHref(r), 'aria-selected': 'false', onclick: () => close() },
+    const href = r.href ?? resultHref(r);
+    const a = h('a', { class: 'gsx-row', role: 'option', href, 'aria-selected': 'false', onclick: () => { remember({ ...r, href }); close(); } },
       plateOf(registry?.get(r.appKey ?? APP_OF[r.app] ?? r.app) ?? { id: r.appKey ?? APP_OF[r.app] ?? r.app }, 28),
       h('span', { class: 'gsx-main' }, h('b', {}, ...mark(r.title, q)), r.subtitle ? h('small', {}, r.subtitle) : null),
       r.archived ? h('span', { class: 'pill' }, icon('archive'), 'Archived') : null);
@@ -91,7 +100,9 @@ export function openSearch({ api, registry, catalog = [], isAdmin = false, curre
   const quick = () => {
     const usable = new Set(catalog.filter((a) => a.state === 'available').map((a) => a.app_key));
     const qa = [['projects', 'New project', '#/projects/all'], ['projects', 'New task', '#/projects/mine'], ['drive', 'New document', hrefFor.app('drive')], ['clients', 'New client', '#/clients']].filter(([k]) => usable.has(k));
-    res.replaceChildren(h('h3', { class: 'gsx-h' }, 'Quick actions'), ...qa.map(([k, t, href]) => row({ appKey: k, title: t, subtitle: 'Opens where you create it', href }, '')),
+    const back = recent();
+    res.replaceChildren(h('h3', { class: 'gsx-h' }, 'Quick actions'), ...qa.map(([k, t, href]) => row({ appKey: k, title: t, href }, '')),
+      ...(back.length ? [h('h3', { class: 'gsx-h' }, 'Jump back in'), ...back.map((r) => row(r, ''))] : []),
       h('p', { class: 'gsx-hint' }, 'Type to search apps, pages, projects, tasks, clients, files, Office records, plans and people. Try “@me overdue” or “in:clients”.'));
     select(0);
   };
@@ -125,7 +136,7 @@ export function openSearch({ api, registry, catalog = [], isAdmin = false, curre
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); select(sel + (e.key === 'ArrowDown' ? 1 : -1)); return; }
     if (e.key === 'Enter' && document.activeElement === input) {
       const a = rows()[sel]; if (!a) return; e.preventDefault();
-      if (e.ctrlKey || e.metaKey) window.open(a.href, '_blank', 'noopener'); else { close(); location.hash = a.getAttribute('href'); }
+      if (e.ctrlKey || e.metaKey) window.open(a.href, '_blank', 'noopener'); else a.click();
       return;
     }
     if (e.key === 'Tab' && document.activeElement === input) {
