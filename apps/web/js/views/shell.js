@@ -105,7 +105,7 @@ function bell(notifications, registry) {
     panel = h('aside', { class: 'nfx', role: 'dialog', 'aria-modal': 'false', 'aria-label': 'Notifications', onkeydown: (e) => { if (e.key === 'Escape') { e.preventDefault(); close(); } } },
       h('header', { class: 'nfx-head' }, h('h2', {}, 'Notifications'), markAll, h('button', { type: 'button', class: 'iconbtn', 'aria-label': 'Close notifications', onclick: close }, icon('x'))),
       kinds, apps, list,
-      h('footer', { class: 'nfx-foot' }, h('a', { href: '#/profile', onclick: () => close() }, 'Notification settings')));
+      h('footer', { class: 'nfx-foot' }, h('a', { href: '#/profile', onclick: () => close() }, icon('gear'), 'Notification settings: choose apps and email digests')));
     document.body.append(panel); b.setAttribute('aria-expanded', 'true'); load();
     panel.querySelector('[role=tab]')?.focus();
   });
