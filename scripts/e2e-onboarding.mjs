@@ -138,11 +138,11 @@ check('ON15', 'The client joins as a client of their own client record: no staff
 await pc.goto(`${base}/#/office/admin/members`); await pc.reload(); await pc.waitForTimeout(1500);
 check('ON16', 'The client cannot open staff areas (no member list, no team)', !(await text(pc)).includes('Joining is by invitation only.') && !(await text(pc)).includes(T1));
 await pc.goto(`${base}/#/profile`); await pc.reload(); await pc.waitForSelector('#pf-name', { timeout: 12000 });
-await pc.fill('#pf-name', 'Carla C. Client'); await pc.getByRole('button', { name: 'Save name' }).click(); await until(pc, 'Name saved.');
+await pc.fill('#pf-name', 'Carla C. Client'); await pc.getByRole('button', { name: 'Save', exact: true }).click(); await until(pc, 'Profile saved.');   // V8 profile: one Save
 check('ON17', 'The client has their own profile and can change their name', (await q("select p.display_name from profiles p join auth.users u on u.id = p.id where u.email=$1", [C1]))[0]?.display_name === 'Carla C. Client');
 
 // ---- N/P. a teammate's profile; Q. the e-mail change goes through Supabase Auth (a confirmation is required)
-await p1.goto(`${base}/#/profile`); await p1.reload(); await p1.waitForSelector('#pf-name', { timeout: 12000 });
+await p1.goto(`${base}/#/profile/account`); await p1.reload(); await p1.waitForSelector('#pf-email', { timeout: 12000 });   // V8: email lives on Account & sign-in
 await p1.fill('#pf-email', `tom.new.${stamp}@example.com`); await p1.getByRole('button', { name: 'Change email' }).click(); await p1.waitForTimeout(2000);
 // the local stack has no mail server, so Supabase Auth cannot send the confirmation here; what matters is that nothing changes without it
 check('ON18', 'Changing the e-mail never changes the sign-in e-mail by itself: it waits for Supabase Auth’s confirmation (the page says so either way)', /confirmation link|couldn’t send the confirmation|couldn’t change the email/.test(await text(p1)) && (await q('select email from auth.users where id=$1', [tomId]))[0].email === T1);
