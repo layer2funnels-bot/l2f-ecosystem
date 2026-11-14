@@ -4,7 +4,7 @@
 // both have (rail, sidebar, app bar, sidebar rows, page title, menus, drawers). Output: $SHOTS/v8cmp/ (git-ignored).
 // Usage: PLAYWRIGHT_MODULE=... node scripts/v8-compare.mjs [filter]
 import { createRequire } from 'node:module';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import pg from 'pg';
 import { startDevServer, LOCAL_ENV } from './dev-server.mjs';
 
@@ -68,7 +68,9 @@ for (const [key, ours, v8, act, sels] of PAGES) for (const [w, hgt, size] of SIZ
   const b = size === 'desktop' ? browser : touch;
   const mine = await (await b.newContext({ viewport: { width: w, height: hgt }, storageState: storage, hasTouch: size !== 'desktop' })).newPage();
   const ref = await (await b.newContext({ viewport: { width: w, height: hgt }, hasTouch: size !== 'desktop' })).newPage();
-  await ref.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
+  // the prototype loads Geist (variable) from Google Fonts; serve the same variable files locally so both sides render the same font
+  await ref.route(/fonts\.googleapis\.com/, (r) => r.fulfill({ contentType: 'text/css', body: '@font-face{font-family:"Geist";font-weight:100 900;src:url(https://fonts.gstatic.com/geist.woff2) format("woff2")}@font-face{font-family:"Geist Mono";font-weight:100 900;src:url(https://fonts.gstatic.com/geist-mono.woff2) format("woff2")}@font-face{font-family:"Bricolage Grotesque";font-weight:700;src:url(https://fonts.gstatic.com/bricolage.woff2) format("woff2")}' }));
+  await ref.route(/fonts\.gstatic\.com/, (r) => { const f = { 'geist.woff2': 'geist-variable.woff2', 'geist-mono.woff2': 'geist-mono-variable.woff2', 'bricolage.woff2': 'bricolage-grotesque-latin-700.woff2' }[r.request().url().split('/').pop()]; return f ? r.fulfill({ contentType: 'font/woff2', body: readFileSync(new URL(`../apps/web/fonts/${f}`, import.meta.url)) }) : r.abort(); });
   await mine.goto(`${base}/${ours}`); await mine.waitForTimeout(2200);
   await ref.goto(`${PROTO}${v8}`); await ref.waitForTimeout(1200);
   if (act) { await act(ref, 'v8'); await act(mine, 'ours'); }

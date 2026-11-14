@@ -138,7 +138,7 @@ await page.keyboard.type('form'); const found = await page.locator('.tile').eval
 await page.keyboard.press('Enter'); await wait('Form Builder: coming soon'); await page.getByRole('button', { name: 'Got it' }).click();
 check('V5', 'Find an app shows only matching apps; a search with no match says so', found.join() === 'forms' && (await (async () => { await page.fill('#app-find', 'zzzz'); return page.getByText('No app matches').count(); })()) === 1);
 await page.fill('#app-find', ''); await page.keyboard.press('Escape');
-await page.goto(`${base}/#/office`); await wait('Your work in'); await page.locator('#app-switcher:visible, #app-switcher-m:visible').first().click();
+await page.goto(`${base}/#/office`); await wait('My day'); await page.locator('#app-switcher:visible, #app-switcher-m:visible').first().click();
 const swApps = await page.locator('#apps-menu .appitem').evaluateAll((els) => els.map((e) => e.dataset.app));
 check('V6', 'The app switcher (V8) offers the Launcher row with its G L shortcut and the apps this person may open here (not the locked or coming-soon ones)', (await page.locator('#apps-menu .back').innerText()).includes('Launcher') && swApps.includes('office') && !swApps.includes('portal') && !swApps.includes('forms'), swApps.join());
 await page.keyboard.press('Escape');
@@ -148,7 +148,7 @@ await page.keyboard.press('Shift+Slash'); await page.waitForTimeout(200);
 const kb = await page.getByRole('dialog', { name: 'Keyboard shortcuts' }).innerText().catch(() => '');
 check('V6c', 'The ? key opens Keyboard shortcuts, listing the shortcuts that work (Ctrl K, G then L, /, ?, Esc)', ['Search everything', 'Open the Launcher', 'Show these shortcuts'].every((x) => kb.includes(x)));
 await page.keyboard.press('Escape');
-await page.goto(`${base}/#/office`); await wait('Your work in');
+await page.goto(`${base}/#/office`); await wait('My day');
 // global search (V8 02 §5): Ctrl K opens it scoped to the current app; pages and menus are found; Enter opens; Esc closes
 await page.keyboard.press('Control+k'); await page.waitForSelector('#gsq'); await page.waitForFunction(() => document.activeElement?.id === 'gsq');
 const gsScope = await page.locator('.gsx-scope button[aria-pressed=true]').innerText();
@@ -371,17 +371,25 @@ await page.goBack(); await page.reload(); await wait('The sky follows your time 
 }
 
 // =============================================================== C. Office Home (design 04)
-await tile('office').click(); await wait('Needs your attention'); await wait('Nothing assigned to you.'); await wait('Invitations waiting');   // the cards fill in after their data loads
-check('U14', 'Office Home: the eight section menu, Home current, designed empty states, owner/admin card with waiting invitations', (await page.locator('nav.nav a').allInnerTexts()).join() === 'Home,Planner,Projects,Funnels,Documents,Team,Apps,Admin' && (await page.locator('nav.nav a[aria-current=page]').innerText()) === 'Home'
-  && (await page.locator('main').innerText()).includes('Nothing assigned to you.') && await page.getByText('For owners and admins').isVisible() && await page.getByText('Invitations waiting').isVisible());
+await tile('office').click(); await wait('Waiting on you'); await wait('Nothing due today.'); await wait('Invitations waiting');   // the cards fill in after their data loads
+{ const t = await page.locator('main').innerText();
+  check('U14', 'Office Home (V8): section menu with Home current; greeting, Owner/Team member view, Ask bar (later), My day, Waiting on you, What’s happening, Plans and goals, Projects, Client pipeline, Team today, Organization health',
+    (await page.locator('nav.nav a').allInnerTexts()).join() === 'Home,Planner,Projects,Funnels,Documents,Team,Apps,Admin' && (await page.locator('nav.nav a[aria-current=page]').innerText()) === 'Home'
+    && ['Good ', 'Owner view', 'Team member view', 'Assistant · later', 'My day', 'Waiting on you', 'What’s happening', 'Plans and goals', 'Projects', 'Client pipeline', 'Organization health', 'Invitations waiting'].every((x) => t.includes(x))
+    && (await page.locator('.v8p-oh .o-hero h1').count()) === 1); }
 await shot(page, 'c1-home');
 // Projects V2 (migration 0051): the owner's tasks, assigned to them, feed Office Home through the same my.work / projects.deadlines answers
 const hp = (await q("insert into pm_projects (workspace_id,name,owner_id,visibility) values ($1,'Quiz funnel rebuild',$2,'organization') returning id", [L, uid]))[0].id;
 const hts = await q("insert into pm_tasks (workspace_id,project_id,title,due_on,number) values ($1,$2,'Edit quiz emails',current_date + 3,0),($1,$2,'Late task',current_date - 2,0) returning id", [L, hp]);
 for (const t of hts) await q('insert into pm_task_assignees (workspace_id,project_id,task_id,user_id) values ($1,$2,$3,$4)', [L, hp, t.id, uid]);
 await q("insert into planner_reviews (workspace_id,title,due_on) values ($1,'Q4 review', current_date + 2)", [L]);
-await visit(page, base + '/#/office'); await wait('Edit quiz emails');
-check('U14b', 'Office Home fills "My work", "Deadlines" and the review notice from Projects and Planner (overdue task flagged, project name shown, review coming up)', (await page.locator('main').innerText()).includes('Quiz funnel rebuild') && (await page.locator('main').innerText()).includes('Overdue') && await page.getByText('Coming up.').isVisible() && !(await page.locator('main').innerText()).includes('Nothing assigned to you.'));
+await visit(page, base + '/#/office'); await wait('Late task');
+const todayList = await page.locator('.v8p-oh .rows').first().innerText();
+await page.locator('.v8p-oh .sec-h .vsw button', { hasText: 'This week' }).click(); await wait('Edit quiz emails');
+check('U14b', 'My day (V8): Today shows my overdue Projects task flagged Overdue with its project; This week adds the task due in 3 days', todayList.includes('Late task') && todayList.includes('Overdue') && todayList.includes('Quiz funnel rebuild') && !todayList.includes('Edit quiz emails'));
+await page.getByRole('checkbox', { name: 'Mark Late task done' }).click(); await wait('ticked off in Projects');
+check('U14c', 'Ticking a task in My day completes it in Projects', (await q('select status from pm_tasks where id = $1', [hts[1].id]))[0]?.status === 'done');
+await page.locator('.v8p-oh .sec-h .vsw button', { hasText: 'Today' }).click();
 
 // Planner switched on here (on the live site that is a separate go-live step), so this check does not depend on what ran before
 await q("update public.apps set lifecycle = 'active' where key = 'planner'"); await q("insert into workspace_apps (workspace_id, app_key, enabled) values ($1, 'planner', true) on conflict (workspace_id, app_key) do update set enabled = true", [L]);
@@ -421,7 +429,7 @@ check('U22', 'The edit form shows "Unsaved changes" as soon as something changes
 await page.locator('nav.nav > a', { hasText: /^Home$/ }).click(); await wait('You have unsaved changes');
 await page.getByRole('button', { name: 'Keep editing' }).click();
 check('U23', 'Leaving with unsaved changes asks first, and "Keep editing" keeps the text and the page', (await page.inputValue('#r-name')) === 'Busy coach (edited)' && page.url().includes('/funnels/avatars/'));
-await page.locator('nav.nav > a', { hasText: /^Home$/ }).click(); await wait('You have unsaved changes'); await page.getByRole('button', { name: 'Save and leave' }).click(); await wait('Needs your attention');
+await page.locator('nav.nav > a', { hasText: /^Home$/ }).click(); await wait('You have unsaved changes'); await page.getByRole('button', { name: 'Save and leave' }).click(); await wait('Waiting on you');
 check('U24', '"Save and leave" saves the change, then goes', (await q('select name from funnel_avatars where workspace_id = $1', [L]))[0].name === 'Busy coach (edited)');
 // share / unshare / archive / restore / delete
 await visit(page, base + '/#/office/funnels/avatars'); await wait('Busy coach (edited)'); await page.getByRole('link', { name: 'Open Busy coach (edited)' }).click(); await page.waitForSelector('#share');
@@ -466,9 +474,9 @@ check('E3', 'Outcome 3: an app that is not on in the other organization is expla
   && await page.getByRole('button', { name: 'Switch back to Layer2Funnels' }).isVisible() && await page.getByRole('button', { name: 'Ask an Aurj admin' }).isVisible() && await page.getByRole('link', { name: 'Browse all apps' }).isVisible());
 await page.getByRole('button', { name: 'Ask an Aurj admin' }).click();
 check('E3b', '"Ask an admin" is message only and says so', (await toastText()).includes('No request was sent'));
-await page.getByRole('button', { name: 'Go to Aurj Office Home' }).click(); await wait('Needs your attention');
+await page.getByRole('button', { name: 'Go to Aurj Office Home' }).click(); await wait('Waiting on you');
 // 4 not a member (the menu was loaded before the membership ended)
-await inMenu(page, 'Layer2Funnels'); await page.waitForFunction(() => document.querySelector('#org-switcher strong')?.textContent === 'Layer2Funnels'); await wait('Needs your attention');
+await inMenu(page, 'Layer2Funnels'); await page.waitForFunction(() => document.querySelector('#org-switcher strong')?.textContent === 'Layer2Funnels'); await wait('Waiting on you');
 await q('delete from memberships where workspace_id = $1 and user_id = $2', [A, uid]);
 await inMenu(page, 'Aurj'); await wait('You’re not a member of Aurj.');
 check('E4', 'Outcome 4: switching to an organization you are no longer in changes nothing and says why, in words', (await page.locator('#org-switcher strong').innerText()) === 'Layer2Funnels' && (await theme()) === 'l2f' && (await page.locator('.notice[role=alert]').innerText()).includes('nothing has changed'));
@@ -536,7 +544,7 @@ await guest.fill('#nm', 'Gus Guest'); await guest.fill('#em', GUEST); await gues
 await wait('Join Layer2Funnels', guest);
 check('G2', 'After signing up, the invitation screen names the organization, the inviter, the level and the signed-in email', (await guest.locator('main').innerText()).includes(`${NAME} invited you to join Layer2Funnels as an Editor.`) && (await guest.locator('main').innerText()).includes(`Signed in as ${GUEST}`) && (await theme(guest)) === 'l2f');
 await shot(guest, 'g1-invite');
-await guest.getByRole('button', { name: 'Accept invitation' }).click(); await wait('Needs your attention', guest);
+await guest.getByRole('button', { name: 'Accept invitation' }).click(); await wait('Waiting on you', guest);
 check('G3', 'Accepting lands in Office Home of that organization; an editor sees no Admin section', (await guest.locator('#org-switcher strong').innerText()) === 'Layer2Funnels' && !(await guest.locator('nav.nav a').allInnerTexts()).includes('Admin') && !(await guest.getByText('For owners and admins').count()));
 await visit(guest, `${base}/#/office/admin/members`); await wait('We couldn’t find that', guest);
 check('G4', 'An editor who opens an Admin address sees the same "We couldn’t find that" screen', (await guest.locator('main').innerText()).includes('Go to Office Home'));
@@ -856,7 +864,7 @@ await rm.close();
   await page.goto(`${base}/#/launcher`); await wait('The sky follows your time of day');
 }
 
-const routes = [['/#/launcher', 'The sky follows your time of day'], ['/#/office', 'Needs your attention'], ['/#/office/funnels', 'Recently changed'], ['/#/office/funnels/avatars', 'Avatar for C1'], ['/#/office/funnels/avatars/new', 'Belongs to'],
+const routes = [['/#/launcher', 'The sky follows your time of day'], ['/#/office', 'Waiting on you'], ['/#/office/funnels', 'Recently changed'], ['/#/office/funnels/avatars', 'Avatar for C1'], ['/#/office/funnels/avatars/new', 'Belongs to'],
   ['/#/office/admin/members', 'Joining is by invitation only.'], ['/#/office/admin/access/levels', 'Deny always wins.'], ['/#/office/admin/access/assignments', 'Add assignment'], ['/#/office/admin/access/effective', 'Show access for'], ['/#/portal', 'The Portal is locked'], ['/#/drive', 'stay with their own app'], ['/#/clients', 'Everyone you work for'], ['/#/clients/requests', 'The Client Portal is locked'], ['/#/clients/sops', 'SOPs are never copied'], ['/#/clients/tools', 'Owners and admins see all four'], ['/#/clients/settings', 'Build is progress only'], ['/#/office/funnels/strategies', 'One written strategy per funnel'], ['/#/office/documents', 'stay with their own app'], ['/#/office/team', 'only where your own access allows'], ['/#/office/apps', 'Locked and coming-soon apps'], ['/#/office/admin/access/history', 'The last 100 changes'], ['/#/planner/plans', 'New plan']];
 for (const [w, label] of [[1280, 'desktop'], [768, 'tablet'], [390, 'phone']]) {
   const p = w < 1280 ? watch(await (await touchBrowser.newContext({ viewport: { width: w, height: 900 }, hasTouch: true })).newPage()) : await newPage(w, 900);
@@ -868,7 +876,7 @@ for (const [w, label] of [[1280, 'desktop'], [768, 'tablet'], [390, 'phone']]) {
   for (const [r, t] of routes) { await p.goto(base + r); await p.reload(); await wait(t, p); await p.waitForTimeout(120); if (!(await layouts(p, `${label} ${r}`))) bad.push(r); }
   check(`R-${label}`, `At ${w}px every screen has no sideways scroll and every control meets the V8 size (${w < 1280 ? '44 px on a touch screen' : 'at least 26 px with a mouse'}; ${routes.length + 2} screens)`, ok && bad.length === 0, bad.join(' '));
   if (w === 390) {
-    await p.goto(base + '/#/office'); await p.reload(); await wait('Needs your attention', p);
+    await p.goto(base + '/#/office'); await p.reload(); await wait('Waiting on you', p);
     const bar = p.locator('nav.bbar'); const labels = await bar.locator('a, button').allInnerTexts();
     check('R-bar', 'On a phone the Office menu is a bottom bar: four sections plus More, labels always visible, top menu hidden', labels.map((x) => x.trim()).join() === 'Home,Planner,Projects,Funnels,More' && !(await p.locator('nav.nav').isVisible()) && (await bar.boundingBox()).y > 700);
     await bar.getByRole('button', { name: 'More' }).click(); await wait('More in Office', p);

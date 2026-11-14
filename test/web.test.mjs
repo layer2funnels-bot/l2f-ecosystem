@@ -2,6 +2,7 @@
 import { recorder } from './lib.mjs';
 import { validate } from '../packages/core/validate.mjs';
 import { createApiClient, isRead } from '../apps/web/js/api.js';
+import { dueLabel, feedLine } from '../apps/web/js/views/home.js';
 const ORG_A = '11111111-1111-4111-8111-111111111111', ORG_B = '22222222-2222-4222-8222-222222222222';
 import { parseRoute, routeForPage, pageKeyFor, defaultOrg, hrefFor, FUNNEL_TYPES, OFFICE_PAGES } from '../apps/web/js/routes.js';
 import { PLANNER_PAGES, plannerSection } from '../apps/web/js/modules/planner.js';
@@ -164,6 +165,14 @@ check('W33', 'Projects (V2) owns every #/projects address and routes its own pag
 }
 check('W41', 'Each profile tab has its own address (V8 #/profile/about, account, notifications, appearance); #/profile is the first tab',
   parseRoute('#/profile').name === 'profile' && !parseRoute('#/profile').params.tab && ['about', 'account', 'notifications', 'appearance'].every((t) => parseRoute(`#/profile/${t}`).params.tab === t) && parseRoute('#/profile/x').name !== 'profile');
+
+{
+  const now = new Date('2026-11-12T10:00:00');   // a Thursday
+  check('W42', 'Office Home due labels (V8): Overdue, Today, Tomorrow, a weekday this week, a date after', JSON.stringify(['2026-11-10', '2026-11-12', '2026-11-13', '2026-11-16', '2026-12-01'].map((d) => dueLabel(d, now)[0]))
+    === JSON.stringify(['Overdue', 'Today', 'Tomorrow', new Date('2026-11-16T12:00:00').toLocaleDateString(undefined, { weekday: 'short' }), new Date('2026-12-01T12:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short' })]) && dueLabel('2026-11-10', now)[1] === 'od' && dueLabel('2026-11-12', now)[1] === 'soon');
+  check('W43', 'Office Home feed lines read like the Projects app (status change, completion, comment)', feedLine({ kind: 'task.updated', data: { field: 'status', to: 'in_review' }, taskTitle: 'Quiz v2' }) === 'moved “Quiz v2” to Review'
+    && feedLine({ kind: 'task.updated', data: { field: 'status', to: 'done' }, taskTitle: 'Copy' }) === 'completed “Copy”' && feedLine({ kind: 'task.commented', data: {}, taskTitle: 'Copy' }) === 'commented on “Copy”');
+}
 
 // ---- Planner inside the shell (apps/web/js/modules/planner.js mounts apps/planner/src/embed.tsx)
 check('W27', 'Planner has one address inside the shell: #/planner/<page> keeps its page and query; the old #/app/planner and #/office/planner lead there too',
