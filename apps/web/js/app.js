@@ -8,6 +8,7 @@ import { messageFor } from './messages.js';
 import { dirty } from './dirty.js';
 import { createTheme } from './theme.js';
 import { loadRegistry } from './registry.js';
+import { openSearch } from './views/search.js';
 import { docView } from './modules/docs.js';
 import { boardView } from './modules/whiteboard.js';
 import { projectsV2View, unmountProjects, projectsMountedFor } from './modules/projects-v2.js';
@@ -25,7 +26,7 @@ import { pdfView } from './modules/pdfeditor.js';
 import { plannerView, unmountPlanner, plannerMountedFor, plannerSection, PLANNER_PAGES } from './modules/planner.js';
 import { strategiesListView, strategyView } from './views/strategies.js';
 import { documentsView, teamView, appsView } from './views/office.js';
-import { loadWeather, weatherOff, setWeatherOff } from './sky.js';
+import { loadWeather, weatherOff, setWeatherOff, snowOff, setSnowOff } from './sky.js';
 import { permissionSet, canWith, canAnywhereWith } from './perm.js';
 import { switchOrganization } from '/packages/core/org-switch.mjs';
 import { dialog, toast, btn, notice, skeleton, notFoundState, designBadge, icon, emptyState } from './ui.js';
@@ -469,10 +470,12 @@ async function render(opts = {}) {
       default: content = notFoundState(hrefFor.office());
     }
   }
-  const view = shellView({ app: appApi, orgs: ctx.orgs, active: org, email: session.get()?.email, name: session.get()?.name, route, content, banner: bannerEl(), isAdmin, inOffice, launcherCurrent: route.name === 'launcher' || route.name === 'home',
+  // global search (V8 02 §5): the rail button and Ctrl K open it, scoped to the current app when that app is searchable; staff only (the operation refuses client contacts)
+  startSearch = org.member_kind === 'client' ? null : (initial = '') => openSearch({ api, registry, catalog: ctx.catalog, isAdmin, currentApp: inOffice ? 'office' : (route.name === 'clients' ? 'clients' : route.name === 'projects' ? 'projects' : route.name === 'planner' ? 'planner' : ['doc', 'sheet', 'image', 'pdf', 'drive'].includes(route.name) ? 'drive' : null), initial });
+  const view = shellView({ onSearch: startSearch, app: appApi, orgs: ctx.orgs, active: org, email: session.get()?.email, name: session.get()?.name, route, content, banner: bannerEl(), isAdmin, inOffice, launcherCurrent: route.name === 'launcher' || route.name === 'home',
     notifications: org.member_kind === 'client' ? null : notifications,
     catalog: ctx.catalog, registry, currentApp: inOffice ? 'office' : route.name === 'doc' || route.name === 'sheet' || route.name === 'image' || route.name === 'pdf' || route.name === 'drive' ? 'drive' : route.name === 'board' ? 'whiteboard' : route.name === 'projects' ? 'projects' : route.name === 'clients' ? 'clients' : route.name === 'portal' ? 'portal' : route.name === 'forms' ? 'forms' : route.name === 'ladder' ? 'value_ladder' : route.name === 'boards' ? 'whiteboard' : route.name === 'social' ? 'social_planner' : route.name === 'planner' ? 'planner' : route.name === 'app' ? route.params.app : null, theme,
-    me, weather: { on: () => !weatherOff(localStorage), set: (on) => { setWeatherOff(localStorage, !on); try { sessionStorage.removeItem('l2f.wx'); } catch { /* none */ } render(); } } });
+    me, weather: { on: () => !weatherOff(localStorage), set: (on) => { setWeatherOff(localStorage, !on); try { sessionStorage.removeItem('l2f.wx'); } catch { /* none */ } render(); } }, snow: { on: () => !snowOff(localStorage), set: (on) => { setSnowOff(localStorage, !on); render(); } } });
   put(root, view, designBadge('Built to design'));
   document.title = `${pageLabel(route)} · ${org.name}`;
   if (toastLater) { toast(toastLater); toastLater = null; }
@@ -500,6 +503,10 @@ window.addEventListener('hashchange', () => {
 });
 window.addEventListener('beforeunload', (e) => { if (dirty.isDirty()) { e.preventDefault(); e.returnValue = ''; } });
 window.addEventListener('offline', () => announce('You are offline. Changes will not be saved.'));
+let startSearch = null;
+document.addEventListener('keydown', (e) => {                      // Ctrl K / Cmd K: global search from anywhere (V8 02 §5)
+  if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'k' && startSearch) { e.preventDefault(); startSearch(); }
+});
 document.addEventListener('keydown', (e) => {                      // "/" focuses search where search exists
   if (e.key === '/' && !/input|textarea|select/i.test(document.activeElement?.tagName ?? '')) { const s = document.querySelector('.search input:not(:disabled)'); if (s) { e.preventDefault(); s.focus(); } }
 });

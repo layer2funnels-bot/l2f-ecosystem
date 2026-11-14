@@ -120,13 +120,13 @@ const keys = await page.locator('.tile').evaluateAll((els) => els.map((e) => e.d
 check('U10', 'Owner sees the twelve apps grouped Everyday then Studio in the v4 order, Funnel Mapper Pro among them as a normal tile', keys.join() === 'office,projects,clients,drive,planner,portal,forms,value_ladder,social_planner,whiteboard,funnel_mapper_pro,layer2_agents', keys.join());
 const state = async (k) => (await tile(k).getAttribute('class')).split(' ')[1];
 check('U11', 'Tile states come from the real catalog: Client Portal locked, five apps coming soon', (await state('portal')) === 'locked' && (await tile('portal').innerText()).includes('Locked') && (await state('forms')) === 'soon' && (await tile('layer2_agents').innerText()).includes('Soon') && (await state('office')) === 'ok');
-await wait('your location');
+await wait('· Khushab');
 await shot(page, 'b1-launcher');
 const sky = await page.locator('.launcher').evaluate((e) => ({ part: e.dataset.part, wx: e.dataset.wx }));
 const hourNow = await page.evaluate(() => new Date().getHours()); const partNow = hourNow >= 5 && hourNow < 12 ? 'morning' : hourNow >= 12 && hourNow < 17 ? 'afternoon' : hourNow >= 17 && hourNow < 21 ? 'evening' : 'night';
-check('V1', 'Launcher sky: time of day from the clock, weather from the server, chip reads "Light rain · 16° · your location", MET Norway credited with a link',
-  sky.part === partNow && sky.wx === 'rain' && (await page.locator('.wxchip').innerText()).includes('Light rain · 16° · your location') && (await page.getByRole('link', { name: 'Data from MET Norway' }).count()) === 1);
-check('V2', 'MET Norway was asked once, by our server, with an identifying User-Agent and coordinates cut to two decimals', metCalls.length === 1 && /lat=31\.52&lon=74\.36/.test(metCalls[0].url) && /@|\./.test(metCalls[0].ua ?? ''), JSON.stringify(metCalls));
+check('V1', 'Launcher sky: time of day from the clock, Khushab weather from the server (owner, 14 Nov), chip reads "Light rain · 16° · Khushab", MET Norway credited with a link',
+  sky.part === partNow && sky.wx === 'rain' && (await page.locator('.wxchip').innerText()).includes('Light rain · 16° · Khushab') && (await page.getByRole('link', { name: 'Data from MET Norway' }).count()) === 1);
+check('V2', 'MET Norway was asked once, by our server, for Khushab (32.30, 72.35) with an identifying User-Agent', metCalls.length === 1 && /lat=32\.30&lon=72\.35/.test(metCalls[0].url) && /@|\./.test(metCalls[0].ua ?? ''), JSON.stringify(metCalls));
 check('V3', 'Apps sit on the frosted shelf in two labelled groups, Everyday and Studio', (await page.locator('.shelf h2').allInnerTexts()).join().toLowerCase() === 'everyday,studio');
 await page.keyboard.press('Escape'); await page.locator('body').click({ position: { x: 5, y: 400 } }); await page.keyboard.press('/');
 check('V4', '"/" jumps to Find an app; typing narrows the tiles; Enter opens the first match', (await page.evaluate(() => document.activeElement.id)) === 'app-find');
@@ -137,16 +137,34 @@ await page.fill('#app-find', ''); await page.keyboard.press('Escape');
 await page.goto(`${base}/#/office`); await wait('Your work in'); await page.locator('#app-switcher:visible, #app-switcher-m:visible').first().click();
 const swApps = await page.locator('#apps-menu .appitem').evaluateAll((els) => els.map((e) => e.dataset.app));
 check('V6', 'The app switcher offers Back to Launcher and the apps this person may open here (not the locked or coming-soon ones)', (await page.locator('#apps-menu .back').innerText()).includes('Back to Launcher') && swApps.includes('office') && !swApps.includes('portal') && !swApps.includes('forms'), swApps.join());
-await page.keyboard.press('Escape'); await page.goto(`${base}/#/launcher`); await wait('The sky follows your time of day');
+await page.keyboard.press('Escape');
+// global search (V8 02 §5): Ctrl K opens it scoped to the current app; pages and menus are found; Enter opens; Esc closes
+await page.keyboard.press('Control+k'); await page.waitForSelector('#gsq'); await page.waitForFunction(() => document.activeElement?.id === 'gsq');
+const gsScope = await page.locator('.gsx-scope button[aria-pressed=true]').innerText();
+await page.keyboard.type('Customer Av'); await page.waitForSelector('.gsx-row:has-text("Customer Avatars")').catch(async (e) => { console.log('--- search window shows:', JSON.stringify(await page.evaluate(() => ({ value: document.querySelector('#gsq')?.value, focus: document.activeElement?.id, text: document.querySelector('.gsx')?.innerText }))), problems.slice(0, 3), net.slice(-4)); throw e; }); await page.waitForFunction(() => !/Searching/.test(document.querySelector('.gsx-res')?.innerText ?? '')); await shot(page, 'b2-search');
+check('GS-UI1', 'Ctrl K opens global search scoped to the current app (Office); typing finds apps, pages and menus; the server search answers', gsScope === 'Office' && (await page.locator('.gsx-row').count()) >= 1 && !(await page.getByText('Search couldn’t reach the server').count()));
+await page.keyboard.press('Enter'); await page.waitForFunction(() => location.hash.startsWith('#/office/funnels/avatars'));
+check('GS-UI2', 'Enter opens the selected result and the search closes', (await page.locator('.gsx-scrim').count()) === 0);
+await page.locator('#rail-search').click(); await page.waitForSelector('#gsq'); await page.keyboard.press('Escape');
+check('GS-UI3', 'The rail\'s search button opens it too, and Escape closes it', (await page.locator('.gsx-scrim').count()) === 0);
+await page.goto(`${base}/#/launcher`); await wait('The sky follows your time of day');
 // weather opt-out: profile menu, no new location use, no new server call; the chip goes; switching it on again brings it back
 const callsBefore = metCalls.length;
 await page.locator('.who').click(); await page.getByRole('menuitemcheckbox', { name: /Weather on the Launcher/ }).click();
 await page.waitForFunction(() => !document.querySelector('.wxchip'));
 check('V7', 'Switching weather off in the profile menu removes the chip and the weather tint, and stops all weather calls', (await page.locator('.launcher').getAttribute('data-wx')) === 'none' && metCalls.length === callsBefore);
-await page.locator('.who').click(); await page.getByRole('menuitemcheckbox', { name: /Weather on the Launcher/ }).click(); await wait('your location');
+await page.locator('.who').click(); await page.getByRole('menuitemcheckbox', { name: /Weather on the Launcher/ }).click(); await wait('· Khushab');
+// snowfall: its own switch in the profile menu; turning it off removes the flakes and leaves the (accurate) weather chip alone
+{ const flakesBefore = await page.locator('.snowlayer .snowf').count(); const snowAttr = await page.locator('.launcher').getAttribute('data-snow');
+  await page.locator('.who').click(); await page.getByRole('menuitemcheckbox', { name: /Snowfall on the Launcher/ }).click();
+  await page.waitForFunction(() => document.querySelector('.launcher')?.dataset.snow === 'false');
+  check('V7s', 'Snowfall has its own switch: off removes every flake and keeps the weather chip; the setting is remembered on this device',
+    (await page.locator('.snowlayer .snowf').count()) === 0 && (await page.locator('.wxchip').count()) === 1 && (await page.evaluate(() => localStorage.getItem('l2f.snow'))) === 'off', `${snowAttr} ${flakesBefore}`);
+  await page.locator('.who').click(); await page.getByRole('menuitemcheckbox', { name: /Snowfall on the Launcher/ }).click(); await wait('· Khushab'); }
 await page.context().clearPermissions(); await page.evaluate(() => sessionStorage.clear()); await page.reload(); await wait('The sky follows your time of day');
-check('V8', 'If location is not allowed, the Launcher shows time of day only: no chip, no error', (await page.locator('.wxchip').count()) === 0 && (await page.locator('.launcher').getAttribute('data-wx')) === 'none');
-await page.context().grantPermissions(['geolocation']); await page.reload(); await wait('your location');
+await wait('· Khushab');
+check('V8', 'Without any location permission the Launcher still shows Khushab weather (no prompt, no error)', (await page.locator('.wxchip').innerText()).includes('Khushab'));
+await page.context().grantPermissions(['geolocation']); await page.reload(); await wait('· Khushab');
 // keyboard: open a dialog from a tile, focus stays inside, Esc closes and focus returns to the tile
 await tile('portal').focus(); await page.keyboard.press('Enter'); await wait('Client Portal is locked');
 await page.keyboard.press('Tab'); await page.keyboard.press('Tab'); await page.keyboard.press('Tab');
@@ -834,8 +852,11 @@ for (const [w, label] of [[1280, 'desktop'], [768, 'tablet'], [390, 'phone']]) {
     check('R-tiles', 'On a phone the Launcher shows three columns of plates with names only (descriptions hidden), as in the design', (await p.locator('.tile').first().evaluate((e) => getComputedStyle(e.querySelector('.t-desc')).display)) === 'none' && new Set(await p.locator('.tile').evaluateAll((els) => els.slice(0, 6).map((e) => Math.round(e.getBoundingClientRect().left / 12)))).size === 3);
     await shot(p, 'i1-phone-launcher'); await p.goto(base + '/#/office/admin/members'); await p.reload(); await wait('Joining is by invitation only.', p); await shot(p, 'i2-phone-members');
     await p.goto(base + '/#/office/funnels/avatars'); await p.reload(); await wait('Avatar for C1', p); await p.evaluate(() => document.querySelector('.hdr .iconbtn')?.focus());
-    await p.click('#org-switcher'); const sheet = await p.locator('#org-menu').boundingBox();
-    check('R-sheet', 'On a phone the organization menu opens as a bottom sheet', sheet.y + sheet.height > 780 && sheet.width > 330);
+    // V8 (02_GLOBAL_SHELL §1): on a phone the rail is hidden; the organization mark in the app bar opens the apps-and-account sheet,
+    // which holds the Launcher, notifications, both organizations, the apps, the profile and Sign out
+    await p.click('#acct-sheet-btn'); await wait('Apps and account', p); const sheet = await p.locator('.dlg').boundingBox();
+    const sheetText = await p.locator('.dlg').innerText();
+    check('R-sheet', 'On a phone the organization mark opens the apps-and-account sheet with both organizations, the Launcher and Sign out', sheet.width > 330 && /Layer2Funnels/.test(sheetText) && /Aurj/.test(sheetText) && /Launcher/.test(sheetText) && /Sign out/.test(sheetText) && !(await p.locator('.rail').isVisible()), sheetText.slice(0, 200));
     await shot(p, 'i3-phone-switcher');
   }
   await p.context().close();

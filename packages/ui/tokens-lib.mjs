@@ -23,7 +23,7 @@ export function ratio(a, b) { const [x, y] = [lum(a), lum(b)].sort((p, q) => q -
 export const PAIRS = [
   ['text', 'bg', 4.5], ['text', 'surface', 4.5], ['text', 'sunk', 4.5], ['text2', 'bg', 4.5], ['text2', 'surface', 4.5], ['text2', 'sunk', 4.5],
   ['muted', 'bg', 4.5], ['muted', 'surface', 4.5], ['muted', 'surface2', 4.5], ['muted', 'sunk', 4.5],
-  ['brand-ink', 'brand', 4.5], ['action-ink', 'action', 4.5], ['action', 'surface', 4.5], ['action', 'bg', 4.5],
+  ['brand-ink', 'brand', 4.5], ['action-ink', 'action', 4.5], ['action', 'action-tint', 4.5], ['action', 'surface', 4.5], ['action', 'bg', 4.5],
   ['warn', 'warn-tint', 4.5], ['danger', 'danger-tint', 4.5], ['ok', 'ok-tint', 4.5], ['warn', 'surface', 4.5], ['danger', 'surface', 4.5], ['ok', 'surface', 4.5],
   ['control', 'surface', 3], ['control', 'bg', 3],
 ];

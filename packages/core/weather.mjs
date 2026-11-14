@@ -39,7 +39,8 @@ export function createWeather({ fetcher = (...a) => fetch(...a), now = Date.now,
     const t0 = json?.properties?.timeseries?.[0]; const temp = t0?.data?.instant?.details?.air_temperature;
     const symbol = t0?.data?.next_1_hours?.summary?.symbol_code ?? t0?.data?.next_6_hours?.summary?.symbol_code ?? t0?.data?.next_12_hours?.summary?.symbol_code;
     if (typeof temp !== 'number' || !symbol) throw new WeatherError('weather_unavailable');
-    return { condition: condition(symbol, temp), label: labelFor(symbol), tempC: Math.round(temp), source: ATTRIBUTION, licence: ATTRIBUTION_LINKS.licence, changes: ATTRIBUTION_LINKS.changes, updated: t0.time };
+    const wind = t0?.data?.instant?.details?.wind_speed;
+    return { condition: condition(symbol, temp), label: labelFor(symbol), tempC: Math.round(temp), symbol: String(symbol).replace(/_(day|night|polartwilight)$/, ''), windMs: typeof wind === 'number' ? Math.round(wind * 10) / 10 : null, source: ATTRIBUTION, licence: ATTRIBUTION_LINKS.licence, changes: ATTRIBUTION_LINKS.changes, updated: t0.time };
   };
   return {
     async get(lat, lon) {

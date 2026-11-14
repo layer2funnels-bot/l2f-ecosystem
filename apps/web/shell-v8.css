@@ -1,0 +1,101 @@
+/* Design V8 "Ledger" shell (02_GLOBAL_SHELL §1, §10): rail 64 px · app sidebar 248 px · app bar 52 px.
+   Taken from the V8 prototype (prototype-source v5.css rail rules + v7/v8 overrides), scoped under .shell.v8 so it cannot
+   reach any other markup (V8_BUG_FIXES: most v7 defects were class names shared between apps). The rail is dark in both themes. */
+.shell.v8{--rail:#121317;--rail-ink:#C9CBD1;background:linear-gradient(to right,var(--rail) 64px,transparent 64px);display:grid;grid-template-columns:64px 248px minmax(0,1fr);min-height:100vh;min-height:100dvh}
+.shell.v8.is-full{grid-template-columns:64px minmax(0,1fr)}
+.shell.v8.sidecol{grid-template-columns:64px 0 minmax(0,1fr)}
+.shell.v8.sidecol>.side{visibility:hidden;padding:0;border:0;overflow:hidden}
+/* editors hide the app sidebar (ui.css .shell:has(.ed-full)); the content then takes the sidebar's column too.
+   The fully focused editor frame (no rail, one 52 px top bar) arrives with the editors in P05. */
+.shell.v8:has(.ed-full){grid-template-columns:64px minmax(0,1fr)}
+
+/* ---- rail ---- */
+.shell.v8 .rail{position:sticky;top:0;height:100vh;height:100dvh;z-index:40;display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 0;background:var(--rail);color:var(--rail-ink);border-right:1px solid rgba(255,255,255,.06)}
+.shell.v8 .r-wrap{position:relative}
+.shell.v8 .r-div{width:28px;height:1px;background:rgba(255,255,255,.1);margin:4px 0}
+.shell.v8 .r-apps{display:grid;gap:6px}
+.shell.v8 .r-sp{flex:1}
+.shell.v8 .rail .r-btn,.shell.v8 .rail .r-org,.shell.v8 .rail .launch-btn,.shell.v8 .rail #bell,.shell.v8 .rail .who{width:44px;height:44px;min-height:44px;padding:0;border-radius:12px;display:grid;place-items:center;color:var(--rail-ink);background:none;border:0;position:relative;transition:background 160ms}
+.shell.v8 .rail .who{border-radius:50%;overflow:hidden}
+.shell.v8 .rail .who img{width:36px;height:36px;border-radius:50%;object-fit:cover}
+.shell.v8 .rail .r-btn:hover,.shell.v8 .rail .r-org:hover,.shell.v8 .rail .launch-btn:hover,.shell.v8 .rail #bell:hover{background:rgba(255,255,255,.08);color:#fff}
+.shell.v8 .rail .r-btn[aria-disabled="true"]{opacity:.55;cursor:not-allowed}
+.shell.v8 .rail svg.i{width:20px;height:20px}
+.shell.v8 .r-app{width:44px;height:44px;display:grid;place-items:center;border-radius:12px;position:relative}
+.shell.v8 .r-app:hover{background:rgba(255,255,255,.08)}
+.shell.v8 .r-app[aria-current="page"]::before{content:"";position:absolute;left:-10px;top:10px;bottom:10px;width:3px;border-radius:0 3px 3px 0;background:#F3F1EB}
+.shell.v8 .rail .plate{box-shadow:none;border-radius:9px}
+.shell.v8 .rail .plate::before{display:none}
+.shell.v8 .rail #bell .badge{position:absolute;top:6px;right:6px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:#FF5A47;color:#fff;font:700 10.5px/17px var(--font);text-align:center;box-shadow:0 0 0 2px var(--rail)}
+.shell.v8 .rail :focus-visible{outline:2px solid var(--action);outline-offset:2px}
+/* menus open to the right of the rail; the lower ones grow upwards */
+.shell.v8 .rail .menu{left:calc(100% + 10px);right:auto;top:0;transform-origin:top left}
+.shell.v8 .rail .r-bell .menu,.shell.v8 .rail .r-me .menu{top:auto;bottom:0;transform-origin:bottom left}
+
+/* ---- app sidebar (structure and text sizes unchanged; V8 active item) ---- */
+.shell.v8>.side{padding:12px 10px;background:var(--surface2);border-right:var(--bw) solid var(--line);overflow-x:hidden;min-width:0}
+.shell.v8 .side-top{display:flex;align-items:center;gap:10px;padding:6px 8px 14px}
+.shell.v8 .side-top b{font:650 17px/1.2 var(--font);letter-spacing:-.01em}
+.shell.v8 .side-top .plate,.shell.v8 .side .plate{box-shadow:none}
+.shell.v8 .side-top .plate::before{display:none}
+.shell.v8 .side .nav a[aria-current="page"]{background:var(--sunk);box-shadow:inset 2px 0 0 var(--app,var(--brand-deep));color:var(--text)}
+.shell.v8 .side .nav a span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ---- app bar: solid background, bottom rule (v7 used blur glass) ---- */
+.shell.v8 .hdr{min-height:52px;padding:6px clamp(12px,2vw,24px);background:var(--bg);-webkit-backdrop-filter:none;backdrop-filter:none;border-bottom:var(--bw) solid var(--line);gap:8px}
+.shell.v8 .hdr .crumb{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* app identity colour for the active marker (01_DESIGN_SYSTEM §2) */
+.shell.v8[data-app="office"]{--app:#C98F00}.shell.v8[data-app="projects"]{--app:#2B5CF0}.shell.v8[data-app="tasks"]{--app:#0EA5A4}.shell.v8[data-app="clients"]{--app:#EF5235}
+.shell.v8[data-app="drive"]{--app:#6B4FF0}.shell.v8[data-app="planner"]{--app:#5E9C14}.shell.v8[data-app="fmp"]{--app:#10B981}.shell.v8[data-app="agents"]{--app:#7E5BF2}
+
+/* ---- phone ≤760: rail and sidebar hidden; the org mark opens the apps-and-account sheet; bottom bar stays ---- */
+@media (max-width:760px){
+  .shell.v8,.shell.v8.is-full,.shell.v8.sidecol{grid-template-columns:minmax(0,1fr);background:none}
+  .shell.v8 .rail,.shell.v8>.side{display:none}
+  .shell.v8 .hdr{padding:6px 8px}
+}
+@media (pointer:coarse){.shell.v8 .hdr .iconbtn{min-width:44px;min-height:44px}}
+
+/* apps-and-account sheet */
+.acct-sheet{display:grid;gap:8px}
+.acct-sheet .over{margin:10px 0 2px;font:600 12.5px/1.3 var(--font);color:var(--muted)}
+.acct-sheet .btn{justify-content:flex-start;gap:10px;min-height:44px}
+.acct-sheet .opt-org small{margin-left:auto;color:var(--muted)}
+.acct-sheet .opt-org[aria-pressed="true"]{border-color:var(--action)}
+.acct-apps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.acct-apps .appitem{display:grid;justify-items:center;gap:6px;padding:10px 2px;border-radius:10px;font-size:12.5px;font-weight:550;color:var(--text2);text-align:center;text-decoration:none;min-height:44px}
+.acct-apps .appitem:hover{background:var(--surface2);color:var(--text)}
+@media (prefers-reduced-motion:reduce){.shell.v8 .rail *{transition:none!important}}
+
+/* ---- global search (V8 02 §5): dialog 680 px, scope row, grouped results with app marks, key hints; full screen on phones ---- */
+.gsx-scrim{position:fixed;inset:0;z-index:calc(var(--z-dialog) + 5);background:rgba(10,11,14,.42);display:flex;justify-content:center;align-items:flex-start;padding:72px 16px 16px;animation:fade 160ms}
+.gsx{width:min(680px,100%);max-height:76vh;display:flex;flex-direction:column;background:var(--surface);color:var(--text);border:var(--bw) solid var(--line);border-radius:16px;box-shadow:var(--sh3);overflow:hidden;font:400 14.5px/1.45 var(--font)}
+.gsx-in{display:flex;align-items:center;gap:12px;padding:0 18px;min-height:70px;border-bottom:var(--bw) solid var(--line)}
+.gsx-in svg.i{width:20px;height:20px;color:var(--muted)}
+.gsx-in input{flex:1;min-width:0;border:0;outline:0;background:none;color:var(--text);font:400 17px/1.4 var(--font);min-height:44px}
+.gsx-in input::-webkit-search-cancel-button{display:none}
+.gsx kbd{font:500 11.5px/1 var(--mono);padding:3px 6px;border-radius:5px;background:var(--sunk);color:var(--text2)}
+.gsx-scopes{display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:var(--bw) solid var(--line);overflow-x:auto}
+.gsx-lbl{font:600 12.5px/1 var(--font);color:var(--muted);white-space:nowrap}
+.gsx-scope{display:flex;gap:6px}
+.gsx-scope button{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;min-height:32px;padding:0 12px 0 8px;border-radius:999px;border:var(--bw) solid var(--line2);background:var(--surface);color:var(--text2);font:550 13px/1 var(--font);cursor:pointer}
+.gsx-scope button[aria-pressed="true"]{background:var(--text);border-color:var(--text);color:var(--surface)}
+.gsx-scope button .plate{box-shadow:none;border-radius:5px}.gsx-scope button .plate::before{display:none}.gsx-scope button svg.i{width:15px;height:15px}
+.gsx-res{overflow-y:auto;padding:6px 8px 10px;flex:1;min-height:120px}
+.gsx-h{font:600 12px/1.3 var(--font);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:12px 10px 6px}
+.gsx-row{display:flex;align-items:center;gap:12px;min-height:52px;padding:6px 10px;border-radius:10px;color:var(--text);text-decoration:none}
+.gsx-row:hover,.gsx-row[aria-selected="true"]{background:var(--sunk)}
+.gsx-row .plate{box-shadow:none;flex:none}.gsx-row .plate::before{display:none}
+.gsx-main{display:grid;min-width:0;flex:1}
+.gsx-main b{font:600 15px/1.3 var(--font);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gsx-main b mark{background:var(--brand-soft);color:inherit;border-radius:3px;padding:0 1px}
+.gsx-main small{font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gsx-row .pill{flex:none}
+.gsx-hint{margin:10px 8px;font-size:13.5px;color:var(--muted)}
+.gsx-empty{display:grid;gap:4px;padding:24px 8px;text-align:center}.gsx-empty span{color:var(--muted);font-size:13.5px}
+.gsx-ai{display:flex;align-items:center;gap:10px;margin:8px;padding:10px 12px;border:var(--bw) dashed var(--line2);border-radius:8px;color:var(--muted);font-size:13.5px}.gsx-ai span:nth-child(2){flex:1}
+.gsx-foot{display:flex;flex-wrap:wrap;align-items:center;gap:14px;padding:8px 16px;border-top:var(--bw) solid var(--line);background:var(--surface2);font-size:12.5px;color:var(--muted)}
+.gsx-foot .grow{flex:1}.gsx-foot .btn.link{min-height:32px;font-size:13px}
+@media (max-width:760px){.gsx-scrim{padding:0}.gsx{width:100%;max-height:none;height:100dvh;border-radius:0;border:0}.gsx-foot>span:not(.grow){display:none}}
+@media (prefers-reduced-motion:reduce){.gsx-scrim{animation:none}}
