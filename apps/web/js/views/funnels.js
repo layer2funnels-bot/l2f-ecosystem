@@ -172,6 +172,43 @@ export function funnelListView(ctx, typeKey) {
 }
 
 // ---- record (read view, edit form)
+// Archive / restore, share with the client / stop sharing, delete permanently (type the name): one implementation for the record page
+// and the V8 detail pages (Offers, Stories, Brand Kits), so no function is lost in the redesign.
+export function recordManager(ctx, typeKey, { view, backTo }) {
+  async function act(r, verb, done) {
+    const res = await run(ctx, `funnels.${typeKey}.${verb}`, { id: r.id });
+    if (!ctx.live()) return;
+    if (!res.ok) return toast(messageFor(res.error?.code), false);
+    toast(done); view(res.data[0]);
+  }
+  function confirmArchive(r) {
+    dialog({ title: `Archive “${nameOf(typeKey, r)}”?`, body: h('p', {}, `It disappears from lists${r.client_visible ? ` and ${ctx.clients.get(r.client_id) ?? 'the client'} can no longer see it` : ''}. Nothing is deleted. You can restore it any time.`),
+      actions: [{ label: 'Archive', cls: 'primary', on: () => act(r, 'archive', 'Archived. Restore it from the Archived list.') }, { label: 'Cancel', focus: true }] });
+  }
+  function share(r) {
+    if (!r.client_id) return dialog({ title: 'Share with a client', body: h('p', {}, 'Only a record that belongs to a client can be shared with that client. This one belongs to the organization. Create it under a client to share it.'), actions: [{ label: 'Got it', focus: true }] });
+    const cn = ctx.clients.get(r.client_id) ?? 'the client';
+    dialog({ title: `Share with ${cn}`, wide: true, body: [h('p', { style: 'margin-bottom:var(--space-3)' }, `${cn} sees only what you share, and only in their Client Portal. They can view it, not change it.`),
+      notice('info', 'info', 'The Client Portal is locked for now. This saves the choice; nothing is visible to the client until the Portal is turned on.')],
+    actions: [{ label: 'Share', cls: 'primary', on: async () => { const x = await run(ctx, `funnels.${typeKey}.share`, { id: r.id, visible: true }); if (!x.ok) return toast(messageFor(x.error?.code), false); toast(`Shared with ${cn}.`); view(x.data[0]); } }, { label: 'Cancel', focus: true }] });
+  }
+  function unshare(r, cn) {
+    dialog({ title: `Stop sharing with ${cn}?`, body: h('p', {}, `${cn} loses access right away. Your team’s copy isn’t affected.`),
+      actions: [{ label: 'Stop sharing', cls: 'dng', on: async () => { const x = await run(ctx, `funnels.${typeKey}.share`, { id: r.id, visible: false }); if (!x.ok) return toast(messageFor(x.error?.code), false); toast(`Stopped sharing with ${cn}.`, false); view(x.data[0]); } }, { label: 'Keep sharing', focus: true }] });
+  }
+  function del(r) {
+    const nm = nameOf(typeKey, r); const cf = field({ id: 'cf', label: 'Type the name to confirm', autocomplete: 'off', hint: nm });
+    dialog({ title: `Delete “${nm}” permanently?`, wide: true, body: [notice('err', 'warn', [h('b', {}, 'This can’t be undone.'), ` It’s removed for everyone${r.client_visible ? ', and removed from the client’s share' : ''}.`]), cf.el],
+      actions: [{ label: 'Delete permanently', cls: 'dng', keep: true, on: async (close) => {
+        cf.ok(); if (cf.input.value.trim() !== nm) { cf.error('That doesn’t match the name.'); return false; }
+        const x = await run(ctx, `funnels.${typeKey}.delete`, { id: r.id }); if (!x.ok) { toast(messageFor(x.error?.code), false); return false; }
+        close(); toast('Deleted permanently.', false); ctx.go(backTo);
+      } }, { label: 'Cancel' }] });
+  }
+
+  return { act, confirmArchive, share, unshare, del };
+}
+
 export function funnelRecordView(ctx, typeKey, id) {
   const t = TYPE[typeKey]; const o = t.obj; const isNew = id === 'new';
   const root = h('div', {}, skeleton(5));
@@ -275,37 +312,7 @@ export function funnelRecordView(ctx, typeKey, id) {
     (Object.values(fl)[0]).input.focus();
   }
 
-  // ---- actions
-  async function act(r, verb, done) {
-    const res = await run(ctx, `funnels.${typeKey}.${verb}`, { id: r.id });
-    if (!ctx.live()) return;
-    if (!res.ok) return toast(messageFor(res.error?.code), false);
-    toast(done); view(res.data[0]);
-  }
-  function confirmArchive(r) {
-    dialog({ title: `Archive “${nameOf(typeKey, r)}”?`, body: h('p', {}, `It disappears from lists${r.client_visible ? ` and ${ctx.clients.get(r.client_id) ?? 'the client'} can no longer see it` : ''}. Nothing is deleted. You can restore it any time.`),
-      actions: [{ label: 'Archive', cls: 'primary', on: () => act(r, 'archive', 'Archived. Restore it from the Archived list.') }, { label: 'Cancel', focus: true }] });
-  }
-  function share(r) {
-    if (!r.client_id) return dialog({ title: 'Share with a client', body: h('p', {}, 'Only a record that belongs to a client can be shared with that client. This one belongs to the organization. Create it under a client to share it.'), actions: [{ label: 'Got it', focus: true }] });
-    const cn = ctx.clients.get(r.client_id) ?? 'the client';
-    dialog({ title: `Share with ${cn}`, wide: true, body: [h('p', { style: 'margin-bottom:var(--space-3)' }, `${cn} sees only what you share, and only in their Client Portal. They can view it, not change it.`),
-      notice('info', 'info', 'The Client Portal is locked for now. This saves the choice; nothing is visible to the client until the Portal is turned on.')],
-    actions: [{ label: 'Share', cls: 'primary', on: async () => { const x = await run(ctx, `funnels.${typeKey}.share`, { id: r.id, visible: true }); if (!x.ok) return toast(messageFor(x.error?.code), false); toast(`Shared with ${cn}.`); view(x.data[0]); } }, { label: 'Cancel', focus: true }] });
-  }
-  function unshare(r, cn) {
-    dialog({ title: `Stop sharing with ${cn}?`, body: h('p', {}, `${cn} loses access right away. Your team’s copy isn’t affected.`),
-      actions: [{ label: 'Stop sharing', cls: 'dng', on: async () => { const x = await run(ctx, `funnels.${typeKey}.share`, { id: r.id, visible: false }); if (!x.ok) return toast(messageFor(x.error?.code), false); toast(`Stopped sharing with ${cn}.`, false); view(x.data[0]); } }, { label: 'Keep sharing', focus: true }] });
-  }
-  function del(r) {
-    const nm = nameOf(typeKey, r); const cf = field({ id: 'cf', label: 'Type the name to confirm', autocomplete: 'off', hint: nm });
-    dialog({ title: `Delete “${nm}” permanently?`, wide: true, body: [notice('err', 'warn', [h('b', {}, 'This can’t be undone.'), ` It’s removed for everyone${r.client_visible ? ', and removed from the client’s share' : ''}.`]), cf.el],
-      actions: [{ label: 'Delete permanently', cls: 'dng', keep: true, on: async (close) => {
-        cf.ok(); if (cf.input.value.trim() !== nm) { cf.error('That doesn’t match the name.'); return false; }
-        const x = await run(ctx, `funnels.${typeKey}.delete`, { id: r.id }); if (!x.ok) { toast(messageFor(x.error?.code), false); return false; }
-        close(); toast('Deleted permanently.', false); ctx.go(backTo);
-      } }, { label: 'Cancel' }] });
-  }
+  const { act, confirmArchive, share, unshare, del } = recordManager(ctx, typeKey, { view: (r) => view(r), backTo });
 
   open();
   return h('section', {}, subnav(typeKey), root);

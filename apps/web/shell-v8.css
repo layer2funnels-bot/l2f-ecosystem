@@ -161,3 +161,4 @@
 .shell.v8 .focusbar .hdr-ttl{line-height:1.15}.shell.v8 .focusbar .hdr-ttl b{font:700 15px/1.15 var(--font)}.shell.v8 .focusbar .hdr-ttl small{font-size:12px;line-height:1.15;color:var(--muted)}
 .shell.v8.focused main.content{padding:0;max-width:none}
 @media (pointer:coarse){.shell.v8 .focusbar .launch-btn{width:44px;height:44px}}
+.shell.v8 .focusbar .hdr-ttl{flex:1}.shell.v8 .focusbar-acts{display:flex;align-items:center;gap:8px;margin-left:auto}   /* V8 focusBar right-hand actions */

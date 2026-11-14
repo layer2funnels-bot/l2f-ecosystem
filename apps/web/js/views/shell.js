@@ -261,7 +261,8 @@ export function shellView({ onSearch = null, app, orgs, active, email, name, rou
     ? h('header', { class: 'hdr bar focusbar' }, sheetBtn, h('a', { class: 'iconbtn hdr-back', href: focused.back ?? '#/launcher', 'aria-label': 'Back', title: 'Back' }, icon('right')),
       appSwitcher({ catalog, registry, launcherCurrent: false, suffix: '-f', currentApp }),
       h('span', { class: 'focusbar-photo', 'aria-hidden': 'true' }, ...avatarBits(name || email, me?.photo)),
-      h('div', { class: 'hdr-ttl' }, h('b', {}, focused.title), focused.sub ? h('small', {}, focused.sub) : null))
+      h('div', { class: 'hdr-ttl' }, h('b', {}, focused.title), focused.sub ? h('small', {}, focused.sub) : null),
+      focused.actions?.length ? h('div', { class: 'focusbar-acts' }, ...focused.actions) : null)   // V8 focusBar `right`: Cancel · Save draft · Create …
     : h('header', { class: full ? 'hdr bar is-full' : 'hdr bar' }, sheetBtn, collapse,
       full ? h('span', { class: 'hdr-app' }, plateOf(manifest ?? { id: currentApp }, 26)) : null, crumb);
   shellEl.append(theRail, ...(full || focused ? [] : [side]), h('div', { class: 'main' }, header, h('main', { class: full ? 'content flush wide is-full' : 'content', id: 'main', 'aria-busy': 'false' }, banner ?? null, content)));
