@@ -141,9 +141,9 @@ await page.keyboard.press('Escape');
 // global search (V8 02 §5): Ctrl K opens it scoped to the current app; pages and menus are found; Enter opens; Esc closes
 await page.keyboard.press('Control+k'); await page.waitForSelector('#gsq');
 const gsScope = await page.locator('.gsx-scope button[aria-pressed=true]').innerText();
-await page.keyboard.type('Requests'); await page.waitForSelector('.gsx-row:has-text("Requests & Approvals")'); await page.waitForFunction(() => !/Searching/.test(document.querySelector('.gsx-res')?.innerText ?? '')); await shot(page, 'b2-search');
+await page.keyboard.type('Customer Av'); await page.waitForSelector('.gsx-row:has-text("Customer Avatars")'); await page.waitForFunction(() => !/Searching/.test(document.querySelector('.gsx-res')?.innerText ?? '')); await shot(page, 'b2-search');
 check('GS-UI1', 'Ctrl K opens global search scoped to the current app (Office); typing finds apps, pages and menus; the server search answers', gsScope === 'Office' && (await page.locator('.gsx-row').count()) >= 1 && !(await page.getByText('Search couldn’t reach the server').count()));
-await page.keyboard.press('Enter'); await page.waitForFunction(() => location.hash.startsWith('#/clients/requests'));
+await page.keyboard.press('Enter'); await page.waitForFunction(() => location.hash.startsWith('#/office/funnels/avatars'));
 check('GS-UI2', 'Enter opens the selected result and the search closes', (await page.locator('.gsx-scrim').count()) === 0);
 await page.locator('#rail-search').click(); await page.waitForSelector('#gsq'); await page.keyboard.press('Escape');
 check('GS-UI3', 'The rail\'s search button opens it too, and Escape closes it', (await page.locator('.gsx-scrim').count()) === 0);
