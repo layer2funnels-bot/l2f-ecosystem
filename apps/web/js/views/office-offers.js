@@ -12,10 +12,10 @@ const BILLING = [['one_off', 'One-off'], ['recurring', 'Recurring'], ['payment_p
 const STEPS = ['Not on a ladder', 'Free (lead magnet)', 'Low-ticket', 'Core offer', 'Premium'];
 const CURRENCIES = ['USD', 'GBP', 'EUR', 'PKR', 'AED'];
 const TONES = ['#E8B820', '#FF8A6B', '#A898FF', '#5FDCCB', '#9CC8FF', '#FF9CC8', '#D3F38A', '#FFD27A'];
-const tone = (id) => TONES[[...String(id)].reduce((a, c) => a + c.charCodeAt(0), 0) % TONES.length];
+export const tone = (id) => TONES[[...String(id)].reduce((a, c) => a + c.charCodeAt(0), 0) % TONES.length];
 const label = (list, k) => (list.find(([v]) => v === k) ?? [k, ''])[1];
 export const price = (o) => (o.price_amount == null ? '—' : new Intl.NumberFormat(undefined, { style: 'currency', currency: o.currency || 'USD', maximumFractionDigits: 0 }).format(o.price_amount));
-const backLink = (href, text) => h('a', { class: 'btn quiet sm backlink', href }, h('span', { style: 'display:inline-flex;transform:scaleX(-1)' }, icon('right')), text);
+export const backLink = (href, text) => h('a', { class: 'btn quiet sm backlink', href }, h('span', { style: 'display:inline-flex;transform:scaleX(-1)' }, icon('right')), text);
 
 export function offersListView(ctx) {
   const root = h('div', { class: 'v8p-office' }); const grid = h('div', { class: 'cardgrid' }, skeleton(3));
@@ -84,6 +84,7 @@ export function offerFormView(ctx, id = null) {
     const sel = (lbl, opts, val) => { const s = h('select', {}, ...opts.map(([v, l]) => h('option', { value: v }, l))); if (val) s.value = val; return [h('div', { class: 'field' }, h('label', {}, lbl), s), s]; };
     const [fName, name] = inp('Name', o.name, { placeholder: 'e.g. Funnel Done-For-You', required: true, maxlength: 200 });
     const [fType, type] = sel('Type', TYPES, o.offer_type ?? 'service'); const [fStat, status] = sel('Status', [['draft', 'Draft'], ['active', 'Active']], o.status ?? 'draft');
+    const who = id ? null : h('select', {}, h('option', { value: '' }, ctx.orgName), ...ctx.clientsWhere('funnels.offer.create').map(([i, n]) => h('option', { value: i }, `A client: ${n}`)));
     const [fProm, promise] = inp('Promise (one line)', o.promise, { placeholder: 'A finished funnel that books calls, in 30 days.', maxlength: 400 });
     const [fPrice, priceIn] = inp('Price', o.price_amount ?? '', { placeholder: '3,000', inputmode: 'decimal' }); const [fCur, cur2] = sel('Currency', CURRENCIES.map((c) => [c, c]), o.currency ?? 'USD');
     const billing = seg(BILLING, st.billing, (k) => { st.billing = k; paintPrev(); }, 'Billing');
@@ -104,7 +105,7 @@ export function offerFormView(ctx, id = null) {
       h('small', { class: 'muted' }, [label(BILLING, st.billing), label(TYPES, type.value)].join(' · ')));
     for (const el of [name, promise, priceIn, cur2, type]) el.addEventListener('input', () => { paintPrev(); dirty.set(true); });
     paintPrev();
-    const sections = [['Basics', [fName, h('div', { class: 'row2' }, fType, fStat), fProm]], ['Price and terms', [h('div', { class: 'row2' }, fPrice, fCur), billing, h('div', { class: 'row2' }, fGuar, fDel)]],
+    const sections = [['Basics', [fName, h('div', { class: 'row2' }, fType, fStat), fProm, ...(who ? [h('div', { class: 'field' }, h('label', {}, 'Belongs to'), who)] : [])]], ['Price and terms', [h('div', { class: 'row2' }, fPrice, fCur), billing, h('div', { class: 'row2' }, fGuar, fDel)]],
       ['What’s included', [incl, fBon]], ['Who it’s for', [h('div', { class: 'field' }, h('label', {}, 'Customer avatars'), chips.childElementCount ? chips : h('p', { class: 'hint' }, 'No customer avatars yet.')), fLad]],
       ['Internal notes', [h('div', { class: 'field' }, notes)]]];
     const save = async (asDraft) => {
@@ -112,7 +113,7 @@ export function offerFormView(ctx, id = null) {
       const amount = String(priceIn.value).trim() ? Number(String(priceIn.value).replace(/[^0-9.]/g, '')) : null;
       const body = { name: name.value.trim(), offer_type: type.value, status: asDraft ? 'draft' : status.value === 'draft' && !id ? 'active' : status.value, promise: promise.value.trim(), billing: st.billing, guarantee: guarantee.value.trim(), delivery_time: delivery.value.trim(),
         included: st.included.map((x) => x.trim()).filter(Boolean), bonuses: bonuses.value.trim(), avatar_ids: st.avatar_ids, ladder_step: ladder.value, internal_notes: notes.value, ...(amount != null && !Number.isNaN(amount) ? { price_amount: amount, currency: cur2.value } : {}) };
-      const r = await ctx.api.call(id ? 'funnels.offers.update' : 'funnels.offers.create', id ? { id, ...body } : { kind: 'offer', ...body });
+      const r = await ctx.api.call(id ? 'funnels.offers.update' : 'funnels.offers.create', id ? { id, ...body } : { kind: 'offer', ...body, ...(who?.value ? { client: who.value } : {}) });
       if (!r.ok) return toast(messageFor(r.error?.code), false);
       dirty.set(false); toast(id ? 'Offer saved.' : asDraft ? 'Saved as draft.' : 'Offer created.'); ctx.go(hrefFor.record('offers', r.data[0].id));
     };

@@ -521,6 +521,8 @@
 .v8p-office .fsec6 h3 span{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:var(--sunk);font:600 12px var(--font)}
 .v8p-office .chipsel{display:flex;gap:6px;flex-wrap:wrap}
 .v8p-office .chipsel .chip.on{background:var(--text);color:var(--bg)}
+.v8p-office .logodrop{display:grid;justify-items:center;gap:4px;padding:18px;border-radius:12px;border:1.5px dashed var(--line2);font-size:13px;text-align:center}
+.v8p-office .logodrop small{color:var(--muted)}
 .v8p-office .logodrop.dark{background:#16171B;color:#F3F1EB;border-color:#3A3D46}
 .v8p-office .colrows{display:grid;gap:6px}
 .v8p-office .csw{width:30px;height:30px;border-radius:8px;background:var(--c);box-shadow:inset 0 0 0 1px rgba(0,0,0,.1);flex-shrink:0}

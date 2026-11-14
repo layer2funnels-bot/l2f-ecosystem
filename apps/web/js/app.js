@@ -38,6 +38,8 @@ import { officeHomeView } from './views/home.js';
 import { adminView } from './views/admin.js';
 import { funnelsHomeView, funnelListView, funnelRecordView } from './views/funnels.js';
 import { offersListView, offerView, offerFormView } from './views/office-offers.js';
+import { storiesListView, storyView, storyFormView, brandKitsListView, brandKitView, brandKitFormView } from './views/office-records.js';
+const V8REC = { offers: [offersListView, offerView, offerFormView], stories: [storiesListView, storyView, storyFormView], brand_kits: [brandKitsListView, brandKitView, brandKitFormView] };
 
 const cfg = window.L2F_CONFIG;
 const root = document.getElementById('app');
@@ -447,9 +449,9 @@ async function render(opts = {}) {
       case 'funnels': content = funnelsHomeView(c); break;
       case 'strategies': content = strategiesListView(c); break;
       case 'strategy': content = strategyView(c, route.params.id); break;
-      case 'funnel-list': content = route.params.type === 'offers' ? offersListView(c) : funnelListView(c, route.params.type); break;
-      case 'funnel-record': content = route.params.type !== 'offers' ? funnelRecordView(c, route.params.type, route.params.id)
-        : route.params.id === 'new' ? offerFormView(c) : route.params.edit ? offerFormView(c, route.params.id) : offerView(c, route.params.id); break;
+      case 'funnel-list': { const v = V8REC[route.params.type]; content = v ? v[0](c) : funnelListView(c, route.params.type); break; }
+      case 'funnel-record': { const v = V8REC[route.params.type]; const { id } = route.params;
+        content = !v ? funnelRecordView(c, route.params.type, id) : id === 'new' ? v[2](c) : route.params.edit ? v[2](c, id) : v[1](c, id); break; }
       case 'doc': content = docView({ api, id: route.params.id, ctx: c }); break;
       case 'social': content = socialView({ api, ctx: c, route: { view: route.params.view, id: route.params.id, query: route.query } }); break;
       case 'boards': content = boardsView({ api, ctx: c, route: { query: route.query } }); break;

@@ -3,7 +3,7 @@ export const FUNNEL_TYPES = [
   { key: 'avatars', label: 'Avatars', full: 'Customer avatars', obj: 'avatar', one: 'Avatar', page: 'funnels.avatars', record: 'funnels.avatar' },
   { key: 'offers', label: 'Offers & Products', full: 'Offers & Products', obj: 'offer', one: 'Offer', page: 'funnels.offers', record: 'funnels.offer' },
   { key: 'stories', label: 'Stories', full: 'Story bank', obj: 'story', one: 'Story', page: 'funnels.stories', record: 'funnels.story' },
-  { key: 'brand_kits', label: 'Brand Kit', full: 'Brand Kit', obj: 'brandkit', one: 'Brand kit', page: 'funnels.brand_kits', record: 'funnels.brand_kit' },
+  { key: 'brand_kits', label: 'Brand Kits', full: 'Brand Kits', obj: 'brandkit', one: 'Brand kit', page: 'funnels.brand_kits', record: 'funnels.brand_kit' },
 ];
 const byKey = Object.fromEntries(FUNNEL_TYPES.map((t) => [t.key, t]));
 
@@ -82,7 +82,7 @@ export function parseRoute(hash) {
     if (byKey[c] && seg.length === 3) return r('funnel-list', { type: c });
     if (byKey[c] && d === 'new' && seg.length === 4) return r('funnel-record', { type: c, id: 'new' });
     if (byKey[c] && d && seg.length === 4) return r('funnel-record', { type: c, id: d });
-    if (c === 'offers' && d && seg[4] === 'edit' && seg.length === 5) return r('funnel-record', { type: c, id: d, edit: true });
+    if (['offers', 'stories', 'brand_kits'].includes(c) && d && seg[4] === 'edit' && seg.length === 5) return r('funnel-record', { type: c, id: d, edit: true });
   }
   return r('not-found');
 }
