@@ -120,13 +120,13 @@ const keys = await page.locator('.tile').evaluateAll((els) => els.map((e) => e.d
 check('U10', 'Owner sees the twelve apps grouped Everyday then Studio in the v4 order, Funnel Mapper Pro among them as a normal tile', keys.join() === 'office,projects,clients,drive,planner,portal,forms,value_ladder,social_planner,whiteboard,funnel_mapper_pro,layer2_agents', keys.join());
 const state = async (k) => (await tile(k).getAttribute('class')).split(' ')[1];
 check('U11', 'Tile states come from the real catalog: Client Portal locked, five apps coming soon', (await state('portal')) === 'locked' && (await tile('portal').innerText()).includes('Locked') && (await state('forms')) === 'soon' && (await tile('layer2_agents').innerText()).includes('Soon') && (await state('office')) === 'ok');
-await wait('your location');
+await wait('· Khushab');
 await shot(page, 'b1-launcher');
 const sky = await page.locator('.launcher').evaluate((e) => ({ part: e.dataset.part, wx: e.dataset.wx }));
 const hourNow = await page.evaluate(() => new Date().getHours()); const partNow = hourNow >= 5 && hourNow < 12 ? 'morning' : hourNow >= 12 && hourNow < 17 ? 'afternoon' : hourNow >= 17 && hourNow < 21 ? 'evening' : 'night';
-check('V1', 'Launcher sky: time of day from the clock, weather from the server, chip reads "Light rain · 16° · your location", MET Norway credited with a link',
-  sky.part === partNow && sky.wx === 'rain' && (await page.locator('.wxchip').innerText()).includes('Light rain · 16° · your location') && (await page.getByRole('link', { name: 'Data from MET Norway' }).count()) === 1);
-check('V2', 'MET Norway was asked once, by our server, with an identifying User-Agent and coordinates cut to two decimals', metCalls.length === 1 && /lat=31\.52&lon=74\.36/.test(metCalls[0].url) && /@|\./.test(metCalls[0].ua ?? ''), JSON.stringify(metCalls));
+check('V1', 'Launcher sky: time of day from the clock, Khushab weather from the server (owner, 14 Nov), chip reads "Light rain · 16° · Khushab", MET Norway credited with a link',
+  sky.part === partNow && sky.wx === 'rain' && (await page.locator('.wxchip').innerText()).includes('Light rain · 16° · Khushab') && (await page.getByRole('link', { name: 'Data from MET Norway' }).count()) === 1);
+check('V2', 'MET Norway was asked once, by our server, for Khushab (32.30, 72.35) with an identifying User-Agent', metCalls.length === 1 && /lat=32\.30&lon=72\.35/.test(metCalls[0].url) && /@|\./.test(metCalls[0].ua ?? ''), JSON.stringify(metCalls));
 check('V3', 'Apps sit on the frosted shelf in two labelled groups, Everyday and Studio', (await page.locator('.shelf h2').allInnerTexts()).join().toLowerCase() === 'everyday,studio');
 await page.keyboard.press('Escape'); await page.locator('body').click({ position: { x: 5, y: 400 } }); await page.keyboard.press('/');
 check('V4', '"/" jumps to Find an app; typing narrows the tiles; Enter opens the first match', (await page.evaluate(() => document.activeElement.id)) === 'app-find');
@@ -143,10 +143,18 @@ const callsBefore = metCalls.length;
 await page.locator('.who').click(); await page.getByRole('menuitemcheckbox', { name: /Weather on the Launcher/ }).click();
 await page.waitForFunction(() => !document.querySelector('.wxchip'));
 check('V7', 'Switching weather off in the profile menu removes the chip and the weather tint, and stops all weather calls', (await page.locator('.launcher').getAttribute('data-wx')) === 'none' && metCalls.length === callsBefore);
-await page.locator('.who').click(); await page.getByRole('menuitemcheckbox', { name: /Weather on the Launcher/ }).click(); await wait('your location');
+await page.locator('.who').click(); await page.getByRole('menuitemcheckbox', { name: /Weather on the Launcher/ }).click(); await wait('· Khushab');
+// snowfall: its own switch in the profile menu; turning it off removes the flakes and leaves the (accurate) weather chip alone
+{ const flakesBefore = await page.locator('.snowlayer .snowf').count(); const snowAttr = await page.locator('.launcher').getAttribute('data-snow');
+  await page.locator('.who').click(); await page.getByRole('menuitemcheckbox', { name: /Snowfall on the Launcher/ }).click();
+  await page.waitForFunction(() => document.querySelector('.launcher')?.dataset.snow === 'false');
+  check('V7s', 'Snowfall has its own switch: off removes every flake and keeps the weather chip; the setting is remembered on this device',
+    (await page.locator('.snowlayer .snowf').count()) === 0 && (await page.locator('.wxchip').count()) === 1 && (await page.evaluate(() => localStorage.getItem('l2f.snow'))) === 'off', `${snowAttr} ${flakesBefore}`);
+  await page.locator('.who').click(); await page.getByRole('menuitemcheckbox', { name: /Snowfall on the Launcher/ }).click(); await wait('· Khushab'); }
 await page.context().clearPermissions(); await page.evaluate(() => sessionStorage.clear()); await page.reload(); await wait('The sky follows your time of day');
-check('V8', 'If location is not allowed, the Launcher shows time of day only: no chip, no error', (await page.locator('.wxchip').count()) === 0 && (await page.locator('.launcher').getAttribute('data-wx')) === 'none');
-await page.context().grantPermissions(['geolocation']); await page.reload(); await wait('your location');
+await wait('· Khushab');
+check('V8', 'Without any location permission the Launcher still shows Khushab weather (no prompt, no error)', (await page.locator('.wxchip').innerText()).includes('Khushab'));
+await page.context().grantPermissions(['geolocation']); await page.reload(); await wait('· Khushab');
 // keyboard: open a dialog from a tile, focus stays inside, Esc closes and focus returns to the tile
 await tile('portal').focus(); await page.keyboard.press('Enter'); await wait('Client Portal is locked');
 await page.keyboard.press('Tab'); await page.keyboard.press('Tab'); await page.keyboard.press('Tab');

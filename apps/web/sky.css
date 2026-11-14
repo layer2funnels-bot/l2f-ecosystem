@@ -1,7 +1,48 @@
 /* Launcher extras on top of v4.css (the sky, orb, tint, weather pieces, shelf and tiles come from the approved prototype). */
 .launcher .wxslot{display:contents}
-.launcher .attrib{margin-top:12px}.launcher .attrib a{color:inherit;text-decoration:underline}
+.launcher .attrib{margin-top:12px}.launcher .attrib a{color:inherit;text-decoration:underline;display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:44px}
 .launcher .tile.opening{animation:zoomout var(--motion-base) var(--e-out) forwards}
 @keyframes zoomout{to{transform:scale(1.14);opacity:0}}
 .l-right{display:inline-flex;align-items:center;gap:14px}.themebtn{width:44px;height:44px;display:grid;place-items:center;border:0;border-radius:50%;background:transparent;color:#fff;cursor:pointer}
 .themebtn:hover{background:rgba(255,255,255,.14)}.themebtn svg{width:20px;height:20px}
+
+/* ---- Khushab atmosphere (owner, 14 Nov 2026; sky.js atmosphere()). Soft, translucent layers behind the shelf; they never take clicks,
+   stop while the tab is hidden, and disappear with reduced motion. There is no snow effect. ---- */
+.launcher .wx i{pointer-events:none}
+.launcher.paused .wx *{animation-play-state:paused!important}
+.w-cool .tint{background:linear-gradient(180deg,rgba(150,175,205,.30),rgba(205,215,228,.18))}
+.w-haze .tint{background:linear-gradient(180deg,rgba(190,182,170,.30),rgba(214,206,192,.26))}
+.w-fog .tint{background:linear-gradient(180deg,rgba(200,205,212,.42),rgba(225,228,232,.36))}
+.hazeb{position:absolute;inset:35% -15% -5%;background:radial-gradient(60% 40% at 50% 60%,rgba(235,226,210,.32),transparent 70%);filter:blur(18px);animation:hazedrift 40s ease-in-out infinite alternate}
+.hazeb.b2{inset:15% -25% 20%;opacity:.7;animation-duration:55s;animation-direction:alternate-reverse}
+.fogb{position:absolute;left:-30%;width:160%;height:22%;border-radius:50%;background:rgba(240,242,245,.30);filter:blur(28px);animation:drift linear infinite}
+.sunglow{position:absolute;inset:-20% -10% 30% 30%;background:radial-gradient(45% 45% at 70% 25%,rgba(255,214,140,.28),transparent 70%);animation:breathe 12s ease-in-out infinite alternate}
+.coolglow{position:absolute;inset:-10% 0 40% 20%;background:radial-gradient(50% 50% at 65% 20%,rgba(214,228,245,.24),transparent 70%);animation:breathe 16s ease-in-out infinite alternate}
+.windl{position:absolute;left:-30%;height:1.5px;border-radius:2px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);animation:gust linear infinite}
+@keyframes hazedrift{to{transform:translateX(6%)}}
+@keyframes breathe{from{opacity:.65}to{opacity:1}}
+@keyframes gust{from{transform:translateX(0)}to{transform:translateX(160vw)}}
+/* Snowfall: a creative winter visual with its own switch (owner, 14 Nov 2026). Three depths: far flakes small, slow and faint; near flakes
+   larger and quicker. Each flake falls and sways on its own timing; transform/opacity only, so the browser composites it cheaply. */
+.launcher .snowlayer{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:-1;animation:fxin 1.6s var(--e-out) both}
+.snowf{position:absolute;top:-12px;border-radius:50%;background:radial-gradient(circle at 35% 35%,rgba(255,255,255,.98),rgba(235,243,255,.75) 60%,rgba(220,232,255,0) 100%);will-change:transform;animation:snowfall linear infinite,snowsway ease-in-out infinite alternate}
+.snowf.d0{opacity:.55;filter:blur(.4px)}.snowf.d1{opacity:.8}.snowf.d2{opacity:.95;box-shadow:0 0 6px rgba(255,255,255,.45)}
+@keyframes snowfall{from{translate:0 -20px}to{translate:0 110vh}}
+@keyframes snowsway{from{transform:translateX(calc(var(--sway) * -.5))}to{transform:translateX(calc(var(--sway) * .5))}}
+/* cold blue-white light while it snows */
+.w-snow .tint{background:linear-gradient(180deg,rgba(150,185,230,.34),rgba(225,236,250,.24))}
+.w-snow .orb{filter:saturate(.6) brightness(1.05)}
+/* smooth changes between themes: the tint and orb ease in, weather layers fade in instead of popping */
+.launcher .tint,.launcher .orb{transition:background 1.2s var(--e-out),opacity 1.2s var(--e-out),filter 1.2s var(--e-out)}
+.launcher .wx{animation:fxin 1.4s var(--e-out) both}
+@keyframes fxin{from{opacity:0}to{opacity:1}}
+.launcher.paused .snowlayer *{animation-play-state:paused!important}
+@media (prefers-reduced-motion:reduce){.hazeb,.fogb,.sunglow,.coolglow,.windl,.snowf{display:none}.launcher .wx,.launcher .snowlayer{animation:none}}
+
+/* ---- V8 Launcher sizes (verbatim from the V8 prototype: prototype-source v7.css "Launcher: a little more zoomed in" + v8.css):
+   content 1240 px, tiles min 176 px (150 px above 1100 px so no app sits alone on a row), 96 px plates, names 16.5 px,
+   descriptions 13.5 px, hero up to 76 px in Bricolage Grotesque (the Launcher is the only place it appears), search 52 px. ---- */
+.lx .l-wrap{max-width:1240px}.lx .l-grid{grid-template-columns:repeat(auto-fill,minmax(176px,1fr));gap:10px}.lx .tile{padding:24px 10px 20px}.lx .t-name{font-size:16.5px}.lx .t-desc{font-size:13.5px}.lx .l-hero h1{font-size:clamp(46px,6vw,76px);font-family:"Bricolage Grotesque",var(--font)}.lx .l-find{min-height:52px;font-size:16px}.lx .l-group h2{font-size:13px}
+.lx .tile .plate{--s:96px}
+@media (min-width:1101px){.lx .l-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}}
+@media (max-width:760px){.lx .l-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.lx .tile{padding:14px 2px 10px}.lx .t-name{font-size:13.5px}.lx .tile .plate{--s:62px}}

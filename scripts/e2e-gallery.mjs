@@ -56,7 +56,7 @@ for (const org of ['l2f', 'aurj']) for (const theme of ['light', 'dark']) for (c
   check(`G1 ${tag}`, 'No sideways scrolling', m.overflow <= 0, `overflow ${m.overflow}`);
   check(`G2 ${tag}`, 'Every control is at least 44x44', m.small.length === 0, m.small.slice(0, 4).join('; '));
   check(`G3 ${tag}`, 'Computed text contrast is at least 4.5:1 on enabled text', lowC.length === 0, lowC.slice(0, 3).map((x) => `"${x.t}" ${x.r.toFixed(2)}`).join('; '));
-  check(`G4 ${tag}`, 'The v4 fonts are loaded from our own files', ['Geist', 'Bricolage Grotesque'].every((f) => m.fonts.includes(f)), m.fonts.join(','));
+  check(`G4 ${tag}`, 'The V8 fonts are loaded from our own files (Geist everywhere; Bricolage only on the Launcher hero)', ['Geist', 'Geist Mono'].every((f) => m.fonts.includes(f)), m.fonts.join(','));
   const org2 = await p.evaluate(() => [document.documentElement.dataset.org, document.documentElement.dataset.theme, getComputedStyle(document.body).backgroundColor]);
   check(`G5 ${tag}`, 'Organization and theme attributes apply', org2[0] === org && org2[1] === theme);
   if (w === 1366 && theme === 'light') {

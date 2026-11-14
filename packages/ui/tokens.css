@@ -98,7 +98,7 @@
   --e-out: cubic-bezier(.22,1,.36,1);
   --e-spring: cubic-bezier(.34,1.56,.64,1);
   --font: "Geist", system-ui, sans-serif;
-  --font-d: "Bricolage Grotesque", system-ui, sans-serif;
+  --font-d: "Geist", system-ui, sans-serif;
   --mono: "Geist Mono", ui-monospace, monospace;
   --urdu: "Noto Nastaliq Urdu", serif;
   --focus-ring: 0 0 0 3px var(--action);

@@ -94,7 +94,7 @@ function bell(notifications) {
 const avatarBits = (text, photo) => (photo ? [h('img', { src: photo, alt: '' })] : [initials(text)]);
 /** Updates the header avatar in place after a photo or name change (no re-render of the page the person is on). */
 export function setHeaderAvatar(me) { for (const b of document.querySelectorAll('.profile-wrap .who')) b.replaceChildren(...avatarBits(me?.name || b.getAttribute('aria-label') || '?', me?.photo)); }
-function profile({ email, name, photo, onSignOut, theme, weather }) {
+function profile({ email, name, photo, onSignOut, theme, weather, snow }) {
   const btn = h('button', { type: 'button', class: 'who avatar', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-controls': 'profile-menu', 'aria-label': `Your profile: ${name || email}` }, ...avatarBits(name || email, photo));
   const menu = h('div', { class: 'menu profile-menu', id: 'profile-menu', role: 'menu', 'aria-label': 'Your profile', 'data-open': 'false' });
   const close = (refocus) => { menu.dataset.open = 'false'; btn.setAttribute('aria-expanded', 'false'); if (refocus) btn.focus(); };
@@ -104,6 +104,7 @@ function profile({ email, name, photo, onSignOut, theme, weather }) {
     const choose = (v) => h('button', { type: 'button', role: 'menuitemradio', 'aria-checked': String(pref === v), tabindex: '-1', onclick: () => { theme.set(v); close(false); } }, { system: 'System', light: 'Light', dark: 'Dark' }[v]);
     menu.replaceChildren(...[h('a', { class: 'opt opt-plain', role: 'menuitem', href: '#/profile', tabindex: '-1', onclick: () => close(false) }, h('span', { class: 'tx' }, h('strong', {}, 'Your profile'), h('small', {}, 'Name, photo, email, password'))), h('div', { class: 'mh' }, 'Signed in as'), h('div', { class: 'mfoot', style: 'border:0;margin:0;color:var(--text);overflow-wrap:anywhere' }, email ?? ''),
       weather ? h('button', { type: 'button', role: 'menuitemcheckbox', class: 'opt opt-plain', 'aria-checked': String(weather.on()), tabindex: '-1', onclick: () => { close(false); weather.set(!weather.on()); } }, h('span', { class: 'tx' }, h('strong', {}, 'Weather on the Launcher'), h('small', {}, weather.on() ? 'On. Uses your location when you allow it.' : 'Off'))) : null,
+      snow ? h('button', { type: 'button', role: 'menuitemcheckbox', class: 'opt opt-plain', 'aria-checked': String(snow.on()), tabindex: '-1', onclick: () => { close(false); snow.set(!snow.on()); } }, h('span', { class: 'tx' }, h('strong', {}, 'Snowfall on the Launcher'), h('small', {}, snow.on() ? 'On in winter and on cold days. Just for fun: not a weather report.' : 'Off'))) : null,
       theme ? [h('div', { class: 'mh' }, 'Appearance'), h('div', { class: 'seg-theme', role: 'group', 'aria-label': 'Appearance' }, choose('system'), choose('light'), choose('dark'))] : null,
       h('button', { type: 'button', role: 'menuitem', class: 'opt opt-plain', tabindex: '-1', onclick: () => { close(false); onSignOut(); } }, h('span', { class: 'tx' }, h('strong', {}, 'Sign out')))].flat().filter(Boolean));
     menu.dataset.open = 'true'; btn.setAttribute('aria-expanded', 'true'); menu.querySelector('[role=menuitem]').focus();
@@ -169,11 +170,11 @@ function bottomBar(items, current, appName = '') {
       } }, h('span', { class: 'pillic' }, icon('more')), 'More') : null);
 }
 
-export function shellView({ app, orgs, active, email, name, route, content, banner, isAdmin, inOffice, launcherCurrent, catalog, registry, currentApp, theme, weather, me = null, notifications = null }) {
+export function shellView({ app, orgs, active, email, name, route, content, banner, isAdmin, inOffice, launcherCurrent, catalog, registry, currentApp, theme, weather, snow, me = null, notifications = null }) {
   offs.forEach((f) => f()); offs = [];
   document.body.classList.remove('hasb');
   const sw = launcherCurrent ? switcher({ orgs, active, onPick: (id) => app.switchOrg(id) }) : null;
-  const who = profile({ email, name, photo: me?.photo, onSignOut: () => app.signOut(), theme, weather });
+  const who = profile({ email, name, photo: me?.photo, onSignOut: () => app.signOut(), theme, weather, snow });
   const skip = h('a', { class: 'skip', href: '#main', onclick: (e) => { e.preventDefault(); const m = document.getElementById('main'); m.setAttribute('tabindex', '-1'); m.focus(); } }, 'Skip to content');      // not a hash link: the address is the route
   if (launcherCurrent) {
     // Design v4 section 8: the Launcher is the sky itself. Its top row carries the organization switcher and the profile; there is no header bar.

@@ -25,7 +25,7 @@ import { pdfView } from './modules/pdfeditor.js';
 import { plannerView, unmountPlanner, plannerMountedFor, plannerSection, PLANNER_PAGES } from './modules/planner.js';
 import { strategiesListView, strategyView } from './views/strategies.js';
 import { documentsView, teamView, appsView } from './views/office.js';
-import { loadWeather, weatherOff, setWeatherOff } from './sky.js';
+import { loadWeather, weatherOff, setWeatherOff, snowOff, setSnowOff } from './sky.js';
 import { permissionSet, canWith, canAnywhereWith } from './perm.js';
 import { switchOrganization } from '/packages/core/org-switch.mjs';
 import { dialog, toast, btn, notice, skeleton, notFoundState, designBadge, icon, emptyState } from './ui.js';
@@ -472,7 +472,7 @@ async function render(opts = {}) {
   const view = shellView({ app: appApi, orgs: ctx.orgs, active: org, email: session.get()?.email, name: session.get()?.name, route, content, banner: bannerEl(), isAdmin, inOffice, launcherCurrent: route.name === 'launcher' || route.name === 'home',
     notifications: org.member_kind === 'client' ? null : notifications,
     catalog: ctx.catalog, registry, currentApp: inOffice ? 'office' : route.name === 'doc' || route.name === 'sheet' || route.name === 'image' || route.name === 'pdf' || route.name === 'drive' ? 'drive' : route.name === 'board' ? 'whiteboard' : route.name === 'projects' ? 'projects' : route.name === 'clients' ? 'clients' : route.name === 'portal' ? 'portal' : route.name === 'forms' ? 'forms' : route.name === 'ladder' ? 'value_ladder' : route.name === 'boards' ? 'whiteboard' : route.name === 'social' ? 'social_planner' : route.name === 'planner' ? 'planner' : route.name === 'app' ? route.params.app : null, theme,
-    me, weather: { on: () => !weatherOff(localStorage), set: (on) => { setWeatherOff(localStorage, !on); try { sessionStorage.removeItem('l2f.wx'); } catch { /* none */ } render(); } } });
+    me, weather: { on: () => !weatherOff(localStorage), set: (on) => { setWeatherOff(localStorage, !on); try { sessionStorage.removeItem('l2f.wx'); } catch { /* none */ } render(); } }, snow: { on: () => !snowOff(localStorage), set: (on) => { setSnowOff(localStorage, !on); render(); } } });
   put(root, view, designBadge('Built to design'));
   document.title = `${pageLabel(route)} · ${org.name}`;
   if (toastLater) { toast(toastLater); toastLater = null; }
