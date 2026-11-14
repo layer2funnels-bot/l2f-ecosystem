@@ -121,6 +121,18 @@
   .drv-tbl td::before{content:none}
   .drv-tbl tr:has(.c-sel:empty){grid-template-columns:0 minmax(0,1fr) 44px}
 }
+/* the same list layout when the Drive area itself is narrow (tablet: the rail and sidebar take 312 px), not only on a phone */
+.drv{container:drv / inline-size}
+@container drv (max-width:560px){
+  /* the table becomes a plain list: name, a line of details under it, the actions at the end */
+  .drv .tblwrap{overflow:hidden}.drv-tbl{table-layout:fixed}.drv-tbl td{min-width:0}.drv-tbl thead{display:none}.drv-tbl,.drv-tbl tbody{display:block;width:100%}
+  .drv-tbl tr{display:grid;grid-template-columns:36px minmax(0,1fr) 44px;align-items:center;gap:0 4px;padding:6px 4px;border-bottom:var(--bw) solid var(--line)}
+  .drv-tbl td{display:block;padding:2px;border:0;text-align:left}.drv-tbl td.c-meta{display:none}
+  .drv-tbl td.c-sel{width:auto;grid-column:1;text-align:center;padding:0}.drv-tbl td.t1{grid-column:2}.drv-tbl td.c-act{grid-column:3;width:auto;padding:0;text-align:right}
+  .drv-tbl td.t1 .drv-sub{display:block}
+  .drv-tbl td::before{content:none}
+  .drv-tbl tr:has(.c-sel:empty){grid-template-columns:0 minmax(0,1fr) 44px}
+}
 @media (max-width:620px){
   .dcards{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.dcard .drv-art.xl{height:84px}
   .dgrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.drv-art.xl{height:92px}

@@ -31,7 +31,7 @@ import { permissionSet, canWith, canAnywhereWith } from './perm.js';
 import { switchOrganization } from '/packages/core/org-switch.mjs';
 import { dialog, toast, btn, notice, skeleton, notFoundState, designBadge, icon, emptyState } from './ui.js';
 import * as authViews from './views/auth.js';
-import { shellView, markAppNav, setHeaderAvatar } from './views/shell.js';
+import { shellView, markAppNav, setHeaderAvatar, shortcutsDialog } from './views/shell.js';
 import { profileView } from './views/profile.js';
 import { launcherView, appNotBuiltView } from './views/launcher.js';
 import { officeHomeView } from './views/home.js';
@@ -524,7 +524,8 @@ document.addEventListener('keydown', (e) => {
   if (e.ctrlKey || e.metaKey || e.altKey || /input|textarea|select/i.test(document.activeElement?.tagName ?? '') || document.activeElement?.isContentEditable) return;
   const k = e.key.toLowerCase();
   if (k === 'g') { gAt = Date.now(); return; }
-  if (k === 'l' && Date.now() - gAt < 1200 && session.signedIn() && ctx?.active) { gAt = 0; e.preventDefault(); location.hash = '#/launcher'; }
+  if (k === 'l' && Date.now() - gAt < 1200 && session.signedIn() && ctx?.active) { gAt = 0; e.preventDefault(); location.hash = '#/launcher'; return; }
+  if (e.key === '?' && session.signedIn()) { e.preventDefault(); shortcutsDialog(); }   // the profile menu's "Keyboard shortcuts
 });
 document.addEventListener('keydown', (e) => {                      // "/" focuses search where search exists
   if (e.key === '/' && !/input|textarea|select/i.test(document.activeElement?.tagName ?? '')) { const s = document.querySelector('.search input:not(:disabled)'); if (s) { e.preventDefault(); s.focus(); } }

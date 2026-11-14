@@ -144,6 +144,10 @@ check('V6', 'The app switcher (V8) offers the Launcher row with its G L shortcut
 await page.keyboard.press('Escape');
 await page.locator('main').click({ position: { x: 5, y: 5 } }).catch(() => {}); await page.keyboard.press('g'); await page.keyboard.press('l'); await page.waitForTimeout(300);
 check('V6b', 'The shortcut shown in the apps menu works: G then L opens the Launcher', (await page.evaluate(() => location.hash)) === '#/launcher');
+await page.keyboard.press('Shift+Slash'); await page.waitForTimeout(200);
+const kb = await page.getByRole('dialog', { name: 'Keyboard shortcuts' }).innerText().catch(() => '');
+check('V6c', 'The ? key opens Keyboard shortcuts, listing the shortcuts that work (Ctrl K, G then L, /, ?, Esc)', ['Search everything', 'Open the Launcher', 'Show these shortcuts'].every((x) => kb.includes(x)));
+await page.keyboard.press('Escape');
 await page.goto(`${base}/#/office`); await wait('Your work in');
 // global search (V8 02 §5): Ctrl K opens it scoped to the current app; pages and menus are found; Enter opens; Esc closes
 await page.keyboard.press('Control+k'); await page.waitForSelector('#gsq'); await page.waitForFunction(() => document.activeElement?.id === 'gsq');
@@ -313,7 +317,9 @@ await page.goBack(); await page.reload(); await wait('The sky follows your time 
   check('W9', 'Restoring version 1 saves it as version 5 and the editor shows the original single rectangle; nothing is deleted', (await page.locator('.docstat').innerText()).includes('1 item') && (await admin.query('select count(*)::int n from file_versions where file_id = $1', [boardId])).rows[0].n === 5);
   // dark theme
   await page.locator('.who').click();
-  check('W9b', 'The profile menu shows Appearance with System, Light and Dark choices (no stray object text), the weather switch and Sign out', (await page.locator('#profile-menu').innerText()).toLowerCase().includes('appearance') && !(await page.locator('#profile-menu').innerText()).includes('[object') && (await page.locator('#profile-menu [role=menuitemradio]').count()) === 3);
+  { const t = await page.locator('#profile-menu').innerText();
+    check('W9b', 'The profile menu (V8): name and email, My profile, Appearance with Light, Dark and Same as this device, Keyboard shortcuts and Sign out (no stray object text)',
+      ['My profile', 'Appearance', 'Light', 'Dark', 'Same as this device', 'Keyboard shortcuts', 'Sign out'].every((x) => t.includes(x)) && !t.includes('[object') && (await page.locator('#profile-menu [role=menuitemradio]').count()) === 3); }
   await page.getByRole('menuitemradio', { name: 'Dark' }).click();
   await page.waitForFunction(() => document.documentElement.dataset.theme === 'dark'); await page.waitForSelector('.boardsurface .excalidraw.theme--dark', { timeout: 8000 }).catch(() => {});
   check('W10', 'Choosing Dark in the profile menu makes the whiteboard editor dark too', await page.locator('.boardsurface .excalidraw.theme--dark').count() === 1);
@@ -1020,7 +1026,7 @@ for (const [w, label] of [[1280, 'desktop'], [768, 'tablet'], [390, 'phone']]) {
 {
   const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
   await visit(page, base + '/#/office'); await page.waitForSelector('.profile-wrap .who', { timeout: 9000 });
-  await page.locator('.profile-wrap .who').click(); await page.getByRole('menuitem', { name: /Your profile/ }).click(); await page.locator('main h1', { hasText: 'Your profile' }).waitFor({ timeout: 9000 });
+  await page.locator('.profile-wrap .who').click(); await page.getByRole('menuitem', { name: /My profile/ }).click(); await page.locator('main h1', { hasText: 'Your profile' }).waitFor({ timeout: 9000 });
   await page.waitForSelector('#pf-name', { timeout: 9000 });   // the form appears once the profile has loaded
   const txt = await page.locator('main').innerText();
   check('PR1', 'The profile menu opens Your profile (V8): name header, tabs Profile · Account & sign-in · Notifications · Appearance, and Your organizations',

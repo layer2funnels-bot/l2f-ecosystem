@@ -30,7 +30,8 @@ const uid = (await q('select id from auth.users where email = $1', [EMAIL]))[0].
 const L = (await q("select id from workspaces where slug = 'layer2funnels'"))[0].id;
 const A = (await q("select id from workspaces where slug = 'aurj'"))[0]?.id;
 await q("insert into memberships (workspace_id,user_id,kind,role) values ($1,$2,'staff','owner') on conflict do nothing", [L, uid]);
-if (A) await q("insert into memberships (workspace_id,user_id,kind,role) values ($1,$2,'staff','owner') on conflict do nothing", [A, uid]);
+if (A) await q("insert into memberships (workspace_id,user_id,kind,role) values ($1,$2,'staff','editor') on conflict do nothing", [A, uid]);   // owner in Layer2Funnels ranks first, as in the prototype
+await q('update profiles set active_workspace_id = $1 where id = $2', [L, uid]);   // Layer2Funnels, as in the prototype
 const storage = await signup.context().storageState();
 await signup.context().close();
 
@@ -39,14 +40,14 @@ const SHELL = [['rail', '.shell.v8 .rail', '.rail'], ['sidebar', '.shell.v8 > .s
   ['sidebar row (current)', '.shell.v8 .side .nav a[aria-current=page]', '.side .nav a[aria-current=page]'], ['app name', '.shell.v8 .side-top b', '.side-top b'], ['page title', 'main h1', '.content h1, .content .t1']];
 const click = (ours, proto) => async (p, side) => { const sel = side === 'ours' ? ours : proto; if (sel) await p.locator(sel).first().click().catch(() => {}); await p.waitForTimeout(500); };
 const PAGES = [
-  ['launcher', '#/launcher', '#/launcher', null, []],
+  ['launcher', '#/launcher', '#/launcher', null, [['top row', '.l-top', '.l-top'], ['weather chip', '.wxchip', '.wxchip'], ['hero', '.l-hero h1', '.l-hero h1'], ['line under hero', '.l-hero .sub', '.l-hero .sub'], ['find an app', '.l-find', '.l-find'], ['shelf', '.shelf', '.shelf'], ['tile', '.tile', '.tile'], ['tile name', '.tile .t-name', '.tile .t-name'], ['tile text', '.tile .t-desc', '.tile .t-desc']]],
   ['office-home', '#/office', '#/office/home', null, SHELL],
   ['apps-menu', '#/office', '#/office/home', click('#app-switcher', '.rail button[title="All apps"]'), [['menu', '.menu.appmenu', '.appmenu'], ['launcher row', '.appmenu .home', '.appmenu .home'], ['app tile', '.appmenu .grid a', '.appmenu .grid a'], ['hint', '.appmenu .hint', '.appmenu .hint']]],
   ['org-menu', '#/office', '#/office/home', click('#org-switcher', '.rail .r-org'), [['menu', '#org-menu', '.menu.railmenu:not([hidden])']]],
   ['profile-menu', '#/office', '#/office/home', click('.profile-wrap .who', '.rail .r-me, .rail .me, .rail button:last-child'), [['menu', '#profile-menu', '.menu:not([hidden])']]],
   ['notifications', '#/office', '#/office/home', click('#bell', '.rail button[title*="otification" i], .rail [aria-label*="otification" i]'), [['drawer', '.nfx', '.drawer, .inbox, .nfx'], ['title', '.nfx h2', '.drawer h2, .inbox h2']]],
   ['search', '#/office', '#/office/home', async (p, side) => { await p.keyboard.press('Control+k'); await p.waitForTimeout(500); }, [['dialog', '.gsx', '.cmdk, .gsx, [role=dialog]']]],
-  ['profile', '#/profile/about', '#/profile', null, [['header', '.pf8-head', '.prof-head'], ['name', '.pf8-name', '.prof-head h1'], ['tab', '.pf8-tabs a', '.prof-tabs a'], ['label', '.pf8 .fld label', '.prof label'], ['input', '.pf8 .fld input', '.prof input'], ['save', '.pf8 .btn.primary', '.prof .btn.primary'], ['card', '.pf8-card', '.prof .panel']]],
+  ['profile', '#/profile/about', '#/profile', null, [['top bar', '.shell.v8 .hdr.bar', '.fbar5'], ['bar title', '.shell.v8 .focusbar .hdr-ttl b', '.fbar5 .grow b'], ['bar photo', '.focusbar-photo', '.fbar5 .photo'], ['back', '.focusbar .hdr-back', '.fbar5 .iconbtn'], ['header', '.pf8-head', '.prof-head'], ['name', '.pf8-name', '.prof-head h1'], ['tab', '.pf8-tabs a', '.prof-tabs a'], ['label', '.pf8 .fld label', '.prof label'], ['input', '.pf8 .fld input', '.prof input'], ['save', '.pf8 .btn.primary', '.prof .btn.primary'], ['card', '.pf8-card', '.prof .panel']]],
   ['profile-account', '#/profile/account', '#/profile/account', null, []],
   ['profile-notifications', '#/profile/notifications', '#/profile/notifications', null, []],
   ['profile-appearance', '#/profile/appearance', '#/profile/appearance', null, []],
@@ -58,7 +59,7 @@ const PAGES = [
 const SIZES = [[1440, 900, 'desktop'], [834, 1112, 'tablet'], [390, 844, 'phone']];
 
 const measure = (p, sels) => p.evaluate((sels) => sels.map((sel) => { const e = sel && document.querySelector(sel); if (!e) return null; const c = getComputedStyle(e); const r = e.getBoundingClientRect();
-  return { w: Math.round(r.width), h: Math.round(r.height), font: `${c.fontSize}/${c.fontWeight}/${c.lineHeight}`, pad: c.padding, rad: c.borderRadius, bg: c.backgroundColor, color: c.color, shadow: c.boxShadow === 'none' ? 'none' : c.boxShadow.slice(0, 40) }; }), sels);
+  return { margin: c.margin, top: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height), font: `${c.fontSize}/${c.fontWeight}/${c.lineHeight}`, pad: c.padding, rad: c.borderRadius, bg: c.backgroundColor, color: c.color, shadow: c.boxShadow === 'none' ? 'none' : c.boxShadow.slice(0, 40) }; }), sels);
 
 const report = [];
 for (const [key, ours, v8, act, sels] of PAGES) for (const [w, hgt, size] of SIZES) {
@@ -77,7 +78,7 @@ for (const [key, ours, v8, act, sels] of PAGES) for (const [w, hgt, size] of SIZ
   if (sels.length) {
     const [m1, m2] = [await measure(ref, sels.map((x) => x[2])), await measure(mine, sels.map((x) => x[1]))];
     sels.forEach(([label], i) => { const v = m1[i], o = m2[i]; if (!v && !o) return;
-      const diffs = !v || !o ? ['missing on one side'] : Object.keys(v).filter((k) => (k === 'w' || k === 'h' ? Math.abs(v[k] - o[k]) > 1 : v[k] !== o[k])).map((k) => `${k}: V8 ${v[k]} · ours ${o[k]}`);
+      const diffs = !v || !o ? ['missing on one side'] : Object.keys(v).filter((k) => (k === 'w' || k === 'h' || k === 'top' ? Math.abs(v[k] - o[k]) > 1 : v[k] !== o[k])).map((k) => `${k}: V8 ${v[k]} · ours ${o[k]}`);
       report.push(`${key} ${w} ${label}: ${diffs.length ? diffs.join('; ') : 'same'}`); });
   }
   await mine.context().close(); await ref.context().close();

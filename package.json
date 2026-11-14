@@ -36,7 +36,9 @@
     "test:e2e:media": "node scripts/e2e-media.mjs",
     "build:media": "node scripts/build-media.mjs",
     "test:e2e:drive": "node scripts/e2e-drive.mjs",
-    "test:e2e:sweep": "node scripts/e2e-sweep.mjs"
+    "test:e2e:sweep": "node scripts/e2e-sweep.mjs",
+    "icons": "node scripts/build-icons.mjs",
+    "check:icons": "node scripts/build-icons.mjs --check"
   },
   "dependencies": {
     "@electric-sql/pglite": "0.3.10",

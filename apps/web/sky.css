@@ -46,3 +46,4 @@
 .lx .tile .plate{--s:96px}
 @media (min-width:1101px){.lx .l-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}}
 @media (max-width:760px){.lx .l-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.lx .tile{padding:14px 2px 10px}.lx .t-name{font-size:13.5px}.lx .tile .plate{--s:62px}}
+.lx .l-hero p.sub,.l-hero .sub{margin:0}   /* V8: the line under the greeting has no margin (the hero gap of 14 px spaces it) */

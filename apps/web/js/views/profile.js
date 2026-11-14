@@ -102,11 +102,11 @@ export function profileView({ app, me, tab = 'about', orgs = [], active = null, 
 
     if (tab === 'about') {
       const full = field({ id: 'pf-full', label: 'Full name', value: det.full_name ?? '', maxlength: 120, autocomplete: 'name' });
-      const nm = field({ id: 'pf-name', label: 'Display name', value: p.name ?? '', maxlength: 120, hint: 'Shown to the people you work with.', autocomplete: 'nickname' });
+      const nm = field({ id: 'pf-name', label: 'Display name', value: p.name ?? '', maxlength: 120, autocomplete: 'nickname' });
       const job = field({ id: 'pf-job', label: 'Job title', value: det.job_title ?? '', maxlength: 80, autocomplete: 'organization-title' });
       const zones = timeZones(); const curZone = det.time_zone ?? '';
       const tz = field({ id: 'pf-tz', label: 'Time zone', value: curZone, options: [['', `Not set (this device: ${here()})`], ...zones.map((z) => [z, z.replace(/_/g, ' ')])] });
-      const about = field({ id: 'pf-about', label: 'About', value: det.about ?? '', rows: 3, maxlength: 600 });
+      const about = field({ id: 'pf-about', label: 'About', value: det.about ?? '', rows: 2, maxlength: 600 });
       const save = btn('Save', async () => {
         const v = nm.input.value.trim(); if (!v) return nm.error('Enter the name people will see.'); nm.ok();
         save.disabled = true;

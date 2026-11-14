@@ -12,6 +12,7 @@ h1{font:620 24px/1.2 var(--font);letter-spacing:-.022em}                       /
 h2{font:650 19px/1.2 var(--font);letter-spacing:-.025em}                       /* dialog / drawer section title */
 h3{font:650 16px/1.25 var(--font);letter-spacing:-.005em}                      /* section heading in a card */
 .sub{font-size:15px;color:var(--text2)}
+.hello h1{font:620 30px/1.15 var(--font);letter-spacing:-.025em;margin-top:4px}   /* greeting (Office, Portal): V8 .o-hero h1 */
 .over{font:600 12.5px/1.3 var(--font);letter-spacing:.02em;text-transform:none;color:var(--muted)}   /* sentence case: tracked uppercase was removed in V8 */
 .fine,.hint{font-size:13px}
 
@@ -89,5 +90,5 @@ h3{font:650 16px/1.25 var(--font);letter-spacing:-.005em}                      /
 /* ---- touch screens: everything at least 44 px (V8) */
 @media (pointer:coarse){
   .btn,.btn.sm,.btn.link,.chip,.seg button,.tabs button,.tabs a,.fld input,.fld select{min-height:44px}
-  .iconbtn{width:44px;height:44px}.btn.link,.seg button,.vsw button{min-width:44px}
+  .iconbtn{width:44px;height:44px}.btn,.btn.link,.seg button,.vsw button{min-width:44px}
 }

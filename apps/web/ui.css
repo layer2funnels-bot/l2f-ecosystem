@@ -56,7 +56,7 @@ button.who{width:44px;height:44px;border-radius:50%;font:700 13px/1 var(--font);
 .menu .mfoot{padding:8px 10px 4px;font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);margin-top:8px}
 .menu hr{border:0;border-top:1px solid var(--line);margin:8px 0}
 .appmenu .grid a:hover{background:var(--surface2);color:var(--text)}
-.profile-menu{width:260px;left:auto;right:0}
+.profile-menu{width:290px;left:auto;right:0}
 .seg-theme{display:flex;gap:4px;padding:8px 10px}.seg-theme button{flex:1;min-height:var(--ctl-sm);border:1px solid var(--line2);border-radius:6px;background:var(--surface);font-weight:550;font-size:13.5px}
 .seg-theme button[aria-checked=true]{background:var(--action);color:var(--action-ink);border-color:var(--action)}
 .orgsw[data-pending=true] .chev{display:none}.orgsw .spin{display:none}.orgsw[data-pending=true] .spin{display:block}
@@ -225,15 +225,15 @@ details.support{margin-top:12px;font-size:13px;color:var(--muted)}
 /* drawers and side panels scroll on their own: the page behind never scrolls with them */
 .drawer-bd,.nfx-list{overscroll-behavior:contain}
 /* Your profile, V8 (02 §7; screenshots 00_SHELL_AND_LAUNCHER 124–127): cover header, 112 px photo, tab pills, form + organizations */
-.pf8{max-width:1036px;margin:0 auto;padding:20px clamp(16px,3vw,32px) 96px}
+.pf8{max-width:1100px;margin:0 auto;padding:20px clamp(16px,3vw,32px) 100px}   /* V8 .prof */
 .pf8-head{border-radius:16px;overflow:hidden;background:var(--surface);border:var(--bw) solid var(--line)}
 .pf8-cover{height:120px}   /* the V8 cover colours live in shell-v8.css */
-.pf8-row{display:flex;align-items:flex-end;gap:16px;padding:0 20px 16px;margin-top:-52px;flex-wrap:wrap}
-.pf8-ph{position:relative;flex:none}
+.pf8-row{display:flex;align-items:flex-end;gap:16px;padding:0 20px 16px;margin-top:-48px;flex-wrap:wrap}
+.pf8-ph{position:relative;flex:none;height:118px}   /* V8 renders the photo button 118 px tall (112 px photo on an inline line box) */
 .pf8-photo{width:112px;height:112px;border-radius:50%;overflow:hidden;display:grid;place-items:center;background:var(--sunk);box-shadow:0 0 0 4px var(--surface);font:600 34px/1 var(--font);color:var(--text2)}.pf8-photo img{width:100%;height:100%;object-fit:cover;display:block}
 .pf8-cam{position:absolute;right:-4px;bottom:-4px;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:transparent}.pf8-cam::before{content:"";position:absolute;inset:8px;border-radius:50%;background:var(--text);box-shadow:0 0 0 2px var(--surface)}.pf8-cam .i{position:relative;width:15px;height:15px;color:var(--bg)}
-.pf8-who{flex:1;min-width:200px;padding-bottom:4px}.pf8-name{margin:0;font:620 24px/1.2 var(--font);letter-spacing:-.022em;overflow-wrap:anywhere}.pf8-roles{margin:4px 0 0;color:var(--text2);font-size:14.5px}
-.pf8-work{display:inline-flex;align-items:center;gap:8px;margin-bottom:6px}.pf8-work .plate{flex:none}
+.pf8-who{flex:1;min-width:200px}.pf8-name{margin:0;font:620 24px/1.2 var(--font);letter-spacing:-.022em;overflow-wrap:anywhere}.pf8-roles{margin:0;color:var(--text2);font-size:14.5px;line-height:1.5}
+.pf8-work{display:inline-flex;align-items:center;gap:8px}.pf8-work .plate{flex:none}
 .pf8-tabs{display:flex;gap:4px;margin:20px 0 16px;overflow-x:auto;scrollbar-width:none}.pf8-tabs a{flex:none;min-height:32px;padding:0 12px;border-radius:8px;display:inline-flex;align-items:center;font:550 13.5px/1.5 var(--font);color:var(--text2);text-decoration:none}@media (pointer:coarse){.pf8-tabs a{min-height:44px}}.pf8-tabs a:hover{color:var(--text);background:var(--sunk)}.pf8-tabs a[aria-current=page]{background:var(--text);color:var(--bg)}
 .pf8-card{padding:18px;display:grid;gap:12px;align-content:start}.pf8-card h3{margin:0}.pf8-card .fld{margin-bottom:0}
 .pf8-split{display:grid;grid-template-columns:minmax(0,1fr) 376px;gap:20px;align-items:start}
@@ -251,7 +251,7 @@ details.support{margin-top:12px;font-size:13px;color:var(--muted)}
 .pf8-dlg{display:grid;gap:14px;justify-items:center}.pf8-dlg .fld{width:100%}.pf8-dlg input[type=range]{width:100%;min-height:44px;accent-color:var(--action)}
 .pf8-prev{width:160px;height:160px;border-radius:50%;overflow:hidden;display:grid;place-items:center;background:var(--sunk);font:600 40px/1 var(--font);color:var(--text2)}.pf8-prev img{width:100%;height:100%;object-fit:cover;transform-origin:center}
 @media (max-width:900px){.pf8-split,.pf8-grid{grid-template-columns:minmax(0,1fr)}}
-@media (max-width:560px){.pf8-two{grid-template-columns:minmax(0,1fr)}.pf8-row{margin-top:-44px;padding:0 16px 16px}.pf8-photo{width:96px;height:96px}.pf8-name{font-size:22px}.pf8-cover{height:96px}}
+@media (max-width:560px){.pf8-two{grid-template-columns:minmax(0,1fr)}.pf8-row{padding:0 20px 16px}}
 /* V8: controls are 38 px (small 32) with a mouse; every one of them is at least 44 px on a touch screen */
 @media (pointer:coarse){.side .nav a,.hdr .search,.seg-theme button,.btn.link,.link,.rows a,.rows button.lnk,.chk,.tools select,.tbl select,.tools .search,.vsw button,.subnav button,.inp input,.inp,.office-docs .findwrap input,.office-team .findwrap input,.toolbar>input[type=search],.toolbar>input[type=text],.toolbar>select,.toolbar select{min-height:44px}.pw button{width:40px;height:40px}}
 /* full-screen apps (Projects): no rail, the app fills the page under the header (moved from the retired v4.css) */

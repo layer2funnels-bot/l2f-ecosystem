@@ -120,17 +120,31 @@ function bell(notifications, registry) {
 const avatarBits = (text, photo) => (photo ? [h('img', { src: photo, alt: '' })] : [initials(text)]);
 /** Updates the header avatar in place after a photo or name change (no re-render of the page the person is on). */
 export function setHeaderAvatar(me) { for (const b of document.querySelectorAll('.profile-wrap .who')) b.replaceChildren(...avatarBits(me?.name || b.getAttribute('aria-label') || '?', me?.photo)); }
+/** The keyboard shortcuts that work everywhere (profile menu "Keyboard shortcuts", or the ? key). */
+export const SHORTCUTS = [['Ctrl K', 'Search everything'], ['G then L', 'Open the Launcher'], ['/', 'Find an app on the Launcher, or search in the app'], ['?', 'Show these shortcuts'], ['Esc', 'Close a menu, panel or dialog']];
+export function shortcutsDialog() {
+  return dialog({ title: 'Keyboard shortcuts', key: 'shortcuts', body: h('dl', { class: 'kbds' }, ...SHORTCUTS.flatMap(([k, t]) => [h('dt', {}, ...k.split(' ').map((x) => (x === 'then' ? ' then ' : h('kbd', {}, x)))), h('dd', {}, t)])), actions: [{ label: 'Close', cls: 'primary', focus: true }] });
+}
+
+// V8 profile menu (prototype .menu.railmenu, measured): photo, name and email; My profile; Appearance (Light, Dark; System kept from
+// before, owner rule: no feature removed without approval); Keyboard shortcuts with its ? key; Sign out. The prototype's
+// "Weather on the Launcher" switch is left out on purpose (owner, 14 Nov: weather changes on its own, no switch).
 function profile({ email, name, photo, onSignOut, theme }) {
   const btn = h('button', { type: 'button', class: 'who avatar', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-controls': 'profile-menu', 'aria-label': `Your profile: ${name || email}` }, ...avatarBits(name || email, photo));
-  const menu = h('div', { class: 'menu profile-menu', id: 'profile-menu', role: 'menu', 'aria-label': 'Your profile', 'data-open': 'false' });
+  const menu = h('div', { class: 'menu profile-menu pm8', id: 'profile-menu', role: 'menu', 'aria-label': 'Your profile', 'data-open': 'false' });
   const close = (refocus) => { menu.dataset.open = 'false'; btn.setAttribute('aria-expanded', 'false'); if (refocus) btn.focus(); };
   btn.addEventListener('click', () => {
     if (menu.dataset.open === 'true') return close(true);
     const pref = theme?.pref?.() ?? 'system';
-    const choose = (v) => h('button', { type: 'button', role: 'menuitemradio', 'aria-checked': String(pref === v), tabindex: '-1', onclick: () => { theme.set(v); close(false); } }, { system: 'System', light: 'Light', dark: 'Dark' }[v]);
-    menu.replaceChildren(...[h('a', { class: 'opt opt-plain', role: 'menuitem', href: '#/profile', tabindex: '-1', onclick: () => close(false) }, h('span', { class: 'tx' }, h('strong', {}, 'Your profile'), h('small', {}, 'Name, photo, email, password'))), h('div', { class: 'mh' }, 'Signed in as'), h('div', { class: 'mfoot', style: 'border:0;margin:0;color:var(--text);overflow-wrap:anywhere' }, email ?? ''),
-      theme ? [h('div', { class: 'mh' }, 'Appearance'), h('div', { class: 'seg-theme', role: 'group', 'aria-label': 'Appearance' }, choose('system'), choose('light'), choose('dark'))] : null,
-      h('button', { type: 'button', role: 'menuitem', class: 'opt opt-plain', tabindex: '-1', onclick: () => { close(false); onSignOut(); } }, h('span', { class: 'tx' }, h('strong', {}, 'Sign out')))].flat().filter(Boolean));
+    const choose = (v, ic, label) => h('button', { type: 'button', class: 'pm8-theme', role: 'menuitemradio', 'aria-checked': String(pref === v), tabindex: '-1', onclick: () => { theme.set(v); close(false); } }, icon(ic), label);
+    const photoEl = h('span', { class: 'pm8-photo', 'aria-hidden': 'true' }, ...avatarBits(name || email, btn.querySelector('img')?.src ?? photo));
+    menu.replaceChildren(...[
+      h('div', { class: 'pm8-who' }, photoEl, h('div', {}, h('b', {}, name || email || ''), name ? h('small', {}, email ?? '') : null)),
+      h('a', { class: 'pm8-link', role: 'menuitem', href: '#/profile', tabindex: '-1', onclick: () => close(false) }, icon('user'), 'My profile'),
+      theme ? h('div', { class: 'pm8-app', role: 'group', 'aria-label': 'Appearance' }, h('p', { class: 'over' }, 'Appearance'), choose('light', 'sun', 'Light'), choose('dark', 'moon', 'Dark'), choose('system', 'desk', 'Same as this device')) : null,
+      h('button', { type: 'button', class: 'pm8-link', role: 'menuitem', tabindex: '-1', onclick: () => { close(false); shortcutsDialog(); } }, icon('info'), 'Keyboard shortcuts', h('kbd', {}, '?')),
+      h('button', { type: 'button', class: 'pm8-link', role: 'menuitem', tabindex: '-1', onclick: () => { close(false); onSignOut(); } }, icon('logout'), 'Sign out'),
+    ].filter(Boolean));
     menu.dataset.open = 'true'; btn.setAttribute('aria-expanded', 'true'); menu.querySelector('[role=menuitem]').focus();
   });
   trap(menu, btn, close);
@@ -205,12 +219,9 @@ export function shellView({ onSearch = null, app, orgs, active, email, name, rou
   if (launcherCurrent) {
     // Design v4 section 8: the Launcher is the sky itself. Its top row carries the organization switcher and the profile; there is no header bar.
     content.querySelector('[data-slot=org]')?.replaceWith(sw); const whoSlot = content.querySelector('[data-slot=who]');
-    if (whoSlot && theme) {   // the Launcher header has a quick light/dark switch (Design v4); everywhere else it lives in the profile menu
-      const dark = () => document.documentElement.dataset.theme === 'dark';
-      const tb = h('button', { type: 'button', class: 'themebtn', 'aria-label': dark() ? 'Switch to light theme' : 'Switch to dark theme', onclick: () => { theme.set(dark() ? 'light' : 'dark'); paint(); } });
-      const paint = () => { tb.replaceChildren(icon(dark() ? 'sun' : 'moon')); tb.setAttribute('aria-label', dark() ? 'Switch to light theme' : 'Switch to dark theme'); }; paint();
+    if (whoSlot) {   // V8 Launcher header: search, bell, profile (light/dark lives in the profile menu and Profile › Appearance)
       const sbtn = onSearch ? h('button', { type: 'button', class: 'themebtn', id: 'launcher-search', 'aria-label': 'Search everything', title: 'Search everything (Ctrl K)', onclick: () => onSearch() }, icon('search')) : null;
-      whoSlot.replaceWith(h('span', { class: 'l-right' }, sbtn, tb, notifications ? bell(notifications, registry) : null, who));
+      whoSlot.replaceWith(h('span', { class: 'l-right' }, sbtn, notifications ? bell(notifications, registry) : null, who));   // V8: search, bell, profile (light/dark lives in the profile menu and Profile › Appearance)
     } else whoSlot?.replaceWith(who);
     return h('div', { class: 'app in-launcher', 'data-org': active.slug ?? '' }, skip, content, banner ?? null);
   }
@@ -245,8 +256,11 @@ export function shellView({ onSearch = null, app, orgs, active, email, name, rou
     onclick: (e) => { const on = !shellEl.classList.contains('sidecol'); shellEl.classList.toggle('sidecol', on); e.currentTarget.setAttribute('aria-pressed', String(on)); try { localStorage.setItem(SIDECOL, on ? '1' : '0'); } catch { /* private window: not remembered */ } } }, icon('layers'));
   const sheetBtn = h('button', { type: 'button', class: 'iconbtn only-m acct-btn', id: 'acct-sheet-btn', 'aria-haspopup': 'dialog', 'aria-label': `Apps and account (${active.name})`,
     onclick: () => accountSheet({ orgs, active, catalog, registry, notifications, app, theme, email, name, onSearch }) }, orgMarkEl(active, 26));
+  // V8 focused top bar (prototype .fbar5, measured): 48 px, Back (mirrored chevron), Apps, 26 px photo, title 15 / 700 and a 12 px line
   const header = focused
-    ? h('header', { class: 'hdr bar' }, sheetBtn, h('a', { class: 'iconbtn hdr-back', href: focused.back ?? '#/launcher', 'aria-label': 'Back to the Launcher', title: 'Back' }, icon('arrow')),
+    ? h('header', { class: 'hdr bar focusbar' }, sheetBtn, h('a', { class: 'iconbtn hdr-back', href: focused.back ?? '#/launcher', 'aria-label': 'Back', title: 'Back' }, icon('right')),
+      appSwitcher({ catalog, registry, launcherCurrent: false, suffix: '-f', currentApp }),
+      h('span', { class: 'focusbar-photo', 'aria-hidden': 'true' }, ...avatarBits(name || email, me?.photo)),
       h('div', { class: 'hdr-ttl' }, h('b', {}, focused.title), focused.sub ? h('small', {}, focused.sub) : null))
     : h('header', { class: full ? 'hdr bar is-full' : 'hdr bar' }, sheetBtn, collapse,
       full ? h('span', { class: 'hdr-app' }, plateOf(manifest ?? { id: currentApp }, 26)) : null, crumb);

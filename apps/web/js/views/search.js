@@ -100,7 +100,7 @@ export function openSearch({ api, registry, catalog = [], isAdmin = false, curre
   const group = (key, list, q) => (list.length ? [h('h3', { class: 'gsx-h' }, LABEL[key] ?? key), ...list.map((r) => row(r, q))] : []);
   const quick = () => {
     const usable = new Set(catalog.filter((a) => a.state === 'available').map((a) => a.app_key));
-    const qa = [['projects', 'New project', '#/projects/all'], ['projects', 'New task', '#/projects/mine'], ['drive', 'New document', hrefFor.app('drive')], ['clients', 'New client', '#/clients']].filter(([k]) => usable.has(k));
+    const qa = [['projects', 'New task', '#/projects/mine'], ['drive', 'New document', hrefFor.app('drive')], ['projects', 'New project', '#/projects/all'], ['clients', 'New client', '#/clients']]   // V8 order.filter(([k]) => usable.has(k));
     const back = recent();
     res.replaceChildren(h('h3', { class: 'gsx-h' }, 'Quick actions'), ...qa.map(([k, t, href]) => row({ appKey: k, title: t, href }, '')),
       ...(back.length ? [h('h3', { class: 'gsx-h' }, 'Jump back in'), ...back.map((r) => row(r, ''))] : []),

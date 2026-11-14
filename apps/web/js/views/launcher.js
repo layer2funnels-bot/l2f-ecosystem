@@ -5,19 +5,19 @@ import { hrefFor } from '../routes.js';
 import { plateOf } from '../registry.js';
 import { partOfDay, greeting, chipText, groupCatalog, findApps, atmosphere, showSnow } from '../sky.js';
 
-const META = {
-  office: ['off', 'Home, plans, funnels, documents, team and admin for this organization.'],
-  projects: ['prj', 'Tasks and project work. Your home and your work in one place.'],
-  clients: ['cli', 'Your client list, delivery stages and internal notes.'],
-  portal: ['por', 'What clients see and approve. Its own sign-in and address.'],
-  drive: ['drv', 'Files and documents for the organization and for you.'],
-  planner: ['pln', 'Strategy, goals, measures and reviews.'],
-  forms: ['frm', 'Build forms and read the answers.'],
-  value_ladder: ['vl', 'Map how your offers lead into each other.'],
-  social_planner: ['soc', 'Draft, approve and schedule social posts.'],
-  whiteboard: ['wb', 'A shared canvas for sketching and planning.'],
-  layer2_agents: ['ag', 'AI helpers that draft work for you to approve.'],
-  funnel_mapper_pro: ['fmp', 'Map funnels and model the numbers.'],
+const META = {   // descriptions: the V8 prototype's Launcher, word for word
+  office: ['off', 'Home, plans, team and admin'],
+  projects: ['prj', 'Client and internal projects, end to end'],
+  clients: ['cli', 'Pipeline, strategy and delivery'],
+  portal: ['por', 'What your clients see and approve'],
+  drive: ['drv', 'Files, SOPs and templates'],
+  planner: ['pln', 'Your week, in one view'],
+  forms: ['frm', 'Forms, quizzes, intake and answers'],
+  value_ladder: ['vl', 'Offers from free to premium'],
+  social_planner: ['soc', 'Posts, carousels, schedule'],
+  whiteboard: ['wb', 'Sketch ideas together'],
+  layer2_agents: ['ag', 'Meeting notes and an assistant that answers from your work'],
+  funnel_mapper_pro: ['fmp', 'Map, model and forecast'],
 };
 const BUILT = new Set(['office']);          // apps whose screens exist in this build
 
@@ -66,9 +66,9 @@ export function launcherView({ catalog, error, org, orgs, role, name, registry, 
   const chipSlot = h('div', { class: 'wxslot', 'aria-live': 'polite' });
   const first = String(name ?? '').trim().split(/\s+/)[0];
   const top = h('div', { class: 'l-top on-stage' }, h('span', { 'data-slot': 'org' }), h('span', { 'data-slot': 'who' }));
-  const hero = (sub) => h('div', { class: 'l-hero' }, chipSlot,
+  const hero = (sub, ...more) => h('div', { class: 'l-hero' }, chipSlot,   // V8: chip, greeting, line, then Find an app, all in one block (gap 14)
     h('h1', { 'data-page-title': true }, GREET[part], first ? [',', h('br'), h('em', {}, `${first}.`)] : ''),
-    h('p', { class: 'sub' }, sub));
+    h('p', { class: 'sub' }, sub), ...more);
   const wrap = (...kids) => { root.append(h('div', { class: 'l-wrap' }, top, ...kids)); return root; };
   if (error) return wrap(hero(''), h('div', { class: 'shelf' }, errorState(retry)));
   if (!catalog.length) return wrap(hero(''), h('div', { class: 'shelf' }, emptyState({ title: 'No apps yet', body: 'No app is switched on for you in this organization. Ask an admin. If you were invited just now, check again in a minute.', ic: 'grid', first: true })));
@@ -142,7 +142,7 @@ export function launcherView({ catalog, error, org, orgs, role, name, registry, 
   const slash = (e) => { if (e.key === '/' && !e.ctrlKey && !e.metaKey && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName) && root.isConnected) { e.preventDefault(); find.focus(); } };
   document.addEventListener('keydown', slash);
   draw();
-  return wrap(hero(sub), h('div', { class: 'l-hero', style: 'padding:0' }, h('label', { class: 'l-find' }, icon('search'), h('span', { class: 'sr' }, 'Find an app'), find, h('kbd', { 'aria-hidden': 'true' }, '/'))), shelf,
+  return wrap(hero(sub, h('label', { class: 'l-find' }, icon('search'), h('span', { class: 'sr' }, 'Find an app'), find, h('kbd', { 'aria-hidden': 'true' }, '/'))), shelf,
     h('p', { class: 'l-foot' }, `You see the apps you’ve been given in ${org.name}. The sky follows your time of day and local weather.`), attrib);
 }
 
