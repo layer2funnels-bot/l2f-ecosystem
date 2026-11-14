@@ -1,5 +1,7 @@
 # Claude Code: next-chat handoff (updated 14 Nov 2026: Funnel Mapper live)
 
+> **14 Nov 2026: start with `docs/START_HERE_NEXT_CHAT.md`.** Design **V8** replaces V7 (V7 had many mistakes); the live software uses the **V4** design.
+
 Read this first. It replaces the need to re-explain the project. The owner (Tabish Riaz, non-technical founder; pronouns not stated in the repo, use "they") wants short plain-English reports, evidence instead of claims, $0 extra cost, and no permission questions for routine work; anything irreversible, live or data-moving still needs their approval.
 
 ## 0. Current state (14 Nov 2026) — read this first
