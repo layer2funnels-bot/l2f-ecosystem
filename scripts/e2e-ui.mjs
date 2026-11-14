@@ -298,7 +298,7 @@ await page.goBack(); await page.reload(); await wait('The sky follows your time 
 {
   const PJ = `Website relaunch ${Date.now()}`, T1 = `Write homepage copy ${Date.now()}`;   // unique per run: a re-run on the same local database never collides
   await page.goto(`${base}/#/projects`);
-  await page.getByText(/^Good (morning|afternoon|evening)/).first().waitFor({ timeout: 15000 }).catch(async (e) => { await shot(page, 'FAILED-pj'); console.log((await page.locator('body').innerText()).slice(0, 600), problems.slice(0, 3), net.slice(-4)); throw e; });
+  await page.getByText(/^(Good (morning|afternoon|evening)|Working late)/).first().waitFor({ timeout: 15000 }).catch(async (e) => { await shot(page, 'FAILED-pj'); console.log((await page.locator('body').innerText()).slice(0, 600), problems.slice(0, 3), net.slice(-4)); throw e; });
   check('P1', 'Projects opens inside the shell (its header and organization switcher stay) with its own navigation and a New project action',
     (await page.locator('.projects-mount').count()) === 1 && (await page.getByRole('link', { name: 'My Work' }).count()) >= 1 && (await page.getByRole('button', { name: 'New project' }).count()) >= 1);
   await page.getByRole('button', { name: 'New project' }).first().click();
