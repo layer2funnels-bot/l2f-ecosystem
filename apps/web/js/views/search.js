@@ -152,7 +152,6 @@ export function openSearch({ api, registry, catalog = [], isAdmin = false, curre
   }
   input.addEventListener('input', run);
   document.addEventListener('keydown', onKey, true);
-  document.body.append(scrim); paintChips(); run();
+  document.body.append(scrim); input.focus(); paintChips(); run();     // focus at once: what the person types next goes into search
   open = { focus: () => input.focus() };
-  setTimeout(() => input.focus(), 0);
 }
