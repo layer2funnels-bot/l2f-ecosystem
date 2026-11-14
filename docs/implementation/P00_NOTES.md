@@ -22,3 +22,12 @@ Launcher summary line with real counts (needs P01 Office data); shared context m
 - Before every push: `npm test` + the browser suite the change touches (`npm run test:e2e:ui`; `test:e2e` for migrations/grants). New SQL functions: revoke from anon/authenticated and add RPC names to `test/audit.test.mjs` F4c.
 - Local stack: `dockerd &`, `npm run stack:start && npm run stack:migrate`; reset `apps.lifecycle` for forms/value_ladder/social_planner/whiteboard to `coming_soon` after onboarding runs.
 - Batch related work per commit; short reports.
+
+## Status 15 Nov (handoff)
+- P00 complete and pushed to PR #56 (last: 105494b, variable Geist). Not merged. Migrations 0054/0055 local only (owner: not to production).
+- P01 Office in progress on LOCAL branch `p01-office` (rebased on PR #56's branch). Only `claude/epic-bohr-nc9jar` may be pushed, and the owner
+  wants ONE Office PR when Office is complete: keep committing on `p01-office`; when Office is done, merge it into the PR branch (or a fresh
+  branch after #56 is merged) and open the Office PR. Plan: `OFFICE_PLAN.md`. Office Home is built (views/home.js, pages/office-home.css).
+- Page method: prototype markup + `scripts/build-page-css.mjs` (add the page's classes and its real ancestor chain to PAGES) + compare with
+  `scripts/v8-compare.mjs <page>`. Dump a prototype page: see the probe in the session (Chromium, computed styles).
+- Owner decisions: one PR per complete app; Client Access Matrix = owners AND admins; no merge/deploy/production DB without approval.
