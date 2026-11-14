@@ -1,0 +1,64 @@
+
+/* =================== v7 SIZING PASS ===================
+   Feedback: v6 got slightly too small. Bring app sidebars, item names, client names,
+   planner labels, editor chrome and Funnel Mapper up one step. Office Home, Funnels,
+   Tasks list text and Drive browsing keep their v6 sizes (approved). */
+:root{--fs:14.5px;--ctl:36px;--ctl-sm:32px}
+.side{padding:12px 10px}.side-top{padding:6px 8px 14px}.side-top b{font-size:17px}
+.nav a,.side-list a{min-height:40px;font-size:15px;gap:12px;padding:0 12px;border-radius:9px}.nav a svg,.side-list a svg{width:19px;height:19px}
+.nav .count,.side .count{font-size:12px}.side-sec.sx{font-size:12px;padding:16px 12px 6px}
+.bar{min-height:52px}.crumb{font-size:14px}
+.t1{font-size:26px}.hint{font-size:13.5px}
+.btn{font-size:14px}.btn.sm{font-size:13.5px}
+.tabs6 a,.tabs6 button{font-size:14px;min-height:40px}.tabs6.big a{font-size:15px;min-height:42px}
+.tbl6 .thd,.tbl6 .tr{font-size:14px;min-height:48px}.tbl6 .thd{min-height:36px;font-size:11.5px}.t1c b{font-size:14.5px}.t1c small{font-size:12.5px}
+.card6>header h2{font-size:16px}
+/* section rhythm: clear space between stacked sections */
+.stackcol{gap:18px}.grid-h,.split,.o-grid{gap:20px}.card6+.card6,.sect6+.sect6{margin-top:0}.ph6{margin-bottom:18px}.kpirow{margin-bottom:18px}
+.content>section+section,.content>.card6+.card6{margin-top:18px}.docsec{margin-bottom:18px}.bb{margin-bottom:16px}
+/* Launcher: a little more zoomed in */
+.lx .l-wrap{max-width:1240px}.lx .l-grid{grid-template-columns:repeat(auto-fill,minmax(176px,1fr));gap:10px}.lx .tile{padding:24px 10px 20px}.lx .t-name{font-size:16.5px}.lx .t-desc{font-size:13.5px}.lx .l-hero h1{font-size:clamp(46px,6vw,76px)}.lx .l-find{min-height:52px;font-size:16px}.lx .l-group h2{font-size:13px}.jcard b{font-size:14.5px}
+@media (max-width:760px){.lx .l-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.lx .tile{padding:14px 2px 10px}.lx .t-name{font-size:13.5px}}
+/* Projects: names readable */
+.pj{min-height:36px;font-size:14.5px;padding-left:24px}.pg>summary{font-size:12.5px;min-height:32px}.pseg button{font-size:12.5px;min-height:28px}
+.trow6{min-height:42px;font-size:14.5px}.tname6{font-size:14.5px}.c-due{font-size:13px}.stp{height:24px;font-size:12px}
+.phd-t h1{font-size:27px}.vtabs a{font-size:14.5px;min-height:42px}.rp b{font-size:14.5px}
+.tf{min-height:40px}.tf-l{font-size:14px}.tf-v{font-size:14.5px}.tps h3{font-size:15px}.tp-title{font-size:24px}
+/* Clients: names readable */
+.cc-h b{font-size:15px}.cc-h small{font-size:13px}.chead6 .t1{font-size:28px}.stagebar6 a b{font-size:14.5px}.qa{font-size:14.5px}
+/* Tasks: sidebar one step up; list text unchanged (approved) */
+[data-app="tasks"] .nav a,[data-app="tasks"] .side-list a{font-size:15.5px;min-height:42px}
+/* Planner */
+.plsel{font-size:16px;min-height:38px}.plhero h2{font-size:34px}.band-h h2{font-size:19px}.objr{font-size:14px;min-height:44px}.objr .on{font-size:14.5px}.sn-t b{font-size:14.5px}.sfa b{font-size:16px}.sleaf{font-size:13.5px}
+.smtop{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-bottom:10px}.tabs6.inline{border-bottom:0;margin:0}
+.smbar2{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;margin-bottom:10px;border-radius:12px;background:var(--surface);border:var(--bw) solid var(--line)}.stratpick{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.stratpick small{color:var(--muted);font-size:13px}
+.sbw{height:calc(100vh - 190px);min-height:600px}
+.planacts{display:flex;justify-content:flex-end;gap:6px;margin:-50px 0 14px}
+.atree{overflow:auto;padding:24px;border-radius:14px;background:radial-gradient(color-mix(in srgb,var(--text) 9%,transparent) 1px,transparent 1px) 0 0/20px 20px,var(--surface2);border:var(--bw) solid var(--line);min-height:420px}
+.at-world{transform-origin:0 0;width:max-content}
+.at-node{display:flex;align-items:flex-start;gap:36px;position:relative}.at-kids{display:grid;gap:12px;position:relative;padding-left:0}.at-kids::before{content:"";position:absolute;left:-18px;top:22px;bottom:22px;width:2px;background:var(--line2);border-radius:2px}.at-kids>.at-node::before{content:"";position:absolute;left:-18px;top:24px;width:18px;height:2px;background:var(--line2)}
+.at-box{display:flex;align-items:center;gap:10px;min-width:250px;max-width:300px;padding:11px 12px;border-radius:12px;background:var(--surface);border:var(--bw) solid var(--line);border-left:4px solid var(--c);box-shadow:var(--sh1);font-size:14px}.at-box>span:nth-child(3){flex:1;display:grid;gap:2px}.at-box small{color:var(--muted);font-size:12.5px}.at-tg{width:24px;height:24px;border-radius:6px;display:grid;place-items:center;background:var(--sunk)}
+/* Drive */
+[data-app="drive"] .nav a{font-size:15px}
+.cathead{display:flex;align-items:center;gap:14px;margin:6px 0 16px;flex-wrap:wrap}.ft.big{width:48px;height:48px;border-radius:14px}
+/* Editors: chrome one step up */
+.edx-top{min-height:52px}.edx-name input{font-size:16.5px}.edx-name small{font-size:12.5px}
+.edx-bar{min-height:46px}.menus button{font-size:14px;min-height:34px;padding:0 10px}.tbtn{min-width:34px;height:34px}.tbtn svg{width:18px;height:18px}.sel.xs{min-height:32px;font-size:13.5px}.fsz{height:32px}.fsz input{font-size:14px}
+.edx-status{min-height:32px;font-size:12.5px}.dtab{font-size:14px;min-height:36px}
+.ruler{position:sticky;top:0;z-index:2;max-width:816px;margin:0 auto 8px;height:26px;background:var(--surface);border-bottom:var(--bw) solid var(--line2);border-radius:3px 3px 0 0}
+.rl-in{position:relative;height:100%;display:flex;align-items:flex-end;justify-content:space-between;padding:0 0 0}.rl-in i{position:relative;width:1px;height:5px;background:var(--line2);font:500 10px var(--mono);font-style:normal;color:var(--muted)}.rl-in i.mid{height:8px}.rl-in i.maj{height:11px;background:var(--muted)}.rl-in i.maj{text-indent:0}.rl-in i{display:flex;justify-content:center}.rl-in i:not(:empty){overflow:visible}.rl-in i:not(:empty)::after{content:attr(data-n)}
+.rl-in{background:linear-gradient(90deg,var(--sunk) 0 9.8%,transparent 9.8% 90.2%,var(--sunk) 90.2%)}
+.rl-mg{position:absolute;top:2px;width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid #2B63F6;cursor:ew-resize}.rl-mg.l{left:calc(9.8% - 6px)}.rl-mg.r{left:calc(90.2% - 6px)}
+.rl-ind{position:absolute;left:calc(9.8% - 5px);bottom:1px;width:10px;height:5px;background:#2B63F6;border-radius:1px}.rl-tab{position:absolute;bottom:1px;width:7px;height:7px;border-left:2px solid var(--text);border-bottom:2px solid var(--text)}
+.dcanvas{position:relative}.vruler{position:absolute;left:calc(50% - 408px - 28px);top:58px;width:18px;height:1056px;background:linear-gradient(180deg,var(--sunk) 0 7%,var(--surface) 7% 93%,var(--sunk) 93%);border-right:var(--bw) solid var(--line2);border-radius:2px}
+@media (max-width:1000px){.vruler{display:none}}
+/* Funnel Mapper: one step larger everywhere */
+.fmpx{font-size:14.5px}.fside nav a{font-size:14.5px;min-height:38px}.fws b{font-size:15px}.fh1{font-size:30px}.fkpis b{font-size:30px}.fkpis small,.fkpis span{font-size:13px}
+.fth-r,.ftr{font-size:14px;min-height:46px}.fth-r{font-size:11.5px;min-height:36px}.fcard b{font-size:14.5px}.fcard small{font-size:12.5px}.fsh h2{font-size:17px}.fat b{font-size:14px}.fat small{font-size:12.5px}.frow{font-size:14px}
+.fbtn{min-height:34px;font-size:13.5px}.fbtn.sm{min-height:30px;font-size:13px}.fsearch{min-height:34px;font-size:13.5px}.ftop{min-height:52px}.fcrumbs{font-size:14px}
+.fblk button{font-size:11.5px}.fprod{font-size:13px}.fnode{width:170px}.fnode b{font-size:13.5px}.fnode small{font-size:11.5px}.finsp h3{font-size:17px}.fkv{font-size:13.5px}.fchk{font-size:13px}.fkpibar{font-size:13.5px}
+.fset nav button{font-size:14px;min-height:36px}
+/* Office: slightly larger on pages other than Home and Funnels */
+[data-app="office"] .tbl6 .tr{font-size:14.5px}.avc-body b{font-size:18px}.docc b{font-size:14.5px}.fsec6 h3{font-size:16px}
+@media (max-width:760px){.edr{flex-wrap:wrap}.edr input{flex:1 1 140px}.fbar5 .btn.ghost,.fbar5 .btn.quiet{display:none}}
+.sroot{position:relative;left:auto;align-self:flex-start;margin-top:8px}

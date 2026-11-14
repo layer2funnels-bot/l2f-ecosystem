@@ -1,0 +1,1258 @@
+{
+ "routes": [
+  "launcher",
+  "profile",
+  "auth",
+  "states",
+  "system",
+  "office/home",
+  "office/funnels",
+  "office/avatars",
+  "office/avatar-new",
+  "office/avatar/john",
+  "office/avatar/john/deep",
+  "office/avatar/john/edit",
+  "office/avatar/john/use",
+  "office/avatar/john/evidence",
+  "office/offers",
+  "office/offer-new",
+  "office/stories",
+  "office/story-new",
+  "office/brandkits",
+  "office/brandkit-new",
+  "office/brandkit/l2f",
+  "office/strategies",
+  "office/strategy-template",
+  "office/strategy/s1",
+  "office/documents",
+  "office/team",
+  "office/member/SN",
+  "office/apps",
+  "office/admin/people",
+  "office/admin/person/SN",
+  "office/admin/teammates",
+  "office/admin/clients",
+  "office/admin/roles",
+  "office/admin/review",
+  "office/admin/storage",
+  "office/admin/branding",
+  "office/admin/audit",
+  "projects/home",
+  "projects/mywork",
+  "projects/workload",
+  "projects/portfolio",
+  "projects/files",
+  "projects/all",
+  "projects/trash",
+  "projects/p/p1/overview",
+  "projects/p/p1/list",
+  "projects/p/p1/board",
+  "projects/p/p1/calendar",
+  "projects/p/p1/timeline",
+  "projects/p/p1/report",
+  "projects/p/p1/docs",
+  "projects/p/p1/collection",
+  "projects/p/p5/overview",
+  "planner/home",
+  "planner/mywork",
+  "planner/plans",
+  "planner/plan/map",
+  "planner/plan/timeline",
+  "planner/plan/reviews",
+  "planner/plan/settings",
+  "planner/alignment",
+  "planner/reports",
+  "planner/model/map",
+  "planner/model/kinds",
+  "planner/model/kpi",
+  "planner/model/fa",
+  "planner/model/horizons",
+  "planner/model/tpl",
+  "fmp/home",
+  "fmp/clients",
+  "fmp/client/sc",
+  "fmp/funnels",
+  "fmp/funnel/pt",
+  "fmp/funnel/pt/reports",
+  "fmp/templates",
+  "fmp/trash",
+  "fmp/settings",
+  "clients/list",
+  "clients/c/hk/Overview",
+  "clients/c/hk/Work/0",
+  "clients/c/hk/Work/1",
+  "clients/c/hk/Work/1/avatar",
+  "clients/c/hk/Work/1/offers",
+  "clients/c/hk/Work/1/brand",
+  "clients/c/hk/Work/2",
+  "clients/c/hk/Work/3",
+  "clients/c/hk/Documents",
+  "clients/requests",
+  "clients/r/r3",
+  "clients/sops",
+  "clients/settings/stages",
+  "drive/home",
+  "drive/mydrive",
+  "drive/personal",
+  "drive/edit/doc/sop",
+  "drive/edit/sheet/cal",
+  "drive/edit/slides/deck",
+  "drive/edit/image/hero",
+  "drive/edit/pdf/prop",
+  "tasks/today",
+  "tasks/upcoming",
+  "tasks/inbox",
+  "tasks/teammates",
+  "tasks/list/mine",
+  "tasks/list/team",
+  "portal/home",
+  "portal/requests",
+  "portal/approvals",
+  "portal/notes",
+  "whiteboard/home",
+  "whiteboard/folder/f1",
+  "whiteboard/board/b1",
+  "forms/list",
+  "forms/b/quiz",
+  "forms/subs",
+  "ladder/list",
+  "ladder/map/hk",
+  "social/calendar",
+  "social/board",
+  "agents/home",
+  "agents/meeting/new",
+  "agents/ask",
+  "planner/plan/p1/builder",
+  "office/member/TR",
+  "profile/about",
+  "profile/account",
+  "profile/notifications",
+  "profile/appearance",
+  "projects/p/p2/list",
+  "clients/c/hk/requests",
+  "social/approvals",
+  "projects/p/p2/overview",
+  "projects/p/p3/overview",
+  "clients/pipeline",
+  "office/member/AR",
+  "office/member/BK",
+  "office/member/UM",
+  "office/projects",
+  "office/admin",
+  "office/strategy/new",
+  "office/brandkit",
+  "office/strategy/s2",
+  "office/strategy/s3",
+  "office/avatar/clara",
+  "office/offer/dfy",
+  "office/avatar/marcus",
+  "office/avatar/john/profile",
+  "office/avatar/john/deep#beliefs",
+  "office/avatar/john/edit/market",
+  "office/avatar/john/edit/qual",
+  "office/avatar/john/edit/basic",
+  "office/avatar/john/edit/drives",
+  "office/avatar/john/edit/beliefs",
+  "office/avatar/john/edit/desires",
+  "office/avatar/john/edit/filter",
+  "office/avatar/john/edit/problems",
+  "office/avatar/john/edit/niche",
+  "office/avatar/john/edit/next",
+  "office/avatar/john/edit/notes",
+  "office/offer/audit",
+  "office/offer/chal",
+  "office/brandkit/challenge",
+  "office/brandkit/harry",
+  "office/member/AH",
+  "office/admin/person/TR",
+  "office/admin/person/AR",
+  "office/admin/person/BK",
+  "office/admin/person/UM",
+  "office/admin/person/AH",
+  "projects/p/p4/overview",
+  "projects/p/p3/list",
+  "projects/p/p4/list",
+  "projects/p/p7/list",
+  "projects/p/p7/overview",
+  "drive/edit/doc/brief",
+  "projects/p/p2/files",
+  "projects/p/p5/list",
+  "projects/p/p5/board",
+  "projects/p/p5/calendar",
+  "projects/p/p5/timeline",
+  "projects/p/p5/report",
+  "projects/p/p5/docs",
+  "projects/p/p5/collection",
+  "planner/model",
+  "fmp/funnel/wb",
+  "fmp/funnel/ac",
+  "fmp/funnel/ptc",
+  "fmp/funnel/sab",
+  "fmp/client/pn",
+  "fmp/client/ml",
+  "fmp/help",
+  "fmp/client/ak",
+  "fmp/funnel/qc",
+  "clients/c/mm/Overview",
+  "clients/c/nv/Overview",
+  "clients/c/gr/Overview",
+  "clients/c/lc/Overview",
+  "clients/tools",
+  "clients/settings",
+  "clients/c/hk/Work",
+  "clients/c/hk/Requests & Approvals",
+  "clients/c/hk/Team Notes",
+  "clients/c/hk/Work/4",
+  "clients/c/hk/Work/1/strategy",
+  "drive/edit/doc/copy",
+  "clients/c/hk/Documents/Brand Base",
+  "clients/c/hk/Documents/Strategy",
+  "clients/c/hk/Documents/Copy",
+  "clients/c/hk/Documents/Build",
+  "clients/c/hk/Documents/Marketing",
+  "clients/c/hk/Documents/Contracts",
+  "clients/r/r1",
+  "clients/r/r2",
+  "clients/r/r4",
+  "clients/r/r5",
+  "clients/settings/statuses",
+  "clients/settings/brandbase",
+  "clients/settings/sections",
+  "clients/settings/notify",
+  "drive/f/delivery",
+  "drive/f/sops",
+  "drive/f/templates",
+  "drive/f/brand",
+  "drive/f/finance",
+  "drive/recent",
+  "drive/starred",
+  "drive/shared",
+  "drive/trash",
+  "tasks/list/challenge",
+  "tasks/list/content",
+  "tasks/teammates/AR",
+  "tasks/teammates/BK",
+  "tasks/teammates/SN",
+  "tasks/teammates/UM",
+  "tasks/teammates/AH",
+  "clients/c/hk/overview",
+  "portal/note/new",
+  "portal/note/n1",
+  "portal/note/n2",
+  "portal/note/n3",
+  "whiteboard/board/new",
+  "whiteboard/folder/f2",
+  "whiteboard/folder/f3",
+  "whiteboard/starred",
+  "whiteboard/tpl",
+  "forms/b/bb",
+  "forms/b/apply",
+  "forms/b/fb",
+  "forms/tpl",
+  "ladder/map/l2f",
+  "ladder/history",
+  "social/posts",
+  "social/campaigns",
+  "social/queue",
+  "social/channels",
+  "agents/meetings",
+  "agents/settings",
+  "projects/p/p2/board",
+  "projects/p/p2/calendar",
+  "projects/p/p2/timeline",
+  "projects/p/p2/report",
+  "projects/p/p2/docs",
+  "projects/p/p2/collection",
+  "projects/p/p3/board",
+  "projects/p/p3/calendar",
+  "projects/p/p3/timeline",
+  "projects/p/p3/report",
+  "projects/p/p3/docs",
+  "projects/p/p3/collection",
+  "clients/c/ap/Overview",
+  "clients/c/zx/Overview",
+  "office/avatar/clara/edit",
+  "office/avatar/clara/profile",
+  "office/avatar/clara/deep",
+  "office/avatar/clara/use",
+  "office/avatar/clara/evidence",
+  "office/avatar/clara/deep#beliefs",
+  "office/avatar/marcus/edit",
+  "office/avatar/marcus/profile",
+  "office/avatar/marcus/deep",
+  "office/avatar/marcus/use",
+  "office/avatar/marcus/evidence",
+  "office/avatar/marcus/deep#beliefs",
+  "projects/p/p4/board",
+  "projects/p/p4/calendar",
+  "projects/p/p4/timeline",
+  "projects/p/p4/report",
+  "projects/p/p4/docs",
+  "projects/p/p4/collection",
+  "projects/p/p7/board",
+  "projects/p/p7/calendar",
+  "projects/p/p7/timeline",
+  "projects/p/p7/report",
+  "projects/p/p7/docs",
+  "projects/p/p7/collection",
+  "fmp/funnel/wb/reports",
+  "fmp/funnel/ac/reports",
+  "fmp/funnel/ptc/reports",
+  "fmp/funnel/sab/reports",
+  "fmp/funnel/qc/reports",
+  "clients/c/mm/Work",
+  "clients/c/mm/Requests & Approvals",
+  "clients/c/mm/Documents",
+  "clients/c/mm/Team Notes",
+  "clients/c/mm/Work/0",
+  "clients/c/mm/Work/1",
+  "clients/c/mm/Work/2",
+  "clients/c/mm/Work/3",
+  "clients/c/mm/Work/4",
+  "clients/c/nv/Work",
+  "clients/c/nv/Requests & Approvals",
+  "clients/c/nv/Documents",
+  "clients/c/nv/Team Notes",
+  "clients/c/nv/Work/0",
+  "clients/c/nv/Work/1",
+  "clients/c/nv/Work/2",
+  "clients/c/nv/Work/3",
+  "clients/c/nv/Work/4",
+  "clients/c/gr/Work",
+  "clients/c/gr/Requests & Approvals",
+  "clients/c/gr/Documents",
+  "clients/c/gr/Team Notes",
+  "clients/c/gr/Work/0",
+  "clients/c/lc/Work",
+  "clients/c/lc/Requests & Approvals",
+  "clients/c/lc/Documents",
+  "clients/c/lc/Team Notes",
+  "clients/c/lc/Work/0",
+  "drive/f/onb",
+  "agents/meeting/m1",
+  "agents/meeting/m2",
+  "agents/meeting/m3",
+  "clients/c/ap/Work",
+  "clients/c/ap/Requests & Approvals",
+  "clients/c/ap/Documents",
+  "clients/c/ap/Team Notes",
+  "clients/c/ap/Work/4",
+  "clients/c/zx/Work",
+  "clients/c/zx/Requests & Approvals",
+  "clients/c/zx/Documents",
+  "clients/c/zx/Team Notes",
+  "clients/c/zx/Work/0",
+  "office/avatar/clara/edit/market",
+  "office/avatar/clara/edit/qual",
+  "office/avatar/clara/edit/basic",
+  "office/avatar/clara/edit/drives",
+  "office/avatar/clara/edit/beliefs",
+  "office/avatar/clara/edit/desires",
+  "office/avatar/clara/edit/filter",
+  "office/avatar/clara/edit/problems",
+  "office/avatar/clara/edit/niche",
+  "office/avatar/clara/edit/next",
+  "office/avatar/clara/edit/notes",
+  "office/avatar/marcus/edit/market",
+  "office/avatar/marcus/edit/qual",
+  "office/avatar/marcus/edit/basic",
+  "office/avatar/marcus/edit/drives",
+  "office/avatar/marcus/edit/beliefs",
+  "office/avatar/marcus/edit/desires",
+  "office/avatar/marcus/edit/filter",
+  "office/avatar/marcus/edit/problems",
+  "office/avatar/marcus/edit/niche",
+  "office/avatar/marcus/edit/next",
+  "office/avatar/marcus/edit/notes",
+  "clients/c/mm/Documents/Brand Base",
+  "clients/c/mm/Documents/Strategy",
+  "clients/c/mm/Documents/Copy",
+  "clients/c/mm/Documents/Build",
+  "clients/c/mm/Documents/Marketing",
+  "clients/c/mm/Documents/Contracts",
+  "clients/c/mm/Work/1/avatar",
+  "clients/c/mm/Work/1/offers",
+  "clients/c/mm/Work/1/brand",
+  "clients/c/mm/Work/1/strategy",
+  "clients/c/nv/Documents/Brand Base",
+  "clients/c/nv/Documents/Strategy",
+  "clients/c/nv/Documents/Copy",
+  "clients/c/nv/Documents/Build",
+  "clients/c/nv/Documents/Marketing",
+  "clients/c/nv/Documents/Contracts",
+  "clients/c/nv/Work/1/avatar",
+  "clients/c/nv/Work/1/offers",
+  "clients/c/nv/Work/1/brand",
+  "clients/c/nv/Work/1/strategy",
+  "clients/c/gr/Work/1",
+  "clients/c/gr/Work/2",
+  "clients/c/gr/Work/3",
+  "clients/c/gr/Work/4",
+  "clients/c/gr/Documents/Brand Base",
+  "clients/c/gr/Documents/Strategy",
+  "clients/c/gr/Documents/Copy",
+  "clients/c/gr/Documents/Build",
+  "clients/c/gr/Documents/Marketing",
+  "clients/c/gr/Documents/Contracts",
+  "clients/c/lc/Work/1",
+  "clients/c/lc/Work/2",
+  "clients/c/lc/Work/3",
+  "clients/c/lc/Work/4",
+  "clients/c/lc/Documents/Brand Base",
+  "clients/c/lc/Documents/Strategy",
+  "clients/c/lc/Documents/Copy",
+  "clients/c/lc/Documents/Build",
+  "clients/c/lc/Documents/Marketing",
+  "clients/c/lc/Documents/Contracts",
+  "agents/meeting/m1/notes",
+  "agents/meeting/m1/transcript",
+  "agents/meeting/m1/actions",
+  "agents/meeting/m2/notes",
+  "agents/meeting/m2/transcript",
+  "agents/meeting/m2/actions",
+  "agents/meeting/m3/notes",
+  "agents/meeting/m3/transcript",
+  "agents/meeting/m3/actions",
+  "clients/c/ap/Work/0",
+  "clients/c/ap/Work/1",
+  "clients/c/ap/Work/2",
+  "clients/c/ap/Work/3",
+  "clients/c/ap/Documents/Brand Base",
+  "clients/c/ap/Documents/Strategy",
+  "clients/c/ap/Documents/Copy",
+  "clients/c/ap/Documents/Build",
+  "clients/c/ap/Documents/Marketing",
+  "clients/c/ap/Documents/Contracts",
+  "clients/c/zx/Work/1",
+  "clients/c/zx/Work/2",
+  "clients/c/zx/Work/3",
+  "clients/c/zx/Work/4",
+  "clients/c/zx/Documents/Brand Base",
+  "clients/c/zx/Documents/Strategy",
+  "clients/c/zx/Documents/Copy",
+  "clients/c/zx/Documents/Build",
+  "clients/c/zx/Documents/Marketing",
+  "clients/c/zx/Documents/Contracts",
+  "clients/c/gr/Work/1/avatar",
+  "clients/c/gr/Work/1/offers",
+  "clients/c/gr/Work/1/brand",
+  "clients/c/gr/Work/1/strategy",
+  "clients/c/lc/Work/1/avatar",
+  "clients/c/lc/Work/1/offers",
+  "clients/c/lc/Work/1/brand",
+  "clients/c/lc/Work/1/strategy",
+  "clients/c/ap/Work/1/avatar",
+  "clients/c/ap/Work/1/offers",
+  "clients/c/ap/Work/1/brand",
+  "clients/c/ap/Work/1/strategy",
+  "clients/c/zx/Work/1/avatar",
+  "clients/c/zx/Work/1/offers",
+  "clients/c/zx/Work/1/brand",
+  "clients/c/zx/Work/1/strategy"
+ ],
+ "templates": {
+  "launcher": [
+   "launcher"
+  ],
+  "profile": [
+   "profile"
+  ],
+  "auth": [
+   "auth"
+  ],
+  "states": [
+   "states"
+  ],
+  "system": [
+   "system"
+  ],
+  "office/home": [
+   "office/home"
+  ],
+  "office/funnels": [
+   "office/funnels"
+  ],
+  "office/avatars": [
+   "office/avatars"
+  ],
+  "office/avatar-new": [
+   "office/avatar-new"
+  ],
+  "office/avatar/:avatar": [
+   "office/avatar/john",
+   "office/avatar/clara",
+   "office/avatar/marcus"
+  ],
+  "office/avatar/:avatar/deep": [
+   "office/avatar/john/deep",
+   "office/avatar/john/deep#beliefs",
+   "office/avatar/clara/deep",
+   "office/avatar/clara/deep#beliefs",
+   "office/avatar/marcus/deep",
+   "office/avatar/marcus/deep#beliefs"
+  ],
+  "office/avatar/:avatar/edit": [
+   "office/avatar/john/edit",
+   "office/avatar/clara/edit",
+   "office/avatar/marcus/edit"
+  ],
+  "office/avatar/:avatar/use": [
+   "office/avatar/john/use",
+   "office/avatar/clara/use",
+   "office/avatar/marcus/use"
+  ],
+  "office/avatar/:avatar/evidence": [
+   "office/avatar/john/evidence",
+   "office/avatar/clara/evidence",
+   "office/avatar/marcus/evidence"
+  ],
+  "office/offers": [
+   "office/offers"
+  ],
+  "office/offer-new": [
+   "office/offer-new"
+  ],
+  "office/stories": [
+   "office/stories"
+  ],
+  "office/story-new": [
+   "office/story-new"
+  ],
+  "office/brandkits": [
+   "office/brandkits"
+  ],
+  "office/brandkit-new": [
+   "office/brandkit-new"
+  ],
+  "office/brandkit/:kit": [
+   "office/brandkit/l2f",
+   "office/brandkit/challenge",
+   "office/brandkit/harry"
+  ],
+  "office/strategies": [
+   "office/strategies"
+  ],
+  "office/strategy-template": [
+   "office/strategy-template"
+  ],
+  "office/strategy/:strategy": [
+   "office/strategy/s1",
+   "office/strategy/s2",
+   "office/strategy/s3"
+  ],
+  "office/documents": [
+   "office/documents"
+  ],
+  "office/team": [
+   "office/team"
+  ],
+  "office/member/:person": [
+   "office/member/SN",
+   "office/member/TR",
+   "office/member/AR",
+   "office/member/BK",
+   "office/member/UM",
+   "office/member/AH"
+  ],
+  "office/apps": [
+   "office/apps"
+  ],
+  "office/admin/people": [
+   "office/admin/people"
+  ],
+  "office/admin/person/:person": [
+   "office/admin/person/SN",
+   "office/admin/person/TR",
+   "office/admin/person/AR",
+   "office/admin/person/BK",
+   "office/admin/person/UM",
+   "office/admin/person/AH"
+  ],
+  "office/admin/teammates": [
+   "office/admin/teammates"
+  ],
+  "office/admin/clients": [
+   "office/admin/clients"
+  ],
+  "office/admin/roles": [
+   "office/admin/roles"
+  ],
+  "office/admin/review": [
+   "office/admin/review"
+  ],
+  "office/admin/storage": [
+   "office/admin/storage"
+  ],
+  "office/admin/branding": [
+   "office/admin/branding"
+  ],
+  "office/admin/audit": [
+   "office/admin/audit"
+  ],
+  "projects/home": [
+   "projects/home"
+  ],
+  "projects/mywork": [
+   "projects/mywork"
+  ],
+  "projects/workload": [
+   "projects/workload"
+  ],
+  "projects/portfolio": [
+   "projects/portfolio"
+  ],
+  "projects/files": [
+   "projects/files"
+  ],
+  "projects/all": [
+   "projects/all"
+  ],
+  "projects/trash": [
+   "projects/trash"
+  ],
+  "projects/p/:project/overview": [
+   "projects/p/p1/overview",
+   "projects/p/p5/overview",
+   "projects/p/p2/overview",
+   "projects/p/p3/overview",
+   "projects/p/p4/overview",
+   "projects/p/p7/overview"
+  ],
+  "projects/p/:project/list": [
+   "projects/p/p1/list",
+   "projects/p/p2/list",
+   "projects/p/p3/list",
+   "projects/p/p4/list",
+   "projects/p/p7/list",
+   "projects/p/p5/list"
+  ],
+  "projects/p/:project/board": [
+   "projects/p/p1/board",
+   "projects/p/p5/board",
+   "projects/p/p2/board",
+   "projects/p/p3/board",
+   "projects/p/p4/board",
+   "projects/p/p7/board"
+  ],
+  "projects/p/:project/calendar": [
+   "projects/p/p1/calendar",
+   "projects/p/p5/calendar",
+   "projects/p/p2/calendar",
+   "projects/p/p3/calendar",
+   "projects/p/p4/calendar",
+   "projects/p/p7/calendar"
+  ],
+  "projects/p/:project/timeline": [
+   "projects/p/p1/timeline",
+   "projects/p/p5/timeline",
+   "projects/p/p2/timeline",
+   "projects/p/p3/timeline",
+   "projects/p/p4/timeline",
+   "projects/p/p7/timeline"
+  ],
+  "projects/p/:project/report": [
+   "projects/p/p1/report",
+   "projects/p/p5/report",
+   "projects/p/p2/report",
+   "projects/p/p3/report",
+   "projects/p/p4/report",
+   "projects/p/p7/report"
+  ],
+  "projects/p/:project/docs": [
+   "projects/p/p1/docs",
+   "projects/p/p5/docs",
+   "projects/p/p2/docs",
+   "projects/p/p3/docs",
+   "projects/p/p4/docs",
+   "projects/p/p7/docs"
+  ],
+  "projects/p/:project/collection": [
+   "projects/p/p1/collection",
+   "projects/p/p5/collection",
+   "projects/p/p2/collection",
+   "projects/p/p3/collection",
+   "projects/p/p4/collection",
+   "projects/p/p7/collection"
+  ],
+  "planner/home": [
+   "planner/home"
+  ],
+  "planner/mywork": [
+   "planner/mywork"
+  ],
+  "planner/plans": [
+   "planner/plans"
+  ],
+  "planner/plan/map": [
+   "planner/plan/map"
+  ],
+  "planner/plan/timeline": [
+   "planner/plan/timeline"
+  ],
+  "planner/plan/reviews": [
+   "planner/plan/reviews"
+  ],
+  "planner/plan/settings": [
+   "planner/plan/settings"
+  ],
+  "planner/alignment": [
+   "planner/alignment"
+  ],
+  "planner/reports": [
+   "planner/reports"
+  ],
+  "planner/model/map": [
+   "planner/model/map"
+  ],
+  "planner/model/kinds": [
+   "planner/model/kinds"
+  ],
+  "planner/model/kpi": [
+   "planner/model/kpi"
+  ],
+  "planner/model/fa": [
+   "planner/model/fa"
+  ],
+  "planner/model/horizons": [
+   "planner/model/horizons"
+  ],
+  "planner/model/tpl": [
+   "planner/model/tpl"
+  ],
+  "fmp/home": [
+   "fmp/home"
+  ],
+  "fmp/clients": [
+   "fmp/clients"
+  ],
+  "fmp/client/:client": [
+   "fmp/client/sc",
+   "fmp/client/pn",
+   "fmp/client/ml",
+   "fmp/client/ak"
+  ],
+  "fmp/funnels": [
+   "fmp/funnels"
+  ],
+  "fmp/funnel/:funnel": [
+   "fmp/funnel/pt",
+   "fmp/funnel/wb",
+   "fmp/funnel/ac",
+   "fmp/funnel/ptc",
+   "fmp/funnel/sab",
+   "fmp/funnel/qc"
+  ],
+  "fmp/funnel/:funnel/reports": [
+   "fmp/funnel/pt/reports",
+   "fmp/funnel/wb/reports",
+   "fmp/funnel/ac/reports",
+   "fmp/funnel/ptc/reports",
+   "fmp/funnel/sab/reports",
+   "fmp/funnel/qc/reports"
+  ],
+  "fmp/templates": [
+   "fmp/templates"
+  ],
+  "fmp/trash": [
+   "fmp/trash"
+  ],
+  "fmp/settings": [
+   "fmp/settings"
+  ],
+  "clients/list": [
+   "clients/list"
+  ],
+  "clients/c/:client/Overview": [
+   "clients/c/hk/Overview",
+   "clients/c/mm/Overview",
+   "clients/c/nv/Overview",
+   "clients/c/gr/Overview",
+   "clients/c/lc/Overview",
+   "clients/c/ap/Overview",
+   "clients/c/zx/Overview"
+  ],
+  "clients/c/:client/Work/0": [
+   "clients/c/hk/Work/0",
+   "clients/c/mm/Work/0",
+   "clients/c/nv/Work/0",
+   "clients/c/gr/Work/0",
+   "clients/c/lc/Work/0",
+   "clients/c/zx/Work/0",
+   "clients/c/ap/Work/0"
+  ],
+  "clients/c/:client/Work/1": [
+   "clients/c/hk/Work/1",
+   "clients/c/mm/Work/1",
+   "clients/c/nv/Work/1",
+   "clients/c/gr/Work/1",
+   "clients/c/lc/Work/1",
+   "clients/c/ap/Work/1",
+   "clients/c/zx/Work/1"
+  ],
+  "clients/c/:client/Work/1/avatar": [
+   "clients/c/hk/Work/1/avatar",
+   "clients/c/mm/Work/1/avatar",
+   "clients/c/nv/Work/1/avatar",
+   "clients/c/gr/Work/1/avatar",
+   "clients/c/lc/Work/1/avatar",
+   "clients/c/ap/Work/1/avatar",
+   "clients/c/zx/Work/1/avatar"
+  ],
+  "clients/c/:client/Work/1/offers": [
+   "clients/c/hk/Work/1/offers",
+   "clients/c/mm/Work/1/offers",
+   "clients/c/nv/Work/1/offers",
+   "clients/c/gr/Work/1/offers",
+   "clients/c/lc/Work/1/offers",
+   "clients/c/ap/Work/1/offers",
+   "clients/c/zx/Work/1/offers"
+  ],
+  "clients/c/:client/Work/1/brand": [
+   "clients/c/hk/Work/1/brand",
+   "clients/c/mm/Work/1/brand",
+   "clients/c/nv/Work/1/brand",
+   "clients/c/gr/Work/1/brand",
+   "clients/c/lc/Work/1/brand",
+   "clients/c/ap/Work/1/brand",
+   "clients/c/zx/Work/1/brand"
+  ],
+  "clients/c/:client/Work/2": [
+   "clients/c/hk/Work/2",
+   "clients/c/mm/Work/2",
+   "clients/c/nv/Work/2",
+   "clients/c/gr/Work/2",
+   "clients/c/lc/Work/2",
+   "clients/c/ap/Work/2",
+   "clients/c/zx/Work/2"
+  ],
+  "clients/c/:client/Work/3": [
+   "clients/c/hk/Work/3",
+   "clients/c/mm/Work/3",
+   "clients/c/nv/Work/3",
+   "clients/c/gr/Work/3",
+   "clients/c/lc/Work/3",
+   "clients/c/ap/Work/3",
+   "clients/c/zx/Work/3"
+  ],
+  "clients/c/:client/Documents": [
+   "clients/c/hk/Documents",
+   "clients/c/mm/Documents",
+   "clients/c/nv/Documents",
+   "clients/c/gr/Documents",
+   "clients/c/lc/Documents",
+   "clients/c/ap/Documents",
+   "clients/c/zx/Documents"
+  ],
+  "clients/requests": [
+   "clients/requests"
+  ],
+  "clients/r/:request": [
+   "clients/r/r3",
+   "clients/r/r1",
+   "clients/r/r2",
+   "clients/r/r4",
+   "clients/r/r5"
+  ],
+  "clients/sops": [
+   "clients/sops"
+  ],
+  "clients/settings/stages": [
+   "clients/settings/stages"
+  ],
+  "drive/home": [
+   "drive/home"
+  ],
+  "drive/mydrive": [
+   "drive/mydrive"
+  ],
+  "drive/personal": [
+   "drive/personal"
+  ],
+  "drive/edit/doc/:file": [
+   "drive/edit/doc/sop",
+   "drive/edit/doc/brief",
+   "drive/edit/doc/copy"
+  ],
+  "drive/edit/sheet/:file": [
+   "drive/edit/sheet/cal"
+  ],
+  "drive/edit/slides/:file": [
+   "drive/edit/slides/deck"
+  ],
+  "drive/edit/image/:file": [
+   "drive/edit/image/hero"
+  ],
+  "drive/edit/pdf/:file": [
+   "drive/edit/pdf/prop"
+  ],
+  "tasks/today": [
+   "tasks/today"
+  ],
+  "tasks/upcoming": [
+   "tasks/upcoming"
+  ],
+  "tasks/inbox": [
+   "tasks/inbox"
+  ],
+  "tasks/teammates": [
+   "tasks/teammates"
+  ],
+  "tasks/list/:list": [
+   "tasks/list/mine",
+   "tasks/list/team",
+   "tasks/list/challenge",
+   "tasks/list/content"
+  ],
+  "portal/home": [
+   "portal/home"
+  ],
+  "portal/requests": [
+   "portal/requests"
+  ],
+  "portal/approvals": [
+   "portal/approvals"
+  ],
+  "portal/notes": [
+   "portal/notes"
+  ],
+  "whiteboard/home": [
+   "whiteboard/home"
+  ],
+  "whiteboard/folder/:id": [
+   "whiteboard/folder/f1",
+   "whiteboard/folder/f2",
+   "whiteboard/folder/f3"
+  ],
+  "whiteboard/board/:id": [
+   "whiteboard/board/b1",
+   "whiteboard/board/new"
+  ],
+  "forms/list": [
+   "forms/list"
+  ],
+  "forms/b/:form": [
+   "forms/b/quiz",
+   "forms/b/bb",
+   "forms/b/apply",
+   "forms/b/fb"
+  ],
+  "forms/subs": [
+   "forms/subs"
+  ],
+  "ladder/list": [
+   "ladder/list"
+  ],
+  "ladder/map/:ladder": [
+   "ladder/map/hk",
+   "ladder/map/l2f"
+  ],
+  "social/calendar": [
+   "social/calendar"
+  ],
+  "social/board": [
+   "social/board"
+  ],
+  "agents/home": [
+   "agents/home"
+  ],
+  "agents/meeting/new": [
+   "agents/meeting/new"
+  ],
+  "agents/ask": [
+   "agents/ask"
+  ],
+  "planner/plan/:plan/builder": [
+   "planner/plan/p1/builder"
+  ],
+  "profile/about": [
+   "profile/about"
+  ],
+  "profile/account": [
+   "profile/account"
+  ],
+  "profile/notifications": [
+   "profile/notifications"
+  ],
+  "profile/appearance": [
+   "profile/appearance"
+  ],
+  "clients/c/:client/requests": [
+   "clients/c/hk/requests"
+  ],
+  "social/approvals": [
+   "social/approvals"
+  ],
+  "clients/pipeline": [
+   "clients/pipeline"
+  ],
+  "office/projects": [
+   "office/projects"
+  ],
+  "office/admin": [
+   "office/admin"
+  ],
+  "office/strategy/new": [
+   "office/strategy/new"
+  ],
+  "office/brandkit": [
+   "office/brandkit"
+  ],
+  "office/offer/:offer": [
+   "office/offer/dfy",
+   "office/offer/audit",
+   "office/offer/chal"
+  ],
+  "office/avatar/:avatar/profile": [
+   "office/avatar/john/profile",
+   "office/avatar/clara/profile",
+   "office/avatar/marcus/profile"
+  ],
+  "office/avatar/:avatar/edit/:chapter": [
+   "office/avatar/john/edit/market",
+   "office/avatar/john/edit/qual",
+   "office/avatar/john/edit/basic",
+   "office/avatar/john/edit/drives",
+   "office/avatar/john/edit/beliefs",
+   "office/avatar/john/edit/desires",
+   "office/avatar/john/edit/filter",
+   "office/avatar/john/edit/problems",
+   "office/avatar/john/edit/niche",
+   "office/avatar/john/edit/next",
+   "office/avatar/john/edit/notes",
+   "office/avatar/clara/edit/market",
+   "office/avatar/clara/edit/qual",
+   "office/avatar/clara/edit/basic",
+   "office/avatar/clara/edit/drives",
+   "office/avatar/clara/edit/beliefs",
+   "office/avatar/clara/edit/desires",
+   "office/avatar/clara/edit/filter",
+   "office/avatar/clara/edit/problems",
+   "office/avatar/clara/edit/niche",
+   "office/avatar/clara/edit/next",
+   "office/avatar/clara/edit/notes",
+   "office/avatar/marcus/edit/market",
+   "office/avatar/marcus/edit/qual",
+   "office/avatar/marcus/edit/basic",
+   "office/avatar/marcus/edit/drives",
+   "office/avatar/marcus/edit/beliefs",
+   "office/avatar/marcus/edit/desires",
+   "office/avatar/marcus/edit/filter",
+   "office/avatar/marcus/edit/problems",
+   "office/avatar/marcus/edit/niche",
+   "office/avatar/marcus/edit/next",
+   "office/avatar/marcus/edit/notes"
+  ],
+  "projects/p/:project/files": [
+   "projects/p/p2/files"
+  ],
+  "planner/model": [
+   "planner/model"
+  ],
+  "fmp/help": [
+   "fmp/help"
+  ],
+  "clients/tools": [
+   "clients/tools"
+  ],
+  "clients/settings": [
+   "clients/settings"
+  ],
+  "clients/c/:client/Work": [
+   "clients/c/hk/Work",
+   "clients/c/mm/Work",
+   "clients/c/nv/Work",
+   "clients/c/gr/Work",
+   "clients/c/lc/Work",
+   "clients/c/ap/Work",
+   "clients/c/zx/Work"
+  ],
+  "clients/c/:client/Requests & Approvals": [
+   "clients/c/hk/Requests & Approvals",
+   "clients/c/mm/Requests & Approvals",
+   "clients/c/nv/Requests & Approvals",
+   "clients/c/gr/Requests & Approvals",
+   "clients/c/lc/Requests & Approvals",
+   "clients/c/ap/Requests & Approvals",
+   "clients/c/zx/Requests & Approvals"
+  ],
+  "clients/c/:client/Team Notes": [
+   "clients/c/hk/Team Notes",
+   "clients/c/mm/Team Notes",
+   "clients/c/nv/Team Notes",
+   "clients/c/gr/Team Notes",
+   "clients/c/lc/Team Notes",
+   "clients/c/ap/Team Notes",
+   "clients/c/zx/Team Notes"
+  ],
+  "clients/c/:client/Work/4": [
+   "clients/c/hk/Work/4",
+   "clients/c/mm/Work/4",
+   "clients/c/nv/Work/4",
+   "clients/c/ap/Work/4",
+   "clients/c/gr/Work/4",
+   "clients/c/lc/Work/4",
+   "clients/c/zx/Work/4"
+  ],
+  "clients/c/:client/Work/1/strategy": [
+   "clients/c/hk/Work/1/strategy",
+   "clients/c/mm/Work/1/strategy",
+   "clients/c/nv/Work/1/strategy",
+   "clients/c/gr/Work/1/strategy",
+   "clients/c/lc/Work/1/strategy",
+   "clients/c/ap/Work/1/strategy",
+   "clients/c/zx/Work/1/strategy"
+  ],
+  "clients/c/:client/Documents/Brand Base": [
+   "clients/c/hk/Documents/Brand Base",
+   "clients/c/mm/Documents/Brand Base",
+   "clients/c/nv/Documents/Brand Base",
+   "clients/c/gr/Documents/Brand Base",
+   "clients/c/lc/Documents/Brand Base",
+   "clients/c/ap/Documents/Brand Base",
+   "clients/c/zx/Documents/Brand Base"
+  ],
+  "clients/c/:client/Documents/Strategy": [
+   "clients/c/hk/Documents/Strategy",
+   "clients/c/mm/Documents/Strategy",
+   "clients/c/nv/Documents/Strategy",
+   "clients/c/gr/Documents/Strategy",
+   "clients/c/lc/Documents/Strategy",
+   "clients/c/ap/Documents/Strategy",
+   "clients/c/zx/Documents/Strategy"
+  ],
+  "clients/c/:client/Documents/Copy": [
+   "clients/c/hk/Documents/Copy",
+   "clients/c/mm/Documents/Copy",
+   "clients/c/nv/Documents/Copy",
+   "clients/c/gr/Documents/Copy",
+   "clients/c/lc/Documents/Copy",
+   "clients/c/ap/Documents/Copy",
+   "clients/c/zx/Documents/Copy"
+  ],
+  "clients/c/:client/Documents/Build": [
+   "clients/c/hk/Documents/Build",
+   "clients/c/mm/Documents/Build",
+   "clients/c/nv/Documents/Build",
+   "clients/c/gr/Documents/Build",
+   "clients/c/lc/Documents/Build",
+   "clients/c/ap/Documents/Build",
+   "clients/c/zx/Documents/Build"
+  ],
+  "clients/c/:client/Documents/Marketing": [
+   "clients/c/hk/Documents/Marketing",
+   "clients/c/mm/Documents/Marketing",
+   "clients/c/nv/Documents/Marketing",
+   "clients/c/gr/Documents/Marketing",
+   "clients/c/lc/Documents/Marketing",
+   "clients/c/ap/Documents/Marketing",
+   "clients/c/zx/Documents/Marketing"
+  ],
+  "clients/c/:client/Documents/Contracts": [
+   "clients/c/hk/Documents/Contracts",
+   "clients/c/mm/Documents/Contracts",
+   "clients/c/nv/Documents/Contracts",
+   "clients/c/gr/Documents/Contracts",
+   "clients/c/lc/Documents/Contracts",
+   "clients/c/ap/Documents/Contracts",
+   "clients/c/zx/Documents/Contracts"
+  ],
+  "clients/settings/statuses": [
+   "clients/settings/statuses"
+  ],
+  "clients/settings/brandbase": [
+   "clients/settings/brandbase"
+  ],
+  "clients/settings/sections": [
+   "clients/settings/sections"
+  ],
+  "clients/settings/notify": [
+   "clients/settings/notify"
+  ],
+  "drive/f/:folder": [
+   "drive/f/delivery",
+   "drive/f/sops",
+   "drive/f/templates",
+   "drive/f/brand",
+   "drive/f/finance",
+   "drive/f/onb"
+  ],
+  "drive/recent": [
+   "drive/recent"
+  ],
+  "drive/starred": [
+   "drive/starred"
+  ],
+  "drive/shared": [
+   "drive/shared"
+  ],
+  "drive/trash": [
+   "drive/trash"
+  ],
+  "tasks/teammates/:person": [
+   "tasks/teammates/AR",
+   "tasks/teammates/BK",
+   "tasks/teammates/SN",
+   "tasks/teammates/UM",
+   "tasks/teammates/AH"
+  ],
+  "clients/c/:client/overview": [
+   "clients/c/hk/overview"
+  ],
+  "portal/note/:note": [
+   "portal/note/new",
+   "portal/note/n1",
+   "portal/note/n2",
+   "portal/note/n3"
+  ],
+  "whiteboard/starred": [
+   "whiteboard/starred"
+  ],
+  "whiteboard/tpl": [
+   "whiteboard/tpl"
+  ],
+  "forms/tpl": [
+   "forms/tpl"
+  ],
+  "ladder/history": [
+   "ladder/history"
+  ],
+  "social/posts": [
+   "social/posts"
+  ],
+  "social/campaigns": [
+   "social/campaigns"
+  ],
+  "social/queue": [
+   "social/queue"
+  ],
+  "social/channels": [
+   "social/channels"
+  ],
+  "agents/meetings": [
+   "agents/meetings"
+  ],
+  "agents/settings": [
+   "agents/settings"
+  ],
+  "agents/meeting/:meeting": [
+   "agents/meeting/m1",
+   "agents/meeting/m2",
+   "agents/meeting/m3"
+  ],
+  "agents/meeting/:meeting/notes": [
+   "agents/meeting/m1/notes",
+   "agents/meeting/m2/notes",
+   "agents/meeting/m3/notes"
+  ],
+  "agents/meeting/:meeting/transcript": [
+   "agents/meeting/m1/transcript",
+   "agents/meeting/m2/transcript",
+   "agents/meeting/m3/transcript"
+  ],
+  "agents/meeting/:meeting/actions": [
+   "agents/meeting/m1/actions",
+   "agents/meeting/m2/actions",
+   "agents/meeting/m3/actions"
+  ]
+ }
+}
