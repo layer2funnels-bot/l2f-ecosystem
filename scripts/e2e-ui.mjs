@@ -374,7 +374,7 @@ await page.goBack(); await page.reload(); await wait('The sky follows your time 
 await tile('office').click(); await wait('Waiting on you'); await wait('Nothing due today.'); await wait('Invitations waiting');   // the cards fill in after their data loads
 { const t = await page.locator('main').innerText();
   check('U14', 'Office Home (V8): section menu with Home current; greeting, Owner/Team member view, Ask bar (later), My day, Waiting on you, What’s happening, Plans and goals, Projects, Client pipeline, Team today, Organization health',
-    (await page.locator('nav.nav a').allInnerTexts()).join() === 'Home,Planner,Projects,Funnels,Documents,Team,Apps,Admin' && (await page.locator('nav.nav a[aria-current=page]').innerText()) === 'Home'
+    (await page.locator('nav.nav a').allInnerTexts()).join() === 'Home,Projects,Funnels,Documents,Team,Apps,Admin' && (await page.locator('nav.nav a[aria-current=page]').innerText()) === 'Home'
     && ['Good ', 'Owner view', 'Team member view', 'Assistant · later', 'My day', 'Waiting on you', 'What’s happening', 'Plans and goals', 'Projects', 'Client pipeline', 'Organization health', 'Invitations waiting'].every((x) => t.includes(x))
     && (await page.locator('.v8p-oh .o-hero h1').count()) === 1); }
 await shot(page, 'c1-home');

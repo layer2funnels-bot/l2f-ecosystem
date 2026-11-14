@@ -178,8 +178,8 @@ check('W41', 'Each profile tab has its own address (V8 #/profile/about, account,
 check('W27', 'Planner has one address inside the shell: #/planner/<page> keeps its page and query; the old #/app/planner and #/office/planner lead there too',
   parseRoute('#/planner').name === 'planner' && parseRoute('#/planner').params.page === 'overview' && parseRoute('#/planner/map?plan=p1').params.page === 'map' && parseRoute('#/planner/map?plan=p1').query.plan === 'p1'
   && parseRoute('#/app/planner').name === 'planner' && parseRoute('#/office/planner').name === 'planner' && parseRoute('#/planner/a/b').name === 'not-found');
-check('W28', 'The Launcher, the app switcher and the Office menu open Planner in the shell, and an organization switch lands on Planner (never on another organization\'s plan)',
-  hrefFor.app('planner') === '#/planner' && OFFICE_PAGES.find((p) => p.key === 'planner').href === '#/planner'
+check('W28', 'The Launcher and the app switcher open Planner in the shell (V8: Planner is its own app, not in the Office menu; old Office links still lead there), and an organization switch lands on Planner (never on another organization\'s plan)',
+  hrefFor.app('planner') === '#/planner' && !OFFICE_PAGES.some((p) => p.key === 'planner') && parseRoute('#/office/planner').name === 'planner'
   && JSON.stringify(pageKeyFor(parseRoute('#/planner/map?plan=p1'))) === '{"app":"planner","page":null}' && routeForPage('planner', null) === '#/planner');
 check('W29', 'Planner\'s menu in the shell covers every Planner page once, and only Strategy model needs plan management',
   ['overview', 'mine', 'plans', 'map', 'reviews', 'settings', 'alignment', 'reports', 'goals', 'metrics', 'model', 'templates'].every((pg) => PLANNER_PAGES.filter((x) => x.pages.includes(pg)).length === 1)

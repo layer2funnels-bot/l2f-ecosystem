@@ -8,9 +8,9 @@ export const FUNNEL_TYPES = [
 const byKey = Object.fromEntries(FUNNEL_TYPES.map((t) => [t.key, t]));
 
 // The Office menu (design 04). Pages marked built:false show the shared "not built yet" state until their own design lands.
+// V8 Office menu (01_OFFICE §2 Navigation): Home · Projects · Funnels · Documents · Team · Apps · Admin. Planner is its own app.
 export const OFFICE_PAGES = [
   { key: 'home', label: 'Home', icon: 'home', href: '#/office', built: true },
-  { key: 'planner', label: 'Planner', icon: 'planner', href: '#/planner', built: true },
   { key: 'projects', label: 'Projects', icon: 'projects', href: '#/projects', built: true },
   { key: 'funnels', label: 'Funnels', icon: 'funnels', href: '#/office/funnels', built: true },
   { key: 'documents', label: 'Documents', icon: 'doc', href: '#/office/documents', built: true },

@@ -25,8 +25,8 @@ export function appNav(appId, route, { isAdmin = false } = {}) {
   const it = (key, href, label, icon) => ({ key, href, label, icon, short: SHORT[label] ?? label });
   switch (appId) {
     case 'office': {
-      const FK = [['home', hrefFor.funnels(), 'Funnels home', 'home'], ['avatars', hrefFor.list('avatars'), 'Customer Avatars', 'avatar'], ['offers', hrefFor.list('offers'), 'Offers & Products', 'offer'], ['stories', hrefFor.list('stories'), 'Stories', 'story'],
-        ['brand_kits', hrefFor.list('brand_kits'), 'Brand Kit', 'brand'], ['strategies', '#/office/funnels/strategies', 'Funnel Strategies', 'strategy']];
+      const FK = [['home', hrefFor.funnels(), 'Overview', 'home'], ['avatars', hrefFor.list('avatars'), 'Customer Avatars', 'avatar'], ['offers', hrefFor.list('offers'), 'Offers & Products', 'offer'], ['stories', hrefFor.list('stories'), 'Stories', 'story'],
+        ['brand_kits', hrefFor.list('brand_kits'), 'Brand Kits', 'brand'], ['strategies', '#/office/funnels/strategies', 'Funnel Strategies', 'strategy']];
       const kid = route.name === 'funnels' ? 'home' : ['funnel-list', 'funnel-record'].includes(route.name) ? route.params.type : ['strategies', 'strategy'].includes(route.name) ? 'strategies' : null;
       return { items: OFFICE_PAGES.filter((p) => !p.adminOnly || isAdmin).map((p) => ({ ...it(p.key, p.href, p.label, ICON[p.key] ?? p.icon), ...(p.key === 'funnels' ? { kids: FK.map(([k, href, label, ic]) => ({ key: k, href, label, icon: ic })), kid } : {}) })), current: officeSection(route) };
     }
