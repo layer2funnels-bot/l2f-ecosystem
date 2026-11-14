@@ -57,7 +57,7 @@ export function feedLine(a) {
 
 export function officeHomeView({ org, role, isAdmin, api, live, portalState, name, catalog = [] }) {
   const canOwn = role === 'owner' || isAdmin;
-  const root = h('div', { class: 'v8p-oh' });
+  const root = h('div', { class: 'v8p-office v8p-oh' });
   const pm = async (op, args = {}) => { const r = await api.call(`pm.${op}`, { args }); return r.ok ? r.data?.[0]?.r : null; };
   const plan = async (fn, args = {}) => { const r = await api.call(`planner.strategy.${fn}`, { args }); return r.ok ? r.data?.[0]?.r : null; };
   let view = canOwn && store.get(VIEW_KEY) !== 'member' ? 'owner' : 'member';
