@@ -21,7 +21,7 @@ const META = {
 };
 const BUILT = new Set(['office']);          // apps whose screens exist in this build
 
-const reduceMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+const reduceMotion = () => document.documentElement.dataset.motion === 'reduce' || (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches);   // the system setting or Profile › Appearance
 // sky tint per atmosphere (sky.js atmosphere()): no snow class anywhere
 const FXCLASS = { sun: 'clear', cool: 'cool', heat: 'hot', haze: 'haze', fog: 'fog', cloud: 'cloud', rain: 'rain' };
 const FXICON = { sun: 'sun', cool: 'sun', heat: 'heat', haze: 'cloud', fog: 'cloud', cloud: 'cloud', rain: 'rain' };

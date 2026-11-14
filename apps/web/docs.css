@@ -262,3 +262,4 @@
 
 .dx-spk{border-radius:8px}.dx-vbeta{margin:0}.dx-vspk .dx-spk:hover{border-color:var(--action)}
 .dx-tbar.dx-ctx{position:static;z-index:auto;max-width:none;border:0;border-top:1px solid var(--line2);border-radius:0;box-shadow:none;background:var(--surface2);flex-wrap:nowrap;padding:2px var(--space-2)}
+@media (pointer:coarse){.dx-statusbar .dx-sel{min-height:44px}.dx-zoom .dx-zb,.dx-toolbar .dx-sz{width:44px;min-width:44px;height:44px;flex:none}}   /* touch: zoom controls are 44 px too (V8) */

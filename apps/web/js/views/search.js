@@ -36,6 +36,7 @@ export function resultHref(r) {
     case 'planner:plan': return `#/planner/map?plan=${r.id}`;
     case 'planner:goal': return `#/planner/map?plan=${r.extra}&goal=${r.id}`;
     case 'people:person': return '#/office/team';
+    case 'drive:folder': return r.extra === 'personal' ? `#/drive/personal/f/${r.id}` : `#/drive/f/${r.id}`;
     default:
       if (r.app === 'office') return hrefFor.record(r.type, r.id);
       if (r.app === 'drive') return mediaHref({ id: r.id, kind: r.type, mime_type: r.extra }) ?? (r.extra === SHEET ? `#/sheet/${r.id}` : r.extra === BOARD ? `#/board/${r.id}` : r.type === 'document' ? `#/doc/${r.id}` : '#/drive');
@@ -115,14 +116,26 @@ export function openSearch({ api, registry, catalog = [], isAdmin = false, curre
     const nav = p.q && (scope === 'all' || scope === 'office') ? pages.filter((x) => matches(x.title, p.q) || matches(x.subtitle, p.q)).slice(0, scope === 'all' ? 4 : 12) : [];
     res.replaceChildren(...group('pages', nav, p.q), h('p', { class: 'gsx-hint', role: 'status' }, 'Searching…'));
     timer = setTimeout(async () => {
-      const r = scope === 'funnels' ? { ok: true, data: [] } : await api.call('search.query', { q: p.q, scope, archived: p.archived, me: p.me, overdue: p.overdue });
+      const ask = (sc) => (sc === 'funnels' ? { ok: true, data: [] } : api.call('search.query', { q: p.q, scope: sc, archived: p.archived, me: p.me, overdue: p.overdue }));
+      const r = await ask(scope);
       if (mine !== seq || !panel.isConnected) return;     // a newer search replaced this one
-      const data = r.ok ? r.data : null; const by = {};
+      let data = r.ok ? r.data : null;
+      // Search opened inside an app looks in that app first (V8). When that app has nothing, every other app is searched at once, so a
+      // file or a customer avatar is never "missing" just because the search started in Office or Clients (owner, 14 Nov).
+      let widened = false;
+      if (scope !== 'all' && data && !data.length && !nav.length && p.q) {
+        const w = await ask('all'); if (mine !== seq || !panel.isConnected) return;
+        if (w.ok && w.data.length) { data = w.data; widened = true; }
+      }
+      const by = {};
       for (const x of data ?? []) (by[x.app] = by[x.app] ?? []).push(x);
-      const cap = scope === 'all' ? 4 : 12;
-      const parts = [...group('pages', nav, p.q), ...Object.entries(by).flatMap(([k, list]) => group(k, list.slice(0, cap), p.q))];
+      const cap = scope === 'all' || widened ? 4 : 12;
+      const scopeName = SCOPES.find(([k]) => k === scope)?.[1] ?? 'this app';
+      const parts = [...(widened ? [h('p', { class: 'gsx-hint', role: 'status' }, `Nothing in ${scopeName}. Results from every app:`)] : []),
+        ...group('pages', nav, p.q), ...Object.entries(by).flatMap(([k, list]) => group(k, list.slice(0, cap), p.q))];
       if (data == null) parts.push(h('p', { class: 'gsx-hint' }, 'Search couldn’t reach the server. Check your connection and try again.'));
-      else if (!parts.length) parts.push(h('div', { class: 'gsx-empty' }, h('b', {}, `No matches for “${p.q || input.value}”`), h('span', {}, scope === 'all' ? 'Try fewer words, or check the spelling.' : 'Try Everything instead of one app.')));
+      else if (!parts.length) parts.push(h('div', { class: 'gsx-empty' }, h('b', {}, `No matches for “${p.q || input.value}”`), h('span', {}, scope === 'all' ? 'Try fewer words, or check the spelling.' : 'Nothing in any app either. Try fewer words, or check the spelling.')));
+      else if (scope !== 'all' && !widened && p.q) parts.push(h('button', { type: 'button', class: 'gsx-more', onclick: () => { scope = 'all'; paintChips(); run(); input.focus(); } }, icon('search'), `Search every app for “${p.q}”`));
       if (scope === 'funnels') parts.push(h('p', { class: 'gsx-hint' }, 'Funnel Mapper search arrives with Funnel Mapper’s ecosystem update.'));
       parts.push(h('div', { class: 'gsx-ai', 'aria-disabled': 'true' }, icon('agents'), h('span', {}, p.q ? `Ask the assistant about “${p.q}”` : 'Ask the assistant'), h('span', { class: 'pill' }, 'Later, with approval')));
       res.replaceChildren(...parts); select(0);

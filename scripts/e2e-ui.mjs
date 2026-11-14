@@ -28,6 +28,9 @@ const fakeStorage = await startFakeSupabaseStorage({ serviceKey: 'ui-storage-key
 const s = await startDevServer({ port: 0, sink: () => {}, weatherFetch, env: { ...LOCAL_ENV, ...process.env, STORAGE_DRIVER: 'supabase', STORAGE_URL: fakeStorage.url, STORAGE_SERVER_KEY: 'ui-storage-key', STORAGE_BUCKET: 'drive' }, extraConnect: fakeStorage.url, limits: { read: { max: 2000, windowMs: 60_000 }, write: { max: 500, windowMs: 60_000 }, sensitive: { max: 100, windowMs: 60_000 } } });
 const base = `http://127.0.0.1:${s.port}`;
 const browser = await chromium.launch();
+// V8: phones and tablets are touch screens (controls 44 px); the desktop has a mouse (controls 38/32 px, smallest 26 px). Chromium reports a
+// coarse pointer only when started as a touch device, so the responsive checks at tablet and phone width use this second browser.
+const touchBrowser = await chromium.launch({ args: ['--blink-settings=primaryPointerType=2,availablePointerTypes=2,primaryHoverType=1,availableHoverTypes=1'] });
 const problems = []; const net = [];
 const watch = (p) => {
   // expected 4xx answers to deliberate bad input are not defects; script errors and CSP violations are
@@ -58,7 +61,8 @@ async function layout(p, label) {
       if (e.closest('.sr, .skip, .search, .chk, .toast') || e.matches('input[type=checkbox]')) continue;
       const b = e.getBoundingClientRect(); if (!b.width || !b.height) continue;
       const st = getComputedStyle(e); if (st.visibility === 'hidden' || st.display === 'none' || e.closest('[hidden], .menu[data-open=false]')) continue;
-      if (b.height < 43.5 || b.width < 43.5) out.small.push(`${e.tagName.toLowerCase()}.${String(e.className).split(' ')[0]}:"${(e.innerText || e.getAttribute('aria-label') || '').trim().slice(0, 20)}" ${Math.round(b.width)}x${Math.round(b.height)}`);
+      const min = matchMedia('(pointer:coarse)').matches ? 43.5 : 25.5;   // V8 01_DESIGN_SYSTEM §4
+      if (b.height < min || b.width < min) out.small.push(`${e.tagName.toLowerCase()}.${String(e.className).split(' ')[0]}:"${(e.innerText || e.getAttribute('aria-label') || '').trim().slice(0, 20)}" ${Math.round(b.width)}x${Math.round(b.height)}`);
     }
     return out;
   });
@@ -136,8 +140,11 @@ check('V5', 'Find an app shows only matching apps; a search with no match says s
 await page.fill('#app-find', ''); await page.keyboard.press('Escape');
 await page.goto(`${base}/#/office`); await wait('Your work in'); await page.locator('#app-switcher:visible, #app-switcher-m:visible').first().click();
 const swApps = await page.locator('#apps-menu .appitem').evaluateAll((els) => els.map((e) => e.dataset.app));
-check('V6', 'The app switcher offers Back to Launcher and the apps this person may open here (not the locked or coming-soon ones)', (await page.locator('#apps-menu .back').innerText()).includes('Back to Launcher') && swApps.includes('office') && !swApps.includes('portal') && !swApps.includes('forms'), swApps.join());
+check('V6', 'The app switcher (V8) offers the Launcher row with its G L shortcut and the apps this person may open here (not the locked or coming-soon ones)', (await page.locator('#apps-menu .back').innerText()).includes('Launcher') && swApps.includes('office') && !swApps.includes('portal') && !swApps.includes('forms'), swApps.join());
 await page.keyboard.press('Escape');
+await page.locator('main').click({ position: { x: 5, y: 5 } }).catch(() => {}); await page.keyboard.press('g'); await page.keyboard.press('l'); await page.waitForTimeout(300);
+check('V6b', 'The shortcut shown in the apps menu works: G then L opens the Launcher', (await page.evaluate(() => location.hash)) === '#/launcher');
+await page.goto(`${base}/#/office`); await wait('Your work in');
 // global search (V8 02 §5): Ctrl K opens it scoped to the current app; pages and menus are found; Enter opens; Esc closes
 await page.keyboard.press('Control+k'); await page.waitForSelector('#gsq'); await page.waitForFunction(() => document.activeElement?.id === 'gsq');
 const gsScope = await page.locator('.gsx-scope button[aria-pressed=true]').innerText();
@@ -147,11 +154,27 @@ await page.keyboard.press('Enter'); await page.waitForFunction(() => location.ha
 check('GS-UI2', 'Enter opens the selected result and the search closes', (await page.locator('.gsx-scrim').count()) === 0);
 await page.locator('#rail-search').click(); await page.waitForSelector('#gsq'); await page.keyboard.press('Escape');
 check('GS-UI3', 'The rail\'s search button opens it too, and Escape closes it', (await page.locator('.gsx-scrim').count()) === 0);
+// owner bug (14 Nov): search started in Office found no Drive files or customers. Office has none, so every app is searched at once.
+await q("insert into drive_folders (workspace_id, space, name) values ($1, 'shared', $2)", [L, `Brand assets ${stamp}`]);
+await page.keyboard.press('Control+k'); await page.waitForFunction(() => document.activeElement?.id === 'gsq');
+await page.keyboard.type(`Harry Kaye PT ${stamp}`); await page.waitForSelector('.gsx-row:has-text("Harry Kaye PT")', { timeout: 9000 }).catch(() => {});
+check('GS-UI4', 'Searching a customer from Office finds the client (Office has nothing, so every app is searched and the window says so)', (await page.locator('.gsx-row', { hasText: `Harry Kaye PT ${stamp}` }).count()) === 1 && (await page.getByText('Results from every app').count()) === 1);
+await page.fill('#gsq', `Brand assets ${stamp}`); await page.waitForSelector('.gsx-row:has-text("Brand assets")', { timeout: 9000 }).catch(() => {});
+await page.locator('.gsx-row', { hasText: `Brand assets ${stamp}` }).click().catch(() => {}); await page.waitForTimeout(300);
+check('GS-UI5', 'A Drive folder is found and opens in Drive', /^#\/drive\/f\//.test(await page.evaluate(() => location.hash)) && (await page.locator('.gsx-scrim').count()) === 0);
 // notifications (V8 02 §6): the bell opens one inbox for every app, with kind tabs; Escape closes it
 await page.locator('#bell').click(); await page.waitForSelector('.nfx [role=tab]'); await page.waitForFunction(() => !/Loading/.test(document.querySelector('.nfx-list')?.innerText ?? 'Loading'));
 check('NF-UI1', 'The bell opens the notifications drawer with All, Mentions, Assigned, Approvals and Updates, Mark all read and a settings link; nothing fails to load',
   (await page.locator('.nfx [role=tab]').allInnerTexts()).join() === 'All,Mentions,Assigned,Approvals,Updates' && (await page.getByRole('button', { name: 'Mark all read' }).count()) === 1 && !(await page.getByText('couldn’t be loaded').count()));
-await shot(page, 'b3-notifications'); await page.keyboard.press('Escape');
+await shot(page, 'b3-notifications');
+// owner bug (14 Nov): switching tabs closed the drawer (the tab re-renders, so the click looked "outside"). Every tab, a click inside, then outside.
+let stayed = true;
+for (const t of ['Mentions', 'Assigned', 'Approvals', 'Updates', 'All']) { await page.locator('.nfx [role=tab]', { hasText: t }).click(); await page.waitForTimeout(120); stayed &&= (await page.locator('.nfx').count()) === 1 && (await page.locator('.nfx [role=tab][aria-selected=true]').innerText()) === t; }
+await page.locator('.nfx-head h2').click(); stayed &&= (await page.locator('.nfx').count()) === 1;
+check('NF-UI3', 'Switching between All, Mentions, Assigned, Approvals and Updates keeps the drawer open and selects the tab; a click inside it never closes it', stayed);
+await page.mouse.click(300, 400);
+check('NF-UI4', 'A click outside the drawer closes it', (await page.locator('.nfx').count()) === 0);
+await page.locator('#bell').click(); await page.waitForSelector('.nfx [role=tab]'); await page.keyboard.press('Escape');
 check('NF-UI2', 'Escape closes the drawer', (await page.locator('.nfx').count()) === 0);
 await page.goto(`${base}/#/launcher`); await wait('The sky follows your time of day');
 // owner (14 Nov): weather and snowfall change on their own; the profile menu has no switch for either
@@ -830,14 +853,14 @@ await rm.close();
 const routes = [['/#/launcher', 'The sky follows your time of day'], ['/#/office', 'Needs your attention'], ['/#/office/funnels', 'Recently changed'], ['/#/office/funnels/avatars', 'Avatar for C1'], ['/#/office/funnels/avatars/new', 'Belongs to'],
   ['/#/office/admin/members', 'Joining is by invitation only.'], ['/#/office/admin/access/levels', 'Deny always wins.'], ['/#/office/admin/access/assignments', 'Add assignment'], ['/#/office/admin/access/effective', 'Show access for'], ['/#/portal', 'The Portal is locked'], ['/#/drive', 'stay with their own app'], ['/#/clients', 'Everyone you work for'], ['/#/clients/requests', 'The Client Portal is locked'], ['/#/clients/sops', 'SOPs are never copied'], ['/#/clients/tools', 'Owners and admins see all four'], ['/#/clients/settings', 'Build is progress only'], ['/#/office/funnels/strategies', 'One written strategy per funnel'], ['/#/office/documents', 'stay with their own app'], ['/#/office/team', 'only where your own access allows'], ['/#/office/apps', 'Locked and coming-soon apps'], ['/#/office/admin/access/history', 'The last 100 changes'], ['/#/planner/plans', 'New plan']];
 for (const [w, label] of [[1280, 'desktop'], [768, 'tablet'], [390, 'phone']]) {
-  const p = await newPage(w, 900);
+  const p = w < 1280 ? watch(await (await touchBrowser.newContext({ viewport: { width: w, height: 900 }, hasTouch: true })).newPage()) : await newPage(w, 900);
   await p.goto(base + '/'); await wait('Sign in', p);
   let ok = await layouts(p, `${label} sign in`);
   await p.getByRole('button', { name: 'Create an account' }).click(); await wait('Create your account', p); ok = (await layouts(p, `${label} sign up`)) && ok;
   await p.goto(base + '/#/signin'); await p.fill('#em', EMAIL); await p.fill('#pw', PW); await p.click('button[type=submit]'); await wait('The sky follows your time of day', p);
   const bad = [];
   for (const [r, t] of routes) { await p.goto(base + r); await p.reload(); await wait(t, p); await p.waitForTimeout(120); if (!(await layouts(p, `${label} ${r}`))) bad.push(r); }
-  check(`R-${label}`, `At ${w}px every screen has no sideways scroll and every control is at least 44px (${routes.length + 2} screens)`, ok && bad.length === 0, bad.join(' '));
+  check(`R-${label}`, `At ${w}px every screen has no sideways scroll and every control meets the V8 size (${w < 1280 ? '44 px on a touch screen' : 'at least 26 px with a mouse'}; ${routes.length + 2} screens)`, ok && bad.length === 0, bad.join(' '));
   if (w === 390) {
     await p.goto(base + '/#/office'); await p.reload(); await wait('Needs your attention', p);
     const bar = p.locator('nav.bbar'); const labels = await bar.locator('a, button').allInnerTexts();
@@ -998,24 +1021,48 @@ for (const [w, label] of [[1280, 'desktop'], [768, 'tablet'], [390, 'phone']]) {
   const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
   await visit(page, base + '/#/office'); await page.waitForSelector('.profile-wrap .who', { timeout: 9000 });
   await page.locator('.profile-wrap .who').click(); await page.getByRole('menuitem', { name: /Your profile/ }).click(); await page.locator('main h1', { hasText: 'Your profile' }).waitFor({ timeout: 9000 });
-  await page.waitForSelector('#pf-name', { timeout: 9000 });   // the cards appear once the profile has loaded
+  await page.waitForSelector('#pf-name', { timeout: 9000 });   // the form appears once the profile has loaded
   const txt = await page.locator('main').innerText();
-  check('PR1', 'The profile menu opens Your profile, with Photo, Name, Email and Password', ['Photo', 'Name', 'Email', 'Password'].every((t) => txt.includes(t)));
-  await page.waitForSelector('#pf-name', { timeout: 9000 }); await page.fill('#pf-name', 'Una Q. Owner'); await page.getByRole('button', { name: 'Save name' }).click(); await wait('Name saved.');
-  check('PR2', 'Changing the name saves it (and an empty name is refused)', (await q("select display_name from profiles where email = $1", [EMAIL]))[0]?.display_name === 'Una Q. Owner');
-  await page.fill('#pf-name', '   '); await page.getByRole('button', { name: 'Save name' }).click(); await page.waitForSelector('#pf-name-e:not([hidden])', { timeout: 5000 }); await page.fill('#pf-name', 'Una Q. Owner');
-  await page.setInputFiles('#pf-file', { name: 'me.png', mimeType: 'image/png', buffer: PNG }); await wait('Photo saved.');
-  check('PR3', 'Choosing a photo saves a small picture and the header shows it', ((await q("select length(avatar_data) n from profiles where email = $1", [EMAIL]))[0]?.n ?? 0) > 100 && (await page.locator('.profile-wrap .who img').count()) === 1);
+  check('PR1', 'The profile menu opens Your profile (V8): name header, tabs Profile · Account & sign-in · Notifications · Appearance, and Your organizations',
+    ['Profile', 'Account & sign-in', 'Notifications', 'Appearance', 'Full name', 'Display name', 'Job title', 'Time zone', 'About'].every((t) => txt.includes(t)) && /your organizations/i.test(txt) && (await page.locator('.pf8-photo').count()) === 1
+    && (await page.locator('.shell.focused > .side').count()) === 0 && (await page.locator('.hdr-ttl').innerText()).includes('Your profile'));   // V8 focused layout: rail + title bar, no app sidebar
+  { const vp = page.viewportSize(); for (const [w, hh] of [[1440, 900], [390, 844]]) { await page.setViewportSize({ width: w, height: hh }); await page.waitForTimeout(150); await shot(page, `profile-about-${w}`); } await page.setViewportSize(vp); }   // compared with V8 124_profile_about
+  await page.fill('#pf-name', 'Una Q. Owner'); await page.fill('#pf-full', 'Una Quinn Owner'); await page.fill('#pf-job', 'Founder'); await page.selectOption('#pf-tz', 'Asia/Karachi'); await page.fill('#pf-about', 'Funnels for coaches.');
+  await page.getByRole('button', { name: 'Save', exact: true }).click(); await wait('Profile saved.');
+  const pr = (await q("select display_name, full_name, job_title, time_zone, about from profiles where email = $1", [EMAIL]))[0] ?? {};
+  check('PR2', 'Save keeps the display name, full name, job title, time zone and about (and an empty display name is refused)', pr.display_name === 'Una Q. Owner' && pr.full_name === 'Una Quinn Owner' && pr.job_title === 'Founder' && pr.time_zone === 'Asia/Karachi' && pr.about === 'Funnels for coaches.', JSON.stringify(pr));
+  await page.fill('#pf-name', '   '); await page.getByRole('button', { name: 'Save', exact: true }).click(); await page.waitForSelector('#pf-name-e:not([hidden])', { timeout: 5000 }); await page.fill('#pf-name', 'Una Q. Owner');
+  await page.getByRole('button', { name: 'Change photo' }).click(); await page.getByRole('dialog', { name: 'Profile photo' }).waitFor({ timeout: 5000 });
+  await page.evaluate(() => document.querySelector('.pf8-cam').click());   // a second click while it is open (e.g. a double click)
+  const oneDialog = (await page.getByRole('dialog', { name: 'Profile photo' }).count()) === 1;
+  await page.setInputFiles('#pf-file', { name: 'me.png', mimeType: 'image/png', buffer: PNG }); await page.locator('#pf-zoom').fill('1.5');
+  await page.getByRole('button', { name: 'Save photo' }).click(); await wait('Photo saved.');
+  check('PR3', 'Change photo opens one dialog (never two) with a zoom slider; saving keeps a small picture and the rail shows it', oneDialog && ((await q("select length(avatar_data) n from profiles where email = $1", [EMAIL]))[0]?.n ?? 0) > 100 && (await page.locator('.profile-wrap .who img').count()) === 1 && (await page.locator('.pf8-photo img').count()) === 1);
+  await page.getByRole('link', { name: 'Account & sign-in' }).click(); await page.waitForSelector('#pf-pw', { timeout: 9000 });
+  const acc = await page.locator('main').innerText();
+  check('PR3b', 'Account & sign-in has its own address and shows Email, Password, Google sign-in (later) and Signed-in devices', page.url().endsWith('#/profile/account') && ['Email', 'Password', 'Google sign-in', 'Signed-in devices', 'Sign out of all devices'].every((t) => acc.includes(t)));
   await page.fill('#pf-pw', 'short'); await page.fill('#pf-pw2', 'short'); await page.getByRole('button', { name: 'Change password' }).click(); await page.waitForSelector('#pf-pw-e:not([hidden])', { timeout: 5000 });
   check('PR4', 'A short password is refused with a plain message', (await page.locator('#pf-pw-e').innerText()).includes('at least 10'));
-  await page.getByRole('button', { name: 'Remove photo' }).click(); await wait('Photo removed.');
+  await visit(page, base + '/#/profile/about'); await page.getByRole('button', { name: 'Change photo' }).click(); await page.getByRole('button', { name: 'Remove photo' }).click(); await wait('Photo removed.');
   check('PR5', 'Removing the photo clears it', (await q("select avatar_data from profiles where email = $1", [EMAIL]))[0]?.avatar_data === null);
+  await visit(page, base + '/#/profile/notifications'); await page.waitForSelector('.pf8-ntab table', { timeout: 9000 });
+  const sw = page.getByRole('switch', { name: /Projects: notifications/ }); const before = await sw.getAttribute('aria-checked'); await sw.click(); await wait('Projects notifications off.');
+  const prefRow = (await q("select np.in_app from notification_prefs np join profiles p on p.id = np.user_id where p.email = $1 and np.app = 'projects'", [EMAIL]))[0];
+  check('PR7', 'Notifications: one row per app with an in-app switch; turning Projects off is saved for this organization (mentions and approvals say Always)', before === 'true' && prefRow?.in_app === false && (await page.locator('.pf8-ntab').innerText()).includes('Always'));
+  await sw.click(); await wait('Projects notifications on.'); await page.setViewportSize({ width: 1440, height: 900 }); await shot(page, 'profile-notifications-1440');
+  await visit(page, base + '/#/profile/appearance'); await page.getByRole('switch', { name: 'Compact density' }).click();
+  const dens = await page.evaluate(() => document.documentElement.dataset.density);
+  await page.getByRole('switch', { name: 'Reduce motion' }).click(); const mot = await page.evaluate(() => document.documentElement.dataset.motion);
+  await page.reload(); await page.waitForSelector('#pf-density', { timeout: 9000 });
+  check('PR8', 'Appearance: Compact density and Reduce motion apply at once and are remembered on this device', dens === 'compact' && mot === 'reduce' && (await page.evaluate(() => document.documentElement.dataset.density)) === 'compact' && (await page.locator('#pf-density').getAttribute('aria-checked')) === 'true');
+  await page.getByRole('switch', { name: 'Compact density' }).click(); await page.getByRole('switch', { name: 'Reduce motion' }).click();
+  check('PR9', 'Turning them off again restores the normal look', (await page.evaluate(() => [document.documentElement.dataset.density, document.documentElement.dataset.motion].join(''))) === '');
   const inv = await newPage(1280, 800); await inv.goto(base + '/#/invite?token=abc123token'); await inv.waitForTimeout(600);
   const kept = await inv.evaluate(() => localStorage.getItem('l2f.invite')); await inv.evaluate(() => sessionStorage.clear()); await inv.reload(); await inv.waitForTimeout(600);
   check('PR6', 'An invitation link is remembered across tabs, so it still applies after the e-mail confirmation opens in a new tab', kept === 'abc123token' && (await inv.evaluate(() => localStorage.getItem('l2f.invite'))) === 'abc123token');
   await inv.evaluate(() => localStorage.removeItem('l2f.invite'));
 }
 check('J1', 'No script errors, warnings or Content-Security-Policy violations during the whole run (deliberate 4xx answers excluded)', problems.length === 0, problems.slice(0, 4).join(' | '));
-await browser.close(); await s.close(); await admin.end();
+await browser.close(); await touchBrowser.close(); await s.close(); await admin.end();
 for (const x of results) console.log(`${x.ok ? 'PASS' : 'FAIL'}  ${x.id.padEnd(8)} ${x.n}${x.ok ? '' : `  [${x.d}]`}`);
 const p = results.filter((x) => x.ok).length; console.log(`\n${p}/${results.length} checks passed`); process.exit(p === results.length ? 0 : 1);

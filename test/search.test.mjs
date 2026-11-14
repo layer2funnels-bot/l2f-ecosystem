@@ -52,6 +52,20 @@ check('SR8', 'An empty search returns nothing (the dialog shows quick actions in
 check('SR9', 'Every result says which app and kind it is, with an id for the link', q1.every((r) => r.app && r.type && r.id && r.title));
 check('SR10', 'Wildcards typed by the person are plain text ("%" finds nothing, not everything)', (await S(U.LO, ORG.L, { q: '%' })).length === 0);
 
+// owner bug (14 Nov): Drive folders, files kept by an app, and clients by business name or email must be found; isolation unchanged
+await db.query("insert into drive_folders (id,workspace_id,space,name) values ($1,$2,'shared','Quarry assets'),($3,$4,'shared','Quarry Aurj folder')", [id(), ORG.L, id(), ORG.A]);
+await db.query("insert into drive_folders (id,workspace_id,space,client_id,name) values ($1,$2,'client',$3,'Quarry client folder')", [id(), ORG.L, C1]);
+await db.query("insert into files (id,workspace_id,name,kind,mime_type,space,in_library,managed_by,uploaded_by) values ($1,$2,'Quarry whiteboard','document','application/vnd.excalidraw+json','shared',false,'whiteboard',$3)", [id(), ORG.L, U.LO]);
+const C2 = id(); await db.query("insert into clients (id,workspace_id,name) values ($1,$2,'Harry Kaye')", [C2, ORG.L]);
+await db.query("update client_profiles set business_name = 'Kaye Coaching Ltd', email = 'harry@kaye.example' where client_id = $1", [C2]);   // the profile is created with the client
+const q2 = await S(U.LO, ORG.L, { q: 'quarry' });
+check('SR11', 'A Drive folder is found (Library), and opening it has what the link needs', q2.some((r) => r.type === 'folder' && r.title === 'Quarry assets' && r.extra === 'shared'), titles(q2).join(' | '));
+check('SR12', 'A file kept by an app (a whiteboard) is found by the person who can open it', titles(q2).includes('Quarry whiteboard'));
+check('SR13', 'A client\'s folder and the other organization\'s folder are never found', !titles(q2).includes('Quarry client folder') && !titles(q2).includes('Quarry Aurj folder'));
+check('SR14', 'A client is found by business name and by email, not only by its name', titles(await S(U.LO, ORG.L, { q: 'kaye coaching' })).includes('Harry Kaye') && titles(await S(U.LO, ORG.L, { q: 'harry@kaye' })).includes('Harry Kaye'));
+check('SR15', 'Aurj never finds Layer2Funnels clients by business name either', !titles(await S(U.AO, ORG.A, { q: 'kaye coaching' })).includes('Harry Kaye'));
+check('SR16', 'A teammate who may not see a Personal folder never finds it', await (async () => { await db.query("insert into drive_folders (id,workspace_id,space,owner_id,name) values ($1,$2,'personal',$3,'Quarry my folder')", [id(), ORG.L, U.LO]); return titles(await S(U.LO, ORG.L, { q: 'quarry my' })).includes('Quarry my folder') && !titles(await S(U.LV, ORG.L, { q: 'quarry my' })).includes('Quarry my folder'); })());
+
 const fails = results.filter((r) => !r.ok);
 for (const r of results) console.log(`${r.ok ? 'PASS' : 'FAIL'}  ${r.id.padEnd(5)} ${r.name}${r.ok ? '' : `  ${r.detail}`}`);
 console.log(`\n${results.length - fails.length}/${results.length} checks passed`);

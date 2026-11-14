@@ -23,3 +23,8 @@ export function announce(text) {
   live.textContent = ''; setTimeout(() => { live.textContent = text; }, 30);
 }
 export function focusTitle(root) { const t = root.querySelector('[data-page-title]'); if (t) { t.setAttribute('tabindex', '-1'); t.focus({ preventScroll: true }); } }
+
+/** True when a click began inside one of `targets` (elements or CSS selectors). Uses the path recorded when the click happened, so a
+ *  panel that re-renders the button that was clicked (a filter, a tab) still counts the click as inside: e.target is detached by then,
+ *  and `panel.contains(e.target)` would wrongly say "outside" and close it. */
+export const clickedInside = (e, ...targets) => (e.composedPath?.() ?? [e.target]).some((n) => targets.some((t) => (typeof t === 'string' ? n?.matches?.(t) : n === t)));

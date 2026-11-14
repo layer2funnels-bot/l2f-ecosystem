@@ -1,0 +1,93 @@
+/* V8 "Ledger" foundation for the shared components (owner, 14 Nov 2026: "V8 is the visual authority").
+   Loaded right after v8-ledger.css (the prototype cascade) and ui.css, before every app stylesheet, so each shared component looks the same in every app.
+   Every value is the COMPUTED value of the V8 prototype (08_PROTOTYPE_AND_SOURCE/ecosystem-v8.html, measured in Chromium at 1440 px:
+   #/profile, #/office/home, #/clients/list, #/drive/home, the New client dialog) or the V8 rule in 00_MASTER_DOCUMENTATION/01_DESIGN_SYSTEM.md
+   and 02_DESIGN_SYSTEM/v8-ledger-visual-layer.css. Our class names are kept (no screen changes behaviour); only the look follows V8.
+   Touch screens: every control is at least 44 px (V8 v6.css @media (pointer:coarse)). */
+
+/* ---- type: one typeface, body 14.5 / 400 / 1.45; titles by size and weight, never 700+ in work screens */
+body{font:400 var(--fs) / 1.5 var(--font)}   /* computed 21.75 px in the V8 prototype */
+h1,h2,h3,h4{font-family:var(--font);letter-spacing:normal}
+h1{font:620 24px/1.2 var(--font);letter-spacing:-.022em}                       /* page title (.t1) */
+h2{font:650 19px/1.2 var(--font);letter-spacing:-.025em}                       /* dialog / drawer section title */
+h3{font:650 16px/1.25 var(--font);letter-spacing:-.005em}                      /* section heading in a card */
+.sub{font-size:15px;color:var(--text2)}
+.over{font:600 12.5px/1.3 var(--font);letter-spacing:.02em;text-transform:none;color:var(--muted)}   /* sentence case: tracked uppercase was removed in V8 */
+.fine,.hint{font-size:13px}
+
+/* ---- fields: label above 13.5 / 550 in --text2; input 40 px, 15 px, radius 6, 1 px --line2; focus = action border + 4 px tint */
+.fld{gap:5px;margin-bottom:12px}
+.fld label,.fld .lb{font:550 13.5px/1.2 var(--font);color:var(--text2)}
+.fld input,.fld select,.fld textarea{min-height:40px;padding:0 10px;border-radius:6px;border:var(--bw) solid var(--line2);background:var(--surface);font:400 15px/1.5 var(--font);color:var(--text)}
+.fld textarea{padding:8px 10px;min-height:64px}
+.fld input:focus,.fld select:focus,.fld textarea:focus{border-color:var(--action);box-shadow:0 0 0 4px var(--action-tint)}   /* the 3 px keyboard ring (ui.css :focus-visible) stays: accessibility */
+.fld input[aria-invalid=true],.fld textarea[aria-invalid=true]{border-color:var(--danger);box-shadow:0 0 0 4px var(--danger-tint)}
+.fld .hint,.fld .err{font-size:13px}
+
+/* ---- buttons: flat, radius 6, 38 px (small 32), 14 / 560; no extruded edge, no lift; hover darkens, active moves 0.5 px */
+.btn{min-height:var(--ctl);min-width:0;padding:0 14px;gap:6px;border-radius:6px;font:560 14px/1 var(--font);box-shadow:none!important;transform:none;transition:background 160ms,border-color 160ms,color 160ms}
+.btn:hover{transform:none}
+.btn:active{transform:translateY(.5px)}
+.btn.sm{min-height:var(--ctl-sm);padding:0 11px;font-size:13.5px}
+.btn.primary{background:var(--brand);color:var(--brand-ink)}
+.btn.primary:hover{background:color-mix(in srgb,var(--brand) 88%,var(--text))}
+.btn.ink{background:var(--text);color:var(--bg)}
+.btn.action{background:var(--action);color:var(--action-ink)}
+.btn.ghost,.btn:not(.primary):not(.ink):not(.action):not(.dng):not(.quiet):not(.link){background:var(--surface);border:var(--bw) solid var(--line2);color:var(--text)}
+.btn.ghost:hover,.btn:not(.primary):not(.ink):not(.action):not(.dng):not(.quiet):not(.link):hover{background:var(--surface2);border-color:color-mix(in srgb,var(--text) 30%,transparent)}
+.btn.quiet{background:none;border:0;color:var(--text2)}.btn.quiet:hover{background:var(--sunk);color:var(--text)}
+.btn.dng{background:var(--danger);color:var(--surface)}
+.btn.link{min-height:var(--ctl-sm);padding:0 4px;border:0;background:none;color:var(--action)}
+.iconbtn{width:var(--ctl);height:var(--ctl);border-radius:6px}
+
+/* ---- surfaces: cards and panels sit flat on the page (1 px line, radius 8, no shadow); header on its own hairline */
+.panel,.card{background:var(--surface);border:var(--bw) solid var(--line);border-radius:8px;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+.card{padding:18px}.card:hover{box-shadow:none;transform:none}
+.card h3{font:650 16px/1.25 var(--font)}
+.notice{border-radius:8px;font-size:14px}
+.empty h3{font-family:var(--font);font-weight:650}
+.content .plate,.drawer .plate,.dlg .plate{box-shadow:none}.content .plate::before,.drawer .plate::before,.dlg .plate::before{display:none}   /* flat app marks in work screens; the Launcher keeps its 3D plates */
+.avatar{box-shadow:none}
+
+/* ---- pills, chips, segmented controls, tabs */
+.pill{height:22px;padding:0 8px;border-radius:5px;font:550 12.5px/1 var(--font)}
+.chip{min-height:var(--ctl-sm);padding:0 11px;border-radius:6px;font:550 13.5px/1 var(--font)}
+.seg{gap:0;padding:2px;border-radius:7px;background:var(--sunk)}
+.seg button{min-height:28px;padding:0 10px;border-radius:5px;font:550 12.5px/1.5 var(--font);color:var(--text2)}
+.seg button[aria-pressed=true],.seg button[aria-selected=true],.seg button[aria-checked=true]{background:var(--surface);color:var(--text);box-shadow:0 0 0 1px var(--line)}
+.tabs{gap:2px;margin-bottom:14px;border-bottom:var(--bw) solid var(--line)}
+.tabs button,.tabs a{min-height:42px;padding:0 12px;font:550 14.5px/1 var(--font);color:var(--muted)}
+.tabs button[aria-selected=true],.tabs a[aria-current=page]{color:var(--text)}
+.tabs button[aria-selected=true]::after,.tabs a[aria-current=page]::after{height:2px;left:12px;right:12px;border-radius:0;background:var(--app,var(--text))}
+
+/* ---- switch: 36 x 22 with a 16 px knob (V8 v6.css); its row keeps the 44 px touch target */
+.toggle{width:36px;height:22px}.toggle::after{width:16px;height:16px}.toggle[aria-checked="true"]::after{transform:translateX(14px)}
+
+/* ---- tables: header band --surface2, sentence case 12.5 / 600; rows 14.5 */
+.tbl th{background:var(--surface2);font:600 12.5px/1 var(--font);letter-spacing:0;text-transform:none;color:var(--muted)}
+.tbl td{font-size:14.5px}
+
+/* ---- overlays: dialog 520 px, radius 10, 22 px padding, title 19 / 650; menus radius 8; drawers float with the V8 shadow */
+.ovl{background:rgba(10,11,14,.5)}
+.dlg{width:min(520px,100%);padding:22px;border-radius:10px;box-shadow:var(--sh3)}
+.dlg h2{margin:0 0 12px;font:650 19px/1.2 var(--font);letter-spacing:-.025em}
+.dlg .acts{gap:10px;margin-top:18px}
+.menu{border-radius:8px}
+/* apps menu (prototype .appmenu, measured): 360 px, radius 22, padding 12; Launcher row 52 px on --sunk; tiles 84 px, 12 / 550; marks 38 px */
+.menu.appmenu{width:min(360px,calc(100vw - 24px));padding:12px;border-radius:22px}
+.appmenu .home{display:flex;align-items:center;gap:12px;min-height:52px;padding:6px 10px;border-radius:14px;background:var(--sunk);font:600 14.5px/1.5 var(--font);color:var(--text);text-decoration:none;margin-bottom:10px}
+.appmenu .home .grow{flex:1}.appmenu .home kbd{padding:4px 6px;border:var(--bw) solid var(--line2);border-radius:6px;background:var(--surface);font:500 11.5px/1 var(--mono);color:var(--muted)}
+.appmenu .home .mini .i{width:18px;height:18px}
+.appmenu .grid a{display:grid;justify-items:center;align-content:start;gap:6px;min-height:84px;padding:10px 2px;border-radius:14px;font:550 12px/1.2 var(--font);color:var(--text2);text-align:center;text-decoration:none}
+.appmenu .grid a:hover{background:var(--surface2);color:var(--text)}.appmenu .grid a[aria-current=true]{background:var(--brand-soft);color:var(--text)}
+.appmenu .grid .plate{--s:38px;border-radius:9px}
+.appmenu .hint{margin:0;padding:8px 4px 0;font-size:13.5px;color:var(--muted)}
+.drawer{box-shadow:-20px 0 50px -30px rgba(20,24,20,.35)}
+.drawer h2{font:650 21px/1.25 var(--font);letter-spacing:-.015em}
+.toast{border-radius:8px;font-size:14px}
+
+/* ---- touch screens: everything at least 44 px (V8) */
+@media (pointer:coarse){
+  .btn,.btn.sm,.btn.link,.chip,.seg button,.tabs button,.tabs a,.fld input,.fld select{min-height:44px}
+  .iconbtn{width:44px;height:44px}.btn.link,.seg button,.vsw button{min-width:44px}
+}

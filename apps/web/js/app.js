@@ -195,6 +195,18 @@ const appApi = {
     if (name) { const tok = await freshToken(); if (tok) auth.updateUser(tok, { data: { full_name: name } }); const c = session.get(); if (c) session.set({ access_token: c.access, refresh_token: c.refresh, expires_at: c.expiresAt / 1000, user: { email: c.email, id: c.userId, user_metadata: { full_name: name } } }); }
     await loadMe(); setHeaderAvatar(me); return { ok: true };
   },
+  async getProfileDetails() {
+    const r = await api.call('profile.details', {}, { org: NO_ORG }); return r.ok ? { ok: true, data: r.data?.[0] ?? {} } : { ok: false };
+  },
+  async saveProfileDetails(v) {
+    const r = await api.call('profile.details.set', v, { org: NO_ORG });
+    return r.ok ? { ok: true } : { ok: false, message: r.status === 429 ? messageFor('rate_limited') : 'We couldn’t save your profile. Try again.' };
+  },
+  async notificationPrefs() { const r = await api.call('notifications.prefs', {}); return r.ok ? { ok: true, data: r.data ?? [] } : { ok: false }; },
+  async setNotificationPref(app, inApp) {
+    const r = await api.call('notifications.prefs.set', { app, in_app: inApp });
+    return r.ok ? { ok: true } : { ok: false, message: r.status === 429 ? messageFor('rate_limited') : 'We couldn’t save that setting. Try again.' };
+  },
   async changeEmail(email) {
     const tok = await freshToken(); if (!tok) return { ok: false, message: 'Your sign-in has expired. Sign in again.' };
     const r = await auth.updateUser(tok, { email }); const soft = offlineOrBusy(r); if (soft) return { ok: false, message: soft };
@@ -396,7 +408,7 @@ async function render(opts = {}) {
     }
     put(root, authViews.inviteView({ app: appApi, token, preview: p?.ok ? p.data[0] : null, email: session.get()?.email })); return focusTitle(root);
   }
-  if (route.name === 'profile' && !ctx?.active) { put(root, centered(profileView({ app: appApi, me }))); document.title = 'Your profile'; return focusTitle(root); }
+  if (route.name === 'profile' && !ctx?.active) { put(root, centered(profileView({ app: appApi, me, tab: route.params.tab, orgs: ctx?.orgs ?? [], theme }))); document.title = 'Your profile'; return focusTitle(root); }
   if (route.name === 'no-org' || !ctx?.active) { put(root, authViews.noOrgView(appApi, session.get()?.email)); return focusTitle(root); }
 
   // inside the ecosystem
@@ -421,7 +433,7 @@ async function render(opts = {}) {
     switch (route.name) {
       case 'home': case 'launcher': case 'signin': case 'signup': case 'check-email': case 'forgot': case 'invite':
         content = launcherView({ catalog: ctx.catalog, error: ctx.catalogError, org, orgs: ctx.orgs, role, name: session.get()?.name, registry, loadWeather: () => loadWeather({ api, store: localStorage }), onSwitch: (i) => switchFlow(i), retry: async () => { await loadOrgContext(org); render(); } }); break;
-      case 'profile': content = profileView({ app: appApi, me }); break;
+      case 'profile': content = profileView({ app: appApi, me, tab: route.params.tab, orgs: ctx.orgs, active: org, catalog: ctx.catalog, registry, theme }); break;
       case 'office': content = officeHomeView({ org, role, isAdmin, api, live, portalState: ctx.catalog.find((a) => a.app_key === 'portal')?.state }); break;
       case 'office-page': {
         const pg = route.params.page;
@@ -506,6 +518,13 @@ window.addEventListener('offline', () => announce('You are offline. Changes will
 let startSearch = null;
 document.addEventListener('keydown', (e) => {                      // Ctrl K / Cmd K: global search from anywhere (V8 02 §5)
   if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'k' && startSearch) { e.preventDefault(); startSearch(); }
+});
+let gAt = 0;                                                         // "G then L" opens the Launcher (V8 apps menu shortcut)
+document.addEventListener('keydown', (e) => {
+  if (e.ctrlKey || e.metaKey || e.altKey || /input|textarea|select/i.test(document.activeElement?.tagName ?? '') || document.activeElement?.isContentEditable) return;
+  const k = e.key.toLowerCase();
+  if (k === 'g') { gAt = Date.now(); return; }
+  if (k === 'l' && Date.now() - gAt < 1200 && session.signedIn() && ctx?.active) { gAt = 0; e.preventDefault(); location.hash = '#/launcher'; }
 });
 document.addEventListener('keydown', (e) => {                      // "/" focuses search where search exists
   if (e.key === '/' && !/input|textarea|select/i.test(document.activeElement?.tagName ?? '')) { const s = document.querySelector('.search input:not(:disabled)'); if (s) { e.preventDefault(); s.focus(); } }

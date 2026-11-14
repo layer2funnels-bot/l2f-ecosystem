@@ -27,16 +27,25 @@ const providers = {
       and (not $5::boolean or (t.due_on < current_date and t.completed_at is null))
       and ($2 <> '' or $3::boolean or $5::boolean)
     order by ${rank('t.title')}, t.due_on nulls last limit ${LIMIT}`, [i.q, esc(i.q), Boolean(i.me), ctx.userId, Boolean(i.overdue)])),
-  clients: async (q, ctx, i) => (await q(`select 'clients' app, 'client' type, c.id::text id, c.name title, 'Client' subtitle, c.archived_at is not null archived, null::text extra
-    from clients c where c.name ilike '%' || $2 || '%' escape '\\' and (c.archived_at is null or $3::boolean or length($1) >= 3)
+  // a client is found by its name, business name or email (the profile is read under the same row-level security as the Clients app)
+  clients: async (q, ctx, i) => (await q(`select 'clients' app, 'client' type, c.id::text id, c.name title,
+      'Client' || coalesce(' · ' || nullif(cp.business_name, c.name), '') subtitle, c.archived_at is not null archived, null::text extra
+    from clients c left join client_profiles cp on cp.client_id = c.id and cp.workspace_id = c.workspace_id
+    where (c.name ilike '%' || $2 || '%' escape '\\' or cp.business_name ilike '%' || $2 || '%' escape '\\' or cp.email ilike '%' || $2 || '%' escape '\\')
+      and (c.archived_at is null or $3::boolean or length($1) >= 3)
     order by ${rank('c.name')}, c.name limit ${LIMIT}`, [i.q, esc(i.q), i.archived])),
-  // Drive: Library and Personal only. Client spaces are never searched (OR-09).
-  files: async (q, ctx, i) => (await q(`select 'drive' app, f.kind type, f.id::text id, f.name title,
-      case when f.space = 'personal' then 'Personal' else 'Library' end || ' · ' || to_char(f.updated_at, 'DD Mon') subtitle,
-      f.archived_at is not null archived, f.mime_type extra
-    from files f where f.client_id is null and f.space <> 'client' and f.name ilike '%' || $2 || '%' escape '\\'
-      and (f.archived_at is null or $3::boolean) and (f.space <> 'shared' or f.in_library)
-    order by ${rank('f.name')}, f.updated_at desc limit ${LIMIT}`, [i.q, esc(i.q), i.archived])),
+  // Drive: every file and folder the person can open in Drive (row-level security decides: Personal is the owner's, shares included),
+  // including files kept by an app (a whiteboard, a funnel document). Client spaces are never searched (owner rule OR-09).
+  files: async (q, ctx, i) => (await q(`select * from (
+      select 'drive' app, f.kind type, f.id::text id, f.name title,
+        case when f.space = 'personal' then 'Personal' when f.in_library then 'Library' else 'Kept by ' || replace(initcap(f.managed_by), '_', ' ') end || ' · ' || to_char(f.updated_at, 'DD Mon') subtitle,
+        f.archived_at is not null archived, f.mime_type extra, ${rank('f.name')} r, f.updated_at u
+      from files f where f.client_id is null and f.space <> 'client' and f.name ilike '%' || $2 || '%' escape '\\' and (f.archived_at is null or $3::boolean)
+      union all
+      select 'drive', 'folder', d.id::text, d.name, case when d.space = 'personal' then 'Folder · Personal' else 'Folder · Library' end,
+        d.archived_at is not null, d.space, ${rank('d.name')}, d.updated_at
+      from drive_folders d where d.client_id is null and d.space <> 'client' and d.name ilike '%' || $2 || '%' escape '\\' and (d.archived_at is null or $3::boolean)
+    ) x order by r, u desc limit ${LIMIT}`, [i.q, esc(i.q), i.archived])).map(({ r, u, ...row }) => row),
   // Office records of the organization itself (client_id is null): client-owned copies are confidential and stay out (OR-09)
   office: async (q, ctx, i) => (await q(`select * from (
       select 'office' app, 'avatars' type, id::text id, name title, 'Customer avatar' subtitle, archived_at is not null archived, null::text extra, ${rank('name')} r from funnel_avatars where client_id is null and name ilike '%' || $2 || '%' escape '\\' and (archived_at is null or $3::boolean)

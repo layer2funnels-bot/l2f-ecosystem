@@ -37,16 +37,23 @@ export function plannerView({ api, org, orgs, me, loader = () => import('/planne
   const entry = { orgId: org.org_id, el: wrap, unmount: null };
   current = entry;
   const host = { org: org.org_id, me, orgs, call: (op, input, orgId) => api.call(op, input, { org: orgId }) };
-  entry.unmount = loader().then(async (m) => {
+  // one automatic retry before saying anything (a dropped connection while the bundle loads); the message names the real cause so the
+  // owner can report it, and "Try again" retries in place without reloading the page
+  const attempt = (n) => loader().then(async (m) => {
     if (current !== entry) return null;                         // switched away while loading
     const off = await m.mount(el, host);
     if (current !== entry) { off(); return null; }
     slot.remove(); el.setAttribute('aria-busy', 'false');
     return off;
-  }).catch(() => {
+  }).catch((e) => {
     if (current !== entry) return null;
-    put(slot, notice('err', 'cross', [h('b', {}, 'Planner couldn’t load.'), ' Your plans are safe. Check your connection and try again.'], [btn('Try again', () => location.reload(), 'primary')]));
+    if (n === 0) return new Promise((r) => setTimeout(r, 800)).then(() => attempt(1));
+    const why = String(e?.message ?? e ?? 'unknown').slice(0, 160);
+    console.error('Planner failed to load:', e);
+    put(slot, notice('err', 'cross', [h('b', {}, 'Planner couldn’t load.'), ' Your plans are safe. Try again; if it keeps happening, send us the details below.', h('small', { class: 'fine', style: 'display:block;margin-top:4px' }, `Details: ${why}`)],
+      [btn('Try again', () => { put(slot, skeleton(4)); entry.unmount = attempt(0); }, 'primary')]));
     return null;
   });
+  entry.unmount = attempt(0);
   return wrap;
 }

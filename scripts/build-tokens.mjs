@@ -1,4 +1,4 @@
-// Single source of truth for design tokens (Design v4 "Signal"): packages/ui/tokens.json -> packages/ui/tokens.css.
+// Single source of truth for design tokens (Design V8 "Ledger"; started as v4 "Signal"): packages/ui/tokens.json -> packages/ui/tokens.css.
 // Themes are data-theme="light|dark" on <html>; the organization is data-org="l2f|aurj". --check fails if tokens.css is stale or a contrast pair fails.
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { tokens as t, THEMES, ORGS, resolve, failures } from '../packages/ui/tokens-lib.mjs';
@@ -17,6 +17,7 @@ for (const g of ['spacing', 'radius', 'shadow']) for (const tk of t[g].tokens) l
 for (const [k, v] of Object.entries(t.v4.radius)) lines.push(`  --${k}: ${v};`);
 for (const [k, v] of Object.entries(t.v4.shadow)) lines.push(`  --${k}: ${v};`);
 for (const [k, v] of Object.entries(t.v4.ease)) lines.push(`  --${k}: ${v};`);
+for (const [k, v] of Object.entries(t.v4.size ?? {})) lines.push(`  --${k}: ${v};`);
 for (const [k, v] of Object.entries(t.type.families)) lines.push(`  --${k}: ${v};`);
 lines.push('  --focus-ring: 0 0 0 3px var(--action);', '  --target-min: 44px;', '  --motion-fast: 120ms;', '  --motion-base: 200ms;', '  --ease: var(--e-out);',
   '  --z-sticky: 10;', '  --z-menu: 100;', '  --z-dialog: 200;', '  --z-toast: 300;',
@@ -26,7 +27,7 @@ lines.push('  --focus-ring: 0 0 0 3px var(--action);', '  --target-min: 44px;', 
   '  --tint: var(--action-tint); --control-border: var(--control); --ink: var(--text); --panel: var(--surface); --shell: var(--bg);',
   '  --success: var(--ok); --success-tint: var(--ok-tint); --warn-text: var(--warn); --line-soft: var(--line);',
   '  --font-body: var(--font); --font-display: var(--font-d);', '}',
-  ':root[data-theme="dark"] { color-scheme: dark; }',
+  `:root[data-theme="dark"] { color-scheme: dark;${Object.entries(t.v4.shadowDark ?? {}).map(([k, v]) => ` --${k}: ${v};`).join('')} }`,
   '@media (prefers-reduced-motion: reduce) { :root { --motion-fast: 0ms; --motion-base: 0ms; } }');
 const css = lines.join('\n') + '\n';
 const bad = failures();

@@ -4,6 +4,7 @@ import { h, icon, orgMarkEl, roleLabel, initials, dialog } from '../ui.js';
 import { hrefFor, appLabel } from '../routes.js';
 import { plateOf } from '../registry.js';
 import { appNav } from '../appnav.js';
+import { clickedInside } from '../dom.js';
 
 let offs = [];      // document-level listeners belong to the shell that is on screen; a new render removes the old ones
 const onDocClick = (fn) => { document.addEventListener('click', fn); offs.push(() => document.removeEventListener('click', fn)); };
@@ -41,12 +42,12 @@ function switcher({ orgs, active, onPick, compact = false }) {
   };
   sw.addEventListener('click', () => (menu.dataset.open === 'true' ? close(true) : open()));
   trap(menu, sw, close);
-  onDocClick((e) => { if (menu.dataset.open === 'true' && !e.target.closest('.swwrap')) close(false); });
+  onDocClick((e) => { if (menu.dataset.open === 'true' && !clickedInside(e, '.swwrap')) close(false); });
   return h('div', { class: 'orgwrap swwrap' }, sw, menu);
 }
 
 /** The grid button: "Back to Launcher" and every app this person may open here (Design v4 section 5). `suffix` keeps ids unique when the phone header repeats it. */
-function appSwitcher({ catalog = [], registry, launcherCurrent, suffix = '' }) {
+function appSwitcher({ catalog = [], registry, launcherCurrent, suffix = '', currentApp = null }) {
   const btn = h('button', { type: 'button', class: 'launch-btn', id: `app-switcher${suffix}`, 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-controls': `apps-menu${suffix}`, 'aria-label': 'Open the app switcher' }, icon('grid'));
   const menu = h('div', { class: 'menu appmenu apps', id: `apps-menu${suffix}`, role: 'menu', 'aria-label': 'Apps', 'data-open': 'false' });
   const close = (refocus) => { menu.dataset.open = 'false'; btn.setAttribute('aria-expanded', 'false'); if (refocus) btn.focus(); };
@@ -54,13 +55,16 @@ function appSwitcher({ catalog = [], registry, launcherCurrent, suffix = '' }) {
   btn.addEventListener('click', () => {
     if (menu.dataset.open === 'true') return close(true);
     menu.replaceChildren(
-      h('a', { class: 'home back', role: 'menuitem', href: '#/launcher', tabindex: '-1', onclick: () => close(false), ...(launcherCurrent ? { 'aria-current': 'page' } : {}) }, h('span', { class: 'mini' }, icon('home')), 'Back to Launcher'),
-      usable.length ? h('div', { class: 'grid applist' }, ...usable.map((a) => h('a', { class: 'appitem', 'data-app': a.app_key, role: 'menuitem', tabindex: '-1', href: a.app_key === 'office' ? hrefFor.office() : hrefFor.app(a.app_key), onclick: () => close(false) },
-        plateOf(registry?.get(a.app_key) ?? { id: a.app_key }, 40), a.name))) : h('div', { class: 'mfoot' }, 'No other app is switched on for you here.'));
+      // V8 apps menu (prototype .appmenu): Launcher row with its shortcut, a 3-column grid of 38 px marks, the current app marked, a hint
+      h('a', { class: 'home back', role: 'menuitem', href: '#/launcher', tabindex: '-1', onclick: () => close(false), ...(launcherCurrent ? { 'aria-current': 'page' } : {}) },
+        h('span', { class: 'mini' }, icon('grid')), h('span', { class: 'grow' }, 'Launcher'), h('kbd', { 'aria-label': 'Shortcut: G then L' }, 'G L')),
+      usable.length ? h('div', { class: 'grid applist' }, ...usable.map((a) => h('a', { class: 'appitem', 'data-app': a.app_key, role: 'menuitem', tabindex: '-1', href: a.app_key === 'office' ? hrefFor.office() : hrefFor.app(a.app_key), onclick: () => close(false), ...(a.app_key === currentApp ? { 'aria-current': 'true' } : {}) },
+        plateOf(registry?.get(a.app_key) ?? { id: a.app_key }, 38), a.name))) : h('div', { class: 'mfoot' }, 'No other app is switched on for you here.'),
+      usable.length ? h('p', { class: 'hint' }, 'Ctrl-click or middle-click opens an app in a new tab.') : null);
     menu.dataset.open = 'true'; btn.setAttribute('aria-expanded', 'true'); menu.querySelector('[role=menuitem]').focus();
   });
   trap(menu, btn, close);
-  onDocClick((e) => { if (menu.dataset.open === 'true' && !e.target.closest(`.apps-wrap${suffix}`)) close(false); });
+  onDocClick((e) => { if (menu.dataset.open === 'true' && !clickedInside(e, `.apps-wrap${suffix}`)) close(false); });
   return h('div', { class: `appsw swwrap apps-wrap apps-wrap${suffix}` }, btn, menu);
 }
 
@@ -105,11 +109,11 @@ function bell(notifications, registry) {
     panel = h('aside', { class: 'nfx', role: 'dialog', 'aria-modal': 'false', 'aria-label': 'Notifications', onkeydown: (e) => { if (e.key === 'Escape') { e.preventDefault(); close(); } } },
       h('header', { class: 'nfx-head' }, h('h2', {}, 'Notifications'), markAll, h('button', { type: 'button', class: 'iconbtn', 'aria-label': 'Close notifications', onclick: close }, icon('x'))),
       kinds, apps, list,
-      h('footer', { class: 'nfx-foot' }, h('a', { href: '#/profile', onclick: () => close() }, icon('gear'), 'Notification settings: choose apps and email digests')));
+      h('footer', { class: 'nfx-foot' }, h('a', { href: '#/profile/notifications', onclick: () => close() }, icon('gear'), 'Notification settings: choose which apps reach you')));
     document.body.append(panel); b.setAttribute('aria-expanded', 'true'); load();
     panel.querySelector('[role=tab]')?.focus();
   });
-  onDocClick((e) => { if (panel && !panel.contains(e.target) && !b.contains(e.target)) close(); });
+  onDocClick((e) => { if (panel && !clickedInside(e, panel, b)) close(); });   // the filters re-render on click: see clickedInside
   return h('div', { class: 'swwrap bell-wrap' }, b);
 }
 
@@ -130,7 +134,7 @@ function profile({ email, name, photo, onSignOut, theme }) {
     menu.dataset.open = 'true'; btn.setAttribute('aria-expanded', 'true'); menu.querySelector('[role=menuitem]').focus();
   });
   trap(menu, btn, close);
-  onDocClick((e) => { if (menu.dataset.open === 'true' && !e.target.closest('.profile-wrap')) close(false); });
+  onDocClick((e) => { if (menu.dataset.open === 'true' && !clickedInside(e, '.profile-wrap')) close(false); });
   return h('div', { class: 'swwrap profile-wrap' }, btn, menu);
 }
 
@@ -145,7 +149,7 @@ function rail({ sw, catalog = [], registry, currentApp, bellEl, who, onSearch })
     : h('button', { type: 'button', class: 'r-btn', id: 'rail-search', 'aria-disabled': 'true', 'aria-describedby': 'search-why', title: 'Search is not available for client accounts', 'aria-label': 'Search everything' }, icon('search'));
   return h('nav', { class: 'rail', 'aria-label': 'Ecosystem' },
     h('div', { class: 'r-wrap' }, sw),
-    h('div', { class: 'r-wrap' }, appSwitcher({ catalog, registry, launcherCurrent: false })),
+    h('div', { class: 'r-wrap' }, appSwitcher({ catalog, registry, launcherCurrent: false, currentApp })),
     h('span', { class: 'r-div', 'aria-hidden': 'true' }),
     h('div', { class: 'r-apps' }, ...keys.map((k) => { const a = usable.get(k); return h('a', { class: 'r-app', href: appHref(k), title: a.name, 'aria-label': a.name, 'data-app': k, ...(k === currentApp ? { 'aria-current': 'page' } : {}) }, plateOf(registry?.get(k) ?? { id: k }, 30)); })),
     h('span', { class: 'r-sp' }),
@@ -159,7 +163,7 @@ function accountSheet({ orgs, active, catalog = [], registry, notifications, app
   const close = dialog({ title: 'Apps and account', wide: false, body: h('div', { class: 'acct-sheet' },
     h('a', { class: 'btn', href: '#/launcher', onclick: () => close() }, icon('home'), 'Launcher'),
     onSearch ? h('button', { type: 'button', class: 'btn', onclick: () => { close(); onSearch(); } }, icon('search'), 'Search everything') : null,
-    notifications ? h('a', { class: 'btn', href: '#/profile', onclick: () => close() }, icon('bell'), 'Notifications') : null,
+    notifications ? h('button', { type: 'button', class: 'btn', onclick: () => { close(); document.getElementById('bell')?.click(); } }, icon('bell'), 'Notifications') : null,   // the inbox drawer (the rail with the bell is hidden on phones)
     h('h3', { class: 'over' }, 'Your organizations'),
     ...orgs.map((o) => h('button', { type: 'button', class: 'btn opt-org', 'aria-pressed': String(o.org_id === active.org_id), onclick: () => { close(); if (o.org_id !== active.org_id) app.switchOrg(o.org_id); } }, orgMarkEl(o, 24), h('span', {}, o.name), h('small', {}, roleLabel(o.role)))),
     h('h3', { class: 'over' }, 'Apps'),
@@ -215,7 +219,9 @@ export function shellView({ onSearch = null, app, orgs, active, email, name, rou
   // A full-screen app (Projects) brings its own sidebar: the shell keeps only its header (with the app switcher in it),
   // and the app fills everything below, edge to edge. No second menu, no frame around the app.
   const full = Boolean(content.__fullApp);
-  const { items, current } = full ? { items: [], current: null } : appNav(currentApp, route, { isAdmin });
+  // V8 "focused layout" (Your profile): the rail and a title bar with Back, no app sidebar and no app menu
+  const focused = !full ? content.__focused ?? null : null;
+  const { items, current } = full || focused ? { items: [], current: null } : appNav(currentApp, route, { isAdmin });
   const here = items.find((i) => i.key === current);
   // V8: the organization switcher, app switcher, notifications and profile live in the rail (no profile footer in the sidebar: it looked clickable and wasn't)
   const swRail = switcher({ orgs, active, onPick: (id) => app.switchOrg(id), compact: true });
@@ -234,14 +240,17 @@ export function shellView({ onSearch = null, app, orgs, active, email, name, rou
   const onCrumbs = (e) => { if (e.detail.root === content) paintCrumb(); };
   document.addEventListener('l2f:crumbs', onCrumbs); offs.push(() => document.removeEventListener('l2f:crumbs', onCrumbs));
   // V8 app bar (52 px): phone organization mark (apps-and-account sheet), collapse sidebar, crumbs. Search, bell, organization and profile are in the rail.
-  const shellEl = h('div', { class: full ? 'shell v8 is-full' : `shell v8${sideCollapsed() ? ' sidecol' : ''}`, 'data-app': currentApp ?? '' });
-  const collapse = full ? null : h('button', { type: 'button', class: 'iconbtn hide-m sidetoggle', 'aria-label': 'Collapse sidebar', title: 'Collapse sidebar', 'aria-pressed': String(sideCollapsed()),
+  const shellEl = h('div', { class: full ? 'shell v8 is-full' : focused ? 'shell v8 focused' : `shell v8${sideCollapsed() ? ' sidecol' : ''}`, 'data-app': currentApp ?? '' });
+  const collapse = full || focused ? null : h('button', { type: 'button', class: 'iconbtn hide-m sidetoggle', 'aria-label': 'Collapse sidebar', title: 'Collapse sidebar', 'aria-pressed': String(sideCollapsed()),
     onclick: (e) => { const on = !shellEl.classList.contains('sidecol'); shellEl.classList.toggle('sidecol', on); e.currentTarget.setAttribute('aria-pressed', String(on)); try { localStorage.setItem(SIDECOL, on ? '1' : '0'); } catch { /* private window: not remembered */ } } }, icon('layers'));
   const sheetBtn = h('button', { type: 'button', class: 'iconbtn only-m acct-btn', id: 'acct-sheet-btn', 'aria-haspopup': 'dialog', 'aria-label': `Apps and account (${active.name})`,
     onclick: () => accountSheet({ orgs, active, catalog, registry, notifications, app, theme, email, name, onSearch }) }, orgMarkEl(active, 26));
-  const header = h('header', { class: full ? 'hdr bar is-full' : 'hdr bar' }, sheetBtn, collapse,
-    full ? h('span', { class: 'hdr-app' }, plateOf(manifest ?? { id: currentApp }, 26)) : null, crumb);
-  shellEl.append(theRail, ...(full ? [] : [side]), h('div', { class: 'main' }, header, h('main', { class: full ? 'content flush wide is-full' : 'content', id: 'main', 'aria-busy': 'false' }, banner ?? null, content)));
+  const header = focused
+    ? h('header', { class: 'hdr bar' }, sheetBtn, h('a', { class: 'iconbtn hdr-back', href: focused.back ?? '#/launcher', 'aria-label': 'Back to the Launcher', title: 'Back' }, icon('arrow')),
+      h('div', { class: 'hdr-ttl' }, h('b', {}, focused.title), focused.sub ? h('small', {}, focused.sub) : null))
+    : h('header', { class: full ? 'hdr bar is-full' : 'hdr bar' }, sheetBtn, collapse,
+      full ? h('span', { class: 'hdr-app' }, plateOf(manifest ?? { id: currentApp }, 26)) : null, crumb);
+  shellEl.append(theRail, ...(full || focused ? [] : [side]), h('div', { class: 'main' }, header, h('main', { class: full ? 'content flush wide is-full' : 'content', id: 'main', 'aria-busy': 'false' }, banner ?? null, content)));
   return h('div', { class: 'app', 'data-org': active.slug ?? '' }, skip, shellEl, items.length ? bottomBar(items, current, appName) : null);
 }
 
