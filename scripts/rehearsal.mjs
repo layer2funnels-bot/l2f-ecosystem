@@ -76,7 +76,7 @@ const walk = (d) => readdirSync(d, { withFileTypes: true }).flatMap((e) => e.isD
 const files = walk(dist).filter((f) => /\.(html|js|css|mjs)$/.test(f) && !/\/(whiteboard|docs-io|sheetjs|media)\//.test(f));          // the editor bundles have their own checks (R8i, R8k)
 const hosts = new Set(); for (const f of files) for (const m of readFileSync(f, 'utf8').matchAll(/https?:\/\/([a-z0-9.-]+)/gi)) hosts.add(m[1].toLowerCase());
 const allowedHosts = new Set(['rehearsalref.supabase.co', 'www.w3.org', 'openfontlicense.org', 'scripts.sil.org', 'fonts.google.com', 'github.com', 'www.met.no', 'creativecommons.org', 'example.com', 'office.example', 'layer2funnels.com', 'www.layer2funnels.com',
-  'reactjs.org']);   // text only: React's production error messages carry an "error decoder" link (Planner bundle); nothing is fetched, and the page policy allows our own files only
+  'reactjs.org', 'schemas.openxmlformats.org']);   // text only: React's production error messages carry an "error decoder" link (Planner bundle); nothing is fetched, and the page policy allows our own files only
 const stray = [...hosts].filter((h) => !allowedHosts.has(h) && !h.endsWith('.example.com'));
 ok('R8d', 'The built site loads nothing from any other host (fonts, scripts, styles are our own); only licence/namespace text mentions other hosts', stray.length === 0, stray.join(','));
 // The whiteboard editor (Excalidraw) mentions many web addresses in its code (help links, embed lists, a collaboration service this app never turns on).
