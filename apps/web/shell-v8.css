@@ -170,7 +170,14 @@
 .shell.v8 .focusbar .hdr-ttl{min-width:0}.shell.v8 .focusbar .hdr-ttl b,.shell.v8 .focusbar .hdr-ttl small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media (max-width:760px){.shell.v8 .focusbar-acts>.pill,.shell.v8 .focusbar-photo{display:none}.shell.v8 .focusbar-acts{gap:4px}}
 /* focused top bar: the rail already has the apps button, so the bar shows its own only on a phone (where the rail is hidden) */
-@media (min-width:761px){.shell.v8 .focusbar .appsw{display:none}}
+.shell.v8 .focusbar .appsw{display:none}   /* the rail (desktop) or the organization mark sheet (phone) already opens every app */
 /* focused top bar on a phone: Back already cancels, so Cancel gives way; the actions never push the page sideways */
 @media (max-width:760px){.shell.v8 .focusbar-acts>.btn.quiet{display:none}.shell.v8 .focusbar-acts{flex:none;min-width:0}.shell.v8 .focusbar .hdr-ttl small{display:none}.shell.v8 .focusbar-acts .btn{padding:0 10px}}
 @media (max-width:760px){.shell.v8 .focusbar-acts .btn svg{display:none}.shell.v8 .focusbar{gap:4px;padding:4px 8px}}
+/* phone: the organization mark button (opens Apps and account) — centred, the mark at its true square size (was squeezed narrow) */
+@media (max-width:760px){.hdr .acct-btn.only-m{display:inline-grid;place-items:center;flex:none;width:44px;height:44px;padding:0}
+  .hdr .acct-btn .mark{width:28px;height:28px;min-width:28px;flex:none;--s:28px}}
+/* Apps and account sheet: scrolls inside itself so Close and Sign out are always reachable */
+.acct-sheet{max-height:calc(100dvh - 120px);overflow-y:auto}
+.hdr .acct-btn .mark b{width:auto;height:auto;white-space:nowrap;font-size:calc(11.5px * var(--ts, 1));line-height:1}
+.hdr .acct-btn .mark.m-l2f i{top:auto;bottom:17%;left:24%;right:24%;width:auto;height:2px;min-height:0}
