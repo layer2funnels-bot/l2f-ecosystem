@@ -17,6 +17,7 @@ const admin = new pg.Client({ connectionString: 'postgresql://supabase_admin:pos
 // the local database keeps what earlier runs created; the client list shows 200 at most, so retire earlier runs' test clients first (archived, never deleted)
 await admin.query("update clients set archived_at = now() where archived_at is null and name ~ '^(Harry Kaye PT|Victor Audit|Acme Fitness|Forms client|E[0-9]+E [Cc]lient|Ladder client|Board client|Acme [0-9]|UI Client|Archived Client)'");
 await admin.query('truncate avatar_versions, value_ladder_rungs, funnel_references, funnel_brand_kits, funnel_stories, funnel_offers, funnel_avatars');   // clean slate (local database only)
+await admin.query("insert into workspace_apps (workspace_id, app_key, enabled) select id, 'tasks', true from workspaces on conflict (workspace_id, app_key) do update set enabled = true");   // CI makes the organizations after the migrations ran
 const stamp = Date.now(); const EMAIL = `ui.${stamp}@example.com`, PW = 'correct-horse-battery-staple'; const NAME = 'Una Owner';
 const GUEST = `guest.ui.${stamp}@example.com`, OUTSIDER = `outsider.ui.${stamp}@example.com`;
 
