@@ -2,7 +2,7 @@
 // The Launcher, the app switcher and Office > Apps read them for the plate (colour, glyph), group and route.
 import { h, icon } from './ui.js';
 
-const ICON_FOR = { office: 'off', projects: 'prj', clients: 'cli', portal: 'por', drive: 'drv', planner: 'pln', forms: 'frm', value_ladder: 'vl', social_planner: 'soc', whiteboard: 'wb', layer2_agents: 'ag', funnel_mapper_pro: 'fmp' };
+const ICON_FOR = { office: 'off', projects: 'prj', clients: 'cli', portal: 'por', drive: 'drv', planner: 'pln', forms: 'frm', value_ladder: 'vl', social_planner: 'soc', whiteboard: 'wb', layer2_agents: 'ag', tasks: 'tasks', funnel_mapper_pro: 'fmp' };
 let cache = null;
 export async function loadRegistry(fetcher = (u) => fetch(u)) {
   if (cache) return cache;

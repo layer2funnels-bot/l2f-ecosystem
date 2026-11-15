@@ -41,6 +41,7 @@ import { documentsView as documentsV8 } from './views/office-docs.js';
 import { offersListView, offerView, offerFormView } from './views/office-offers.js';
 import { storiesListView, storyView, storyFormView, brandKitsListView, brandKitView, brandKitFormView } from './views/office-records.js';
 import { adminV8View } from './views/office-admin.js';
+import { tasksView } from './modules/tasks.js';
 import { avatarsListView, avatarNewView, avatarStudioView, avatarEditView } from './views/office-avatars.js';
 let lastTouched = null;   // the app last reported to access.app.touch
 const V8REC = { avatars: [avatarsListView, (c, id, prm) => avatarStudioView(c, id, prm?.tab ?? 'profile'), (c, id, prm) => (id ? avatarEditView(c, id, prm?.chapter) : avatarNewView(c))], offers: [offersListView, offerView, offerFormView], stories: [storiesListView, storyView, storyFormView], brand_kits: [brandKitsListView, brandKitView, brandKitFormView] };
@@ -477,6 +478,10 @@ async function render(opts = {}) {
         break;
       }
       case 'board': content = boardView({ api, id: route.params.id, ctx: c }); break;
+      case 'tasks': {
+        const entry = ctx.catalog.find((a) => a.app_key === 'tasks');
+        content = !ctx.catalogError && entry && entry.state !== 'available' ? appNotBuiltView('Tasks') : tasksView({ api, ctx: c, route, org }); break;
+      }
       case 'planner': {
         // the database refuses Planner without the app switched on here and the person's grant; this only explains it instead of mounting an app that can show nothing
         const entry = ctx.catalog.find((a) => a.app_key === 'planner');
@@ -491,12 +496,12 @@ async function render(opts = {}) {
       default: content = notFoundState(hrefFor.office());
     }
   }
-  { const usedApp = org.member_kind === 'client' ? null : (inOffice ? 'office' : route.name === 'doc' || route.name === 'sheet' || route.name === 'image' || route.name === 'pdf' || route.name === 'drive' ? 'drive' : route.name === 'board' || route.name === 'boards' ? 'whiteboard' : ['projects', 'clients', 'forms', 'planner'].includes(route.name) ? route.name : route.name === 'ladder' ? 'value_ladder' : route.name === 'social' ? 'social_planner' : null); if (usedApp && usedApp !== lastTouched) { lastTouched = usedApp; api.call('access.app.touch', { app: usedApp }).catch(() => {}); } }   // Admin › Access review: when each app was last used
+  { const usedApp = org.member_kind === 'client' ? null : (inOffice ? 'office' : route.name === 'doc' || route.name === 'sheet' || route.name === 'image' || route.name === 'pdf' || route.name === 'drive' ? 'drive' : route.name === 'board' || route.name === 'boards' ? 'whiteboard' : ['projects', 'clients', 'forms', 'planner', 'tasks'].includes(route.name) ? route.name : route.name === 'ladder' ? 'value_ladder' : route.name === 'social' ? 'social_planner' : null); if (usedApp && usedApp !== lastTouched) { lastTouched = usedApp; api.call('access.app.touch', { app: usedApp }).catch(() => {}); } }   // Admin › Access review: when each app was last used
   // global search (V8 02 §5): the rail button and Ctrl K open it, scoped to the current app when that app is searchable; staff only (the operation refuses client contacts)
-  startSearch = org.member_kind === 'client' ? null : (initial = '') => openSearch({ api, registry, catalog: ctx.catalog, isAdmin, currentApp: inOffice ? 'office' : (route.name === 'clients' ? 'clients' : route.name === 'projects' ? 'projects' : route.name === 'planner' ? 'planner' : ['doc', 'sheet', 'image', 'pdf', 'drive'].includes(route.name) ? 'drive' : null), initial });
-  const view = shellView({ onSearch: startSearch, app: appApi, orgs: ctx.orgs, active: org, email: session.get()?.email, name: session.get()?.name, route, content, banner: bannerEl(), isAdmin, inOffice, launcherCurrent: route.name === 'launcher' || route.name === 'home',
+  startSearch = org.member_kind === 'client' ? null : (initial = '') => openSearch({ api, registry, catalog: ctx.catalog, isAdmin, currentApp: inOffice ? 'office' : (route.name === 'clients' ? 'clients' : route.name === 'projects' ? 'projects' : route.name === 'planner' ? 'planner' : route.name === 'tasks' ? 'tasks' : ['doc', 'sheet', 'image', 'pdf', 'drive'].includes(route.name) ? 'drive' : null), initial });
+  const view = shellView({ timer: org.member_kind === 'client' ? null : { running: () => api.call('timer.running', {}), stop: () => api.call('timer.stop', {}) }, onSearch: startSearch, app: appApi, orgs: ctx.orgs, active: org, email: session.get()?.email, name: session.get()?.name, route, content, banner: bannerEl(), isAdmin, inOffice, launcherCurrent: route.name === 'launcher' || route.name === 'home',
     notifications: org.member_kind === 'client' ? null : notifications,
-    catalog: ctx.catalog, registry, currentApp: inOffice ? 'office' : route.name === 'doc' || route.name === 'sheet' || route.name === 'image' || route.name === 'pdf' || route.name === 'drive' ? 'drive' : route.name === 'board' ? 'whiteboard' : route.name === 'projects' ? 'projects' : route.name === 'clients' ? 'clients' : route.name === 'portal' ? 'portal' : route.name === 'forms' ? 'forms' : route.name === 'ladder' ? 'value_ladder' : route.name === 'boards' ? 'whiteboard' : route.name === 'social' ? 'social_planner' : route.name === 'planner' ? 'planner' : route.name === 'app' ? route.params.app : null, theme,
+    catalog: ctx.catalog, registry, currentApp: inOffice ? 'office' : route.name === 'doc' || route.name === 'sheet' || route.name === 'image' || route.name === 'pdf' || route.name === 'drive' ? 'drive' : route.name === 'board' ? 'whiteboard' : route.name === 'projects' ? 'projects' : route.name === 'clients' ? 'clients' : route.name === 'portal' ? 'portal' : route.name === 'forms' ? 'forms' : route.name === 'ladder' ? 'value_ladder' : route.name === 'boards' ? 'whiteboard' : route.name === 'social' ? 'social_planner' : route.name === 'planner' ? 'planner' : route.name === 'tasks' ? 'tasks' : route.name === 'app' ? route.params.app : null, theme,
     me });
   put(root, view, designBadge('Built to design'));
   document.title = `${pageLabel(route)} · ${org.name}`;

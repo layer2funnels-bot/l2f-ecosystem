@@ -1,0 +1,19 @@
+{
+  "id": "tasks",
+  "name": "Tasks",
+  "description": "Lists, folders and mind maps for everyday to-dos",
+  "group": "Everyday",
+  "plate": { "colors": ["#5EEAD4", "#0EA5A4", "#08706F"], "glyph": "#FFFEFA", "icon": "tasks" },
+  "routes": "/tasks/*",
+  "orgs": ["layer2funnels", "aurj"],
+  "permissionPrefix": ["tasks"],
+  "grantRequired": true,
+  "status": "building",
+  "embeds": [],
+  "reuses": ["notifications", "timer"],
+  "searchTypes": ["task", "list"],
+  "storage": "none",
+  "ai": false,
+  "integrations": [],
+  "order": 12
+}

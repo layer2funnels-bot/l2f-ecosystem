@@ -17,6 +17,7 @@ const admin = new pg.Client({ connectionString: 'postgresql://supabase_admin:pos
 // the local database keeps what earlier runs created; the client list shows 200 at most, so retire earlier runs' test clients first (archived, never deleted)
 await admin.query("update clients set archived_at = now() where archived_at is null and name ~ '^(Harry Kaye PT|Victor Audit|Acme Fitness|Forms client|E[0-9]+E [Cc]lient|Ladder client|Board client|Acme [0-9]|UI Client|Archived Client)'");
 await admin.query('truncate avatar_versions, value_ladder_rungs, funnel_references, funnel_brand_kits, funnel_stories, funnel_offers, funnel_avatars');   // clean slate (local database only)
+await admin.query("insert into workspace_apps (workspace_id, app_key, enabled) select id, 'tasks', true from workspaces on conflict (workspace_id, app_key) do update set enabled = true");   // CI makes the organizations after the migrations ran
 const stamp = Date.now(); const EMAIL = `ui.${stamp}@example.com`, PW = 'correct-horse-battery-staple'; const NAME = 'Una Owner';
 const GUEST = `guest.ui.${stamp}@example.com`, OUTSIDER = `outsider.ui.${stamp}@example.com`;
 
@@ -121,7 +122,7 @@ await page.getByRole('button', { name: 'Check for invitations' }).click(); await
 check('U9', 'After an admin adds them, "Check for invitations" opens the Launcher in the organization theme with the switcher showing it', (await theme()) === 'l2f' && (await page.locator('#org-switcher strong').innerText()) === 'Layer2Funnels' && (await page.locator('.launcher.lx').count()) === 1);
 const tile = (k) => page.locator(`.tile[data-app=${k}]`);
 const keys = await page.locator('.tile').evaluateAll((els) => els.map((e) => e.dataset.app));
-check('U10', 'Owner sees the twelve apps grouped Everyday then Studio in the v4 order, Funnel Mapper Pro among them as a normal tile', keys.join() === 'office,projects,clients,drive,planner,portal,forms,value_ladder,social_planner,whiteboard,funnel_mapper_pro,layer2_agents', keys.join());
+check('U10', 'Owner sees the thirteen apps in the V8 order (Everyday ends with Tasks, then Studio), Funnel Mapper Pro among them as a normal tile', keys.join() === 'office,projects,clients,drive,planner,portal,tasks,forms,value_ladder,social_planner,whiteboard,funnel_mapper_pro,layer2_agents', keys.join());
 const state = async (k) => (await tile(k).getAttribute('class')).split(' ')[1];
 check('U11', 'Tile states come from the real catalog: Client Portal locked, five apps coming soon', (await state('portal')) === 'locked' && (await tile('portal').innerText()).includes('Locked') && (await state('forms')) === 'soon' && (await tile('layer2_agents').innerText()).includes('Soon') && (await state('office')) === 'ok');
 await wait('· Khushab');

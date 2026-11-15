@@ -12,20 +12,21 @@ Then read, in this order: `CURRENT_PROJECT_STATUS.md` → `MASTER_HANDOFF.md` �
 ## 2. What is done
 - **P00 Foundation and Global Shell** — branch `claude/epic-bohr-nc9jar`, PR #56 (draft, CI green). Not merged.
 - **P01 Office** — branch `p01-office`, PR #57 (draft, stacked on #56). Not merged.
+- **P02 Tasks** — branch `p02-tasks`, draft PR stacked on #57 (`TASKS_REPORT.md`). Not merged. Migration 0059 local only.
 - Migrations 0054–0058 written and tested locally; **not applied to production** (blocked: no verified backup possible from the cloud session).
 
 ## 3. Your first task
-**Unblock and apply the P00 + P01 migrations — only after a verified backup:**
+**Migrations 0054–0059 are applied on production (15 Nov). Start P03 Drive with editors.**
 1. Ask the owner to run the backup on their machine (never paste secrets in chat):
    `SUPABASE_DB_URL=… AGE_RECIPIENT=… bash scripts/backup-supabase.sh` and confirm the `l2f-backup-<stamp>.tar.age` file exists and is non-empty
    (or approve enabling `.github/workflows/backup.yml.disabled` with those two repository secrets and confirm a successful run + artifact).
 2. Confirm the target: Supabase project `l2f-ecosystem` (ref `dfitnxilkezepkhdmzuh`); `list_migrations` must end at 0053.
-3. Apply in order, each with Supabase `apply_migration` using the file's exact SQL from `p01-office`: 0054, 0055, 0056, 0057, 0058.
+3. Apply in order, each with Supabase `apply_migration` using the file's exact SQL: 0054, 0055, 0056, 0057, 0058 (`p01-office`), then 0059 (`p02-tasks`) once Tasks is approved.
 4. Verify (see `MASTER_HANDOFF.md` §7): `list_migrations`, tables/columns/policies, `get_advisors` (security), functions not executable by anon/authenticated,
    Client Access Matrix policy uses `clients.apps.manage` (owner + admin), the preview's bell, Profile details and Office pages load.
 5. Update `CURRENT_PROJECT_STATUS.md`.
 
-**Then the next application is P02 Tasks.** Approved order (owner, 15 Nov 2026): P00 Foundation and Global Shell → P01 Office → **P02 Tasks** → P03 Drive with editors → P04 Projects → P05 Planner → P06 Clients → P07 Funnel Mapper → P08 Portal → P09 Whiteboard → P10 Forms → P11 Value Ladder → P12 Social Planner → P13 Agents → P14 Final Ecosystem Verification.
+**P02 Tasks is built; the next application is P03 Drive with editors.** Approved order (owner, 15 Nov 2026): P00 Foundation and Global Shell → P01 Office → **P02 Tasks** → P03 Drive with editors → P04 Projects → P05 Planner → P06 Clients → P07 Funnel Mapper → P08 Portal → P09 Whiteboard → P10 Forms → P11 Value Ladder → P12 Social Planner → P13 Agents → P14 Final Ecosystem Verification.
 Do not start a new app until the owner says so; do not start Tasks before the migrations question is settled or explicitly deferred by the owner.
 
 ## 4. Never

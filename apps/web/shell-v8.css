@@ -162,6 +162,17 @@
 .shell.v8.focused main.content{padding:0;max-width:none}
 @media (pointer:coarse){.shell.v8 .focusbar .launch-btn{width:44px;height:44px}}
 .shell.v8 .focusbar .hdr-ttl{flex:1}.shell.v8 .focusbar-acts{display:flex;align-items:center;gap:8px;margin-left:auto}   /* V8 focusBar right-hand actions */
+/* app bar: right side (V8 tShell barRight) and the shared running-timer pill (prototype .tpill, tasks6.js) */
+.shell.v8 .hdr .hdr-grow{flex:1}
+.tpill-box:empty{display:none}
+.tpill{display:inline-flex;align-items:center;gap:8px;min-height:30px;padding:0 4px 0 10px;border-radius:15px;border:1.5px solid color-mix(in srgb,var(--action) 60%,transparent);background:var(--action-tint);color:var(--action);font-size:calc(13px * var(--ts, 1));font-weight:550;max-width:300px}
+.tpill .rec{width:8px;height:8px;border-radius:50%;background:#E5482F;animation:tpbeat 1.4s infinite}
+.tpill .tp-n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px;color:inherit;text-decoration:none}
+.tpill .tp-stop{width:22px;height:22px;border-radius:50%;background:var(--action);color:var(--action-ink);display:grid;place-items:center;border:0;cursor:pointer}
+@keyframes tpbeat{50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.tpill .rec{animation:none}}
+@media (pointer:coarse){.tpill .tp-stop{width:44px;height:44px}.tpill{min-height:44px}}
+.shell.v8[data-app=tasks] .side .nav a,.shell.v8[data-app=tasks] .tside a{font-size:calc(15.5px * var(--ts, 1));line-height:1.5;min-height:42px}   /* V8 04_TASKS: sidebar 15.5 px, 42 px rows */
 /* focused top bar: the apps menu drops down below the bar (it opened upwards, off-screen, and covered the bar) */
 .shell.v8 .focusbar{position:relative;z-index:30;overflow:visible}
 .shell.v8 .focusbar .appsw .menu{top:calc(100% + 6px);bottom:auto;left:0;right:auto;transform-origin:top left;max-height:calc(100vh - 70px);overflow:auto}

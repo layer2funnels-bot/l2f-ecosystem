@@ -13,8 +13,12 @@ async function running(tx: Tx): Promise<RunningTimer | null> {
   return r ? { entryId: r.id, taskId: r.task_id, taskTitle: r.title, projectId: r.project_id, startedAt: r.started_at } : null;
 }
 
-const stopMine = (tx: Tx) => run(tx, `update pm_time_entries set ended_at = least(now(), started_at + interval '24 hours')
-  where user_id = pm.uid() and ended_at is null`);
+// one running timer per person across Projects and Tasks (V8 04_TASKS §1): starting or stopping here also stops a Tasks timer
+const stopMine = async (tx: Tx) => {
+  await run(tx, `update pm_time_entries set ended_at = least(now(), started_at + interval '24 hours') where user_id = pm.uid() and ended_at is null`);
+  const t = await one<Row>(tx, "select to_regclass('public.task_time_entries') is not null as ok", []);
+  if (t?.ok) await run(tx, 'update task_time_entries set ended_at = now() where user_id = pm.uid() and ended_at is null');
+};
 
 async function entry(tx: Tx, ctx: Ctx, id: string): Promise<TimeEntry> {
   const r = await one<Row>(tx, `select e.id, e.user_id, e.started_at, e.ended_at, e.note, e.billable, ${personCols('u', 'u')}, ${MINUTES_SQL} minutes

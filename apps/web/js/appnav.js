@@ -51,6 +51,9 @@ export function appNav(appId, route, { isAdmin = false } = {}) {
     case 'social_planner':
       return { items: [it('calendar', '#/social', 'Calendar', 'cal'), it('posts', '#/social?tab=posts', 'Posts', 'note'), it('queue', '#/social?tab=queue', 'Queue', 'list'), it('approvals', '#/social?tab=approvals', 'Approvals', 'check'), it('campaigns', '#/social?tab=campaigns', 'Campaigns', 'flag'), it('channels', '#/social?tab=channels', 'Channels', 'plug')],
         current: route.params?.view === 'c' ? 'campaigns' : (['posts', 'queue', 'approvals', 'campaigns', 'channels'].includes(route.query?.tab) ? route.query.tab : 'calendar') };
+    case 'tasks':   // V8 04_TASKS: Today · Upcoming · Inbox · Teammates; the lists live below (the module lifts them into the sidebar)
+      return { items: [it('today', '#/tasks/today', 'Today', 'sun'), it('upcoming', '#/tasks/upcoming', 'Upcoming', 'cal'), it('inbox', '#/tasks/inbox', 'Inbox', 'inbox'), it('teammates', '#/tasks/teammates', 'Teammates', 'users'), { ...it('lists', '#/tasks/lists', 'More', 'more'), phoneOnly: true }],
+        current: ['today', 'upcoming', 'inbox', 'teammates', 'lists'].includes(route.params?.page) ? route.params.page : null };
     case 'portal':
       return { items: [it('home', '#/portal', 'Preview', 'portal')], current: 'home' };
     case 'planner':
