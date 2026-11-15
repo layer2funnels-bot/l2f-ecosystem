@@ -92,8 +92,8 @@ const eff = (await J('access.effective', { user: U.LED }, U.LAD, ORG.L)).rows.fi
 check('OF31', 'A feature switched off for a person is enforced by the server (effective access says no) and can be reset to the role', fs1.status === 200 && eff && eff.allowed === false
   && (await J('access.features.of', { user: U.LED }, U.LAD, ORG.L)).rows.length === 1 && (await J('access.feature.set', { user: U.LED, permission: perm, effect: 'reset' }, U.LAD, ORG.L)).status === 200 && (await J('access.features.of', { user: U.LED }, U.LAD, ORG.L)).rows.length === 0);
 await J('access.app.touch', { app: 'office' }, U.LED, ORG.L);
-const rv = await J('access.review.list', {}, U.LAD, ORG.L);
-check('OF32', 'Access review lists teammates’ apps with when they were last used (owners and admins only)', rv.status === 200 && rv.rows.some((r) => r.user_id === U.LED && r.app_key === 'office' && r.last_used_at) && (await J('access.review.list', {}, U.LED, ORG.L)).rows.length === 0);
+const usage = (await J('access.apps.counts', {}, U.LAD, ORG.L)).rows.find((r) => r.user_id === U.LED);
+check('OF32', 'Access review is gone (owner, 15 Nov 2026): its operations no longer exist; People still shows when each teammate last used their apps', (await J('access.review.list', {}, U.LAD, ORG.L)).status >= 400 && usage?.last_used_at != null);
 const PNG = 'data:image/png;base64,iVBORw0KGgo=';
 check('OF33', 'Branding: only an owner replaces the logo; the whole team sees it', (await J('branding.set', { slot: 'icon', data: PNG }, U.LAD, ORG.L)).status >= 400 && (await J('branding.set', { slot: 'icon', data: PNG }, U.LO, ORG.L)).status === 200
   && (await J('branding.get', {}, U.LVW, ORG.L)).row?.brand_icon === PNG && (await J('branding.get', {}, U.AO, ORG.A)).row?.brand_icon == null);

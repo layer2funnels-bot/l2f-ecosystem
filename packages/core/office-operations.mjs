@@ -135,24 +135,21 @@ export const officeOperations = [
       where g.workspace_id = $1 group by g.user_id`, [ctx.orgId]) }),
   defineOperation({ name: 'access.apps.of', class: 'read', input: { user: { type: 'uuid', required: true } },
     run: (q, ctx, i) => q('select app_key from app_grants where workspace_id = $1 and user_id = $2 order by app_key', [ctx.orgId, i.user]) }),
-  defineOperation({ name: 'access.app.set', class: 'sensitive', single: true, input: { user: { type: 'uuid', required: true }, app: { type: 'text', required: true, max: 40 }, on: { type: 'bool', required: true } },
+  defineOperation({ name: 'access.app.set', class: 'write', single: true, input: { user: { type: 'uuid', required: true }, app: { type: 'text', required: true, max: 40 }, on: { type: 'bool', required: true } },
     run: (q, _c, i) => q('select public.access_app_set($1, $2, $3) as on', [i.user, i.app, i.on]) }),
   defineOperation({ name: 'access.features.of', class: 'read', input: { user: { type: 'uuid', required: true } }, run: (q, _c, i) => q('select permission_key, effect from public.access_feature_overrides($1)', [i.user]) }),
-  defineOperation({ name: 'access.feature.set', class: 'sensitive', single: true, input: { user: { type: 'uuid', required: true }, permission: { type: 'text', required: true, max: 80 }, effect: { type: 'enum', values: ['allow', 'deny', 'reset'], required: true } },
+  defineOperation({ name: 'access.feature.set', class: 'write', single: true, input: { user: { type: 'uuid', required: true }, permission: { type: 'text', required: true, max: 80 }, effect: { type: 'enum', values: ['allow', 'deny', 'reset'], required: true } },
     run: (q, _c, i) => q('select public.access_feature_set($1, $2, $3) as effect', [i.user, i.permission, i.effect === 'reset' ? null : i.effect]) }),
-  defineOperation({ name: 'access.review.list', class: 'read', run: (q) => q('select user_id, display_name, role, app_key, granted_at, last_used_at, reviewed_at from public.access_review_list()') }),
-  defineOperation({ name: 'access.review.keep', class: 'sensitive', single: true, input: { user: { type: 'uuid', required: true }, app: { type: 'text', required: true, max: 40 } },
-    run: (q, _c, i) => q('select public.access_review_keep($1, $2) as ok', [i.user, i.app]) }),
   // Client Access Matrix: owners AND admins (clients.apps.manage) — row rules on both tables
   defineOperation({ name: 'clients.apps.matrix', class: 'read',
     run: async (q, ctx) => {
       const [defs, rows] = await Promise.all([q('select app_key from client_app_defaults where workspace_id = $1', [ctx.orgId]), q('select client_id, app_key, enabled from client_app_access where workspace_id = $1', [ctx.orgId])]);
       return [{ defaults: defs.map((d) => d.app_key), cells: rows }];
     } }),
-  defineOperation({ name: 'clients.apps.set', class: 'sensitive', single: true, input: { client: { type: 'uuid', required: true }, app: { type: 'text', required: true, max: 40 }, enabled: { type: 'bool', required: true } },
+  defineOperation({ name: 'clients.apps.set', class: 'write', single: true, input: { client: { type: 'uuid', required: true }, app: { type: 'text', required: true, max: 40 }, enabled: { type: 'bool', required: true } },
     run: (q, ctx, i) => q(`insert into client_app_access (workspace_id, client_id, app_key, enabled, changed_by) values ($1, $2, $3, $4, $5)
       on conflict (client_id, app_key) do update set enabled = excluded.enabled, changed_by = excluded.changed_by, changed_at = now() returning client_id, app_key, enabled`, [ctx.orgId, i.client, i.app, i.enabled, ctx.userId]) }),
-  defineOperation({ name: 'clients.apps.defaults.set', class: 'sensitive', input: { apps: { type: 'list', items: 'text', max: 30, itemMax: 40, required: true } },
+  defineOperation({ name: 'clients.apps.defaults.set', class: 'write', input: { apps: { type: 'list', items: 'text', max: 30, itemMax: 40, required: true } },
     run: async (q, ctx, i) => {
       await q('delete from client_app_defaults where workspace_id = $1 and app_key <> all($2::text[])', [ctx.orgId, i.apps]);
       return q('insert into client_app_defaults (workspace_id, app_key) select $1, unnest($2::text[]) on conflict do nothing returning app_key', [ctx.orgId, i.apps]);
@@ -161,4 +158,24 @@ export const officeOperations = [
   defineOperation({ name: 'branding.get', class: 'read', single: true, run: (q) => q('select brand_icon, brand_wordmark, brand_wordmark_dark, brand_favicon from public.workspace_branding()') }),
   defineOperation({ name: 'branding.set', class: 'sensitive', single: true, input: { slot: { type: 'enum', values: ['icon', 'wordmark', 'wordmark_dark', 'favicon'], required: true }, data: { type: 'text', min: 0, max: 300000 } },
     run: (q, _c, i) => q('select public.workspace_branding_set($1, $2) as ok', [i.slot, i.data ?? '']) }),
+  // ---- recovery (0060): Documents linked from Drive, organization name, Avatar Studio defaults
+  defineOperation({ name: 'office.doclinks.list', class: 'read',   // only files the person can read come back (files' own row rules)
+    run: (q, ctx) => q(`select l.id as link_id, l.section_id, l.created_by, f.id, f.name, f.kind, f.mime_type, f.folder_id, f.space, f.protected_sop, f.updated_at
+      from doc_links l join files f on f.id = l.file_id where l.workspace_id = $1 and f.archived_at is null order by lower(f.name)`, [ctx.orgId]) }),
+  defineOperation({ name: 'office.doclinks.add', class: 'write', single: true, input: { section: { type: 'uuid', required: true }, file: { type: 'uuid', required: true } },
+    run: (q, ctx, i) => q(`insert into doc_links (workspace_id, section_id, file_id) values ($1, $2, $3) on conflict (section_id, file_id) do update set section_id = excluded.section_id
+      returning id, section_id, file_id`, [ctx.orgId, i.section, i.file]) }),
+  defineOperation({ name: 'office.doclinks.remove', class: 'write', single: true, input: { id: { type: 'uuid', required: true } }, run: (q, _c, i) => q('delete from doc_links where id = $1 returning id', [i.id]) }),
+  defineOperation({ name: 'org.rename', class: 'write', single: true, input: { name: { type: 'text', required: true, min: 2, max: 80 } }, run: (q, _c, i) => q('select public.workspace_rename($1) as name', [i.name]) }),
+  defineOperation({ name: 'org.icons', class: 'read', audience: 'any', run: (q) => q('select org_id, brand_icon from public.my_org_icons()') }),
+  defineOperation({ name: 'launcher.order.set', class: 'write', single: true, input: { apps: { type: 'list', items: 'text', max: 60, itemMax: 40, required: true } }, run: (q, _c, i) => q('select public.launcher_order_set($1::text[]) as n', [i.apps]) }),
+  defineOperation({ name: 'office.avatar.settings', class: 'read', single: true, run: (q, ctx) => q('select sections, updated_at from avatar_settings where workspace_id = $1', [ctx.orgId]) }),
+  defineOperation({ name: 'office.avatar.settings.set', class: 'write', single: true, input: { sections: { type: 'json', required: true } },
+    run: (q, ctx, i) => {
+      const list = Array.isArray(i.sections) ? i.sections : null;
+      if (!list || !list.length || list.length > 60) return [];
+      const clean = list.map((d) => ({ type: /^[a-z]{2,20}$/.test(d?.type ?? '') ? d.type : 'custom', title: String(d?.title ?? '').trim().slice(0, 120) || 'Untitled section', profile: Boolean(d?.profile) }));
+      return q(`insert into avatar_settings (workspace_id, sections, updated_by) values ($1, $2, $3)
+        on conflict (workspace_id) do update set sections = excluded.sections, updated_by = excluded.updated_by, updated_at = now() returning sections, updated_at`, [ctx.orgId, JSON.stringify(clean), ctx.userId]);
+    } }),
 ];

@@ -87,7 +87,7 @@ export const tasksOperations = [
   }),
   // ---- who can open a list or folder (multi-select at once)
   defineOperation({
-    name: 'tasks.access.set', class: 'sensitive', input: { list: { type: 'uuid' }, folder: { type: 'uuid' }, entries: { type: 'json', required: true, max: 20000 } },
+    name: 'tasks.access.set', class: 'write', input: { list: { type: 'uuid' }, folder: { type: 'uuid' }, entries: { type: 'json', required: true, max: 20000 } },
     run: async (q, ctx, i) => {
       if (!i.list === !i.folder) throw { code: '22023', message: 'choose a list or a folder' };
       const entries = (Array.isArray(i.entries) ? i.entries : []).filter((e) => /^[0-9a-f-]{36}$/i.test(e?.user) && ['edit', 'view'].includes(e?.level)).slice(0, 500);

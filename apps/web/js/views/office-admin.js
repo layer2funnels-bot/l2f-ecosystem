@@ -1,4 +1,4 @@
-// Office › Admin, V8 (prototype office6.js `adminPage`): People · Teammate access · Client access · Roles · Access review · Storage & versions · Branding · Audit log,
+// Office › Admin, V8 (prototype office6.js `adminPage`): People · Teammate access · Client access · Roles · Storage & versions · Branding · Audit log,
 // and a page per person. Owners and admins only (everyone else gets the not-found screen). Every switch is checked again by the database (migration 0058):
 // nobody changes their own access or an owner's; the Client Access Matrix is for owners AND admins (owner decision, 15 Nov 2026); branding is owners only.
 // The V4 dialogs stay in use (invite, manage a member or invitation, client portal contacts, access levels and assignments) through adminView({ parts: true }).
@@ -7,7 +7,7 @@ import { hrefFor } from '../routes.js';
 import { plateOf, loadRegistry } from '../registry.js';
 import { adminView, emailLine } from './admin.js';
 
-const TABS = [['people', 'People'], ['teammates', 'Teammate access'], ['clients', 'Client access'], ['roles', 'Roles'], ['review', 'Access review'], ['storage', 'Storage & versions'], ['branding', 'Branding'], ['audit', 'Audit log']];
+const TABS = [['people', 'People'], ['teammates', 'Teammate access'], ['clients', 'Client access'], ['roles', 'Roles'], ['storage', 'Storage & versions'], ['branding', 'Branding'], ['audit', 'Audit log']];
 export const ADMIN_V8_TABS = TABS.map(([k]) => k);
 const RANK = { viewer: 1, editor: 2, admin: 3, owner: 4 }; const LV = ['No access', 'Viewer', 'Editor', 'Admin'];
 const ago = (iso) => { if (!iso || iso.startsWith('-')) return '—'; const s = (Date.now() - new Date(iso)) / 1000; return s < 120 ? 'Now' : s < 3600 ? `${Math.round(s / 60)} min` : s < 86400 ? `${Math.round(s / 3600)} h` : s < 172800 ? 'Yesterday' : `${Math.round(s / 86400)} days ago`; };
@@ -54,8 +54,11 @@ export function adminV8View({ api, ctx, org, role, route, go }) {
   }
 
   // ---------------- one person: relationships, app and feature access, check access
+  let personSeq = 0;   // switching people quickly: only the latest person's answer may paint (an older, slower answer would show the wrong switches)
   async function personPage(uid, selector) {
-    const [m, eff, grants, ov, perms, cl, R] = await Promise.all([call('members.list'), call('access.effective', { user: uid }), call('access.apps.of', { user: uid }), call('access.features.of', { user: uid }), call('access.roles'), call('clients.access.list'), reg()]); if (!live()) return;
+    const my = ++personSeq; if (selector) put(body, selector, skeleton(4));
+    const [m, eff, grants, ov, perms, cl, R] = await Promise.all([call('members.list'), call('access.effective', { user: uid }), call('access.apps.of', { user: uid }), call('access.features.of', { user: uid }), call('access.roles'), call('clients.access.list'), reg()]); if (!live() || my !== personSeq) return;
+    if (!m.ok || !eff.ok || !grants.ok || !ov.ok || !perms.ok) return put(body, selector ?? null, errorState(() => personPage(uid, selector)));
     const mem = (m.data ?? []).find((x) => x.row_kind === 'member' && x.user_id === uid); if (!mem) return put(body, emptyState({ title: 'This person isn’t in the organization', body: 'They may have been removed.', action: h('a', { class: 'btn', href: '#/office/admin/people' }, 'All people') }));
     const owners = m.data.filter((x) => x.row_kind === 'member' && x.role === 'owner' && x.status === 'active').length;
     const locked = mem.is_you || mem.role === 'owner'; const all = mem.role === 'owner' || mem.role === 'admin';
@@ -64,14 +67,28 @@ export function adminV8View({ api, ctx, org, role, route, go }) {
     const roleSel = h('select', { class: 'sel sm', 'aria-label': 'Role', disabled: locked }, ...['admin', 'editor', 'viewer', ...(mem.role === 'owner' ? ['owner'] : [])].map((r) => h('option', { value: r }, roleLabel(r)))); roleSel.value = mem.role;
     roleSel.addEventListener('change', async () => { const r = await call('members.setRole', { user: uid, role: roleSel.value }); if (!r.ok) { roleSel.value = mem.role; return failed(r); } toast('Role changed. Access starts from the new role.'); personPage(uid, selector); });
     const feats = (app) => (perms.data ?? []).filter((p) => p.app_key === app || (app === 'office' && ['funnels', 'platform'].includes(p.app_key)));
+    // every feature switch on the page, so that after any saved change all of them are re-read from the server (the switch shows what is saved, never a guess)
+    const featEls = new Map(); const roleGives = (p) => RANK[mem.role] >= RANK[p.default_role ?? 'owner'];
+    const paintFeat = (key) => { const x = featEls.get(key); if (!x) return; const e = allowed.get(key); x.sw.setAttribute('aria-checked', String(Boolean(e?.allowed))); x.pill.textContent = changed.has(key) ? 'Changed' : e?.allowed ? 'From role' : 'Off by role'; };
+    const resync = async () => { const [e2, o2, g2] = await Promise.all([call('access.effective', { user: uid }), call('access.features.of', { user: uid }), call('access.apps.of', { user: uid })]); if (!live() || my !== personSeq) return;
+      if (e2.ok) { allowed.clear(); for (const e of e2.data) allowed.set(e.permission_key, e); } if (o2.ok) { changed.clear(); for (const o of o2.data) changed.set(o.permission_key, o.effect); }
+      if (g2.ok) { has.clear(); for (const g of g2.data) has.add(g.app_key); for (const [k, s] of appEls) if (!s.disabled) s.setAttribute('aria-checked', String(all || has.has(k))); }
+      for (const k of featEls.keys()) paintFeat(k); resetBtn.hidden = locked || !changed.size; };
+    const appEls = new Map();
     const accm = h('div', { class: 'accm' }, ...staffApps().map((a) => { const fs = feats(a.app_key); const man = R(a.app_key);
-      const sw = toggle(all || has.has(a.app_key), `${a.name} access`, async (v) => { const r = await call('access.app.set', { user: uid, app: a.app_key, on: v }); if (!r.ok) { failed(r); return false; } toast(`${a.name} ${v ? 'on' : 'off'} for ${mem.display_name || 'them'}. Saved and logged.`); return true; }, locked || all);
+      const sw = toggle(all || has.has(a.app_key), `${a.name} access`, async (v) => { const r = await call('access.app.set', { user: uid, app: a.app_key, on: v }); if (!r.ok) { failed(r); resync(); return false; } toast(`${a.name} ${v ? 'on' : 'off'} for ${mem.display_name || 'them'}. Saved and logged.`); resync(); return true; }, locked || all);
+      appEls.set(a.app_key, sw);
       const det = h('details', { class: 'acc-row' }, h('summary', {}, sw, plateOf(man, 26), h('b', {}, a.name), h('span', { class: 'grow' }), all ? h('span', { class: 'pill', style: 'height:20px' }, `${roleLabel(mem.role)}: all apps`) : null, fs.length ? [h('span', { class: 'fcount' }, `${fs.length} features`), icon('down')] : null),
-        fs.length ? h('div', { class: 'feat' }, ...fs.map((p) => { const e = allowed.get(p.key); const ch = changed.get(p.key);
-          const pillEl = h('span', { class: 'pill', style: 'height:20px' }, ch ? 'Changed' : e?.allowed ? 'From role' : 'Off by role');
-          return h('div', { class: 'tg-row' }, h('span', {}, p.description), pillEl, toggle(e?.allowed, p.description, async (v) => { const r = await call('access.feature.set', { user: uid, permission: p.key, effect: v ? 'allow' : 'deny' }); if (!r.ok) { failed(r); return false; } pillEl.textContent = 'Changed'; toast('Saved and logged. Enforced by the server on the next request.'); return true; }, locked || p.floor_role === 'owner' && !isOwner)); })) : null);
+        fs.length ? h('div', { class: 'feat' }, ...fs.map((p) => {
+          const pillEl = h('span', { class: 'pill', style: 'height:20px' });
+          // back to what the role gives = remove the exception (not a second, identical exception)
+          const fsw = toggle(allowed.get(p.key)?.allowed, p.description, async (v) => { const r = await call('access.feature.set', { user: uid, permission: p.key, effect: v === roleGives(p) ? 'reset' : v ? 'allow' : 'deny' }); if (!r.ok) { failed(r); resync(); return false; } toast('Saved and logged. Enforced by the server on the next request.'); resync(); return true; }, locked || p.floor_role === 'owner' && !isOwner);
+          featEls.set(p.key, { sw: fsw, pill: pillEl }); paintFeat(p.key);
+          return h('div', { class: 'tg-row' }, h('span', {}, p.description), pillEl, fsw); })) : null);
       return det; }));
-    const reset = async () => { for (const k of changed.keys()) await call('access.feature.set', { user: uid, permission: k, effect: 'reset' }); toast('Back to what the role gives.'); personPage(uid, selector); };
+    const reset = async (e) => { e.currentTarget.disabled = true; const rs = await Promise.all([...changed.keys()].map((k) => call('access.feature.set', { user: uid, permission: k, effect: 'reset' })));
+      if (rs.some((r) => !r.ok)) failed(rs.find((r) => !r.ok)); else toast('Back to what the role gives.'); await resync(); e.currentTarget.disabled = false; };
+    const resetBtn = btn('Reset to role', reset, 'quiet sm'); resetBtn.hidden = locked || !changed.size;
     const ask = h('input', { placeholder: 'Can they… e.g. delete a project', 'aria-label': 'Check access', type: 'search' }); const answers = h('div', {});
     const paintAsk = () => { const t = ask.value.trim().toLowerCase(); const list = (perms.data ?? []).filter((p) => !t || `${p.description} ${p.key}`.toLowerCase().includes(t)).slice(0, t ? 12 : 4);
       answers.replaceChildren(...list.map((p) => { const e = allowed.get(p.key); return h('div', { class: 'why' }, h('b', {}, p.description), h('span', { class: `pill ${e?.allowed ? 'blue' : 'danger'}` }, e?.allowed ? 'Yes' : 'No'), h('small', {}, changed.has(p.key) ? 'Changed for this person' : e?.reason ? String(e.reason).replace(/_/g, ' ') : `From the ${roleLabel(mem.role)} role`)); })); };
@@ -82,7 +99,7 @@ export function adminV8View({ api, ctx, org, role, route, go }) {
         h('p', { class: 'sec-t' }, 'Relationships'), h('div', { class: 'relcards' }, h('div', { class: 'relcard' }, h('span', { class: 'wic', style: '--c:#2B63F6' }, icon('team')), h('div', { class: 'grow' }, h('b', {}, `Teammate in ${org.name}`), h('small', {}, `Role: ${roleLabel(mem.role)}${locked ? (mem.is_you ? ' · you can’t change your own' : ' · owners keep full access') : ''}`)), roleSel),
           client ? h('div', { class: 'relcard' }, h('span', { class: 'wic', style: '--c:#13A592' }, icon('portal')), h('div', { class: 'grow' }, h('b', {}, `Client contact · ${client.client_name ?? ''}`), h('small', {}, 'Client apps are set per client')), h('a', { class: 'btn ghost sm', href: '#/office/admin/clients' }, 'Client access')) : null)),
       h('section', { class: 'card6' }, h('header', {}, h('h2', {}, 'App and feature access'), h('span', { class: 'hint' }, all ? 'Owners and admins have every app; features follow the role.' : 'Starts from the role. Change any app, then open it for features.')), accm,
-        h('div', { class: 'pad-s', style: 'display:flex;gap:8px;align-items:center' }, h('span', { class: 'hint grow' }, 'Each switch saves at once and is logged.'), !locked && changed.size ? btn('Reset to role', reset, 'quiet sm') : null))),
+        h('div', { class: 'pad-s', style: 'display:flex;gap:8px;align-items:center' }, h('span', { class: 'hint grow' }, 'Each switch saves at once and is logged.'), resetBtn))),
     h('div', { class: 'stackcol' }, h('section', { class: 'card6 pad-s' }, h('p', { class: 'sec-t', style: 'margin-top:0' }, icon('eye'), 'Check access'), h('label', { class: 'inp sm' }, icon('search'), ask), answers),
       h('div', { class: 'notice plain', style: 'font-size:13px' }, icon('shield'), h('span', {}, 'Hiding a button is not security. Every switch here is checked by the server and the database.')))));
   }
@@ -104,7 +121,7 @@ export function adminV8View({ api, ctx, org, role, route, go }) {
     const grid = h('div', { class: 'cagrid', style: `--n:${apps.length}` }, h('div', { class: 'cahead' }, h('span', {}, 'Client'), ...apps.map((a) => h('span', { title: a.name }, plateOf(R(a.app_key), 24)))),
       ...clients.map((c) => h('div', { class: 'carow' }, h('span', {}, h('b', {}, c.name), h('small', {}, c.contact_name ?? c.stage ?? '')), ...apps.map((a) => { const k = `${c.id}:${a.app_key}`; const on = cell.has(k) ? cell.get(k) : def.has(a.app_key);
         const b = h('button', { type: 'button', class: `cell ${on ? 'on' : ''}`.trim(), 'aria-pressed': String(on), 'aria-label': `${a.name} for ${c.name}: ${on ? 'on' : 'off'}` }, on ? icon('check') : '');
-        b.addEventListener('click', async () => { const v = !b.classList.contains('on'); const r = await call('clients.apps.set', { client: c.id, app: a.app_key, enabled: v }); if (!r.ok) return failed(r);
+        b.addEventListener('click', async () => { if (b.disabled) return; const v = !b.classList.contains('on'); b.disabled = true; b.classList.add('busy'); const r = await call('clients.apps.set', { client: c.id, app: a.app_key, enabled: v }); b.disabled = false; b.classList.remove('busy'); if (!r.ok) return failed(r);
           b.classList.toggle('on', v); b.setAttribute('aria-pressed', String(v)); b.setAttribute('aria-label', `${a.name} for ${c.name}: ${v ? 'on' : 'off'}`); b.replaceChildren(...(v ? [icon('check')] : [])); toast(`${a.name} ${v ? 'on' : 'off'} for ${c.name}. Saved and logged.`); }); return b; }))));
     const editDefaults = () => { const boxes = apps.map((a) => { const i = h('input', { type: 'checkbox', ...(def.has(a.app_key) ? { checked: true } : {}) }); return [a, i]; });
       dialog({ title: 'Default client apps', body: [h('p', { class: 'hint' }, 'New clients get these apps. A client you changed by hand keeps its own choice.'), ...boxes.map(([a, i]) => h('label', { class: 'chk' }, i, ` ${a.name}`))], actions: [{ label: 'Save defaults', cls: 'primary', on: async () => {
@@ -127,20 +144,6 @@ export function adminV8View({ api, ctx, org, role, route, go }) {
       h('div', { class: 'tb6', style: 'margin-top:12px' }, h('span', { class: 'hint grow' }, 'Access levels, assignments and the full history:'), ...[['levels', 'Access levels'], ['assignments', 'Assignments'], ['effective', 'Effective access'], ['history', 'History']].map(([k, l]) => h('a', { class: 'btn quiet sm', href: `#/office/admin/access/${k}` }, l))));
   }
   function accessV4() { put(body, parts.pane); parts.access(); }
-
-  // ---------------- Access review
-  async function review() {
-    const [r, R] = await Promise.all([call('access.review.list'), reg()]); if (!live()) return; if (!r.ok) return put(body, errorState(review));
-    const name = (k) => (ctx.catalog ?? []).find((a) => a.app_key === k)?.name ?? k; const days = (iso) => (iso && !iso.startsWith('-') ? Math.floor((Date.now() - new Date(iso)) / 864e5) : null);
-    const suggest = (x) => { const d = days(x.last_used_at); return x.reviewed_at && Date.now() - new Date(x.reviewed_at) < 90 * 864e5 ? 'Kept' : d == null ? 'Remove' : d > 30 ? 'Remove' : 'Keep'; };
-    const rows = r.data.map((x) => { const s = suggest(x); const row = h('div', { class: 'tr' }, h('span', { class: 't1c' }, avatar(x.display_name, 24), h('b', {}, x.display_name)), h('span', {}, h('span', { style: 'display:inline-flex;gap:6px;align-items:center' }, plateOf(R(x.app_key), 18), name(x.app_key))),
-      h('span', {}, x.last_used_at && !x.last_used_at.startsWith('-') ? ago(x.last_used_at) : 'Never'), h('span', { class: 'tx2' }, s === 'Kept' ? `Kept ${new Date(x.reviewed_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}` : s),
-      h('span', {}, btn('Keep', async () => { const k = await call('access.review.keep', { user: x.user_id, app: x.app_key }); if (!k.ok) return failed(k); toast('Kept.'); review(); }, 'ghost sm')),
-      h('span', {}, btn('Remove', () => dialog({ title: `Remove ${name(x.app_key)} for ${x.display_name}?`, body: h('p', {}, 'They lose access at once. Their work in the app stays.'), actions: [{ label: 'Remove access', cls: 'dng', on: async () => { const k = await call('access.app.set', { user: x.user_id, app: x.app_key, on: false }); if (!k.ok) { failed(k); return false; } toast('Changed and logged.'); review(); } }, { label: 'Cancel' }] }), 'quiet sm'))); return row; });
-    put(body, h('div', { class: 'notice blue', style: 'margin-bottom:12px' }, icon('info'), h('span', {}, h('b', {}, 'What is this?'), ' Every 90 days, owners and admins confirm that people still need the access they have. It removes forgotten access, like a freelancer who finished months ago. Nothing changes until you choose.')),
-      rows.length ? h('div', { class: 'tbl6' }, h('div', { class: 'thd' }, ...['Person', 'Access', 'Last used', 'Suggestion', '', ''].map((x) => h('span', {}, x))), ...rows) : emptyState({ title: 'Nothing to review', body: 'Owners and admins have every app; other teammates’ app access appears here.' }),
-      h('p', { class: 'hint', style: 'margin-top:8px' }, '“Last used” counts from when this review was switched on. You can run a review any time.'));
-  }
 
   // ---------------- Storage
   async function storage() {
@@ -195,7 +198,7 @@ export function adminV8View({ api, ctx, org, role, route, go }) {
     : h('div', { class: 'tabs6', role: 'tablist' }, ...TABS.map(([k, l]) => h('a', { href: `#/office/admin/${k}`, role: 'tab', 'aria-selected': String(k === (tab === 'access' ? 'roles' : tab)) }, l)));
   put(root, head, strip, body);
   if (person) { personPage(person); call('members.list').then((m) => { const x = (m.data ?? []).find((y) => y.user_id === person); if (x && live()) head.querySelector('h1').textContent = x.display_name || x.email; }); }
-  else ({ people, teammates, clients: clientsTab, roles, review, storage, branding, audit, access: accessV4 }[tab] ?? people)();
+  else ({ people, teammates, clients: clientsTab, roles, storage, branding, audit, access: accessV4 }[tab] ?? people)();
   // the V4 dialogs refresh their own pane when they finish: reload this tab then
   new MutationObserver(() => { if (!live()) return; if (person) personPage(person); else if (tab === 'people') people(); else if (tab === 'teammates') teammates(); }).observe(parts.pane, { childList: true });
   return root;

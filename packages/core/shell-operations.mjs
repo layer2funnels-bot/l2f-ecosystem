@@ -9,7 +9,11 @@ const reasonText = { type: 'text', max: 200 };
 
 export const shellOperations = [
   // ---- launcher, profile, invitations (people who may not have an organization yet use the nil organization)
-  defineOperation({ name: 'launcher.catalog', class: 'read', audience: 'any', run: (q) => q('select app_key, name, scope, lifecycle, sort_order, launch_url, state, other_org from launcher_catalog()') }),
+  // each app carries the organization's own position (owners and admins drag the Launcher into order, 0060); null = the designed order
+  defineOperation({ name: 'launcher.catalog', class: 'read', audience: 'any', run: async (q, ctx) => {
+    const [apps, order] = await Promise.all([q('select app_key, name, scope, lifecycle, sort_order, launch_url, state, other_org from launcher_catalog()'), ctx.orgId ? q('select app_key, position from workspace_app_order where workspace_id = $1', [ctx.orgId]) : []]);
+    const pos = new Map(order.map((o) => [o.app_key, o.position])); return apps.map((a) => ({ ...a, position: pos.get(a.app_key) ?? null }));
+  } }),
   defineOperation({ name: 'profile.get', class: 'read', allowNoOrg: true, run: (q) => q('select id, display_name, email, avatar_data from profile_get()') }),
   // the caller's own name and photo only (the function has no person argument); the photo is a small JPEG data URL made by the browser
   defineOperation({ name: 'profile.update', class: 'write', allowNoOrg: true, input: { name: { type: 'text', max: 120 }, photo: { type: 'text', max: 12000 }, clear_photo: { type: 'bool' } },
