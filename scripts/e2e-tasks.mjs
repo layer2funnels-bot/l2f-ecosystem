@@ -165,14 +165,16 @@ async function layout(p) {
 }
 for (const [w, label, t] of [[1280, 'desktop', false], [834, 'tablet', true], [390, 'phone', true]]) {
   const p = await signIn(O, { w, h: 900, touchScreen: t }); const bad = [];
-  for (const r of ['today', 'upcoming', 'inbox', 'teammates', `list/${mineId}`, `list/${teamId}`, `teammates/${S.id}`]) {
+  for (const r of ['today', 'upcoming', 'inbox', 'teammates', 'lists', `list/${mineId}`, `list/${teamId}`, `teammates/${S.id}`]) {
     await p.goto(`${base}/#/tasks/${r}`); await p.reload(); await p.waitForTimeout(1600); const l = await layout(p);
     if (l.over > 1 || l.small.length) bad.push(`${r}: over ${l.over}; ${l.small.slice(0, 3).join(' | ')}`);
   }
   check(`TR-${label}`, `At ${w}px every Tasks page has no sideways scroll and every control meets the V8 size`, bad.length === 0, bad.join(' ;; '));
   if (w === 390) { await p.goto(`${base}/#/tasks/list/${mineId}`); await p.reload(); await p.waitForTimeout(1500); await shot(p, 'tk4-phone-list');
     const bar = await p.locator('nav.bbar a, nav.bbar button').allInnerTexts();
-    check('TR-bar', 'Phone: the bottom bar is Today, Upcoming, Inbox, Teammates', bar.map((x) => x.replace(/\d+/g, '').trim()).join() === 'Today,Upcoming,Inbox,Teammates', bar.join('|')); }
+    check('TR-bar', 'Phone: the bottom bar is Today, Upcoming, Inbox, Teammates, More', bar.map((x) => x.replace(/\d+/g, '').trim()).join() === 'Today,Upcoming,Inbox,Teammates,More', bar.join('|'));
+    await p.locator('nav.bbar a', { hasText: 'More' }).click(); await p.waitForSelector('main .card6 a[href*="#/tasks/list/"]', { timeout: 9000 });
+    check('TR-more', 'Phone: More shows every list and New list or folder', (await p.locator('main .card6').innerText()).includes('My tasks') && (await p.locator('main .card6').innerText()).includes('New list or folder')); }
 }
 check('TJ', 'No script errors during the run', problems.length === 0, problems.slice(0, 3).join(' | '));
 

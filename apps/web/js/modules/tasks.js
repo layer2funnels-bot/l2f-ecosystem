@@ -12,7 +12,7 @@ const tone = (id) => TONES[[...String(id)].reduce((a, c) => a + c.charCodeAt(0),
 const OFFLINE_KEY = 'l2f.tasks.offline';
 const state = { showDone: {}, view: {}, collapsed: new Set(), tab: 'people' };   // per list: show completed, List/Board/Calendar; collapsed parents; Teammates tab
 
-export function tasksView({ api, ctx, route }) {
+export function tasksView({ api, ctx, route, org = null }) {
   const page = route.params?.page ?? 'today'; const id = route.params?.id ?? null;
   const root = h('div', { class: 'v8p-tasks' }); const body = h('div', {}, skeleton(4)); root.append(body);
   const call = (op, input = {}) => api.call(op, input);
@@ -265,16 +265,19 @@ export function tasksView({ api, ctx, route }) {
   };
   async function today() {
     const t = iso(new Date());
-    const [r, mw, R] = await Promise.all([call('tasks.today', { today: t }), call('my.work', { limit: 40 }), loadRegistry().catch(() => null)]); if (!ctx.live()) return;
+    const [r, mw, pw, R] = await Promise.all([call('tasks.today', { today: t }), call('my.work', { limit: 40 }), org?.org_id ? call('planner.strategy.my_work', { args: { p_workspace: org.org_id } }) : null, loadRegistry().catch(() => null)]); if (!ctx.live()) return;
+    const CAD = { weekly: 7, fortnightly: 14, monthly: 30, quarterly: 91 };   // Planner goals whose update is due (as Office Home)
+    const planner = ((pw?.ok ? pw.data?.[0]?.r : null)?.goals ?? []).filter((g) => g.update_cadence && g.update_cadence !== 'none' && !g.completed_at).map((g) => { const d = new Date(g.last_update_at ?? g.created_at ?? Date.now()); d.setDate(d.getDate() + (CAD[g.update_cadence] ?? 30));
+      return { app: 'planner', title: `Post update: ${g.title}`, sub: g.plan_name, due: iso(d), href: `#/planner/map?plan=${g.plan_id}&goal=${g.id}` }; }).filter((g) => g.due <= t);
     if (R) reg = (k) => R.get(k) ?? { id: k };
     if (!r.ok) return put(body, errorState(render));
-    const other = (mw.ok ? mw.data : []).filter((x) => x.due_on && x.due_on <= t).slice(0, 8);
+    const other = [...(mw.ok ? mw.data : []).filter((x) => x.due_on && String(x.due_on).slice(0, 10) <= t).map((x) => ({ app: 'projects', title: x.title, sub: x.project_name ?? 'Projects', due: String(x.due_on).slice(0, 10), href: `#/projects/p/${x.project_id}/list?task=${x.id}` })), ...planner].slice(0, 8);
     const items = r.data;
     put(body, head('sun', '#FFB547', 'Today', `${new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })} · your lists plus work assigned to you in Projects and Planner.`), capture(),
       h('div', { class: 'tdoc' }, h('section', { class: 'tblock' }, h('div', { class: 'tb-h' }, h('h2', {}, 'From your lists'), h('span', { class: 'cnt' }, String(items.length))),
         items.length ? h('ul', { class: 'outline' }, ...items.map((it) => row(it, null))) : h('p', { class: 'hint', style: 'padding:6px 4px' }, 'Nothing due today.')),
       h('section', { class: 'tblock' }, h('div', { class: 'tb-h' }, h('h2', {}, 'From other apps'), h('span', { class: 'hint', style: 'margin-left:auto' }, 'Tick them where they live')),
-        ...(other.length ? other.map((x) => { const d = dueChip(x.due_on); return h('a', { class: 'linkrow', href: x.href ?? `#/projects/p/${x.project_id}/list?task=${x.id}` }, plateOf(reg('projects'), 24), h('span', { class: 'main' }, h('b', {}, x.title), h('small', {}, x.project_name ?? 'Projects')), d ? h('span', { class: `due-c ${d.tone}`.trim() }, d.text) : null); })
+        ...(other.length ? other.map((x) => { const d = dueChip(x.due); return h('a', { class: 'linkrow', href: x.href }, plateOf(reg(x.app), 24), h('span', { class: 'main' }, h('b', {}, x.title), h('small', {}, x.sub)), d ? h('span', { class: `due-c ${d.tone}`.trim() }, d.text) : null); })
           : [h('p', { class: 'hint', style: 'padding:6px 4px' }, 'Nothing due from Projects or Planner.')]))));
     body.querySelector('#tcapi')?.focus();
   }
@@ -392,6 +395,13 @@ export function tasksView({ api, ctx, route }) {
     const ti = new URLSearchParams(location.hash.split('?')[1] ?? '').get('task'); if (ti) body.querySelector(`[data-task="${CSS.escape(ti)}"]`)?.scrollIntoView({ block: 'center' });
   }
 
+  // phone (V8: bottom bar Today · Upcoming · Inbox · Teammates · More): every list and folder, as the sidebar shows them on a computer
+  async function allLists() {
+    paintSide(); const copy = side.cloneNode(true); copy.classList.remove('tside');
+    copy.querySelector('.addrow')?.addEventListener('click', () => newListDialog());
+    put(body, h('div', { class: 'ph6' }, h('h1', { class: 't1', 'data-page-title': true }, 'Lists')), h('div', { class: 'card6 pad-s tside' }, ...copy.childNodes));
+  }
+
   // ---------------------------------------------------------------- offline capture queue (V8 brief §6)
   function queueOffline(input) { try { const q = JSON.parse(localStorage.getItem(OFFLINE_KEY) ?? '[]'); q.push({ ...input, id: crypto.randomUUID() }); localStorage.setItem(OFFLINE_KEY, JSON.stringify(q.slice(-100))); } catch { /* storage off */ } }
   async function flushOffline() { let q = []; try { q = JSON.parse(localStorage.getItem(OFFLINE_KEY) ?? '[]'); } catch { return; } if (!q.length) return;
@@ -404,7 +414,7 @@ export function tasksView({ api, ctx, route }) {
   async function render() {
     const n = ++busy; const run = await call('timer.running'); if (n !== busy || !ctx.live()) return; state.running = run.ok ? run.data?.[0] ?? null : null;
     const t = setTimeout(() => { if (n === busy && body.querySelector('.skel')) put(body, errorState(render)); }, 10000);   // nothing spins forever
-    try { await ({ today, upcoming, inbox, teammates: id ? person : teammates, list: listPage }[page] ?? today)(); } finally { clearTimeout(t); }
+    try { await ({ today, upcoming, inbox, teammates: id ? person : teammates, list: listPage, lists: allLists }[page] ?? today)(); } finally { clearTimeout(t); }
   }
   (async () => {
     const [hr, tm] = await Promise.all([refreshHome(), call('team.list')]); if (!ctx.live()) return;

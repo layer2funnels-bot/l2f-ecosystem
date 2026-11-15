@@ -16,6 +16,10 @@ Next application: **P02 Tasks**. Page IDs in `V8_IMPLEMENTATION_TRACKER.md` (P02
 - Report: `docs/implementation/OFFICE_REPORT.md` (what was built, known differences from V8).
 - Needs migrations 0056, 0057 and 0058 on production.
 
+## P02 — Tasks: **Done** (not merged)
+- Branch `p02-tasks` (stacked on `p01-office`), draft PR (see `TASKS_REPORT.md`). Migration 0059 local only.
+- Tests: `tasks.test` 20/20, `e2e-tasks` 33/33, regression suites green.
+
 ## Database migrations — **Blocked: not applied to production**
 | # | Name | Phase | Repo | Local stack | Production (`l2f-ecosystem`) |
 |---|---|---|---|---|---|
@@ -25,6 +29,7 @@ Next application: **P02 Tasks**. Page IDs in `V8_IMPLEMENTATION_TRACKER.md` (P02
 | 0056 | office_v8 | P01 | `p01-office` | applied | not applied |
 | 0057 | avatar_studio | P01 | `p01-office` | applied | not applied |
 | 0058 | admin_access_v8 | P01 | `p01-office` | applied | not applied |
+| 0059 | tasks | P02 | `p02-tasks` | applied | not applied |
 
 Each has a rollback in `migrations/rollback/`; `test/migration-rollback.test.mjs` passes (up → down → up).
 Target verified: Supabase project `l2f-ecosystem`, ref `dfitnxilkezepkhdmzuh` (ap-south-1, ACTIVE_HEALTHY). Production and branch previews share this database.

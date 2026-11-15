@@ -480,7 +480,7 @@ async function render(opts = {}) {
       case 'board': content = boardView({ api, id: route.params.id, ctx: c }); break;
       case 'tasks': {
         const entry = ctx.catalog.find((a) => a.app_key === 'tasks');
-        content = !ctx.catalogError && entry && entry.state !== 'available' ? appNotBuiltView('Tasks') : tasksView({ api, ctx: c, route }); break;
+        content = !ctx.catalogError && entry && entry.state !== 'available' ? appNotBuiltView('Tasks') : tasksView({ api, ctx: c, route, org }); break;
       }
       case 'planner': {
         // the database refuses Planner without the app switched on here and the person's grant; this only explains it instead of mounting an app that can show nothing

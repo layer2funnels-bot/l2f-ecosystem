@@ -239,7 +239,7 @@ export function shellView({ onSearch = null, app, orgs, active, email, name, rou
   const theRail = rail({ onSearch, sw: swRail, catalog, registry, currentApp, bellEl: notifications ? bell(notifications, registry) : h('span', { class: 'r-btn', role: 'img', 'aria-label': 'Notifications are not available yet', 'aria-disabled': 'true', title: 'Notifications are not available yet' }, icon('bell')), who });
   const side = h('aside', { class: 'side', 'aria-label': `${appName} menu` },
     h('div', { class: 'side-top' }, plateOf(manifest ?? { id: currentApp }, 30), h('b', {}, appName)),
-    items.length ? h('nav', { class: 'nav', 'aria-label': appName }, ...items.map((i) => sideLink(i, current))) : null,
+    items.length ? h('nav', { class: 'nav', 'aria-label': appName }, ...items.filter((i) => !i.phoneOnly).map((i) => sideLink(i, current))) : null,
     content.__side ?? null);                 // an app may lift its own list (Projects: the project list) into the sidebar
   const crumb = h('div', { class: 'crumb', 'aria-label': 'You are here' });
   const paintCrumb = () => {

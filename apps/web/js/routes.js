@@ -37,7 +37,7 @@ export function parseRoute(hash) {
   if (a === 'planner' && seg.length <= 2) return r('planner', { page: b ?? 'overview' });
   // Tasks (V8 04_TASKS): #/tasks/today|upcoming|inbox|teammates, #/tasks/teammates/<person>, #/tasks/list/<id>
   if (a === 'tasks' && seg.length === 1) return r('tasks', { page: 'today' });
-  if (a === 'tasks' && ['today', 'upcoming', 'inbox', 'teammates'].includes(b) && seg.length === 2) return r('tasks', { page: b });
+  if (a === 'tasks' && ['today', 'upcoming', 'inbox', 'teammates', 'lists'].includes(b) && seg.length === 2) return r('tasks', { page: b });
   if (a === 'tasks' && (b === 'teammates' || b === 'list') && c && seg.length === 3) return r('tasks', { page: b, id: c });
   if ((a === 'app' || a === 'office') && b === 'planner' && seg.length === 2) return r('planner', { page: 'overview' });
   if (a === 'app' && b && seg.length === 2 && b !== 'projects' && b !== 'drive' && b !== 'portal' && b !== 'forms' && b !== 'value_ladder' && b !== 'whiteboard' && b !== 'social_planner') return r('app', { app: b });
