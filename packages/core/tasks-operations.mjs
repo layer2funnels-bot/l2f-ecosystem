@@ -27,7 +27,7 @@ export const tasksOperations = [
     run: async (q, ctx) => {
       const [{ id: mine }] = await q('select public.tasks_my_default() as id');
       const [folders, lists, counts] = await Promise.all([
-        q('select id, space, name, icon, colour, position, owner_id from task_folders where workspace_id = $1 and archived_at is null order by space, position, name', [ctx.orgId]),
+        q('select id, space, name, icon, colour, position, owner_id, private.task_folder_level(id) as level from task_folders where workspace_id = $1 and archived_at is null order by space, position, name', [ctx.orgId]),
         q(`select ${LIST_COLS}, private.task_list_level(l.id) as level from task_lists l where l.workspace_id = $1 and l.archived_at is null order by l.is_default desc, l.position, l.name`, [ctx.orgId]),
         q(`select
              (select count(*)::int from task_items i where i.workspace_id = $1 and i.done_at is null and i.due_date <= $2::date

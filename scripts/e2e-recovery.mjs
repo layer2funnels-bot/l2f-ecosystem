@@ -160,12 +160,14 @@ check('BK2', 'The brand kit saves any typed font names and returns to the list, 
 
 // =============================================================== Launcher: bell colour (V8: white on the sky) and arranging apps
 await q('delete from workspace_app_order where workspace_id = $1', [L]);
-await page.goto(`${base}/#/launcher`); await page.waitForSelector('.shelf .tile');
+await page.goto(`${base}/#/launcher`); await page.reload(); await page.waitForSelector('.shelf .tile');
 const bellColor = await page.locator('.in-launcher #bell').evaluate((e) => getComputedStyle(e).color);
 check('LA1', 'The Launcher bell is white on the sky like search (V8), not the dark app-bar style', bellColor === 'rgb(255, 255, 255)', bellColor);
 await page.getByRole('button', { name: 'Arrange apps' }).click(); await page.waitForSelector('.shelf.arranging');
 const firstGroup = page.locator('.l-group').first(); const names0 = await firstGroup.locator('.tile').evaluateAll((ts) => ts.map((t) => t.dataset.app));
-await firstGroup.locator('.tile').nth(1).dragTo(firstGroup.locator('.tile').nth(0), { targetPosition: { x: 5, y: 40 } }); await page.waitForTimeout(1500);
+{ const a = await firstGroup.locator('.tile').nth(1).boundingBox(); const b = await firstGroup.locator('.tile').nth(0).boundingBox();
+  await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2); await page.mouse.down(); await page.mouse.move(a.x + a.width / 2 - 20, a.y + a.height / 2, { steps: 5 });
+  await page.mouse.move(b.x + 8, b.y + b.height / 2, { steps: 12 }); await page.mouse.up(); await page.waitForTimeout(1500); }
 const names1 = await page.locator('.l-group').first().locator('.tile').evaluateAll((ts) => ts.map((t) => t.dataset.app));
 const saved = (await q('select app_key from workspace_app_order where workspace_id = $1 order by position', [L])).map((r) => r.app_key);
 check('LA2', 'An owner drags an app to a new place; the new order shows at once and is saved for the organization', names1[0] === names0[1] && names1[1] === names0[0] && saved[0] === names0[1], `${names0.join()} → ${names1.join()} saved ${saved.slice(0, 3).join()}`);
@@ -230,7 +232,30 @@ await slow.locator('.addt').first().click({ clickCount: 1 }); await slow.locator
 const tk1 = (await q("select count(*)::int n from task_items where list_id = $1 and title = 'New task'", [mine]))[0].n;
 check('TK2', 'Clicking “Add task” three times while it saves adds one task', tk1 - tk0 === 1, `${tk1 - tk0}`);
 const sd = slow.locator('.showdone'); check('TK3', 'Show completed is always at the bottom of the list (V8), with its count', (await sd.count()) === 1 && /completed \(\d+\)/.test(await sd.innerText()));
+await slow.unroute('**/api/**'); await slow.locator('.tside .addrow').click(); await slow.waitForSelector('.dlg'); await slow.locator('.dlg').getByLabel('Where').selectOption('team').catch(() => {});
+await slow.locator('.dlg .ppchips .chip').nth(1).click().catch(() => {}); await slow.waitForTimeout(400); await slow.locator('.dlg').screenshot({ path: `${SHOTS}/rc-newlist.png` });
 await slow.close();
+
+// =============================================================== Tasks folders (owner, 15 Nov 2026: “folder doesn’t work, we can’t add a list in it”)
+const fp = await signIn(O); await fp.goto(`${base}/#/tasks/today`); await fp.waitForSelector('.tside .addrow', { timeout: 15000 });
+await fp.locator('.tside .addrow').click(); await fp.waitForSelector('.dlg'); await fp.locator('.dlg').getByRole('radio', { name: 'Folder' }).click();
+await fp.locator('.dlg').getByLabel('Name').fill(`Clients ${stamp}`); await fp.getByRole('button', { name: 'Create' }).click(); await fp.waitForSelector(`.tfold:has-text("Clients ${stamp}")`, { timeout: 9000 });
+const fold = fp.locator('.tfold', { hasText: `Clients ${stamp}` });
+const pad = await fold.evaluate((e) => getComputedStyle(e).padding);
+check('TF1', 'A new folder shows as a row in the sidebar tree (not a card) with “Add a list to this folder”', pad === '0px' && await fold.locator('.tfold-empty').isVisible(), pad);
+await fold.locator('.tfold-empty').click(); await fp.waitForSelector('.dlg');
+check('TF2', 'Adding a list from the folder opens “New list in …” with the folder already chosen', (await fp.locator('.dlg').innerText()).includes(`New list in Clients ${stamp}`));
+await fp.locator('.dlg').getByLabel('Name').fill(`Acme ${stamp}`); await fp.getByRole('button', { name: 'Create' }).click(); await fp.waitForURL(/tasks\/list\//, { timeout: 9000 });
+const inF = await q('select l.folder_id = f.id ok from task_lists l join task_folders f on f.name = $2 where l.name = $1', [`Acme ${stamp}`, `Clients ${stamp}`]);
+await fp.waitForSelector(`.tfold:has-text("Clients ${stamp}") .tfold-in a:has-text("Acme ${stamp}")`, { timeout: 9000 }).catch(() => {});
+check('TF3', 'The list is saved inside the folder and shows indented under it', inF[0]?.ok === true && await fp.locator('.tfold', { hasText: `Clients ${stamp}` }).locator('.tfold-in a', { hasText: `Acme ${stamp}` }).isVisible());
+const mineL = (await q('select id, name from task_lists where owner_id = $1 and is_default', [O.id]))[0];
+await fp.locator('.tside a', { hasText: mineL.name }).first().click({ button: 'right' }); await fp.getByText('Move to folder…').click(); await fp.locator('.ctxm, [role=menu]').last().getByText(`Clients ${stamp}`).click(); await fp.waitForTimeout(1500);
+check('TF4', 'An existing list can be moved into a folder from its menu', (await q('select folder_id is not null m from task_lists where id = $1', [mineL.id]))[0].m === true);
+await q('update task_lists set folder_id = null where id = $1', [mineL.id]);
+const tab = await signIn(O, { w: 834, h: 1112 }); await tab.goto(`${base}/#/tasks/list/${mineL.id}`); await tab.waitForSelector('.tdoc', { timeout: 15000 });
+check('TF5', 'On a tablet (834 px) the task list is visible and not stuck to the screen', await tab.locator('.tdoc ul.outline').first().isVisible() && (await tab.locator('.tdoc ul.outline').first().evaluate((e) => getComputedStyle(e).position)) === 'static');
+await fp.close(); await tab.close();
 
 console.log(`\n${results.filter((r) => r.ok).length}/${results.length} checks passed`);
 if (problems.length) console.log('page problems:\n' + [...new Set(problems)].slice(0, 15).join('\n'));

@@ -184,3 +184,33 @@ h3{font:650 calc(16px * var(--ts, 1))/1.25 var(--font);letter-spacing:-.005em}  
 .dpick-i small{display:block;color:var(--muted)}
 .dpick{display:grid;gap:6px;max-height:50vh;overflow:auto;margin-top:10px}
 .v8p-tasks .showdone:disabled{opacity:.55;cursor:default}
+/* the hidden attribute always hides (a component's display rule must never show a hidden field — Tasks "New list or folder", 15 Nov 2026) */
+[hidden]{display:none !important}
+.ppchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.ppchips .chip{display:inline-flex;align-items:center;gap:6px}
+.pplv{display:grid;gap:6px;margin-top:10px}
+.pplv-row{display:flex;align-items:center;gap:10px;font-size:calc(14px * var(--ts, 1))}
+.pplv-row .grow{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.seg3.xs button{min-height:30px;padding:0 10px;font-size:calc(12.5px * var(--ts, 1))}
+/* Tasks sidebar folders: a row in the tree (V8 side list), lists indented under it — never a card */
+.tside .tfold{display:block;margin:2px 0}
+.tside .tfold-h{display:flex;align-items:center;gap:8px;min-height:40px;padding:0 6px 0 10px;border-radius:10px;cursor:pointer;list-style:none;color:var(--text2,var(--text));font-weight:550;font-size:calc(14.5px * var(--ts, 1))}
+.tside .tfold-h::-webkit-details-marker{display:none}
+.tside .tfold-h:hover{background:var(--surface2)}
+.tside .tfold-h .tw{display:inline-flex;transition:transform .15s}
+.tside .tfold:not([open]) .tfold-h .tw{transform:rotate(-90deg)}
+.tside .tfold-h svg{width:16px;height:16px;color:var(--muted)}
+.tside .tfold-h .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tside .tfold-h .count{color:var(--muted);font-size:calc(12.5px * var(--ts, 1));font-weight:500}
+.tside .tfold-h .fa{opacity:0;width:28px;height:28px}
+.tside .tfold-h:hover .fa,.tside .tfold-h:focus-within .fa{opacity:1}
+@media (hover:none){.tside .tfold-h .fa{opacity:1}}
+.tside .tfold-in{display:grid;gap:2px;padding-left:22px;margin-left:12px;border-left:1px solid var(--line)}
+.tside .tfold-empty{display:flex;align-items:center;gap:6px;min-height:36px;padding:0 10px;border:0;background:none;color:var(--muted);font:inherit;font-size:calc(13.5px * var(--ts, 1));cursor:pointer;text-align:left}
+.tside .tfold-empty svg{width:14px;height:14px}
+button.tfold-empty:hover{color:var(--text)}
+/* The task outline is a list, not the prototype's sticky "on this page" outline (same class name in pages/tasks.css): never sticky, never hidden on tablets */
+.v8p-tasks ul.outline{position:static;top:auto;display:block}
+@media (max-width:1180px){.v8p-tasks ul.outline{display:block}}
+.ppchips{max-height:232px;overflow:auto;padding:2px}
+.seg3.xs button{white-space:nowrap}
