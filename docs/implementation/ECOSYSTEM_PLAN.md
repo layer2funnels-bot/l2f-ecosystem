@@ -1,5 +1,8 @@
 # V8 ecosystem implementation plan
 
+> **Approved sequence (owner, 15 Nov 2026):** P00 Foundation and Global Shell → P01 Office → **P02 Tasks** → P03 Drive with editors → P04 Projects → P05 Planner → P06 Clients → P07 Funnel Mapper → P08 Portal → P09 Whiteboard → P10 Forms → P11 Value Ladder → P12 Social Planner → P13 Agents → P14 Final Ecosystem Verification. The P0x labels below are older reference IDs, not the build order.
+
+
 Date: 14 Nov 2026. Inputs: the V8 handoff (`docs/design/v8/`), the owner's three instruction documents (main V8 prompt, critical requirements, final directives) and the live code on `main` (PRs #1–#53). Tracker: `V8_IMPLEMENTATION_TRACKER.md`. Review: `V8_DOCUMENTATION_REVIEW.md`.
 
 ## 1. The rule this plan follows

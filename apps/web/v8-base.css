@@ -97,3 +97,20 @@ h3{font:650 calc(16px * var(--ts, 1))/1.25 var(--font);letter-spacing:-.005em}  
   .btn,.btn.sm,.btn.link,.chip,.seg button,.tabs button,.tabs a,.fld input,.fld select{min-height:44px}
   .iconbtn{width:44px;height:44px}.btn,.btn.link,.seg button,.vsw button{min-width:44px}
 }
+/* rebuilt V8 pages (root class v8p-*): the app's older global .sub spacing must not leak in (V8 sets only margin-top) */
+[class^="v8p-"] .sub{margin-bottom:0;padding:0;max-width:none}
+@media (pointer:coarse){[class^="v8p-"] .linkbtn{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px}}   /* touch: short link buttons ("Team") reach 44 px */
+/* rebuilt V8 Office pages: small icon buttons and text links stay at least 28 px with a mouse; the Client Access Matrix cells keep their size */
+.v8p-office .iconbtn.xs{min-width:28px;min-height:28px}.v8p-office .lk,.v8p-office .linkbtn{min-height:28px;min-width:28px}
+.v8p-office .cagrid .cell{min-height:32px;min-width:32px}
+/* touch screens: every control on the rebuilt pages reaches 44 px (V8 v6.css @media (pointer:coarse)); !important because the generated page rules are more specific */
+  .v8p-office .btn,.v8p-office .btn.sm,.v8p-office input:not([type=checkbox]):not([type=radio]):not([type=file]),.v8p-office select,.v8p-office .tabs6 a,.v8p-office .studio-tabs a,.v8p-office .lk,.v8p-office .addrow,.v8p-office .chip,.v8p-office .chips6 button,.v8p-office .seg3 button,.v8p-office .linkbtn{min-height:44px!important}
+  .v8p-office .iconbtn,.v8p-office .iconbtn.xs,.v8p-office .cagrid .cell{min-width:44px!important;min-height:44px!important}
+  .v8p-office .btn,.v8p-office .linkbtn{min-width:44px!important}
+  .v8p-office .tabs6 a{flex-shrink:0}
+}
+/* Avatar Studio profile: the summary cards on each side are spaced (14 px, as V8's avatar profile) */
+.v8p-office .studio .specs{display:grid;gap:14px;align-content:start}
+/* tab strips never break a label over two lines; on a narrow screen the strip scrolls sideways inside itself */
+.v8p-office .studio-tabs,.v8p-office .tabs6{overflow-x:auto;scrollbar-width:none;max-width:100%}
+.v8p-office .studio-tabs a,.v8p-office .tabs6 a,.v8p-office .tabs6 button{white-space:nowrap;flex:none}

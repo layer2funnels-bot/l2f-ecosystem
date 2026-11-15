@@ -8,13 +8,19 @@ const T = (max = 8000) => ({ type: 'text', min: 0, max });
 export const FUNNEL_TYPES = Object.freeze({
   avatars: {
     table: 'funnel_avatars', one: 'avatar', order: 'name',
-    fields: { name: { type: 'text', required: true, max: 200 }, summary: T(4000), pains: T(), desires: T(), objections: T() },
+    fields: { name: { type: 'text', required: true, max: 200 }, summary: T(4000), pains: T(), desires: T(), objections: T(),
+      // V8 Customer Avatar Studio (0057)
+      tagline: T(200), role: T(200), market: T(80), look: { type: 'int', min: 0, max: 9 }, stage: { type: 'enum', values: ['draft', 'validated'] }, profile: { type: 'json', max: 400000 }, source_file_id: { type: 'uuid' } },
   },
   offers: {
     table: 'funnel_offers', one: 'offer', order: 'name',
     fields: {
       kind: { type: 'enum', values: ['offer', 'product'] }, name: { type: 'text', required: true, max: 200 }, promise: T(4000), description: T(),
       price_amount: { type: 'number' }, currency: { type: 'currency' }, avatar_id: { type: 'uuid' },
+      // V8 New offer (0056)
+      offer_type: { type: 'enum', values: ['service', 'course', 'coaching', 'digital', 'physical'] }, status: { type: 'enum', values: ['draft', 'active'] },
+      billing: { type: 'enum', values: ['one_off', 'recurring', 'payment_plan'] }, guarantee: T(300), delivery_time: T(120),
+      included: { type: 'list', items: 'text', max: 50, itemMax: 300 }, bonuses: T(2000), avatar_ids: { type: 'list', items: 'uuid', max: 20 }, ladder_step: T(120), internal_notes: T(8000),
     },
   },
   stories: {
@@ -22,6 +28,9 @@ export const FUNNEL_TYPES = Object.freeze({
     fields: {
       kind: { type: 'enum', values: ['origin', 'case_study', 'testimonial', 'analogy', 'other'] }, title: { type: 'text', required: true, max: 200 },
       body: T(20000), avatar_id: { type: 'uuid' }, offer_id: { type: 'uuid' },
+      // V8 New story (0056)
+      before_text: T(500), after_text: T(500), best_quote: T(1000), permission: { type: 'enum', values: ['given', 'ask', 'anonymous'] }, consent_file_id: { type: 'uuid' },
+      use_in: { type: 'list', items: 'text', max: 12, itemMax: 40 },
     },
   },
   brand_kits: {
@@ -29,10 +38,13 @@ export const FUNNEL_TYPES = Object.freeze({
     fields: {
       name: { type: 'text', required: true, max: 200 }, voice: T(), colors: { type: 'list', items: 'hex', max: 24 },
       fonts: { type: 'list', items: 'text', max: 12, itemMax: 100 }, logo_file_id: { type: 'uuid' }, notes: T(),
+      // V8 Brand Kits, many (0056)
+      is_main: { type: 'bool' }, logo_dark_file_id: { type: 'uuid' }, icon_file_id: { type: 'uuid' }, voice_say: T(2000), voice_never: T(2000),
+      asset_file_ids: { type: 'list', items: 'uuid', max: 50 }, color_names: { type: 'list', items: 'text', max: 24, itemMax: 40 },
     },
   },
 });
-const JSON_COLS = new Set(['colors', 'fonts']);
+const JSON_COLS = new Set(['colors', 'fonts', 'included', 'profile']);
 const val = (col, v) => (JSON_COLS.has(col) ? JSON.stringify(v) : v);
 
 const makeOps = (plural, { table, order, fields }) => {
@@ -101,9 +113,9 @@ const strategyOps = [
   }),
   defineOperation({ name: 'funnels.strategies.get', class: 'read', single: true, input: sid, run: (q, _c, i) => q(`select ${STRATEGY_COLS} from funnel_strategies s where s.id = $1`, [i.id]) }),
   defineOperation({
-    name: 'funnels.strategies.create', class: 'write', single: true, input: { name: { type: 'text', required: true, max: 200 }, file: { type: 'uuid', required: true }, client: { type: 'uuid' } },
+    name: 'funnels.strategies.create', class: 'write', single: true, input: { name: { type: 'text', required: true, max: 200 }, file: { type: 'uuid', required: true }, client: { type: 'uuid' }, template_version: { type: 'int', min: 1, max: 100000 } },
     run: async (q, ctx, i) => {
-      const [r] = await q('insert into funnel_strategies (workspace_id, client_id, name, file_id) values ($1,$2,$3,$4) returning id', [ctx.orgId, i.client ?? null, i.name, i.file]);
+      const [r] = await q('insert into funnel_strategies (workspace_id, client_id, name, file_id, template_version) values ($1,$2,$3,$4,$5) returning id', [ctx.orgId, i.client ?? null, i.name, i.file, i.template_version ?? null]);
       return q(`select ${STRATEGY_COLS} from funnel_strategies s where s.id = $1`, [r.id]);
     },
   }),

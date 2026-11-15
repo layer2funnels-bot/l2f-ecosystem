@@ -53,11 +53,11 @@ const ownerId = (await q('select id from auth.users where email=$1', [ownerMail]
 await q("insert into memberships (workspace_id,user_id,kind,role) values ($1,$2,'staff','owner'),($3,$2,'staff','owner') on conflict do nothing", [L, ownerId, A]);
 const switchOrg = (p, org) => p.evaluate(async (org) => { const t = JSON.parse(decodeURIComponent(document.cookie.split('; ').find((c) => c.startsWith('l2f-session=')).slice(12))).access; await fetch('/api/org.switch', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${t}`, 'x-org-id': '00000000-0000-0000-0000-000000000000' }, body: JSON.stringify({ org, app: 'office' }) }); }, org);
 await switchOrg(op, L);      // the owner works in Layer2Funnels (an owner of two organizations invites into the one in the header)
-await op.goto(`${base}/#/office/admin/members`); await op.reload(); await until(op, 'Joining is by invitation only.');
+await op.goto(`${base}/#/office/admin/members`); await op.reload(); await until(op, 'One person, one sign-in.');
 check('ON0', 'Setup: the owner is in Layer2Funnels', (await op.locator('#org-switcher').textContent()).includes('Layer2Funnels'));
 
 async function inviteStaff(email, level = 'editor') {
-  await op.goto(`${base}/#/office/admin/members`); await op.reload(); await until(op, 'Joining is by invitation only.');
+  await op.goto(`${base}/#/office/admin/members`); await op.reload(); await until(op, 'One person, one sign-in.');
   await op.click('#invite'); await op.fill('#ie', email); await op.selectOption('#il', level);
   await op.getByRole('button', { name: 'Send invitation' }).click(); await until(op, `Invitation sent to ${email}`);
   await op.getByRole('button', { name: 'Done' }).click();
@@ -82,7 +82,7 @@ await p1.goto(`${base}/#/launcher`); await p1.reload(); await p1.waitForSelector
 const tiles = await p1.locator('.tile').allInnerTexts();
 check('ON4', 'Their Launcher shows the team apps right away (Office, Projects, Drive, Forms, Whiteboardâ€¦)', ['Office', 'Projects', 'Drive', 'Form Builder', 'Whiteboard'].every((t) => tiles.some((x) => x.includes(t))), tiles.join('|').slice(0, 200));
 await p1.goto(`${base}/#/office/admin/members`); await p1.reload(); await p1.waitForTimeout(1500);
-check('ON5', 'An Editor does not get Admin (same "not found" screen as a missing page)', !(await text(p1)).includes('Joining is by invitation only.'));
+check('ON5', 'An Editor does not get Admin (same "not found" screen as a missing page)', !(await text(p1)).includes('One person, one sign-in.'));
 
 // ---- H. another device: sign up WITHOUT the link; the server finds the invitation for the verified e-mail
 const T2 = `dana.${stamp}@example.com`;
@@ -114,9 +114,9 @@ check('ON10', 'Someone else (another e-mail) opening a used link gets the "canâ€
 const T4 = `eve.${stamp}@example.com`;
 await inviteStaff(T4, 'viewer');
 await q("update invitations set expires_at = now() - interval '1 hour' where email = $1", [T4]);
-await op.goto(`${base}/#/office/admin/members`); await op.reload(); await until(op, 'Joining is by invitation only.');
-check('ON11', 'An expired invitation is shown as Expired', (await op.locator('tr', { hasText: T4 }).innerText()).includes('Expired'));
-await op.locator('tr', { hasText: T4 }).getByRole('button', { name: /Manage/ }).click(); await op.getByRole('button', { name: 'Send a new invitation' }).click(); await until(op, `Invitation sent to ${T4}`);
+await op.goto(`${base}/#/office/admin/members`); await op.reload(); await until(op, 'One person, one sign-in.');
+check('ON11', 'An expired invitation is shown as Expired', (await op.locator('.tbl6 .tr', { hasText: T4 }).innerText()).includes('Expired'));
+await op.locator('.tbl6 .tr', { hasText: T4 }).click(); await op.getByRole('button', { name: 'Send a new invitation' }).click(); await until(op, `Invitation sent to ${T4}`);
 await op.getByRole('button', { name: 'Done' }).click();
 const old = mails.filter((m) => m.to[0].email === T4).at(0), fresh = mailTo(T4);
 check('ON12', 'Send a new invitation e-mails a fresh link; the old link no longer works', mails.filter((m) => m.to[0].email === T4).length === 2 && linkOf(old) !== linkOf(fresh));
@@ -136,7 +136,7 @@ const cm = await q("select m.kind, m.role, m.client_id from memberships m join a
 check('ON15', 'The client joins as a client of their own client record: no staff role, no app grants', cm.length === 1 && cm[0].kind === 'client' && cm[0].role === null && !!cm[0].client_id
   && (await q("select count(*)::int n from app_grants g join auth.users u on u.id = g.user_id where u.email=$1", [C1]))[0].n === 0);
 await pc.goto(`${base}/#/office/admin/members`); await pc.reload(); await pc.waitForTimeout(1500);
-check('ON16', 'The client cannot open staff areas (no member list, no team)', !(await text(pc)).includes('Joining is by invitation only.') && !(await text(pc)).includes(T1));
+check('ON16', 'The client cannot open staff areas (no member list, no team)', !(await text(pc)).includes('One person, one sign-in.') && !(await text(pc)).includes(T1));
 await pc.goto(`${base}/#/profile`); await pc.reload(); await pc.waitForSelector('#pf-name', { timeout: 12000 });
 await pc.fill('#pf-name', 'Carla C. Client'); await pc.getByRole('button', { name: 'Save', exact: true }).click(); await until(pc, 'Profile saved.');   // V8 profile: one Save
 check('ON17', 'The client has their own profile and can change their name', (await q("select p.display_name from profiles p join auth.users u on u.id = p.id where u.email=$1", [C1]))[0]?.display_name === 'Carla C. Client');
@@ -152,7 +152,7 @@ const pd = await newPage(); await signUp(pd, 'Tom Again', T1); await pd.waitForT
 check('ON21', 'Signing up with an address that already has an account says so and points to Sign in (no fake "check your email")', (await text(pd)).includes('already has an account') && !(await text(pd)).includes('Confirm your email'));
 // ---- R. organization isolation in the admin lists
 await switchOrg(op, A);
-await op.goto(`${base}/#/office/admin/members`); await op.reload(); await until(op, 'Joining is by invitation only.');
+await op.goto(`${base}/#/office/admin/members`); await op.reload(); await until(op, 'One person, one sign-in.');
 check('ON19', 'In Aurj, none of the Layer2Funnels people or invitations are listed', !(await text(op)).includes(T1) && !(await text(op)).includes(T4));
 check('ON20', 'No script errors in any of the browsers', problems.length === 0, problems.slice(0, 3).join(' | '));
 

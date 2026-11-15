@@ -4,7 +4,7 @@
 // both have (rail, sidebar, app bar, sidebar rows, page title, menus, drawers). Output: $SHOTS/v8cmp/ (git-ignored).
 // Usage: PLAYWRIGHT_MODULE=... node scripts/v8-compare.mjs [filter]
 import { createRequire } from 'node:module';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import pg from 'pg';
 import { startDevServer, LOCAL_ENV } from './dev-server.mjs';
 
@@ -41,7 +41,9 @@ const SHELL = [['rail', '.shell.v8 .rail', '.rail'], ['sidebar', '.shell.v8 > .s
 const click = (ours, proto) => async (p, side) => { const sel = side === 'ours' ? ours : proto; if (sel) await p.locator(sel).first().click().catch(() => {}); await p.waitForTimeout(500); };
 const PAGES = [
   ['launcher', '#/launcher', '#/launcher', null, [['top row', '.l-top', '.l-top'], ['weather chip', '.wxchip', '.wxchip'], ['hero', '.l-hero h1', '.l-hero h1'], ['line under hero', '.l-hero .sub', '.l-hero .sub'], ['find an app', '.l-find', '.l-find'], ['shelf', '.shelf', '.shelf'], ['tile', '.tile', '.tile'], ['tile name', '.tile .t-name', '.tile .t-name'], ['tile text', '.tile .t-desc', '.tile .t-desc']]],
-  ['office-home', '#/office', '#/office/home', null, SHELL],
+  ['office-home', '#/office', '#/office/home', null, [...SHELL.slice(0, 6), ...[['date line', '.o-hero .over'], ['greeting', '.o-hero h1'], ['summary', '.o-hero .sub'], ['view switch', '.o-hero .vsw'], ['view button', '.o-hero .vsw button'],
+    ['ask bar', '.askbar'], ['ask pill', '.askbar .pill'], ['grid', '.o-grid'], ['left column', '.o-grid > .stackcol'], ['panel', '.o-grid .panel'], ['panel header', '.o-grid .sec-h'], ['panel title', '.o-grid .sec-h h2'],
+    ['count', '.o-grid .sec-h .n'], ['day switch', '.o-grid .sec-h .vsw'], ['right panel', '.o-grid > .stackcol:last-child .panel'], ['link button', '.o-grid .linkbtn']].map(([l, sel]) => [l, `.v8p-oh ${sel}`, `.content ${sel}`])]],
   ['apps-menu', '#/office', '#/office/home', click('#app-switcher', '.rail button[title="All apps"]'), [['menu', '.menu.appmenu', '.appmenu'], ['launcher row', '.appmenu .home', '.appmenu .home'], ['app tile', '.appmenu .grid a', '.appmenu .grid a'], ['hint', '.appmenu .hint', '.appmenu .hint']]],
   ['org-menu', '#/office', '#/office/home', click('#org-switcher', '.rail .r-org'), [['menu', '#org-menu', '.menu.railmenu:not([hidden])']]],
   ['profile-menu', '#/office', '#/office/home', click('.profile-wrap .who', '.rail .r-me, .rail .me, .rail button:last-child'), [['menu', '#profile-menu', '.menu:not([hidden])']]],
@@ -51,6 +53,16 @@ const PAGES = [
   ['profile-account', '#/profile/account', '#/profile/account', null, []],
   ['profile-notifications', '#/profile/notifications', '#/profile/notifications', null, []],
   ['profile-appearance', '#/profile/appearance', '#/profile/appearance', null, []],
+  ['of-funnels', '#/office/funnels', '#/office/funnels', null, SHELL], ['of-avatars', '#/office/funnels/avatars', '#/office/avatars', null, SHELL],
+  ['of-avatar-new', '#/office/funnels/avatars/new', '#/office/avatar-new', null, []], ['of-offers', '#/office/funnels/offers', '#/office/offers', null, SHELL],
+  ['of-offer-new', '#/office/funnels/offers/new', '#/office/offer-new', null, []], ['of-stories', '#/office/funnels/stories', '#/office/stories', null, SHELL],
+  ['of-story-new', '#/office/funnels/stories/new', '#/office/story-new', null, []], ['of-brandkits', '#/office/funnels/brand_kits', '#/office/brandkits', null, SHELL],
+  ['of-brandkit-new', '#/office/funnels/brand_kits/new', '#/office/brandkit-new', null, []], ['of-strategies', '#/office/funnels/strategies', '#/office/strategies', null, SHELL],
+  ['of-template', '#/office/funnels/strategies/template', '#/office/strategy-template', null, SHELL], ['of-documents', '#/office/documents', '#/office/documents', null, SHELL],
+  ['of-team', '#/office/team', '#/office/team', null, SHELL], ['of-apps', '#/office/apps', '#/office/apps', null, SHELL], ['of-settings', '#/office/settings', '#/office/settings', null, SHELL],
+  ['of-admin-people', '#/office/admin/people', '#/office/admin/people', null, SHELL], ['of-admin-clients', '#/office/admin/clients', '#/office/admin/clients', null, SHELL],
+  ['of-admin-roles', '#/office/admin/roles', '#/office/admin/roles', null, SHELL], ['of-admin-review', '#/office/admin/review', '#/office/admin/review', null, SHELL],
+  ['of-admin-storage', '#/office/admin/storage', '#/office/admin/storage', null, SHELL], ['of-admin-branding', '#/office/admin/branding', '#/office/admin/branding', null, SHELL],
   ['clients-list', '#/clients', '#/clients/list', null, SHELL],
   ['drive-home', '#/drive', '#/drive/home', null, SHELL],
   ['projects-home', '#/projects', '#/projects/home', null, SHELL],
@@ -66,7 +78,9 @@ for (const [key, ours, v8, act, sels] of PAGES) for (const [w, hgt, size] of SIZ
   const b = size === 'desktop' ? browser : touch;
   const mine = await (await b.newContext({ viewport: { width: w, height: hgt }, storageState: storage, hasTouch: size !== 'desktop' })).newPage();
   const ref = await (await b.newContext({ viewport: { width: w, height: hgt }, hasTouch: size !== 'desktop' })).newPage();
-  await ref.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
+  // the prototype loads Geist (variable) from Google Fonts; serve the same variable files locally so both sides render the same font
+  await ref.route(/fonts\.googleapis\.com/, (r) => r.fulfill({ contentType: 'text/css', body: '@font-face{font-family:"Geist";font-weight:100 900;src:url(https://fonts.gstatic.com/geist.woff2) format("woff2")}@font-face{font-family:"Geist Mono";font-weight:100 900;src:url(https://fonts.gstatic.com/geist-mono.woff2) format("woff2")}@font-face{font-family:"Bricolage Grotesque";font-weight:700;src:url(https://fonts.gstatic.com/bricolage.woff2) format("woff2")}' }));
+  await ref.route(/fonts\.gstatic\.com/, (r) => { const f = { 'geist.woff2': 'geist-variable.woff2', 'geist-mono.woff2': 'geist-mono-variable.woff2', 'bricolage.woff2': 'bricolage-grotesque-latin-700.woff2' }[r.request().url().split('/').pop()]; return f ? r.fulfill({ contentType: 'font/woff2', body: readFileSync(new URL(`../apps/web/fonts/${f}`, import.meta.url)) }) : r.abort(); });
   await mine.goto(`${base}/${ours}`); await mine.waitForTimeout(2200);
   await ref.goto(`${PROTO}${v8}`); await ref.waitForTimeout(1200);
   if (act) { await act(ref, 'v8'); await act(mine, 'ours'); }

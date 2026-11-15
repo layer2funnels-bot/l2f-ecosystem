@@ -13,7 +13,7 @@ export const strategiesHref = () => '#/office/funnels/strategies';
 const KINDS = [['avatar', 'avatars', 'Customer avatar', 'name'], ['offer', 'offers', 'Offer or product', 'name'], ['story', 'stories', 'Story', 'title'], ['brand_kit', 'brand_kits', 'Brand kit', 'name']];
 
 export function strategiesListView(ctx) {
-  const { api } = ctx; const root = h('section', {}); const body = h('div', {}, skeleton(3));
+  const { api } = ctx; const root = h('section', { class: 'v8p-office' }); const body = h('div', {}, skeleton(3));
   const canNew = ctx.canAnywhere('funnels.strategy.create');
   let q = ''; let status = ''; let show = 'active'; let t = null;
   async function load() {
@@ -28,17 +28,19 @@ export function strategiesListView(ctx) {
     const name = field({ id: 'ns-name', label: 'Funnel name', maxlength: 200, hint: 'For example: Webinar funnel' });
     dialog({ title: 'New Funnel Strategy', body: [name.el, h('p', { class: 'fine muted' }, 'One strategy per funnel. The map stays in Funnel Mapper; you can link it from the strategy.')], actions: [{ label: 'Create', cls: 'primary', on: async () => {
       const nm = name.input.value.trim(); if (!nm || /[\/\\]/.test(nm)) return name.error('Give it a name without slashes.');
-      const d = await api.call('drive.files.create', { app: 'funnels', space: 'shared', name: nm, kind: 'document', mime_type: DOC_MIME, body: serialize({ v: 1, blocks: [{ t: 'h1', c: [{ x: nm }] }, { t: 'h2', c: [{ x: 'Funnel overview' }] }, { t: 'p', c: [] }, { t: 'h2', c: [{ x: 'Target audience' }] }, { t: 'p', c: [] }, { t: 'h2', c: [{ x: 'Offer and value' }] }, { t: 'p', c: [] }, { t: 'h2', c: [{ x: 'Customer journey' }] }, { t: 'p', c: [] }, { t: 'h2', c: [{ x: 'Messaging direction' }] }, { t: 'p', c: [] }, { t: 'h2', c: [{ x: 'Success criteria' }] }, { t: 'p', c: [] }] }) });
+      const tp = await api.call('office.template.get', {}); const tpl = tp.ok && tp.data[0] ? tp.data[0] : { version: 0, sections: [] };   // the organization's default template (new documents only)
+      const d = await api.call('drive.files.create', { app: 'funnels', space: 'shared', name: nm, kind: 'document', mime_type: DOC_MIME, body: serialize({ v: 1, blocks: [{ t: 'h1', c: [{ x: nm }] }, ...tpl.sections.flatMap((x) => [{ t: 'h2', c: [{ x: x.heading }] }, { t: 'p', c: x.help ? [{ x: x.help, i: 1 }] : [] }])] }) });
       if (!d.ok) { toast('Couldn’t create the document here. Strategies need Drive access to write.', false); return false; }
-      const s = await api.call('funnels.strategies.create', { name: nm, file: d.data[0].id });
+      const s = await api.call('funnels.strategies.create', { name: nm, file: d.data[0].id, ...(tpl.version ? { template_version: tpl.version } : {}) });
       if (!s.ok) { toast('Couldn’t create the strategy.', false); return false; } ctx.go(strategyHref(s.data[0].id)); } }, { label: 'Cancel' }] });
   }
   const search = h('input', { type: 'search', placeholder: 'Search strategies', 'aria-label': 'Search strategies', autocomplete: 'off' });
   search.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { q = search.value.trim(); load(); }, 200); });
   const st = h('select', { 'aria-label': 'Status' }, h('option', { value: '' }, 'All statuses'), ...STATUS.map(([k, l]) => h('option', { value: k }, l))); st.addEventListener('change', () => { status = st.value; load(); });
   const sh = h('select', { 'aria-label': 'Show' }, h('option', { value: 'active' }, 'Active'), h('option', { value: 'archived' }, 'Archived')); sh.addEventListener('change', () => { show = sh.value; load(); });
-  put(root, h('div', { class: 'crumb' }, 'Office · Funnels'), h('div', { class: 'pj-head' }, h('div', {}, h('h1', { 'data-page-title': true }, 'Funnel Strategies'), h('p', { class: 'sub' }, 'One written strategy per funnel. Maps stay in Funnel Mapper.')), canNew ? btn('New Funnel Strategy', create, 'primary') : null),
+  put(root, h('div', { class: 'pj-head' }, h('div', {}, h('h1', { 'data-page-title': true }, 'Funnel Strategies'), h('p', { class: 'sub' }, 'One written strategy per funnel. Maps stay in Funnel Mapper.')), h('div', { class: 'acts' }, ctx.canAnywhere('funnels.strategy.edit') ? h('a', { class: 'btn ghost sm', href: '#/office/funnels/strategies/template' }, icon('sliders'), 'Default template') : null, canNew ? btn('New funnel strategy', create, 'primary') : null)),
     h('div', { class: 'toolbar' }, search, st, sh), body);
+  if (canNew && /[?&]new=1\b/.test(location.hash)) { history.replaceState(null, '', location.hash.replace(/[?&]new=1\b/, '')); create(); }   // Funnels overview › New funnel strategy
   load(); return root;
 }
 
@@ -86,6 +88,37 @@ export function strategyView(ctx, id) {
     put(root, docView({ api, id: s.file_id, ctx, opts: {
       crumbs: () => [h('a', { href: '#/office/funnels' }, 'Funnels'), h('a', { href: strategiesHref() }, 'Funnel Strategies'), s.name],
       side } }));
+  })();
+  return root;
+}
+
+/** Default strategy template (V8 office6 `strategy-template`): the headings every new strategy starts with; each save is a new version, existing documents never change. */
+export function strategyTemplateView(ctx) {
+  const { api } = ctx; const root = h('div', { class: 'v8p-office' }, skeleton(3));
+  const canSave = ctx.canAnywhere('funnels.strategy.edit');
+  (async () => {
+    const [t, v] = await Promise.all([api.call('office.template.get', {}), api.call('office.template.versions', {})]); if (!ctx.live()) return;
+    if (!t.ok) return put(root, errorState(() => ctx.rerender()));
+    let rows = t.data[0].sections.map((s) => ({ ...s })); let versions = v.ok ? v.data : [];
+    const list = h('div', { class: 'stg-edit pad-s' }); const prev = h('div', { class: 'tplprev' }); const vers = h('p', { class: 'hint' });
+    const paintPrev = () => prev.replaceChildren(...rows.flatMap((r) => [h('b', {}, r.heading || 'Untitled section'), h('small', {}, r.help)]));
+    const paintVers = () => vers.replaceChildren(...(versions.length ? versions.slice(0, 8).flatMap((x, i) => [i ? h('br') : null, `v${x.version} · ${new Date(x.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} · ${x.by_name}`]) : ['The starting template. Saving makes version 1.']));
+    const paint = () => { list.replaceChildren(...rows.map((r, i) => h('div', { class: 'stg-row' }, h('span', { class: 'grip' }, icon('grip')), h('b', { class: 'num' }, String(i + 1)),
+      h('div', { style: 'flex:1;display:grid;gap:6px' }, h('input', { value: r.heading, 'aria-label': `Section ${i + 1} heading`, maxlength: 120, disabled: !canSave, oninput: (e) => { r.heading = e.target.value; paintPrev(); } }),
+        h('input', { value: r.help, 'aria-label': `Section ${i + 1} helper text`, class: 'sm-in', maxlength: 300, disabled: !canSave, oninput: (e) => { r.help = e.target.value; paintPrev(); } })),
+      canSave ? h('span', { style: 'display:flex;flex-direction:column' }, h('button', { class: 'iconbtn xs', type: 'button', 'aria-label': `Move section ${i + 1} up`, disabled: i === 0, onclick: () => { [rows[i - 1], rows[i]] = [rows[i], rows[i - 1]]; paint(); } }, h('span', { style: 'display:inline-flex;transform:rotate(-90deg)' }, icon('right'))),
+        h('button', { class: 'iconbtn xs', type: 'button', 'aria-label': `Remove section ${i + 1}`, disabled: rows.length === 1, onclick: () => { rows.splice(i, 1); paint(); } }, icon('trash'))) : null))); paintPrev(); };
+    const save = async () => {
+      const clean = rows.filter((r) => r.heading.trim()); if (!clean.length) return toast('Keep at least one section with a heading.', false);
+      const r = await api.call('office.template.save', { sections: clean }); if (!r.ok) return toast('Couldn’t save the template.', false);
+      rows = r.data[0].sections.map((s) => ({ ...s })); versions = [{ version: r.data[0].version, created_at: r.data[0].created_at, by_name: ctx.userName || 'You' }, ...versions];
+      paint(); paintVers(); toast(`Template saved as v${r.data[0].version}. New strategies use it from now on.`);
+    };
+    paint(); paintVers();
+    put(root, h('a', { class: 'btn quiet sm backlink', href: strategiesHref() }, h('span', { style: 'display:inline-flex;transform:scaleX(-1)' }, icon('right')), 'Funnel Strategies'),
+      h('div', { class: 'ph6', style: 'margin-top:8px' }, h('div', {}, h('h1', { class: 't1', 'data-page-title': true }, 'Default strategy template'), h('p', { class: 'hint' }, 'The headings every new funnel strategy starts with. Existing documents never change.')), canSave ? btn('Save template', save, 'primary sm') : null),
+      h('div', { class: 'split' }, h('section', { class: 'card6' }, h('header', {}, h('h2', {}, 'Sections'), canSave ? h('button', { class: 'lk', type: 'button', onclick: () => { rows.push({ heading: 'New section', help: 'Helper text' }); paint(); list.querySelector('.stg-row:last-child input')?.select(); } }, icon('plus'), 'Add section') : null), list),
+        h('aside', { class: 'stackcol' }, h('section', { class: 'card6 pad-s' }, h('p', { class: 'sec-t', style: 'margin-top:0' }, 'Preview'), prev), h('section', { class: 'card6 pad-s' }, h('p', { class: 'sec-t', style: 'margin-top:0' }, icon('hist'), 'Versions'), vers))));
   })();
   return root;
 }

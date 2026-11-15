@@ -6,7 +6,7 @@ import { ApiError } from '../errors.ts';
 import { assertReadableFile, signedUrlFor } from '../files.ts';
 import * as V from '../validate.ts';
 import { FEED_TYPES, OPTIONAL_VIEW_KINDS, VIEW_IDS } from '../../shared/api.ts';
-import type { Collection, FeedItem, FeedType, GalleryItem, LinkDetection, Ops, OpName, OptionalViewKind, Resource, SignedUrl, ViewId, ViewsInfo } from '../../shared/api.ts';
+import type { Collection, FeedItem, OrgFeedItem, FeedType, GalleryItem, LinkDetection, Ops, OpName, OptionalViewKind, Resource, SignedUrl, ViewId, ViewsInfo } from '../../shared/api.ts';
 import { activity, all, needRole, one, person, personCols, run, type Ctx, type Row } from './util.ts';
 
 // ───────────── link detection (pure) ─────────────
@@ -474,6 +474,22 @@ export const resourcesOps = {
   },
 
   // -- activity feed --
+  'activity.org.feed': async (ctx, args) => {
+    const scope = args.scope === undefined ? 'all' : V.oneOf(args.scope, 'scope', ['all', 'mine', 'clients'] as const);
+    const limit = V.opt(args, 'limit', (x, f) => V.int(x, f, 1, 50)) ?? 12;
+    const actor = V.opt(args, 'actor', V.uuid) ?? null;   // Team › member page: one person's recent activity (still only projects the viewer can open)
+    const where = scope === 'mine' ? 'and exists (select 1 from pm_project_members m where m.project_id = p.id and m.user_id = pm.uid())'
+      : scope === 'clients' ? 'and p.client_id is not null' : '';
+    return asUser(ctx, async (tx) => {   // row policies: only projects this person can open (pm.project_role)
+      const rows = await all(tx, `select a.id, a.kind, a.data, a.created_at, a.task_id, t.title task_title, p.id project_id, p.name project_name, p.client_id, ${personCols('u', 'u')}
+        from pm_activity a join pm_projects p on p.id = a.project_id left join pm_people u on u.id = a.actor_id left join pm_tasks t on t.id = a.task_id
+        where p.deleted_at is null and p.archived_at is null ${where} and ($1::uuid is null or a.actor_id = $1) order by a.id desc limit ${limit}`, [actor]);
+      const items: OrgFeedItem[] = rows.map((r) => ({ id: r.id, actor: person(r, 'u'), kind: r.kind, data: r.data ?? {}, createdAt: r.created_at, taskId: r.task_id,
+        taskTitle: r.task_title ?? null, projectId: r.project_id, projectName: r.project_name, clientId: r.client_id ?? null }));
+      return { items };
+    });
+  },
+
   'activity.feed': async (ctx, args) => {
     const projectId = V.uuid(args.projectId, 'projectId');
     const type = V.opt(args, 'type', (x, f) => V.oneOf(x, f, FEED_TYPES));

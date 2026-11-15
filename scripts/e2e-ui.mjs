@@ -16,7 +16,7 @@ const results = []; const check = (id, n, ok, d = '') => { results.push({ id, n,
 const admin = new pg.Client({ connectionString: 'postgresql://supabase_admin:postgres@127.0.0.1:54332/postgres' }); await admin.connect();
 // the local database keeps what earlier runs created; the client list shows 200 at most, so retire earlier runs' test clients first (archived, never deleted)
 await admin.query("update clients set archived_at = now() where archived_at is null and name ~ '^(Harry Kaye PT|Victor Audit|Acme Fitness|Forms client|E[0-9]+E [Cc]lient|Ladder client|Board client|Acme [0-9]|UI Client|Archived Client)'");
-await admin.query('truncate value_ladder_rungs, funnel_references, funnel_brand_kits, funnel_stories, funnel_offers, funnel_avatars');   // clean slate (local database only)
+await admin.query('truncate avatar_versions, value_ladder_rungs, funnel_references, funnel_brand_kits, funnel_stories, funnel_offers, funnel_avatars');   // clean slate (local database only)
 const stamp = Date.now(); const EMAIL = `ui.${stamp}@example.com`, PW = 'correct-horse-battery-staple'; const NAME = 'Una Owner';
 const GUEST = `guest.ui.${stamp}@example.com`, OUTSIDER = `outsider.ui.${stamp}@example.com`;
 
@@ -138,7 +138,7 @@ await page.keyboard.type('form'); const found = await page.locator('.tile').eval
 await page.keyboard.press('Enter'); await wait('Form Builder: coming soon'); await page.getByRole('button', { name: 'Got it' }).click();
 check('V5', 'Find an app shows only matching apps; a search with no match says so', found.join() === 'forms' && (await (async () => { await page.fill('#app-find', 'zzzz'); return page.getByText('No app matches').count(); })()) === 1);
 await page.fill('#app-find', ''); await page.keyboard.press('Escape');
-await page.goto(`${base}/#/office`); await wait('Your work in'); await page.locator('#app-switcher:visible, #app-switcher-m:visible').first().click();
+await page.goto(`${base}/#/office`); await wait('My day'); await page.locator('#app-switcher:visible, #app-switcher-m:visible').first().click();
 const swApps = await page.locator('#apps-menu .appitem').evaluateAll((els) => els.map((e) => e.dataset.app));
 check('V6', 'The app switcher (V8) offers the Launcher row with its G L shortcut and the apps this person may open here (not the locked or coming-soon ones)', (await page.locator('#apps-menu .back').innerText()).includes('Launcher') && swApps.includes('office') && !swApps.includes('portal') && !swApps.includes('forms'), swApps.join());
 await page.keyboard.press('Escape');
@@ -148,7 +148,7 @@ await page.keyboard.press('Shift+Slash'); await page.waitForTimeout(200);
 const kb = await page.getByRole('dialog', { name: 'Keyboard shortcuts' }).innerText().catch(() => '');
 check('V6c', 'The ? key opens Keyboard shortcuts, listing the shortcuts that work (Ctrl K, G then L, /, ?, Esc)', ['Search everything', 'Open the Launcher', 'Show these shortcuts'].every((x) => kb.includes(x)));
 await page.keyboard.press('Escape');
-await page.goto(`${base}/#/office`); await wait('Your work in');
+await page.goto(`${base}/#/office`); await wait('My day');
 // global search (V8 02 §5): Ctrl K opens it scoped to the current app; pages and menus are found; Enter opens; Esc closes
 await page.keyboard.press('Control+k'); await page.waitForSelector('#gsq'); await page.waitForFunction(() => document.activeElement?.id === 'gsq');
 const gsScope = await page.locator('.gsx-scope button[aria-pressed=true]').innerText();
@@ -371,22 +371,30 @@ await page.goBack(); await page.reload(); await wait('The sky follows your time 
 }
 
 // =============================================================== C. Office Home (design 04)
-await tile('office').click(); await wait('Needs your attention'); await wait('Nothing assigned to you.'); await wait('Invitations waiting');   // the cards fill in after their data loads
-check('U14', 'Office Home: the eight section menu, Home current, designed empty states, owner/admin card with waiting invitations', (await page.locator('nav.nav a').allInnerTexts()).join() === 'Home,Planner,Projects,Funnels,Documents,Team,Apps,Admin' && (await page.locator('nav.nav a[aria-current=page]').innerText()) === 'Home'
-  && (await page.locator('main').innerText()).includes('Nothing assigned to you.') && await page.getByText('For owners and admins').isVisible() && await page.getByText('Invitations waiting').isVisible());
+await tile('office').click(); await wait('Waiting on you'); await wait('Nothing due today.'); await wait('Invitations waiting');   // the cards fill in after their data loads
+{ const t = await page.locator('main').innerText();
+  check('U14', 'Office Home (V8): section menu with Home current; greeting, Owner/Team member view, Ask bar (later), My day, Waiting on you, What’s happening, Plans and goals, Projects, Client pipeline, Team today, Organization health',
+    (await page.locator('nav.nav a').allInnerTexts()).join() === 'Home,Projects,Funnels,Documents,Team,Apps,Admin' && (await page.locator('nav.nav a[aria-current=page]').innerText()) === 'Home'
+    && ['Good ', 'Owner view', 'Team member view', 'Assistant · later', 'My day', 'Waiting on you', 'What’s happening', 'Plans and goals', 'Projects', 'Client pipeline', 'Organization health', 'Invitations waiting'].every((x) => t.includes(x))
+    && (await page.locator('.v8p-oh .o-hero h1').count()) === 1); }
 await shot(page, 'c1-home');
 // Projects V2 (migration 0051): the owner's tasks, assigned to them, feed Office Home through the same my.work / projects.deadlines answers
 const hp = (await q("insert into pm_projects (workspace_id,name,owner_id,visibility) values ($1,'Quiz funnel rebuild',$2,'organization') returning id", [L, uid]))[0].id;
 const hts = await q("insert into pm_tasks (workspace_id,project_id,title,due_on,number) values ($1,$2,'Edit quiz emails',current_date + 3,0),($1,$2,'Late task',current_date - 2,0) returning id", [L, hp]);
 for (const t of hts) await q('insert into pm_task_assignees (workspace_id,project_id,task_id,user_id) values ($1,$2,$3,$4)', [L, hp, t.id, uid]);
 await q("insert into planner_reviews (workspace_id,title,due_on) values ($1,'Q4 review', current_date + 2)", [L]);
-await visit(page, base + '/#/office'); await wait('Edit quiz emails');
-check('U14b', 'Office Home fills "My work", "Deadlines" and the review notice from Projects and Planner (overdue task flagged, project name shown, review coming up)', (await page.locator('main').innerText()).includes('Quiz funnel rebuild') && (await page.locator('main').innerText()).includes('Overdue') && await page.getByText('Coming up.').isVisible() && !(await page.locator('main').innerText()).includes('Nothing assigned to you.'));
+await visit(page, base + '/#/office'); await wait('Late task');
+const todayList = await page.locator('.v8p-oh .rows').first().innerText();
+await page.locator('.v8p-oh .sec-h .vsw button', { hasText: 'This week' }).click(); await wait('Edit quiz emails');
+check('U14b', 'My day (V8): Today shows my overdue Projects task flagged Overdue with its project; This week adds the task due in 3 days', todayList.includes('Late task') && todayList.includes('Overdue') && todayList.includes('Quiz funnel rebuild') && !todayList.includes('Edit quiz emails'));
+await page.getByRole('checkbox', { name: 'Mark Late task done' }).click(); await wait('ticked off in Projects');
+check('U14c', 'Ticking a task in My day completes it in Projects', (await q('select status from pm_tasks where id = $1', [hts[1].id]))[0]?.status === 'done');
+await page.locator('.v8p-oh .sec-h .vsw button', { hasText: 'Today' }).click();
 
 // Planner switched on here (on the live site that is a separate go-live step), so this check does not depend on what ran before
 await q("update public.apps set lifecycle = 'active' where key = 'planner'"); await q("insert into workspace_apps (workspace_id, app_key, enabled) values ($1, 'planner', true) on conflict (workspace_id, app_key) do update set enabled = true", [L]);
 await page.reload(); await page.waitForSelector('nav.nav', { timeout: 9000 });
-await page.locator('nav.nav a', { hasText: 'Planner' }).click(); await page.waitForURL(/#\/planner/, { timeout: 9000 });
+await page.evaluate(() => { location.hash = '#/planner'; }); await page.waitForURL(/#\/planner/, { timeout: 9000 });   // V8: Planner is its own app (not in the Office menu)
 await page.waitForFunction(() => !!document.querySelector('.planner-mount')?.shadowRoot?.querySelector('.stage'), null, { timeout: 9000 }).catch(() => {});
 const onPlanner = new URL(page.url()).pathname === '/' && (await page.locator('.side-top b').innerText()) === 'Planner' && (await page.locator('header.hdr').count()) === 1
   && await page.evaluate(() => !!document.querySelector('.planner-mount')?.shadowRoot?.querySelector('.stage') && !document.querySelector('.planner-mount').shadowRoot.querySelector('.rail'));
@@ -401,63 +409,77 @@ check('U16', 'A missing page and a missing record show the same "We couldn’t f
 
 // =============================================================== D. Funnels (design 06)
 await visit(page, base + '/#/office/funnels'); await wait('Recently changed');
-check('U17', 'Funnels home: four counts, the section pills, and the "Link design pending" note for funnel maps', (await page.locator('.tile2').count()) === 4 && await page.getByText('Link design pending').isVisible());
-await page.locator('.nav .sub a', { hasText: 'Avatars' }).click(); await wait('No avatars yet');
-check('U18', 'First-use empty list has the V4 stack illustration, a create action for owners', await page.getByRole('link', { name: 'New avatar' }).first().isVisible() && (await page.locator('.empty .stack').count()) > 0);
-await page.getByRole('link', { name: 'New avatar' }).first().click(); await page.locator('main h1', { hasText: 'New avatar' }).waitFor({ timeout: 9000 }); await page.waitForSelector('#r-client');
-const scope = await page.locator('#r-client option').allInnerTexts();
-check('U19', '"Belongs to" offers the organization and live clients only (never archived ones)', scope.includes('Organization-wide') && scope.some((o) => o.startsWith('Harry Kaye')) && !scope.some((o) => o.startsWith('Archived')));
-await page.click('button[type=submit]');
-check('U20', 'Saving without a name is explained next to the field', (await page.locator('#r-name-e').innerText()).includes('Give it a name'));
-await page.fill('#r-name', 'Busy coach, 35–45'); await page.fill('#r-pains', 'No time to follow up'); await page.selectOption('#r-client', { label: `Harry Kaye PT ${stamp}` });
-await page.click('button[type=submit]'); await wait('Not filled in yet.');
-check('U21', 'Creating an avatar opens its record page with sections, the client it belongs to, and the owner’s buttons', (await h1()) === 'Busy coach, 35–45' && await page.locator('#edit').isVisible() && await page.locator('#share').isVisible() && await page.locator('#archive').isVisible() && (await page.locator('main').innerText()).includes('No time to follow up'));
-check('O1', 'A customer avatar opens as a portrait profile: a portrait card with name and role, and the pains in their own column', (await page.locator('.ava-center .portrait').count()) === 1 && (await page.locator('.ava-center').innerText()).toLowerCase().includes('customer avatar') && (await page.locator('.ava .specs.left').innerText()).includes('No time to follow up'));
+await page.waitForSelector('.v8p-office .fn-node b', { timeout: 9000 });
+check('U17', 'Funnels overview (V8): the flow Customer Avatars → Offers & Products → Stories → Brand Kits → Funnel Strategies with counts, each a real link', (await page.locator('.v8p-office .fn-map .fn-node:not(.fmp)').count()) === 5
+  && (await page.locator('.v8p-office .fn-node:not(.fmp) span:not(.wic)').allInnerTexts()).join() === 'Customer Avatars,Offers & Products,Stories,Brand Kits,Funnel Strategies' && (await page.locator('.v8p-office .fn-node[href]').count()) >= 5);
+await page.locator('.nav .sub a', { hasText: 'Customer Avatars' }).click(); await page.waitForSelector('.v8p-office .avcard.add', { timeout: 9000 });
+check('U18', 'Customer Avatars (V8): first use offers "New avatar" as a button and as the last card, for owners', (await h1()) === 'Customer Avatars' && await page.getByRole('link', { name: 'New avatar' }).first().isVisible() && (await page.locator('.avcard:not(.add)').count()) === 0);
+await page.locator('.avcard.add').click(); await page.waitForSelector('.wizsteps', { timeout: 9000 });
+check('U19', 'New customer avatar: five steps; start by importing a Word or PDF file, or blank', (await page.locator('.wizsteps li').count()) === 5 && (await page.locator('.startc').count()) === 2 && (await page.locator('.focusbar').innerText()).includes('New customer avatar'));
+await page.locator('.startc', { hasText: 'Start blank' }).click(); await page.waitForSelector('.pickgrid .pick');
+const looks = await page.locator('.pickgrid .pick').count(); await page.locator('.pickgrid .pick').nth(3).click(); await page.getByRole('button', { name: 'Next' }).click();
+const usedFor = page.locator('.field', { hasText: 'Used for' }).locator('select'); await usedFor.waitFor({ timeout: 9000 });
+const scope = await usedFor.locator('option').allInnerTexts();
+check('U19b', 'Ten 3D looks to pick from; "Used for" offers the organization and live clients only (never archived ones)', looks === 10 && scope.some((o) => o.includes('(internal)')) && scope.some((o) => o.includes('Harry Kaye')) && !scope.some((o) => o.includes('Archived')));
+await page.getByRole('button', { name: 'Create avatar' }).click(); await page.waitForTimeout(150);
+check('U20', 'Creating without a name is refused with a plain message', (await toastText()).includes('Give the avatar a name') && (await q('select count(*)::int n from funnel_avatars where workspace_id = $1', [L]))[0].n === 0);
+await page.getByPlaceholder('John', { exact: true }).fill('Busy coach'); await page.getByPlaceholder('the One Comma Club chaser').fill('35–45, no time'); await usedFor.selectOption({ label: `A client: Harry Kaye PT ${stamp}` });
+await page.getByRole('button', { name: 'Create avatar' }).click(); await page.waitForSelector('.studio-tabs', { timeout: 9000 });
+const av1 = (await q('select id, look, client_id, tagline from funnel_avatars where workspace_id = $1', [L]))[0];
+check('U21', 'Creating opens the Avatar Studio (Profile, Full profile, Use it, Evidence) with the chosen look, for the chosen client, with Edit', (await page.locator('.studio-tabs a').allInnerTexts()).join() === 'Profile,Full profile,Use it,Evidence'
+  && (await page.locator('.studio-c h1').innerText()) === 'Busy coach' && av1.look === 3 && av1.client_id === C1 && av1.tagline === '35–45, no time' && await page.locator('.focusbar-acts a', { hasText: 'Edit' }).isVisible());
+check('O1', 'The profile is the V8 3D stage: the figure on its pedestal, the version badge and the summary cards around it', (await page.locator('.studio .a3d .a3d-fig svg').count()) === 1 && (await page.locator('.a3d-badge').innerText()).includes('v1.0 · Draft') && (await page.locator('.studio .sp').count()) >= 4);
 await shot(page, 'd1-record');
-// edit, leave with unsaved changes
-await page.click('#edit'); await page.waitForSelector('#r-name');
-await page.fill('#r-name', 'Busy coach (edited)');
-check('U22', 'The edit form shows "Unsaved changes" as soon as something changes', (await page.locator('#ds').innerText()) === 'Unsaved changes');
-await page.locator('nav.nav > a', { hasText: /^Home$/ }).click(); await wait('You have unsaved changes');
+// edit a chapter, leave with unsaved changes
+await page.locator('.focusbar-acts a', { hasText: 'Edit' }).click(); await page.waitForSelector('.chapters');
+await page.locator('.chapters a', { hasText: 'What drives them' }).click(); await page.getByRole('button', { name: 'Add wants' }).click();
+await page.getByLabel('Wants 1', { exact: true }).fill('More booked calls');
+check('U22', 'Edit mode shows "Unsaved changes" as soon as something changes', (await page.locator('.savest').innerText()).includes('Unsaved changes'));
+await page.locator('.chapters a', { hasText: 'Beliefs' }).click(); await page.waitForSelector('.edhead');
+await page.locator('.chapters a', { hasText: 'What drives them' }).click(); await page.waitForSelector('.edhead');
+check('U22b', 'Moving between chapters keeps the draft and asks nothing', (await page.getByLabel('Wants 1', { exact: true }).inputValue()) === 'More booked calls');
+await page.locator('.focusbar .hdr-back').click(); await wait('You have unsaved changes');
 await page.getByRole('button', { name: 'Keep editing' }).click();
-check('U23', 'Leaving with unsaved changes asks first, and "Keep editing" keeps the text and the page', (await page.inputValue('#r-name')) === 'Busy coach (edited)' && page.url().includes('/funnels/avatars/'));
-await page.locator('nav.nav > a', { hasText: /^Home$/ }).click(); await wait('You have unsaved changes'); await page.getByRole('button', { name: 'Save and leave' }).click(); await wait('Needs your attention');
-check('U24', '"Save and leave" saves the change, then goes', (await q('select name from funnel_avatars where workspace_id = $1', [L]))[0].name === 'Busy coach (edited)');
-// share / unshare / archive / restore / delete
-await visit(page, base + '/#/office/funnels/avatars'); await wait('Busy coach (edited)'); await page.getByRole('link', { name: 'Open Busy coach (edited)' }).click(); await page.waitForSelector('#share');
-await page.click('#share'); await wait('The Client Portal is locked for now.'); await page.getByRole('button', { name: 'Share', exact: true }).click(); await wait('Stop sharing');
-check('U25', 'Share with client saves the choice, says the Portal is locked, and lists the client with "Stop sharing"', (await q('select client_visible from funnel_avatars where workspace_id = $1', [L]))[0].client_visible === true && (await toastText()).startsWith('Shared with Harry'));
-await page.getByRole('button', { name: /Stop sharing/ }).click(); await page.getByRole('button', { name: 'Stop sharing', exact: true }).last().click(); await wait('Not shared yet.');
-await page.click('#archive'); await wait('Archive “Busy coach (edited)”?'); await page.getByRole('button', { name: 'Archive', exact: true }).last().click(); await wait('This avatar is archived.');
-check('U26', 'Archive names what it does, and an archived record shows the banner with Restore and Delete permanently (owner)', await page.locator('#restore').isVisible() && await page.locator('#delete').isVisible() && (await page.locator('#edit').count()) === 0);
-await page.click('#delete'); await wait('This can’t be undone.');
+check('U23', 'Leaving with unsaved changes asks first, and "Keep editing" keeps the text and the page', (await page.getByLabel('Wants 1', { exact: true }).inputValue()) === 'More booked calls' && page.url().includes('/edit'));
+await page.locator('.focusbar .hdr-back').click(); await wait('You have unsaved changes'); await page.getByRole('button', { name: 'Save and leave' }).click(); await page.waitForSelector('.studio-tabs', { timeout: 9000 });
+check('U24', '"Save and leave" saves the change, then goes; the profile shows it at once', (await q("select profile->'wants'->>0 w from funnel_avatars where workspace_id = $1", [L]))[0].w === 'More booked calls' && (await page.locator('.studio').innerText()).includes('More booked calls'));
+// share / unshare / archive / restore / delete (More actions)
+const more = async (label) => { await page.getByRole('button', { name: 'More actions' }).click(); await page.getByRole('button', { name: label, exact: true }).click(); };
+await more('Share with client'); await wait('The Client Portal is locked for now.'); await page.getByRole('button', { name: 'Share', exact: true }).click(); await page.waitForTimeout(300);
+check('U25', 'Share with client saves the choice and says the Portal is locked', (await q('select client_visible from funnel_avatars where workspace_id = $1', [L]))[0].client_visible === true && (await toastText()).startsWith('Shared with Harry'));
+await more('Stop sharing'); await page.getByRole('button', { name: 'Stop sharing', exact: true }).last().click(); await page.waitForTimeout(300);
+await more('Archive'); await wait('Archive “Busy coach”?'); await page.getByRole('button', { name: 'Archive', exact: true }).last().click(); await page.waitForTimeout(400);
+await page.getByRole('button', { name: 'More actions' }).click(); await wait('This avatar is archived.');
+check('U26', 'An archived avatar offers Restore and Delete permanently (owner), and no Edit', await page.getByRole('button', { name: 'Restore', exact: true }).isVisible() && await page.getByRole('button', { name: 'Delete permanently', exact: true }).isVisible() && (await page.locator('.focusbar-acts a', { hasText: 'Edit' }).count()) === 0
+  && (await q('select client_visible from funnel_avatars where workspace_id = $1', [L]))[0].client_visible === false);
+await page.getByRole('button', { name: 'Delete permanently', exact: true }).click(); await wait('This can’t be undone.');
 await page.fill('#cf', 'wrong name'); await page.getByRole('button', { name: 'Delete permanently' }).last().click();
 check('U27', 'Permanent delete needs the exact name typed first', (await page.locator('#cf-e').innerText()).includes('doesn’t match') && (await q('select count(*)::int n from funnel_avatars where workspace_id = $1', [L]))[0].n === 1);
-await page.fill('#cf', 'Busy coach (edited)'); await page.getByRole('button', { name: 'Delete permanently' }).last().click(); await wait('No avatars yet');
+await page.fill('#cf', 'Busy coach'); await page.getByRole('button', { name: 'Delete permanently' }).last().click(); await page.waitForSelector('.v8p-office .avcard.add', { timeout: 9000 });
 check('U28', 'Typing the name deletes it for good and returns to the list', (await q('select count(*)::int n from funnel_avatars where workspace_id = $1', [L]))[0].n === 0);
 // records used by later steps: one per client, one organization-wide
 await q("insert into funnel_avatars (workspace_id, name, client_id) values ($1,'Avatar for C1',$2),($1,'Avatar for C2',$3),($1,'Organization avatar',null)", [L, C1, C2]);
 await q("insert into funnel_avatars (workspace_id, name, client_id, archived_at) values ($1,'Old avatar',null,now())", [L]);
 await visit(page, base + '/#/office/funnels/avatars'); await wait('Avatar for C1');
-await page.selectOption('#fl', 'archived'); await wait('Old avatar'); await page.selectOption('#fl', 'all'); await wait('Avatar for C1');
-await page.fill('#q', 'victor'); await page.waitForTimeout(100);
-check('U29', 'The Show filter (Active, Archived, All) and the search box work; a search with no result says so', (await page.locator('tbody tr').count()) === 0 && await page.getByText('No matches').isVisible());
-await page.fill('#q', ''); await page.selectOption('#fl', 'active');
+await page.getByRole('button', { name: 'Archived', exact: true }).click(); await wait('Old avatar'); await page.getByRole('button', { name: 'All', exact: true }).click(); await wait('Avatar for C1');
+await page.getByLabel('Search avatars').fill('victor'); await page.waitForTimeout(100);
+check('U29', 'The Show filter (Active, Archived, All) and the search box work; a search with no result says so', (await page.locator('.avcard').count()) === 0 && await page.getByText('No avatar matches').isVisible());
+await page.getByLabel('Search avatars').fill(''); await page.getByRole('button', { name: 'Active', exact: true }).click();
 await shot(page, 'd2-list');
 
 // =============================================================== E. Switching organization: six outcomes (design 01)
 // 1 same page
 await wait('Avatar for C1');
 await inMenu(page, 'Aurj'); await page.waitForFunction(() => document.querySelector('#org-switcher strong')?.textContent === 'Aurj');
-await wait('No avatars yet');
+await page.waitForSelector('.v8p-office .avcard.add', { timeout: 9000 });
 check('E1', 'Outcome 1: the same page in the other organization, new colours, a "Now in Aurj · Funnels" confirmation, none of the old data, never the Launcher',
-  (await h1()) === 'Customer avatars' && (await theme()) === 'aurj' && !(await page.locator('main').innerText()).includes('Avatar for C1') && (await toastText()).includes('Now in Aurj · Funnels') && !page.url().includes('launcher'));
+  (await h1()) === 'Customer Avatars' && (await theme()) === 'aurj' && !(await page.locator('main').innerText()).includes('Avatar for C1') && (await toastText()).includes('Now in Aurj · Funnels') && !page.url().includes('launcher'));
 await shot(page, 'e1-aurj');
 await inMenu(page, 'Layer2Funnels'); await wait('Avatar for C1'); check('E1b', 'Switching back restores that organization’s records and theme', (await theme()) === 'l2f');
 // 2 record not carried
-await page.getByRole('link', { name: 'Open Avatar for C1' }).click(); await page.waitForSelector('#edit');
+await page.locator('.avcard', { hasText: 'Avatar for C1' }).click(); await page.waitForSelector('.studio-tabs');
 await inMenu(page, 'Aurj'); await wait('That item belongs to Layer2Funnels, so it isn’t here.');
-check('E2', 'Outcome 2: a record that is not in the other organization lands on that organization’s list, with a plain notice and a way back', (await page.locator('.notice').innerText()).includes('Switch back to Layer2Funnels') && (await h1()) === 'Customer avatars');
+check('E2', 'Outcome 2: a record that is not in the other organization lands on that organization’s list, with a plain notice and a way back', (await page.locator('.notice').innerText()).includes('Switch back to Layer2Funnels') && (await h1()) === 'Customer Avatars');
 await page.getByRole('button', { name: 'Switch back to Layer2Funnels' }).click(); await page.waitForFunction(() => document.querySelector('#org-switcher strong')?.textContent === 'Layer2Funnels');
 // 3 app not turned on
 await visit(page, base + '/#/drive'); await page.waitForSelector('.drv', { timeout: 9000 });
@@ -466,9 +488,9 @@ check('E3', 'Outcome 3: an app that is not on in the other organization is expla
   && await page.getByRole('button', { name: 'Switch back to Layer2Funnels' }).isVisible() && await page.getByRole('button', { name: 'Ask an Aurj admin' }).isVisible() && await page.getByRole('link', { name: 'Browse all apps' }).isVisible());
 await page.getByRole('button', { name: 'Ask an Aurj admin' }).click();
 check('E3b', '"Ask an admin" is message only and says so', (await toastText()).includes('No request was sent'));
-await page.getByRole('button', { name: 'Go to Aurj Office Home' }).click(); await wait('Needs your attention');
+await page.getByRole('button', { name: 'Go to Aurj Office Home' }).click(); await wait('Waiting on you');
 // 4 not a member (the menu was loaded before the membership ended)
-await inMenu(page, 'Layer2Funnels'); await page.waitForFunction(() => document.querySelector('#org-switcher strong')?.textContent === 'Layer2Funnels'); await wait('Needs your attention');
+await inMenu(page, 'Layer2Funnels'); await page.waitForFunction(() => document.querySelector('#org-switcher strong')?.textContent === 'Layer2Funnels'); await wait('Waiting on you');
 await q('delete from memberships where workspace_id = $1 and user_id = $2', [A, uid]);
 await inMenu(page, 'Aurj'); await wait('You’re not a member of Aurj.');
 check('E4', 'Outcome 4: switching to an organization you are no longer in changes nothing and says why, in words', (await page.locator('#org-switcher strong').innerText()) === 'Layer2Funnels' && (await theme()) === 'l2f' && (await page.locator('.notice[role=alert]').innerText()).includes('nothing has changed'));
@@ -482,20 +504,19 @@ await page.getByRole('button', { name: 'Try again' }).click(); await page.waitFo
 check('E5b', '"Try again" completes the switch', (await theme()) === 'aurj');
 await inMenu(page, 'Layer2Funnels'); await page.waitForFunction(() => document.querySelector('#org-switcher strong')?.textContent === 'Layer2Funnels');
 // 6 unsaved changes
-await visit(page, base + '/#/office/funnels/avatars'); await wait('Avatar for C1');
-await page.getByRole('link', { name: 'New avatar' }).first().click(); await page.waitForSelector('#r-name'); await page.fill('#r-name', 'Typed before switching');
+await visit(page, base + '/#/office/funnels/offers/new'); const offerName = page.getByPlaceholder('e.g. Funnel Done-For-You'); await offerName.waitFor({ timeout: 9000 }); await offerName.fill('Typed before switching');
 await inMenu(page, 'Aurj'); await wait('Save your changes before switching?');
 check('E6a', 'Outcome 6: the dialog names the page and offers Save and switch, Discard and switch, Stay here', (await page.locator('.dlg').innerText()).includes('They can’t come with you to Aurj') && await page.getByRole('button', { name: 'Stay here' }).isVisible());
 await page.getByRole('button', { name: 'Stay here' }).click();
-check('E6b', '"Stay here" keeps the organization, the page and the typed text', (await page.locator('#org-switcher strong').innerText()) === 'Layer2Funnels' && (await page.inputValue('#r-name')) === 'Typed before switching');
+check('E6b', '"Stay here" keeps the organization, the page and the typed text', (await page.locator('#org-switcher strong').innerText()) === 'Layer2Funnels' && (await offerName.inputValue()) === 'Typed before switching');
 await inMenu(page, 'Aurj'); await wait('Save your changes before switching?'); await page.getByRole('button', { name: 'Save and switch' }).click();
 await page.waitForFunction(() => document.querySelector('#org-switcher strong')?.textContent === 'Aurj');
-check('E6c', '"Save and switch" saves in the old organization first, then switches', (await q('select count(*)::int n from funnel_avatars where workspace_id = $1 and name = $2', [L, 'Typed before switching']))[0].n === 1 && (await h1()) === 'Customer avatars');
+check('E6c', '"Save and switch" saves in the old organization first (a new offer is kept as a draft), then switches', (await q("select count(*)::int n from funnel_offers where workspace_id = $1 and name = $2 and status = 'draft'", [L, 'Typed before switching']))[0].n === 1 && (await h1()) === 'Offers & Products');
 await inMenu(page, 'Layer2Funnels'); await wait('Typed before switching');
-await page.getByRole('link', { name: 'New avatar' }).first().click(); await page.waitForSelector('#r-name'); await page.fill('#r-name', 'Thrown away');
+await visit(page, base + '/#/office/funnels/offers/new'); await offerName.waitFor({ timeout: 9000 }); await offerName.fill('Thrown away');
 await inMenu(page, 'Aurj'); await wait('Save your changes before switching?'); await page.getByRole('button', { name: 'Discard and switch' }).click();
-await page.waitForFunction(() => document.querySelector('#org-switcher strong')?.textContent === 'Aurj'); await wait('No avatars yet');
-check('E6d', '"Discard and switch" drops the draft and switches', (await q('select count(*)::int n from funnel_avatars where name = $1', ['Thrown away']))[0].n === 0);
+await page.waitForFunction(() => document.querySelector('#org-switcher strong')?.textContent === 'Aurj'); await wait('No offers yet');
+check('E6d', '"Discard and switch" drops the draft and switches', (await q('select count(*)::int n from funnel_offers where name = $1', ['Thrown away']))[0].n === 0);
 // keyboard: the switcher menu
 await inMenu(page, 'Layer2Funnels'); await wait('Typed before switching');
 await page.focus('#org-switcher'); await page.keyboard.press('Enter');
@@ -505,10 +526,11 @@ await page.focus('.skip'); const hashBefore = page.url(); await page.keyboard.pr
 check('E8', 'The "Skip to content" link moves focus to the main area and leaves the address (the route) alone', (await page.evaluate(() => document.activeElement.id)) === 'main' && page.url() === hashBefore);
 
 // =============================================================== F. Admin → Members and Access (design 05)
-await visit(page, base + '/#/office/admin'); await wait('Joining is by invitation only.');
-check('F1', 'Admin opens on Members: you, marked "(you)", as Owner and Active, in a table with a Manage button', (await page.locator('tbody tr').count()) === 1 && (await page.locator('tbody').innerText()).includes(`${NAME} (you)`) && (await page.locator('tbody').innerText()).includes('Owner') && (await page.getAttribute('[role=tab][data-k=members]', 'aria-selected')) === 'true');
+await visit(page, base + '/#/office/admin'); await wait('One person, one sign-in.');
+check('F1', 'Admin (V8) opens on People: you, marked "(you)", as Owner and Active; eight sections as real links', (await page.locator('.tbl6 .tr', { hasText: 'Teammate' }).count()) === 1 && (await page.locator('.tbl6').innerText()).includes(`${NAME} (you)`) && (await page.locator('.tbl6').innerText()).includes('Owner')
+  && (await page.locator('.tabs6 a').allInnerTexts()).join() === 'People,Teammate access,Client access,Roles,Access review,Storage & versions,Branding,Audit log' && (await page.locator('.tabs6 a[href^="#/office/admin/"]').count()) === 8);
 await shot(page, 'f1-members');
-await page.getByRole('button', { name: 'Invite someone' }).click(); await page.getByRole('button', { name: 'Send invitation' }).click();
+await page.getByRole('button', { name: 'Invite', exact: true }).click(); await page.getByRole('button', { name: 'Send invitation' }).click();
 check('F2', 'Inviting with a bad email is explained in the dialog', (await page.locator('#ie-e').innerText()).includes('Enter an email'));
 await page.fill('#ie', GUEST); await page.selectOption('#il', 'editor');
 check('F3', 'The level hint explains the chosen level; Owner is not offered', (await page.locator('#ild').innerText()).includes('Creates and edits records') && !(await page.locator('#il option').allInnerTexts()).includes('Owner'));
@@ -516,12 +538,15 @@ await page.getByRole('button', { name: 'Send invitation' }).click(); await wait(
 const link = await page.inputValue('#il2'); const token = new URL(link).hash.split('token=')[1];
 check('F4', 'A saved invitation shows its link once (email sending is switched on at go-live) and appears as Invited', link.includes('#/invite?token=') && (await q('select count(*)::int n from invitations where workspace_id = $1 and email = $2', [L, GUEST]))[0].n === 1);
 await page.getByRole('button', { name: 'Done' }).click(); await wait('Invited');
-await page.getByRole('button', { name: `Manage ${GUEST}` }).click(); await wait('Invitation not accepted yet.');
-await page.getByRole('button', { name: 'Cancel invitation' }).click(); await wait('1 person.');
+await page.locator('.tbl6 .tr', { hasText: GUEST }).click(); await wait('Invitation not accepted yet.');
+await page.getByRole('button', { name: 'Cancel invitation' }).click(); await page.waitForFunction((g) => !document.querySelector('.tbl6')?.innerText.includes(g), GUEST, { timeout: 9000 });
 check('F5', 'An invitation can be cancelled before it is accepted', (await q('select count(*)::int n from invitations where workspace_id = $1 and email = $2 and revoked_at is not null', [L, GUEST]))[0].n === 1);
 const tok2 = (await (await fetch(`${base}/api/invitation.create`, { method: 'POST', headers: { authorization: `Bearer ${await (async () => (await (await fetch('http://127.0.0.1:54321/auth/v1/token?grant_type=password', { method: 'POST', headers: { apikey: 'sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH', 'content-type': 'application/json' }, body: JSON.stringify({ email: EMAIL, password: PW }) })).json()).access_token)()}`, 'x-org-id': L, 'content-type': 'application/json' }, body: JSON.stringify({ email: GUEST, kind: 'staff', role: 'editor' }) })).json()).data[0].token;
 // the sole owner
-await page.getByRole('button', { name: `Manage ${NAME}` }).click(); await wait('is the only owner.');
+const OWNER_ID = (await q('select id from auth.users where email = $1', [EMAIL]))[0].id;
+await visit(page, `${base}/#/office/admin/person/${OWNER_ID}`); await wait('App and feature access');
+check('F5b', 'The owner’s own page: relationships with the role locked ("you can’t change your own"), every app by role', await page.getByLabel('Role', { exact: true }).isDisabled() && (await page.locator('main').innerText()).includes('you can’t change your own'));
+await page.getByRole('button', { name: 'Manage', exact: true }).click(); await wait('is the only owner.');
 check('F6', 'The only owner can’t be demoted, deactivated or removed: the level is locked and the dialog says why', (await page.locator('#ml').isDisabled()) && (await page.locator('.dlg').innerText()).includes('An organization always needs one'));
 await page.getByRole('button', { name: `Remove from Layer2Funnels` }).click();
 check('F6b', 'Remove on the only owner is refused in words', (await toastText()).includes('The only owner can’t be removed.'));
@@ -536,7 +561,7 @@ await guest.fill('#nm', 'Gus Guest'); await guest.fill('#em', GUEST); await gues
 await wait('Join Layer2Funnels', guest);
 check('G2', 'After signing up, the invitation screen names the organization, the inviter, the level and the signed-in email', (await guest.locator('main').innerText()).includes(`${NAME} invited you to join Layer2Funnels as an Editor.`) && (await guest.locator('main').innerText()).includes(`Signed in as ${GUEST}`) && (await theme(guest)) === 'l2f');
 await shot(guest, 'g1-invite');
-await guest.getByRole('button', { name: 'Accept invitation' }).click(); await wait('Needs your attention', guest);
+await guest.getByRole('button', { name: 'Accept invitation' }).click(); await wait('Waiting on you', guest);
 check('G3', 'Accepting lands in Office Home of that organization; an editor sees no Admin section', (await guest.locator('#org-switcher strong').innerText()) === 'Layer2Funnels' && !(await guest.locator('nav.nav a').allInnerTexts()).includes('Admin') && !(await guest.getByText('For owners and admins').count()));
 await visit(guest, `${base}/#/office/admin/members`); await wait('We couldn’t find that', guest);
 check('G4', 'An editor who opens an Admin address sees the same "We couldn’t find that" screen', (await guest.locator('main').innerText()).includes('Go to Office Home'));
@@ -554,20 +579,24 @@ check('G6', 'Declining asks first, then leaves the person with no organization',
 await out.close();
 
 // ---- Members as owner, now with the guest
-await visit(page, base + '/#/office/admin/members'); await wait('3 people.');
-await page.getByRole('button', { name: 'Manage Gus Guest' }).click(); await page.selectOption('#ml', 'viewer'); await page.getByRole('button', { name: 'Save changes' }).click(); await wait('Level updated.'); await page.waitForFunction(() => document.querySelector('tbody')?.innerText.includes('Viewer'), null, { timeout: 9000 });   // the confirmation first, then the refreshed table
-check('F7', 'Changing a level saves and shows at once', (await q("select role from memberships where workspace_id = $1 and role = 'viewer' and user_id = (select id from auth.users where email = $2)", [L, GUEST])).length === 1 && (await page.locator('tbody').innerText()).includes('Viewer'));
-await page.getByRole('button', { name: 'Manage Gus Guest' }).click(); await page.getByRole('button', { name: 'Deactivate' }).click(); await wait('Deactivate Gus Guest?'); await page.getByRole('button', { name: 'Deactivate', exact: true }).last().click(); await wait('Deactivated');
+await visit(page, base + '/#/office/admin/people'); await wait('Gus Guest');
+await page.locator('.tbl6 a.tr', { hasText: 'Gus Guest' }).click(); await wait('App and feature access');
+await page.getByLabel('Role', { exact: true }).selectOption('viewer'); await page.waitForTimeout(600); await visit(page, base + '/#/office/admin/people'); await page.waitForFunction(() => document.querySelector('.tbl6')?.innerText.includes('Viewer'), null, { timeout: 9000 });   // the confirmation first, then the refreshed table
+check('F7', 'Changing a level saves and shows at once', (await q("select role from memberships where workspace_id = $1 and role = 'viewer' and user_id = (select id from auth.users where email = $2)", [L, GUEST])).length === 1 && (await page.locator('.tbl6').innerText()).includes('Viewer'));
+await page.locator('.tbl6 a.tr', { hasText: 'Gus Guest' }).click(); await wait('App and feature access');
+await page.getByRole('button', { name: 'Manage', exact: true }).click(); await page.getByRole('button', { name: 'Deactivate' }).click(); await wait('Deactivate Gus Guest?'); await page.getByRole('button', { name: 'Deactivate', exact: true }).last().click(); await page.waitForTimeout(600);
 check('F8', 'Deactivating confirms first, deletes nothing, and the row says Deactivated', (await q("select status from memberships where workspace_id = $1 and user_id = (select id from auth.users where email = $2)", [L, GUEST]))[0].status !== 'active');
-await page.getByRole('button', { name: 'Manage Gus Guest' }).click(); await page.getByRole('button', { name: 'Reactivate' }).click(); await page.getByRole('button', { name: 'Reactivate', exact: true }).last().click(); await wait('Active');
+await page.getByRole('button', { name: 'Manage', exact: true }).click(); await page.getByRole('button', { name: 'Reactivate' }).click(); await page.getByRole('button', { name: 'Reactivate', exact: true }).last().click(); await page.waitForTimeout(600);
+check('F8b', 'Reactivating restores the membership', (await q("select status from memberships where workspace_id = $1 and user_id = (select id from auth.users where email = $2)", [L, GUEST]))[0].status === 'active');
 await q("update memberships set role = 'editor' where workspace_id = $1 and user_id = (select id from auth.users where email = $2)", [L, GUEST]);
 
 // ---- Access
-await page.getByRole('tab', { name: 'Access', exact: true }).click(); await wait('Deny always wins.');
+await visit(page, base + '/#/office/admin/people'); await page.waitForSelector('.tabs6'); await page.locator('.tabs6 a', { hasText: 'Roles' }).click(); await wait('Roles are starting points');
+check('F9a', 'Roles (V8): what each role starts with, app by app, read from the real permission catalog', (await page.locator('.tbl6.roles .thd').innerText()).replace(/\s+/g, ' ').includes('App Owner Admin Editor Viewer') && (await page.locator('.tbl6.roles .tr').count()) >= 4 && (await page.locator('.tabs6 a[aria-selected=true]').innerText()) === 'Roles');
+await page.getByRole('link', { name: 'Access levels', exact: true }).click(); await wait('Deny always wins.');
 check('F9', 'Access opens on Levels: a table read from the real permission catalog, four levels, grouped by app', (await page.locator('thead th').evaluateAll((e) => e.map((x) => x.textContent))).join() === 'Can they…,Owner,Admin,Editor,Viewer' && (await page.locator('tbody th[colspan]').count()) >= 4 && await page.getByText('The last owner can’t be removed or demoted.').isVisible());
 await shot(page, 'f2-levels');
-await page.keyboard.press('Shift+Tab'); await page.getByRole('tab', { name: 'Access', exact: true }).focus(); await page.keyboard.press('ArrowLeft'); await page.waitForFunction(() => location.hash.endsWith('/admin/clients')); await page.waitForSelector('#invite-client'); await page.locator('[role=tab][data-k=clients]').focus(); await page.keyboard.press('ArrowLeft'); await page.waitForFunction(() => location.hash.endsWith('/admin/members') && document.querySelector('[role=tab][data-k=members]')?.getAttribute('aria-selected') === 'true');
-check('F10', 'Tabs work from the keyboard: arrow keys move and switch', (await page.getAttribute('[role=tab][data-k=members]', 'aria-selected')) === 'true' && page.url().endsWith('/admin/members'));
+check('F10', 'Admin sections are real links that keep their place (Roles stays marked inside the access levels)', (await page.locator('.tabs6 a[aria-selected=true]').innerText()) === 'Roles' && (await page.locator('.tabs6 a', { hasText: 'People' }).getAttribute('href')) === '#/office/admin/people');
 await visit(page, base + '/#/office/admin/access/assignments'); await wait('Add assignment');
 check('F11', 'Assignments starts empty with an explanation, not a blank table', await page.getByText('No assignments yet').isVisible());
 await page.getByRole('button', { name: 'Add assignment' }).click(); await wait('Deny instead');
@@ -582,9 +611,9 @@ await visit(page, base + '/#/office/admin/access/effective'); await wait('Show a
 await page.selectOption('#ep', { label: 'Gus Guest' }); await wait('Funnels records'); await page.waitForFunction(() => document.querySelector('tbody')?.innerText.includes('Deny wins'), null, { timeout: 9000 });
 const eff = await page.locator('tbody').innerText();
 check('F15', 'Effective access shows one row per area with Can edit / Can view / No access, and a denial reads "Deny wins"', eff.includes('Funnels records') && eff.includes('No access') && eff.includes('Deny wins') && eff.includes('Can edit'));
-await visit(page, base + '/#/office/admin/storage'); await wait('File storage'); await wait('used');
+await visit(page, base + '/#/office/admin/storage'); await wait('How each file type saves and keeps history');
 const stg = await page.locator('main').innerText();
-check('F18', 'Admin → Storage shows the counter against the 8 GB limit, with a labelled meter and plain words about the shared limit', /of 8\.00 GB used/.test(stg) && (await page.getByRole('progressbar').getAttribute('aria-label')).startsWith('Storage used') && stg.includes('every organization on this system together') && (await page.locator('[role=tab][aria-selected=true]').innerText()) === 'Storage');
+check('F18', 'Storage & versions shows the counter against the 8 GB limit, a labelled bar and plain words about the shared limit', /of 8(\.0+)? GB/.test(stg) && (await page.locator('.stack-bar').getAttribute('aria-label')).includes('of storage used') && stg.includes('every organization on this system together'));
 await shot(page, 'f3-effective');
 await visit(page, base + '/#/office/admin/access/assignments'); await wait('Remove');
 await page.getByRole('button', { name: /Remove Gus Guest Funnels · edit/ }).click(); await page.getByRole('button', { name: 'Remove', exact: true }).last().click(); await wait('Assignment removed.');
@@ -592,10 +621,17 @@ check('F16', 'Removing a denial asks first and lifts it', (await q('select count
 
 // ---- an admin cannot change an owner
 await q("update memberships set role = 'admin' where workspace_id = $1 and user_id = (select id from auth.users where email = $2)", [L, GUEST]);
-await visit(guest, `${base}/#/office/admin/members`); await guest.reload(); await wait('Joining is by invitation only.', guest);
-await guest.getByRole('button', { name: `Manage ${NAME}` }).click(); await wait('Only an owner can change an owner.', guest);
+await visit(guest, `${base}/#/office/admin/person/${OWNER_ID}`); await guest.reload(); await wait('App and feature access', guest);
+check('F17a', 'An admin opens the owner’s page: the role is locked and the switches are off-limits', await guest.getByLabel('Role', { exact: true }).isDisabled() && (await guest.locator('main').innerText()).includes('owners keep full access'));
+await guest.getByRole('button', { name: 'Manage', exact: true }).click(); await wait('Only an owner can change an owner.', guest);
 check('F17', 'An admin sees the owner’s level but can’t change it: "Only an owner can change an owner."', await guest.locator('#ml').isDisabled());
 await guest.keyboard.press('Escape');
+// Client Access Matrix: an ADMIN can change it (owner decision, 15 Nov 2026)
+await visit(guest, `${base}/#/office/admin/clients`); await guest.waitForSelector('.cagrid .cell', { timeout: 9000 });
+const cell0 = guest.locator('.cagrid .carow', { hasText: `Harry Kaye PT ${stamp}` }).locator('.cell').first(); const before = await cell0.getAttribute('aria-pressed'); await cell0.click(); await guest.waitForTimeout(500);
+check('F19', 'Client Access Matrix: an admin turns an app on or off for one client; it is saved and logged', (await cell0.getAttribute('aria-pressed')) !== before && (await q('select count(*)::int n from client_app_access where workspace_id = $1 and client_id = $2', [L, C1]))[0].n === 1
+  && (await q("select count(*)::int n from audit_events where workspace_id = $1 and action like 'client_app_access.%'", [L]))[0].n >= 1);
+await shot(guest, 'f4-client-matrix');
 await q("update memberships set role = 'editor' where workspace_id = $1 and user_id = (select id from auth.users where email = $2)", [L, GUEST]);
 
 // =============================================================== H. Scoped buttons and read-only (design 06, 07)
@@ -603,15 +639,19 @@ const lvl = (await q("insert into access_levels (workspace_id, app_key, name) va
 await q("insert into access_level_permissions (workspace_id, access_level_id, permission_key) values ($1,$2,'funnels.record.share')", [L, lvl]);
 await q("insert into access_assignments (workspace_id, access_level_id, principal_type, principal_id, client_id) values ($1,$2,'user',(select id from auth.users where email = $3),$4)", [L, lvl, GUEST, C1]);
 await visit(guest, `${base}/#/office/funnels/avatars`); await guest.reload(); await wait('Avatar for C1', guest);
-await guest.getByRole('link', { name: 'Open Avatar for C1' }).click(); await guest.waitForSelector('#edit');
-const onC1 = await guest.locator('#share').count();
-await visit(guest, `${base}/#/office/funnels/avatars`); await guest.getByRole('link', { name: 'Open Avatar for C2' }).click(); await guest.waitForSelector('#edit');
-check('H1', 'A person who holds a permission on one client only sees that button on that client’s records and no others', onC1 === 1 && (await guest.locator('#share').count()) === 0 && (await guest.locator('#edit').count()) === 1);
+const moreOpen = async () => { await guest.getByRole('button', { name: 'More actions' }).click(); await guest.waitForSelector('.dlg'); };
+const moreClose = async () => { await guest.getByRole('button', { name: 'Close', exact: true }).click(); };
+await guest.locator('.avcard', { hasText: 'Avatar for C1' }).click(); await guest.waitForSelector('.studio-tabs'); await moreOpen();
+const onC1 = await guest.getByRole('button', { name: 'Share with client', exact: true }).count(); await moreClose();
+await visit(guest, `${base}/#/office/funnels/avatars`); await guest.locator('.avcard', { hasText: 'Avatar for C2' }).click(); await guest.waitForSelector('.studio-tabs'); await moreOpen();
+const onC2 = await guest.getByRole('button', { name: 'Share with client', exact: true }).count(); await moreClose();
+check('H1', 'A person who holds a permission on one client only sees that button on that client’s records and no others', onC1 === 1 && onC2 === 0 && (await guest.locator('.focusbar-acts a', { hasText: 'Edit' }).count()) === 1);
 await q("update memberships set role = 'viewer' where workspace_id = $1 and user_id = (select id from auth.users where email = $2)", [L, GUEST]);
-await guest.reload(); await wait('Read only.', guest);
-check('H2', 'A viewer sees records read-only: a clear notice, no Edit, Archive or Share buttons', (await guest.locator('#edit').count()) === 0 && (await guest.locator('#archive').count()) === 0 && (await guest.locator('#share').count()) === 0);
-await visit(guest, `${base}/#/office/funnels/avatars`); await wait('You can view these.', guest);
-check('H3', 'The viewer’s list says "You can view these" and has no New button', (await guest.getByRole('link', { name: 'New avatar' }).count()) === 0);
+await guest.reload(); await wait('Read only', guest); await moreOpen();
+check('H2', 'A viewer sees records read-only: a clear mark, no Edit, Archive or Share', (await guest.locator('.focusbar-acts a', { hasText: 'Edit' }).count()) === 0 && (await guest.getByRole('button', { name: 'Archive', exact: true }).count()) === 0 && (await guest.getByRole('button', { name: 'Share with client', exact: true }).count()) === 0);
+await moreClose();
+await visit(guest, `${base}/#/office/funnels/avatars`); await wait('Avatar for C1', guest);
+check('H3', 'The viewer’s list has no New button and no New card', (await guest.getByRole('link', { name: 'New avatar' }).count()) === 0 && (await guest.locator('.avcard.add').count()) === 0);
 await q("update memberships set role = 'editor' where workspace_id = $1 and user_id = (select id from auth.users where email = $2)", [L, GUEST]);
 
 // =============================================================== I. Reduced motion, widths, keyboard
@@ -826,13 +866,13 @@ await rm.close();
   await page.goto(`${base}/#/office/documents`); await page.getByRole('button', { name: 'New document' }).first().click(); await page.fill('#nd-name', `Made here ${Date.now()}`); await page.getByRole('button', { name: 'Create', exact: true }).click(); await page.waitForSelector('.docpage', { timeout: 9000 });
   const made = (await admin.query("select in_library, managed_by from files where name like 'Made here %' order by created_at desc limit 1")).rows[0];
   check('O4', 'A document made in Office › Documents lands in the library (visible in Drive) and opens for editing', made.in_library === true && made.managed_by === null);
-  await page.goto(`${base}/#/office/team`); await page.waitForSelector('.team li', { timeout: 9000 });
-  check('O5', 'Team lists the organization’s active people with their levels, and marks you', (await page.locator('.team li').count()) >= 1 && (await page.locator('main').innerText()).includes('(you)') && (await page.locator('main').innerText()).includes('Owner'));
-  await page.locator('.team li .pj-title').first().click(); await page.waitForSelector('text=Open work you can see', { timeout: 9000 });
-  check('O6', 'A person’s profile drawer opens and says what work you can see (or that none is visible)', (await page.locator('.drawer, [role=dialog]').first().innerText()).includes('Open work you can see'));
+  await page.goto(`${base}/#/office/team`); await page.waitForSelector('.cardgrid.team a.tm', { timeout: 9000 });
+  check('O5', 'Team (V8) shows a card per active person with role, what they are working on, and marks you', (await page.locator('.cardgrid.team a.tm').count()) >= 1 && (await page.locator('main').innerText()).includes('(you)') && (await page.locator('main').innerText()).includes('Owner'));
+  await page.locator('.cardgrid.team a.tm').first().click(); await page.waitForSelector('text=Pending work', { timeout: 9000 });
+  check('O6', 'A person’s page shows working on now, pending work, this week and projects, only as far as you may see', (await page.locator('main').innerText()).includes('Only work you’re allowed to see.') && (await page.locator('.profile-hero h1').count()) === 1);
   await page.keyboard.press('Escape');
-  await page.goto(`${base}/#/office/apps`); await wait('Locked and coming-soon apps');
-  check('O7', 'Apps lists every app with its state: open links for available apps and the reason for locked or coming-soon ones', (await page.locator('.app-row').count()) >= 10 && (await page.locator('main').innerText()).includes('Coming soon') && (await page.locator('main a', { hasText: 'Open' }).count()) >= 3);
+  await page.goto(`${base}/#/office/apps`); await wait('Owners turn apps on or off');
+  check('O7', 'Apps lists every app with its state: open links for available apps and the reason for locked or coming-soon ones', (await page.locator('.v8p-office .cardgrid .card').count()) >= 10 && (await page.locator('main').innerText()).includes('Coming soon') && (await page.locator('main a', { hasText: 'Open' }).count()) >= 3);
   await page.goto(`${base}/#/office/projects`); await page.waitForFunction(() => location.hash === '#/projects', null, { timeout: 9000 }); await page.waitForSelector('.projects-mount', { timeout: 9000 });
   check('O8', 'The old Office › Projects address opens Projects (one Projects app, under the shell header)', (await page.locator('.projects-mount').count()) === 1);
   // Funnel Strategies (list, editor with side panel)
@@ -849,15 +889,16 @@ await rm.close();
   check('O12', 'The map link must start with https:// and is shown as a link only (opens in a new tab safely)', /https:\/\//.test(badMsg) && (await page.locator('.strat-side a[href^="https://app.example.com"]').getAttribute('rel')) === 'noopener noreferrer');
   await page.goto(`${base}/#/office/funnels/strategies`); await page.waitForSelector('.tbl', { timeout: 9000 });
   check('O13', 'The list shows the strategy with its status and a "Linked" map badge', (await page.locator('.tbl tr', { hasText: SN }).innerText()).includes('In review') && (await page.locator('.tbl tr', { hasText: SN }).innerText()).includes('Linked'));
-  await page.goto(`${base}/#/office/funnels`); await page.waitForSelector('text=See all Funnel Strategies', { timeout: 9000 });
-  check('O14', 'Funnels home shows the Funnel Strategies summary and keeps its four record tiles', (await page.locator('.tile2').count()) === 4 && (await page.locator('main').innerText()).includes(SN));
+  await page.goto(`${base}/#/office/funnels`);
+  await page.waitForSelector('.v8p-office .fn-node b', { timeout: 9000 });
+  check('O14', 'Funnels overview shows the strategy in "Funnel strategies" with its status, and the five steps of the flow', (await page.locator('.v8p-office .fn-map .fn-node:not(.fmp)').count()) === 5 && (await page.locator('.v8p-office .split').innerText()).includes(SN));
   await page.goto(`${base}/#/office/admin/access/history`); await page.waitForSelector('text=Access history', { timeout: 9000 }); await page.waitForSelector('.tbl, .empty', { timeout: 9000 });
   check('O9', 'Admin › Access › Access history shows who changed what and when, with names, never content', (await page.locator('.tbl thead th').allInnerTexts()).join().toLowerCase() === 'when,who,what' && !(await page.locator('main').innerText()).includes('{'));
   await page.goto(`${base}/#/launcher`); await wait('The sky follows your time of day');
 }
 
-const routes = [['/#/launcher', 'The sky follows your time of day'], ['/#/office', 'Needs your attention'], ['/#/office/funnels', 'Recently changed'], ['/#/office/funnels/avatars', 'Avatar for C1'], ['/#/office/funnels/avatars/new', 'Belongs to'],
-  ['/#/office/admin/members', 'Joining is by invitation only.'], ['/#/office/admin/access/levels', 'Deny always wins.'], ['/#/office/admin/access/assignments', 'Add assignment'], ['/#/office/admin/access/effective', 'Show access for'], ['/#/portal', 'The Portal is locked'], ['/#/drive', 'stay with their own app'], ['/#/clients', 'Everyone you work for'], ['/#/clients/requests', 'The Client Portal is locked'], ['/#/clients/sops', 'SOPs are never copied'], ['/#/clients/tools', 'Owners and admins see all four'], ['/#/clients/settings', 'Build is progress only'], ['/#/office/funnels/strategies', 'One written strategy per funnel'], ['/#/office/documents', 'stay with their own app'], ['/#/office/team', 'only where your own access allows'], ['/#/office/apps', 'Locked and coming-soon apps'], ['/#/office/admin/access/history', 'The last 100 changes'], ['/#/planner/plans', 'New plan']];
+const routes = [['/#/launcher', 'The sky follows your time of day'], ['/#/office', 'Waiting on you'], ['/#/office/funnels', 'Recently changed'], ['/#/office/funnels/avatars', 'Avatar for C1'], ['/#/office/funnels/avatars/new', 'Start blank'], ['/#/office/funnels/offers/new', 'Price and terms'], ['/#/office/funnels/strategies/template', 'Default strategy template'],
+  ['/#/office/admin/people', 'One person, one sign-in.'], ['/#/office/admin/access/levels', 'Deny always wins.'], ['/#/office/admin/access/assignments', 'Add assignment'], ['/#/office/admin/access/effective', 'Show access for'], ['/#/portal', 'The Portal is locked'], ['/#/drive', 'stay with their own app'], ['/#/clients', 'Everyone you work for'], ['/#/clients/requests', 'The Client Portal is locked'], ['/#/clients/sops', 'SOPs are never copied'], ['/#/clients/tools', 'Owners and admins see all four'], ['/#/clients/settings', 'Build is progress only'], ['/#/office/funnels/strategies', 'One written strategy per funnel'], ['/#/office/documents', 'Make a section for anything'], ['/#/office/team', 'what they’re working on'], ['/#/office/apps', 'Owners turn apps on or off'], ['/#/office/admin/clients', 'Turn any app off for one client'], ['/#/office/admin/review', 'What is this?'], ['/#/office/admin/access/history', 'The last 100 changes'], ['/#/planner/plans', 'New plan']];
 for (const [w, label] of [[1280, 'desktop'], [768, 'tablet'], [390, 'phone']]) {
   const p = w < 1280 ? watch(await (await touchBrowser.newContext({ viewport: { width: w, height: 900 }, hasTouch: true })).newPage()) : await newPage(w, 900);
   await p.goto(base + '/'); await wait('Sign in', p);
@@ -868,15 +909,15 @@ for (const [w, label] of [[1280, 'desktop'], [768, 'tablet'], [390, 'phone']]) {
   for (const [r, t] of routes) { await p.goto(base + r); await p.reload(); await wait(t, p); await p.waitForTimeout(120); if (!(await layouts(p, `${label} ${r}`))) bad.push(r); }
   check(`R-${label}`, `At ${w}px every screen has no sideways scroll and every control meets the V8 size (${w < 1280 ? '44 px on a touch screen' : 'at least 26 px with a mouse'}; ${routes.length + 2} screens)`, ok && bad.length === 0, bad.join(' '));
   if (w === 390) {
-    await p.goto(base + '/#/office'); await p.reload(); await wait('Needs your attention', p);
+    await p.goto(base + '/#/office'); await p.reload(); await wait('Waiting on you', p);
     const bar = p.locator('nav.bbar'); const labels = await bar.locator('a, button').allInnerTexts();
-    check('R-bar', 'On a phone the Office menu is a bottom bar: four sections plus More, labels always visible, top menu hidden', labels.map((x) => x.trim()).join() === 'Home,Planner,Projects,Funnels,More' && !(await p.locator('nav.nav').isVisible()) && (await bar.boundingBox()).y > 700);
+    check('R-bar', 'On a phone the Office menu is a bottom bar: four sections plus More, labels always visible, top menu hidden', labels.map((x) => x.trim()).join() === 'Home,Projects,Funnels,Docs,More' && !(await p.locator('nav.nav').isVisible()) && (await bar.boundingBox()).y > 700, `${labels.join('|')} nav:${await p.locator('nav.nav').isVisible()} y:${(await bar.boundingBox())?.y}`);
     await bar.getByRole('button', { name: 'More' }).click(); await wait('More in Office', p);
     const more = await p.locator('.bsheet a').allInnerTexts(); await p.keyboard.press('Escape');
-    check('R-more', 'More opens a sheet with the rest (Docs, Team, Apps, Admin); Esc closes it and focus returns to More', more.map((x) => x.trim()).join() === 'Documents,Team,Apps,Admin' && (await p.evaluate(() => document.activeElement.textContent)).includes('More'));
+    check('R-more', 'More opens a sheet with the rest (Team, Apps, Admin; Planner is its own app in V8); Esc closes it and focus returns to More', more.map((x) => x.trim()).join() === 'Team,Apps,Admin' && (await p.evaluate(() => document.activeElement.textContent)).includes('More'));
     await p.goto(base + '/#/launcher'); await p.reload(); await wait('The sky follows your time of day', p);
     check('R-tiles', 'On a phone the Launcher shows three columns of plates with names only (descriptions hidden), as in the design', (await p.locator('.tile').first().evaluate((e) => getComputedStyle(e.querySelector('.t-desc')).display)) === 'none' && new Set(await p.locator('.tile').evaluateAll((els) => els.slice(0, 6).map((e) => Math.round(e.getBoundingClientRect().left / 12)))).size === 3);
-    await shot(p, 'i1-phone-launcher'); await p.goto(base + '/#/office/admin/members'); await p.reload(); await wait('Joining is by invitation only.', p); await shot(p, 'i2-phone-members');
+    await shot(p, 'i1-phone-launcher'); await p.goto(base + '/#/office/admin/people'); await p.reload(); await wait('One person, one sign-in.', p); await shot(p, 'i2-phone-members');
     await p.goto(base + '/#/office/funnels/avatars'); await p.reload(); await wait('Avatar for C1', p); await p.evaluate(() => document.querySelector('.hdr .iconbtn')?.focus());
     // V8 (02_GLOBAL_SHELL §1): on a phone the rail is hidden; the organization mark in the app bar opens the apps-and-account sheet,
     // which holds the Launcher, notifications, both organizations, the apps, the profile and Sign out
@@ -1018,7 +1059,7 @@ for (const [w, label] of [[1280, 'desktop'], [768, 'tablet'], [390, 'phone']]) {
   await page.locator('tbody tr', { hasText: EMAIL }).getByRole('button', { name: /Manage/ }).click(); await page.getByRole('button', { name: 'Invite again' }).click(); await page.waitForSelector('#cl-link', { timeout: 9000 });
   check('CX10', 'Inviting a revoked person again reuses their client record', (await admin.query("select count(*)::int c from clients where name = $1 and workspace_id = $2", [CNAME, wsX])).rows[0].c === 1 && (await admin.query("select count(*)::int c from client_access where email = $1 and workspace_id = $2", [EMAIL, wsX])).rows[0].c === 2);
   await page.getByRole('button', { name: 'Done' }).click();
-  check('CX11', 'Client access is not in the staff Members list', !(await (async () => { await page.getByRole('tab', { name: 'Members' }).click(); await page.waitForSelector('#invite', { timeout: 9000 }); return (await page.locator('main').innerText()).includes(EMAIL); })()));
+  check('CX11', 'People (V8) shows a client contact as a Client relationship, never as a Teammate', await (async () => { await page.goto(`${base}/#/office/admin/people`); await page.waitForSelector('.tbl6 .tr', { timeout: 9000 }); const row = page.locator('.tbl6 .tr', { hasText: EMAIL }); return (await row.count()) === 0 || ((await row.first().innerText()).includes('Client') && !(await row.first().innerText()).includes('Teammate')); })());
 }
 
 

@@ -1,5 +1,8 @@
 # V8 implementation tracker
 
+> **Approved sequence (owner, 15 Nov 2026):** P00 Foundation and Global Shell → P01 Office → **P02 Tasks** → P03 Drive with editors → P04 Projects → P05 Planner → P06 Clients → P07 Funnel Mapper → P08 Portal → P09 Whiteboard → P10 Forms → P11 Value Ladder → P12 Social Planner → P13 Agents → P14 Final Ecosystem Verification. The P0x labels below are older reference IDs, not the build order.
+
+
 One list for everything: the V8 handoff (every page, menu, dialog, flow and cross-cutting rule) **merged with the owner's additional requirements, bug reports and final directives** (14 Nov 2026). Nothing is marked done because a screen exists; "Tested and verified" needs the test named in the row.
 
 **Statuses:** Not started · In progress · Implemented · Tested and verified · Blocked · Requires clarification.

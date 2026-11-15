@@ -24,8 +24,8 @@ import { sheetView } from './modules/sheets.js';
 import { imageView } from './modules/imageeditor.js';
 import { pdfView } from './modules/pdfeditor.js';
 import { plannerView, unmountPlanner, plannerMountedFor, plannerSection, PLANNER_PAGES } from './modules/planner.js';
-import { strategiesListView, strategyView } from './views/strategies.js';
-import { documentsView, teamView, appsView } from './views/office.js';
+import { strategiesListView, strategyTemplateView, strategyView } from './views/strategies.js';
+import { teamView, memberView, appsView, notificationSettingsView } from './views/office-team.js';
 import { loadWeather } from './sky.js';
 import { permissionSet, canWith, canAnywhereWith } from './perm.js';
 import { switchOrganization } from '/packages/core/org-switch.mjs';
@@ -37,6 +37,13 @@ import { launcherView, appNotBuiltView } from './views/launcher.js';
 import { officeHomeView } from './views/home.js';
 import { adminView } from './views/admin.js';
 import { funnelsHomeView, funnelListView, funnelRecordView } from './views/funnels.js';
+import { documentsView as documentsV8 } from './views/office-docs.js';
+import { offersListView, offerView, offerFormView } from './views/office-offers.js';
+import { storiesListView, storyView, storyFormView, brandKitsListView, brandKitView, brandKitFormView } from './views/office-records.js';
+import { adminV8View } from './views/office-admin.js';
+import { avatarsListView, avatarNewView, avatarStudioView, avatarEditView } from './views/office-avatars.js';
+let lastTouched = null;   // the app last reported to access.app.touch
+const V8REC = { avatars: [avatarsListView, (c, id, prm) => avatarStudioView(c, id, prm?.tab ?? 'profile'), (c, id, prm) => (id ? avatarEditView(c, id, prm?.chapter) : avatarNewView(c))], offers: [offersListView, offerView, offerFormView], stories: [storiesListView, storyView, storyFormView], brand_kits: [brandKitsListView, brandKitView, brandKitFormView] };
 
 const cfg = window.L2F_CONFIG;
 const root = document.getElementById('app');
@@ -417,7 +424,7 @@ async function render(opts = {}) {
   theme.setOrg(org);
   const role = org.role; const isAdmin = role === 'owner' || role === 'admin';
   const c = {
-    api, orgName: org.name, isOwner: role === 'owner', userId: session.get()?.userId, userName: session.get()?.name, clients: ctx.clients, catalog: ctx.catalog, live, announce, go, guard, rerender: () => render(),
+    api, orgName: org.name, isOwner: role === 'owner', isAdmin, userId: session.get()?.userId, userName: session.get()?.name, clients: ctx.clients, catalog: ctx.catalog, live, announce, go, guard, rerender: () => render(),
     can: (p, clientId) => canWith(ctx.mine, p, clientId), canAnywhere: (p) => canAnywhereWith(ctx.mine, p),
     clientsWhere: (p) => [...ctx.clients].filter(([cid]) => canWith(ctx.mine, p, cid)),
   };
@@ -434,20 +441,22 @@ async function render(opts = {}) {
       case 'home': case 'launcher': case 'signin': case 'signup': case 'check-email': case 'forgot': case 'invite':
         content = launcherView({ catalog: ctx.catalog, error: ctx.catalogError, org, orgs: ctx.orgs, role, name: session.get()?.name, registry, loadWeather: () => loadWeather({ api, store: localStorage }), onSwitch: (i) => switchFlow(i), retry: async () => { await loadOrgContext(org); render(); } }); break;
       case 'profile': content = profileView({ app: appApi, me, tab: route.params.tab, orgs: ctx.orgs, active: org, catalog: ctx.catalog, registry, theme }); break;
-      case 'office': content = officeHomeView({ org, role, isAdmin, api, live, portalState: ctx.catalog.find((a) => a.app_key === 'portal')?.state }); break;
+      case 'office': content = officeHomeView({ org, role, isAdmin, api, live, portalState: ctx.catalog.find((a) => a.app_key === 'portal')?.state, name: me?.name ?? session.get()?.name, catalog: ctx.catalog }); break;
       case 'office-page': {
         const pg = route.params.page;
-        if (pg === 'documents') content = documentsView({ api, ctx: c });
-        else if (pg === 'team') content = teamView({ api, ctx: c });
+        if (pg === 'documents') content = documentsV8({ api, ctx: c });
+        else if (pg === 'team') content = route.params.member ? memberView({ api, ctx: c, id: route.params.member }) : teamView({ api, ctx: c });
+        else if (pg === 'settings') content = notificationSettingsView({ api, ctx: c });
         else if (pg === 'apps') content = appsView({ catalog: ctx.catalog, registry, org, orgs: ctx.orgs });
         else content = appNotBuiltView(OFFICE_PAGES.find((p) => p.key === pg)?.label ?? 'This page');
         break;
       }
       case 'funnels': content = funnelsHomeView(c); break;
-      case 'strategies': content = strategiesListView(c); break;
+      case 'strategies': content = route.params.template ? strategyTemplateView(c) : strategiesListView(c); break;
       case 'strategy': content = strategyView(c, route.params.id); break;
-      case 'funnel-list': content = funnelListView(c, route.params.type); break;
-      case 'funnel-record': content = funnelRecordView(c, route.params.type, route.params.id); break;
+      case 'funnel-list': { const v = V8REC[route.params.type]; content = v ? v[0](c) : funnelListView(c, route.params.type); break; }
+      case 'funnel-record': { const v = V8REC[route.params.type]; const { id } = route.params;
+        content = !v ? funnelRecordView(c, route.params.type, id) : id === 'new' ? v[2](c, null, route.params) : route.params.edit ? v[2](c, id, route.params) : v[1](c, id, route.params); break; }
       case 'doc': content = docView({ api, id: route.params.id, ctx: c }); break;
       case 'social': content = socialView({ api, ctx: c, route: { view: route.params.view, id: route.params.id, query: route.query } }); break;
       case 'boards': content = boardsView({ api, ctx: c, route: { query: route.query } }); break;
@@ -477,11 +486,12 @@ async function render(opts = {}) {
         /* the Planner menu comes from appnav.js */
         break;
       }
-      case 'admin': content = adminView({ api, live, org, role, route, rerender: () => render(), go, clients: ctx.clients }); break;
+      case 'admin': content = adminV8View({ api, ctx: c, org, role, route, go }); break;
       case 'app': content = appNotBuiltView(ctx.catalog.find((a) => a.app_key === route.params.app)?.name ?? appLabel(route.params.app)); break;
       default: content = notFoundState(hrefFor.office());
     }
   }
+  { const usedApp = org.member_kind === 'client' ? null : (inOffice ? 'office' : route.name === 'doc' || route.name === 'sheet' || route.name === 'image' || route.name === 'pdf' || route.name === 'drive' ? 'drive' : route.name === 'board' || route.name === 'boards' ? 'whiteboard' : ['projects', 'clients', 'forms', 'planner'].includes(route.name) ? route.name : route.name === 'ladder' ? 'value_ladder' : route.name === 'social' ? 'social_planner' : null); if (usedApp && usedApp !== lastTouched) { lastTouched = usedApp; api.call('access.app.touch', { app: usedApp }).catch(() => {}); } }   // Admin › Access review: when each app was last used
   // global search (V8 02 §5): the rail button and Ctrl K open it, scoped to the current app when that app is searchable; staff only (the operation refuses client contacts)
   startSearch = org.member_kind === 'client' ? null : (initial = '') => openSearch({ api, registry, catalog: ctx.catalog, isAdmin, currentApp: inOffice ? 'office' : (route.name === 'clients' ? 'clients' : route.name === 'projects' ? 'projects' : route.name === 'planner' ? 'planner' : ['doc', 'sheet', 'image', 'pdf', 'drive'].includes(route.name) ? 'drive' : null), initial });
   const view = shellView({ onSearch: startSearch, app: appApi, orgs: ctx.orgs, active: org, email: session.get()?.email, name: session.get()?.name, route, content, banner: bannerEl(), isAdmin, inOffice, launcherCurrent: route.name === 'launcher' || route.name === 'home',

@@ -93,6 +93,19 @@ check('PA30', 'Opening changes nothing: the project is still private to its owne
 check('PA17', 'No database text in any log line', logs.length > 0 && !logs.some((l) => /select |insert |update |delete |constraint|relation|column/i.test(JSON.stringify(l))));
 
 const failed = results.filter((r) => !r.ok);
+// Office Home (V8, P01): the organization feed and the light project list follow the same row rules
+{
+  const J = async (op, input, u, org) => { const r = await api.handle({ operation: op, input, auth: { userId: u, email: 'x@example.com' }, headers: { 'x-org-id': org } }); return { status: r.status, rows: r.body?.data ?? [] }; };
+  const feedL = (await P('activity.org.feed', {}, U.LO, ORG.L)).r?.items ?? [];
+  check('PA40', 'Office feed: the owner sees recent activity of their organization’s projects, newest first, with the project named', feedL.length > 0 && feedL.every((a) => a.projectName) && feedL[0].id >= feedL[feedL.length - 1].id);
+  check('PA41', 'Office feed: another organization sees none of it, and someone without Projects gets nothing', ((await P('activity.org.feed', {}, U.AO, ORG.A)).r?.items ?? []).every((a) => a.projectId !== PID) && ((await P('activity.org.feed', {}, U.LNO, ORG.L)).r?.items?.length ?? 0) === 0);
+  check('PA42', 'Office feed: a personal project’s activity never reaches the owner’s organization feed', !feedL.some((a) => a.projectId === mine.r.id));
+  check('PA43', 'Office feed: "My projects" and "Clients" scopes are accepted; an unknown scope is refused', (await P('activity.org.feed', { scope: 'mine' }, U.LO, ORG.L)).status === 200 && (await P('activity.org.feed', { scope: 'clients' }, U.LO, ORG.L)).status === 200 && (await P('activity.org.feed', { scope: 'everything' }, U.LO, ORG.L)).status === 422);
+  const ol = await J('office.projects.list', {}, U.LO, ORG.L);
+  check('PA44', 'Office projects card: live projects with colour, V8 status and progress; personal projects and other organizations never appear', ol.status === 200 && ol.rows.some((p) => p.id === PID && p.color && p.status && typeof p.progress === 'number') && !ol.rows.some((p) => p.id === mine.r.id)
+    && !(await J('office.projects.list', {}, U.AO, ORG.A)).rows.some((p) => p.id === PID));
+}
+
 for (const r of results) console.log(`${r.ok ? 'ok  ' : 'FAIL'}  ${r.id.padEnd(5)} ${r.name}${r.ok ? '' : '  ' + r.detail}`);
 console.log(`${results.length - failed.length}/${results.length} checks passed`);
 await db.close?.();

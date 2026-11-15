@@ -2,6 +2,7 @@
 import { recorder } from './lib.mjs';
 import { validate } from '../packages/core/validate.mjs';
 import { createApiClient, isRead } from '../apps/web/js/api.js';
+import { dueLabel, feedLine } from '../apps/web/js/views/home.js';
 const ORG_A = '11111111-1111-4111-8111-111111111111', ORG_B = '22222222-2222-4222-8222-222222222222';
 import { parseRoute, routeForPage, pageKeyFor, defaultOrg, hrefFor, FUNNEL_TYPES, OFFICE_PAGES } from '../apps/web/js/routes.js';
 import { PLANNER_PAGES, plannerSection } from '../apps/web/js/modules/planner.js';
@@ -32,6 +33,7 @@ check('W2', 'A record route never maps to a record page after a switch: it lands
 check('W3', 'The switch never lands on the Launcher: unknown pages fall back to the app home, other apps to their own placeholder', routeForPage('office', 'whatever') === '#/office' && routeForPage('projects', null) === '#/projects' && !routeForPage('office', null).includes('launcher'));
 check('W4', 'Page keys sent to resolve_org_switch match the registry in migration 0006', pageKeyFor(parseRoute('#/office/funnels/avatars')).page === 'funnels.avatars' && pageKeyFor(parseRoute('#/office/funnels/avatars/abc')).page === 'funnels.avatar' && pageKeyFor(parseRoute('#/office')).page === 'home');
 import { readFileSync } from 'node:fs';
+import { matchChapter, toSections, sectionsToProfile } from '../apps/web/js/modules/avatarimport.js';
 const sql = readFileSync(new URL('../migrations/0006_funnels_foundation.sql', import.meta.url), 'utf8');
 check('W5', 'Every page key the UI uses is registered in app_pages', FUNNEL_TYPES.every((t) => sql.includes(`'${t.page}'`) && sql.includes(`'${t.record}'`)) && sql.includes("'funnels',"));
 check('W6', 'First sign-in default: highest role, then name', defaultOrg([{ name: 'Aurj', role: 'editor' }, { name: 'Layer2Funnels', role: 'owner' }]).name === 'Layer2Funnels' && defaultOrg([{ name: 'B', role: 'admin' }, { name: 'A', role: 'admin' }]).name === 'A');
@@ -40,7 +42,9 @@ const codes = Object.values(errors).filter((e) => e && typeof e === 'object' && 
 check('W7', 'Every API error code in the contract has a plain-words message in the browser', codes.length >= 9 && codes.every((c) => MESSAGES[c]));
 check('W8', 'Messages never contain technical words', Object.values(MESSAGES).every((m) => !/constraint|policy|rls|postgres|sql|jwt|token|42501|uuid/i.test(m)) && messageFor('weird') === MESSAGES.failed && fieldLabel('zzz') === 'a field');
 // ---- UI field definitions vs server specs (no field the server would refuse, none missing)
-const NOT_YET = { brand_kits: ['logo_file_id'] };   // logos are Drive files; the picker arrives with Drive
+const V8_FORM = { avatars: ['tagline', 'role', 'market', 'look', 'stage', 'profile', 'source_file_id'], offers: ['offer_type', 'status', 'billing', 'guarantee', 'delivery_time', 'included', 'bonuses', 'avatar_ids', 'ladder_step', 'internal_notes'],   // 0056 fields: edited by the V8 New/Edit forms
+  stories: ['before_text', 'after_text', 'best_quote', 'permission', 'consent_file_id', 'use_in'], brand_kits: ['is_main', 'logo_dark_file_id', 'icon_file_id', 'voice_say', 'voice_never', 'asset_file_ids', 'color_names'] };
+const NOT_YET = Object.fromEntries(Object.keys(V8_FORM).map((k) => [k, [...V8_FORM[k], ...(k === 'brand_kits' ? ['logo_file_id'] : [])]]));   // logos are Drive files; the picker arrives with Drive
 const sameFields = Object.entries(SERVER_TYPES).every(([k, spec]) => JSON.stringify(Object.keys(spec.fields).filter((f) => !(NOT_YET[k] ?? []).includes(f)).sort()) === JSON.stringify(FIELD_DEFS[k].map((f) => f.k).sort()));
 check('W9', 'The UI edits exactly the fields the server accepts (logo waits for Drive), for all four record types', sameFields);
 check('W10', 'Every UI route type has all eight server operations', FUNNEL_TYPES.every((t) => ['list', 'get', 'create', 'update', 'archive', 'restore', 'share', 'delete'].every((a) => operations[`funnels.${t.key}.${a}`])));
@@ -165,15 +169,32 @@ check('W33', 'Projects (V2) owns every #/projects address and routes its own pag
 check('W41', 'Each profile tab has its own address (V8 #/profile/about, account, notifications, appearance); #/profile is the first tab',
   parseRoute('#/profile').name === 'profile' && !parseRoute('#/profile').params.tab && ['about', 'account', 'notifications', 'appearance'].every((t) => parseRoute(`#/profile/${t}`).params.tab === t) && parseRoute('#/profile/x').name !== 'profile');
 
+{
+  const now = new Date('2026-11-12T10:00:00');   // a Thursday
+  check('W42', 'Office Home due labels (V8): Overdue, Today, Tomorrow, a weekday this week, a date after', JSON.stringify(['2026-11-10', '2026-11-12', '2026-11-13', '2026-11-16', '2026-12-01'].map((d) => dueLabel(d, now)[0]))
+    === JSON.stringify(['Overdue', 'Today', 'Tomorrow', new Date('2026-11-16T12:00:00').toLocaleDateString(undefined, { weekday: 'short' }), new Date('2026-12-01T12:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short' })]) && dueLabel('2026-11-10', now)[1] === 'od' && dueLabel('2026-11-12', now)[1] === 'soon');
+  check('W43', 'Office Home feed lines read like the Projects app (status change, completion, comment)', feedLine({ kind: 'task.updated', data: { field: 'status', to: 'in_review' }, taskTitle: 'Quiz v2' }) === 'moved “Quiz v2” to Review'
+    && feedLine({ kind: 'task.updated', data: { field: 'status', to: 'done' }, taskTitle: 'Copy' }) === 'completed “Copy”' && feedLine({ kind: 'task.commented', data: {}, taskTitle: 'Copy' }) === 'commented on “Copy”');
+}
+
 // ---- Planner inside the shell (apps/web/js/modules/planner.js mounts apps/planner/src/embed.tsx)
 check('W27', 'Planner has one address inside the shell: #/planner/<page> keeps its page and query; the old #/app/planner and #/office/planner lead there too',
   parseRoute('#/planner').name === 'planner' && parseRoute('#/planner').params.page === 'overview' && parseRoute('#/planner/map?plan=p1').params.page === 'map' && parseRoute('#/planner/map?plan=p1').query.plan === 'p1'
   && parseRoute('#/app/planner').name === 'planner' && parseRoute('#/office/planner').name === 'planner' && parseRoute('#/planner/a/b').name === 'not-found');
-check('W28', 'The Launcher, the app switcher and the Office menu open Planner in the shell, and an organization switch lands on Planner (never on another organization\'s plan)',
-  hrefFor.app('planner') === '#/planner' && OFFICE_PAGES.find((p) => p.key === 'planner').href === '#/planner'
+check('W28', 'The Launcher and the app switcher open Planner in the shell (V8: Planner is its own app, not in the Office menu; old Office links still lead there), and an organization switch lands on Planner (never on another organization\'s plan)',
+  hrefFor.app('planner') === '#/planner' && !OFFICE_PAGES.some((p) => p.key === 'planner') && parseRoute('#/office/planner').name === 'planner'
   && JSON.stringify(pageKeyFor(parseRoute('#/planner/map?plan=p1'))) === '{"app":"planner","page":null}' && routeForPage('planner', null) === '#/planner');
 check('W29', 'Planner\'s menu in the shell covers every Planner page once, and only Strategy model needs plan management',
   ['overview', 'mine', 'plans', 'map', 'reviews', 'settings', 'alignment', 'reports', 'goals', 'metrics', 'model', 'templates'].every((pg) => PLANNER_PAGES.filter((x) => x.pages.includes(pg)).length === 1)
   && PLANNER_PAGES.filter((x) => x.manage).map((x) => x.key).join() === 'model' && plannerSection('metrics') === 'reports' && plannerSection(undefined) === 'overview');
+// ---- Customer Avatar import (V8 New customer avatar)
+{
+  const secs = toSections([{ t: 'h', x: '4. WHAT DRIVES HIM' }, { t: 'li', x: '$10K/month' }, { t: 'h', x: '5. BELIEFS' }, { t: 'p', x: 'I am behind.' }, { t: 'h', x: 'Russell’s vocabulary list' }, { t: 'p', x: 'VSL' }, { t: 'h', x: 'Empty' }]);
+  check('W44', 'Avatar import: headings split the file into sections (empty ones dropped) and each is matched to a chapter with a confidence',
+    secs.length === 3 && matchChapter(secs[0].heading).key === 'drives' && matchChapter('5. BELIEFS').confidence === 'High' && matchChapter('Russell’s vocabulary list').key === 'custom' && matchChapter('Russell’s vocabulary list').confidence === 'Low');
+  const p = sectionsToProfile(secs, ['drives', 'beliefs', 'custom']);
+  check('W45', 'Avatar import: checked sections fill the chapters; anything else becomes a custom chapter, and Skip leaves it out',
+    p.wants[0] === '$10K/month' && p.beliefs[0][1] === 'I am behind.' && p.custom[0].title === 'Russell’s vocabulary list' && !sectionsToProfile(secs, ['skip', 'skip', 'skip']).wants);
+}
 for (const x of results) console.log(`${x.ok ? 'PASS' : 'FAIL'}  ${x.id.padEnd(4)} ${x.name}`);
 const p = results.filter((x) => x.ok).length; console.log(`\n${p}/${results.length} checks passed`); process.exit(p === results.length ? 0 : 1);

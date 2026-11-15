@@ -3,14 +3,14 @@ export const FUNNEL_TYPES = [
   { key: 'avatars', label: 'Avatars', full: 'Customer avatars', obj: 'avatar', one: 'Avatar', page: 'funnels.avatars', record: 'funnels.avatar' },
   { key: 'offers', label: 'Offers & Products', full: 'Offers & Products', obj: 'offer', one: 'Offer', page: 'funnels.offers', record: 'funnels.offer' },
   { key: 'stories', label: 'Stories', full: 'Story bank', obj: 'story', one: 'Story', page: 'funnels.stories', record: 'funnels.story' },
-  { key: 'brand_kits', label: 'Brand Kit', full: 'Brand Kit', obj: 'brandkit', one: 'Brand kit', page: 'funnels.brand_kits', record: 'funnels.brand_kit' },
+  { key: 'brand_kits', label: 'Brand Kits', full: 'Brand Kits', obj: 'brandkit', one: 'Brand kit', page: 'funnels.brand_kits', record: 'funnels.brand_kit' },
 ];
 const byKey = Object.fromEntries(FUNNEL_TYPES.map((t) => [t.key, t]));
 
 // The Office menu (design 04). Pages marked built:false show the shared "not built yet" state until their own design lands.
+// V8 Office menu (01_OFFICE §2 Navigation): Home · Projects · Funnels · Documents · Team · Apps · Admin. Planner is its own app.
 export const OFFICE_PAGES = [
   { key: 'home', label: 'Home', icon: 'home', href: '#/office', built: true },
-  { key: 'planner', label: 'Planner', icon: 'planner', href: '#/planner', built: true },
   { key: 'projects', label: 'Projects', icon: 'projects', href: '#/projects', built: true },
   { key: 'funnels', label: 'Funnels', icon: 'funnels', href: '#/office/funnels', built: true },
   { key: 'documents', label: 'Documents', icon: 'doc', href: '#/office/documents', built: true },
@@ -18,7 +18,7 @@ export const OFFICE_PAGES = [
   { key: 'apps', label: 'Apps', icon: 'apps', href: '#/office/apps', built: true },
   { key: 'admin', label: 'Admin', icon: 'shield', href: '#/office/admin', built: true, adminOnly: true },
 ];
-const OFFICE_OTHER = new Set(['projects', 'documents', 'team', 'apps']);
+const OFFICE_OTHER = new Set(['projects', 'documents', 'team', 'apps', 'settings']);
 export const ADMIN_ACCESS_TABS = ['levels', 'assignments', 'effective', 'history'];
 
 // '#/office/funnels/avatars/abc?x=1' -> { name, params, query }
@@ -67,21 +67,28 @@ export function parseRoute(hash) {
   if (a === 'board' && b && seg.length === 2) return r('board', { id: b });
   if (a === 'office' && seg.length === 1) return r('office');
   if (a === 'office' && OFFICE_OTHER.has(b) && seg.length === 2) return r('office-page', { page: b });
+  if (a === 'office' && b === 'member' && c && seg.length === 3) return r('office-page', { page: 'team', member: c });
   if (a === 'office' && b === 'admin') {
-    if (seg.length === 2) return r('admin', { tab: 'members' });
-    if (c === 'members' && seg.length === 3) return r('admin', { tab: 'members' });
-    if (c === 'storage' && seg.length === 3) return r('admin', { tab: 'storage' });
-    if (c === 'clients' && seg.length === 3) return r('admin', { tab: 'clients' });
-    if (c === 'access' && seg.length === 3) return r('admin', { tab: 'access', sub: 'levels' });
-    if (c === 'access' && ADMIN_ACCESS_TABS.includes(d) && seg.length === 4) return r('admin', { tab: 'access', sub: d });
+    if (seg.length === 2) return r('admin', { tab: 'members', v8: 'people' });
+    if (['people', 'teammates', 'roles', 'review', 'branding', 'audit'].includes(c) && seg.length === 3) return r('admin', { tab: c, v8: c });
+    if (c === 'person' && d && seg.length === 4) return r('admin', { tab: 'people', v8: 'people', person: d });
+    if (c === 'members' && seg.length === 3) return r('admin', { tab: 'members', v8: 'people' });
+    if (c === 'storage' && seg.length === 3) return r('admin', { tab: 'storage', v8: 'storage' });
+    if (c === 'clients' && seg.length === 3) return r('admin', { tab: 'clients', v8: 'clients' });
+    if (c === 'access' && seg.length === 3) return r('admin', { tab: 'access', sub: 'levels', v8: 'access' });
+    if (c === 'access' && ADMIN_ACCESS_TABS.includes(d) && seg.length === 4) return r('admin', { tab: 'access', sub: d, v8: 'access' });
   }
   if (a === 'office' && b === 'funnels') {
     if (seg.length === 2) return r('funnels');
     if (c === 'strategies' && seg.length === 3) return r('strategies');
+    if (c === 'strategies' && d === 'template' && seg.length === 4) return r('strategies', { template: true });
     if (c === 'strategy' && d && seg.length === 4) return r('strategy', { id: d });
     if (byKey[c] && seg.length === 3) return r('funnel-list', { type: c });
     if (byKey[c] && d === 'new' && seg.length === 4) return r('funnel-record', { type: c, id: 'new' });
     if (byKey[c] && d && seg.length === 4) return r('funnel-record', { type: c, id: d });
+    if (c === 'avatars' && d && d !== 'new' && seg[4] === 'edit' && seg.length <= 6) return r('funnel-record', { type: c, id: d, edit: true, chapter: seg[5] });
+    if (c === 'avatars' && d && d !== 'new' && ['deep', 'use', 'evidence'].includes(seg[4]) && seg.length === 5) return r('funnel-record', { type: c, id: d, tab: seg[4] });
+    if (['offers', 'stories', 'brand_kits'].includes(c) && d && seg[4] === 'edit' && seg.length === 5) return r('funnel-record', { type: c, id: d, edit: true });
   }
   return r('not-found');
 }

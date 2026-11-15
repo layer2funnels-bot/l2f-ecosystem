@@ -34,6 +34,7 @@ jobs:
       - run: npm run check:ledger
       - run: npm run check:textscale
       - run: npm run check:icons
+      - run: npm run check:pages
       - run: npm run check:fmp-copy
 
   test:
@@ -66,6 +67,7 @@ jobs:
       - run: npm run check:tokens
       - run: npm run check:ledger
       - run: npm run check:icons
+      - run: npm run check:pages
       - run: npm run check:fmp-copy
       - run: DRIVERS=pglite,pg npm test
       - run: npm run drill:restore
