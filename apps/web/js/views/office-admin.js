@@ -115,7 +115,7 @@ export function adminV8View({ api, ctx, org, role, route, go }) {
   async function clientsTab() {
     const [cl, mx, R] = await Promise.all([call('clients.list'), call('clients.apps.matrix'), reg()]); if (!live()) return;
     if (!cl.ok || !mx.ok) return put(body, errorState(clientsTab));
-    const apps = (ctx.catalog ?? []).filter((a) => a.app_key !== 'clients' && a.lifecycle !== 'retired');   // Office included: a client sees the Office records shared with them only while it is on (0060) const { defaults, cells } = mx.data[0];
+    const apps = (ctx.catalog ?? []).filter((a) => a.app_key !== 'clients' && a.lifecycle !== 'retired');   /* Office included: a client sees the Office records shared with them only while it is on (0060) */ const { defaults, cells } = mx.data[0];
     const cell = new Map(cells.map((c) => [`${c.client_id}:${c.app_key}`, c.enabled])); const def = new Set(defaults);
     const clients = cl.data.filter((c) => !c.archived_at);
     const grid = h('div', { class: 'cagrid', style: `--n:${apps.length}` }, h('div', { class: 'cahead' }, h('span', {}, 'Client'), ...apps.map((a) => h('span', { title: a.name }, plateOf(R(a.app_key), 24)))),

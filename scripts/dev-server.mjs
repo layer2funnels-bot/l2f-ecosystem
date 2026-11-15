@@ -8,7 +8,8 @@ import { fileURLToPath } from 'node:url';
 import { createServer } from '../packages/core/server.mjs';
 import { loadManifests } from '../packages/core/manifests.mjs';
 
-const root = fileURLToPath(new URL('../apps/web/', import.meta.url));
+// WEB_ROOT=dist/web serves the built (bundled) site instead of the source, to test exactly what is deployed
+const root = process.env.WEB_ROOT ? `${fileURLToPath(new URL(`../${process.env.WEB_ROOT.replace(/^\/+|\/+$/g, '')}/`, import.meta.url))}` : fileURLToPath(new URL('../apps/web/', import.meta.url));
 const ui = fileURLToPath(new URL('../packages/ui/', import.meta.url));
 const core = fileURLToPath(new URL('../packages/core/', import.meta.url));
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.txt': 'text/plain; charset=utf-8' };

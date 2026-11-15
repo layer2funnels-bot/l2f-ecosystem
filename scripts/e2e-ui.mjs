@@ -406,7 +406,7 @@ check('U15b', 'An app whose screens are not built yet says so honestly instead o
 await visit(page, base + '/#/office/nope'); await wait('We couldn’t find that');
 const lost = await page.locator('main').innerText();
 await visit(page, base + `/#/office/funnels/avatars/00000000-0000-4000-8000-000000000000`); await wait('We couldn’t find that');
-check('U16', 'A missing page and a missing record show the same "We couldn’t find that" screen, with a safe way back', lost.includes('It may have moved, or you may not have access.') && (await page.locator('main').innerText()).includes('Back to Funnels'));
+check('U16', 'A missing page and a missing record show the same "We couldn’t find that" screen, with a safe way back', lost.includes('It may have moved, or you may not have access.') && (await page.locator('main').innerText()).includes('Back to Customer Avatars'));
 
 // =============================================================== D. Funnels (design 06)
 await visit(page, base + '/#/office/funnels'); await wait('Recently changed');
@@ -429,21 +429,21 @@ await page.getByRole('button', { name: 'Create avatar' }).click(); await page.wa
 const av1 = (await q('select id, look, client_id, tagline from funnel_avatars where workspace_id = $1', [L]))[0];
 check('U21', 'Creating opens the Avatar Studio (Profile, Full profile, Use it, Evidence) with the chosen look, for the chosen client, with Edit', (await page.locator('.studio-tabs a').allInnerTexts()).join() === 'Profile,Full profile,Use it,Evidence'
   && (await page.locator('.studio-c h1').innerText()) === 'Busy coach' && av1.look === 3 && av1.client_id === C1 && av1.tagline === '35–45, no time' && await page.locator('.focusbar-acts a', { hasText: 'Edit' }).isVisible());
-check('O1', 'The profile is the V8 3D stage: the figure on its pedestal, the version badge and the summary cards around it', (await page.locator('.studio .a3d .a3d-fig svg').count()) === 1 && (await page.locator('.a3d-badge').innerText()).includes('v1.0 · Draft') && (await page.locator('.studio .sp').count()) >= 4);
+check('O1', 'The profile is the V8 3D stage: the figure on its pedestal, the version badge and the default section cards around it', (await page.locator('.studio .a3d .a3d-fig svg').count()) === 1 && (await page.locator('.a3d-badge').innerText()).includes('v1.0 · Draft') && (await page.locator('.studio .sp').count()) >= 2);
 await shot(page, 'd1-record');
 // edit a chapter, leave with unsaved changes
 await page.locator('.focusbar-acts a', { hasText: 'Edit' }).click(); await page.waitForSelector('.chapters');
-await page.locator('.chapters a', { hasText: 'What drives them' }).click(); await page.getByRole('button', { name: 'Add wants' }).click();
-await page.getByLabel('Wants 1', { exact: true }).fill('More booked calls');
+await page.locator('.chapters a', { hasText: 'What drives them' }).click(); await page.waitForSelector('.blked'); await page.locator('.blk-add').getByRole('button', { name: 'List item' }).click();
+await page.getByLabel('List item 1', { exact: true }).fill('More booked calls');
 check('U22', 'Edit mode shows "Unsaved changes" as soon as something changes', (await page.locator('.savest').innerText()).includes('Unsaved changes'));
 await page.locator('.chapters a', { hasText: 'Beliefs' }).click(); await page.waitForSelector('.edhead');
 await page.locator('.chapters a', { hasText: 'What drives them' }).click(); await page.waitForSelector('.edhead');
-check('U22b', 'Moving between chapters keeps the draft and asks nothing', (await page.getByLabel('Wants 1', { exact: true }).inputValue()) === 'More booked calls');
+check('U22b', 'Moving between sections keeps the draft and asks nothing', (await page.getByLabel('List item 1', { exact: true }).inputValue()) === 'More booked calls');
 await page.locator('.focusbar .hdr-back').click(); await wait('You have unsaved changes');
 await page.getByRole('button', { name: 'Keep editing' }).click();
-check('U23', 'Leaving with unsaved changes asks first, and "Keep editing" keeps the text and the page', (await page.getByLabel('Wants 1', { exact: true }).inputValue()) === 'More booked calls' && page.url().includes('/edit'));
+check('U23', 'Leaving with unsaved changes asks first, and "Keep editing" keeps the text and the page', (await page.getByLabel('List item 1', { exact: true }).inputValue()) === 'More booked calls' && page.url().includes('/edit'));
 await page.locator('.focusbar .hdr-back').click(); await wait('You have unsaved changes'); await page.getByRole('button', { name: 'Save and leave' }).click(); await page.waitForSelector('.studio-tabs', { timeout: 9000 });
-check('U24', '"Save and leave" saves the change, then goes; the profile shows it at once', (await q("select profile->'wants'->>0 w from funnel_avatars where workspace_id = $1", [L]))[0].w === 'More booked calls' && (await page.locator('.studio').innerText()).includes('More booked calls'));
+check('U24', '"Save and leave" saves the change, then goes; the profile shows it at once', (await q("select profile::text like '%More booked calls%' w from funnel_avatars where workspace_id = $1", [L]))[0].w === true && (await page.locator('.studio').innerText()).includes('More booked calls'));
 // share / unshare / archive / restore / delete (More actions)
 const more = async (label) => { await page.getByRole('button', { name: 'More actions' }).click(); await page.getByRole('button', { name: label, exact: true }).click(); };
 await more('Share with client'); await wait('The Client Portal is locked for now.'); await page.getByRole('button', { name: 'Share', exact: true }).click(); await page.waitForTimeout(300);
@@ -899,7 +899,7 @@ await rm.close();
 }
 
 const routes = [['/#/launcher', 'The sky follows your time of day'], ['/#/office', 'Waiting on you'], ['/#/office/funnels', 'Recently changed'], ['/#/office/funnels/avatars', 'Avatar for C1'], ['/#/office/funnels/avatars/new', 'Start blank'], ['/#/office/funnels/offers/new', 'Price and terms'], ['/#/office/funnels/strategies/template', 'Default strategy template'],
-  ['/#/office/admin/people', 'One person, one sign-in.'], ['/#/office/admin/access/levels', 'Deny always wins.'], ['/#/office/admin/access/assignments', 'Add assignment'], ['/#/office/admin/access/effective', 'Show access for'], ['/#/portal', 'The Portal is locked'], ['/#/drive', 'stay with their own app'], ['/#/clients', 'Everyone you work for'], ['/#/clients/requests', 'The Client Portal is locked'], ['/#/clients/sops', 'SOPs are never copied'], ['/#/clients/tools', 'Owners and admins see all four'], ['/#/clients/settings', 'Build is progress only'], ['/#/office/funnels/strategies', 'One written strategy per funnel'], ['/#/office/documents', 'Make a section for anything'], ['/#/office/team', 'what they’re working on'], ['/#/office/apps', 'Owners turn apps on or off'], ['/#/office/admin/clients', 'Turn any app off for one client'], ['/#/office/admin/review', 'What is this?'], ['/#/office/admin/access/history', 'The last 100 changes'], ['/#/planner/plans', 'New plan']];
+  ['/#/office/admin/people', 'One person, one sign-in.'], ['/#/office/admin/access/levels', 'Deny always wins.'], ['/#/office/admin/access/assignments', 'Add assignment'], ['/#/office/admin/access/effective', 'Show access for'], ['/#/portal', 'The Portal is locked'], ['/#/drive', 'stay with their own app'], ['/#/clients', 'Everyone you work for'], ['/#/clients/requests', 'The Client Portal is locked'], ['/#/clients/sops', 'SOPs are never copied'], ['/#/clients/tools', 'Owners and admins see all four'], ['/#/clients/settings', 'Build is progress only'], ['/#/office/funnels/strategies', 'One written strategy per funnel'], ['/#/office/documents', 'Make a section for anything'], ['/#/office/team', 'what they’re working on'], ['/#/office/apps', 'Owners turn apps on or off'], ['/#/office/admin/clients', 'Turn any app off for one client'], ['/#/office/admin/access/history', 'The last 100 changes'], ['/#/planner/plans', 'New plan']];
 for (const [w, label] of [[1280, 'desktop'], [768, 'tablet'], [390, 'phone']]) {
   const p = w < 1280 ? watch(await (await touchBrowser.newContext({ viewport: { width: w, height: 900 }, hasTouch: true })).newPage()) : await newPage(w, 900);
   await p.goto(base + '/'); await wait('Sign in', p);

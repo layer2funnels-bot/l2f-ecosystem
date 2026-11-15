@@ -17,6 +17,7 @@ import { buildWhiteboard } from './build-whiteboard.mjs';
 import { buildMedia } from './build-media.mjs';
 import { buildDocsIo } from './build-docs-io.mjs';
 import { buildSheetjs } from './build-sheetjs.mjs';
+import { bundleWeb } from './bundle-web.mjs';
 const out = at('dist/web'); rmSync(out, { recursive: true, force: true }); mkdirSync(out + '/packages/core', { recursive: true });
 // Cloudflare runs only this script: it installs the editors' build-time dependencies itself (like Planner below), so the live site never ships
 // without the whiteboard editor or .xlsx support. Each tree has its own lockfile; `npm ci` installs exactly what was reviewed.
@@ -56,6 +57,7 @@ cpSync(at('packages/ui'), out + '/packages/ui', { recursive: true });
 rmSync(out + '/gallery.html', { force: true }); rmSync(out + '/js/gallery.js', { force: true });         // the component gallery is for development and tests only
 writeFileSync(out + '/app-manifests.json', JSON.stringify(loadManifests().map(({ dir, ...m }) => m)));
 cpSync(at('packages/core/org-switch.mjs'), out + '/packages/core/org-switch.mjs');
+await bundleWeb(out);   // one minified, content-hashed script graph and one stylesheet instead of ~100 separate files (performance audit, 15 Nov 2026)
 // One sign-in for every app (DECISIONS FM-10): COOKIE_DOMAIN (e.g. ".example.com") lets apps on sister addresses share the session; APP_ORIGINS
 // (comma-separated https addresses, e.g. "https://fmp.example.com") are the only places the sign-in page may send people back to.
 const cookieDomain = (process.env.COOKIE_DOMAIN || '').trim();
