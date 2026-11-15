@@ -4,7 +4,7 @@ import { defineOperation } from './define.mjs';
 
 const ID = { type: 'uuid', required: true };
 const T = (max, required = false) => ({ type: 'text', min: required ? 1 : 0, max, required });
-const ITEM_COLS = `i.id, i.list_id, i.block_id, i.parent_id, i.position, i.title, i.done_at, i.due_date, i.due_time, i.priority, i.private, i.notes, i.source_app, i.source_ref,
+const ITEM_COLS = `i.id, i.list_id, i.block_id, i.parent_id, i.position, i.title, i.done_at, i.due_date::text as due_date, left(i.due_time::text, 5) as due_time, i.priority, i.private, i.notes, i.source_app, i.source_ref,
   i.project_task_id, i.project_id, i.created_by, i.created_at,
   coalesce((select array_agg(a.user_id order by a.added_at) from task_assignees a where a.item_id = i.id), '{}') as assignees`;
 const LIST_COLS = 'l.id, l.folder_id, l.owner_id, l.space, l.name, l.icon, l.colour, l.is_default, l.position, l.archived_at, l.created_at';
@@ -175,13 +175,13 @@ export const tasksOperations = [
     name: 'tasks.person', class: 'read', single: true, input: { user: ID },
     run: async (q, _c, i) => {
       const [p] = await q('select user_id, display_name, email, role, has_photo from team_list() where user_id = $1', [i.user]); if (!p) return [];
-      const [items, [{ n }]] = await Promise.all([q('select * from public.tasks_person_items($1)', [i.user]), q('select public.tasks_private_count($1) as n', [i.user])]);
+      const [items, [{ n }]] = await Promise.all([q('select id, title, list_name, due_date::text as due_date, given_by, kind from public.tasks_person_items($1)', [i.user]), q('select public.tasks_private_count($1) as n', [i.user])]);
       return [{ ...p, items, private_count: n }];
     },
   }),
   defineOperation({
     name: 'tasks.gave', class: 'read',
-    run: (q, ctx) => q(`select i.id, i.title, i.due_date, i.done_at, a.user_id, l.name as list_name, l.id as list_id from task_assignees a join task_items i on i.id = a.item_id left join task_lists l on l.id = i.list_id
+    run: (q, ctx) => q(`select i.id, i.title, i.due_date::text as due_date, i.done_at, a.user_id, l.name as list_name, l.id as list_id from task_assignees a join task_items i on i.id = a.item_id left join task_lists l on l.id = i.list_id
       where a.workspace_id = $1 and a.assigned_by = private.current_user_id() and a.user_id <> private.current_user_id() order by i.done_at nulls first, i.due_date nulls last limit 300`, [ctx.orgId]),
   }),
   // ---- timer: one per person across Tasks and Projects

@@ -122,6 +122,8 @@ jobs:
         env: { PLAYWRIGHT_MODULE: '${{ github.workspace }}/node_modules/playwright' }
       - name: 'Onboarding end-to-end (invitation e-mails to a fake Brevo, joining with and without the link, clients, profiles)'
         run: npm run test:e2e:onboarding
+      - name: 'Tasks end-to-end (invitation e-mails to a fake Brevo, joining with and without the link, clients, profiles)'
+        run: npm run test:e2e:tasks
         env: { PLAYWRIGHT_MODULE: '${{ github.workspace }}/node_modules/playwright' }
       - name: 'Component gallery (Design v4, both organizations, light and dark, 390/768/1366)'
         run: npm run test:gallery

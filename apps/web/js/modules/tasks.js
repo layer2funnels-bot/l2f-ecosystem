@@ -143,7 +143,9 @@ export function tasksView({ api, ctx, route }) {
   }
   async function sendToProject(it) {
     const pid = await pickProject('Send to a project'); if (!pid) return;
-    const r = await call('pm.tasks.create', { args: { projectId: pid, title: it.title, ...(it.due_date ? { dueOn: it.due_date } : {}), ...(it.priority === 'high' ? { priority: 'high' } : {}), ...(it.assignees?.length ? { assigneeIds: it.assignees } : {}) } });
+    const base = { projectId: pid, title: it.title, ...(it.due_date ? { dueOn: String(it.due_date).slice(0, 10) } : {}), ...(it.priority === 'high' ? { priority: 'high' } : {}) };
+    let r = await call('pm.tasks.create', { args: { ...base, ...(it.assignees?.length ? { assigneeIds: it.assignees } : {}) } });
+    if (!r.ok && it.assignees?.length) r = await call('pm.tasks.create', { args: base });   // assignees who aren't in that project: send it unassigned
     const pt = r.ok ? r.data?.[0]?.r : null; if (!pt?.id) return fail(r, 'send it');
     const u = await call('tasks.items.update', { id: it.id, done: true, project_task: pt.id, project: pid }); if (!u.ok) return fail(u);
     toast('Sent to Projects; it links back here.'); render();
@@ -151,7 +153,7 @@ export function tasksView({ api, ctx, route }) {
   async function turnIntoProject(l) {
     const g = await call('tasks.lists.get', { id: l.id }); const open = (g.data?.[0]?.items ?? []).filter((x) => !x.done_at && !x.parent_id && !x.private);
     const r = await call('pm.projects.create', { args: { name: l.name } }); const p = r.ok ? r.data?.[0]?.r : null; if (!p?.id) return fail(r, 'create the project');
-    for (const it of open) { const t = await call('pm.tasks.create', { args: { projectId: p.id, title: it.title, ...(it.due_date ? { dueOn: it.due_date } : {}) } }); if (t.ok && t.data?.[0]?.r?.id) await call('tasks.items.update', { id: it.id, done: true, project_task: t.data[0].r.id, project: p.id }); }
+    for (const it of open) { const t = await call('pm.tasks.create', { args: { projectId: p.id, title: it.title, ...(it.due_date ? { dueOn: String(it.due_date).slice(0, 10) } : {}) } }); if (t.ok && t.data?.[0]?.r?.id) await call('tasks.items.update', { id: it.id, done: true, project_task: t.data[0].r.id, project: p.id }); }
     toast(`Project “${l.name}” created with ${open.length} task${open.length === 1 ? '' : 's'}.`); ctx.go(`#/projects/p/${p.id}/list`);
   }
   function dueDialog(it) {
@@ -180,10 +182,8 @@ export function tasksView({ api, ctx, route }) {
       ...(snap.due_date ? { due_date: snap.due_date } : {}), ...(snap.due_time ? { due_time: snap.due_time.slice(0, 5) } : {}), priority: snap.priority, private: snap.private, notes: snap.notes, ...(snap.assignees?.length ? { assignees: snap.assignees } : {}) });
     if (!back.ok) return fail(back, 'undo'); await refreshHome(); render(); toast('Restored.'); });
   }
-  function dialogToastUndo(undo) {   // V8: "Deleted. Undo?" — a toast with an Undo button for 6 seconds
-    const t = h('div', { class: 'toast', role: 'status', 'data-show': 'true', style: 'display:flex;gap:12px;align-items:center' }, h('span', {}, 'Deleted.'), h('button', { type: 'button', class: 'btn link', onclick: () => { t.remove(); undo(); } }, 'Undo'));
-    document.body.append(t); setTimeout(() => t.remove(), 6000);
-  }
+  const dialogToastUndo = (undo) => toast('Deleted.', true, { label: 'Undo', on: undo });   // V8: "Deleted. Undo?"
+
   async function timer(it) {
     const run = await call('timer.running'); const cur = run.ok ? run.data?.[0] : null;
     const r = cur?.app === 'tasks' && cur.ref === it.id ? await call('tasks.timer.stop') : await call('tasks.timer.start', { item: it.id });
@@ -240,7 +240,7 @@ export function tasksView({ api, ctx, route }) {
       t.addEventListener('keydown', async (e) => {
         if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); await save(); complete(it, li); }
         else if (e.key === 'Enter') { e.preventDefault(); await save(); if (list) addBelow(it, list); }
-        else if (e.key === 'Escape') { e.preventDefault(); t.textContent = it.title; t.blur(); }
+        else if (e.key === 'Escape') { e.preventDefault(); t.blur(); }   // V8: Esc leaves editing (what was typed is kept)
         else if (e.key === 'Tab' && list) { e.preventDefault(); await save(); const sib = state.siblings?.get(it.id);
           if (e.shiftKey) { if (it.parent_id) { const parent = list.items.find((x) => x.id === it.parent_id); state.focus = it.id; await upd(it, parent?.parent_id ? { parent: parent.parent_id, position: parent.position + 0.5 } : { no_parent: true, position: (parent?.position ?? 0) + 0.5 }); } }
           else if (sib?.prev) { state.focus = it.id; await upd(it, { parent: sib.prev.id, position: 1e6 }); } }

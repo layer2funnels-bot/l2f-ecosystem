@@ -5,11 +5,11 @@ import { icon } from './icons.js';
 
 // ---- toast (one at a time, announced politely)
 let toastEl; let toastTimer;
-export function toast(text, ok = true) {
+export function toast(text, ok = true, action = null) {   // action: { label, on } — e.g. Undo (stays 6 s)
   toastEl ??= document.body.appendChild(h('div', { class: 'toast', role: 'status', 'data-show': 'false' }));
-  clear(toastEl).append(icon(ok ? 'check' : 'info'), h('span', {}, text));
+  clear(toastEl).append(icon(ok ? 'check' : 'info'), h('span', {}, text), action ? h('button', { type: 'button', class: 'btn link', onclick: () => { toastEl.dataset.show = 'false'; action.on(); } }, action.label) : '');
   toastEl.dataset.show = 'true';
-  clearTimeout(toastTimer); toastTimer = setTimeout(() => { toastEl.dataset.show = 'false'; }, 3600);
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { toastEl.dataset.show = 'false'; }, action ? 6000 : 3600);
 }
 
 // ---- dialog: focus is trapped, Esc closes (unless `modal: 'strict'`), focus returns to what opened it.

@@ -63,6 +63,8 @@ const PAGES = [
   ['of-admin-people', '#/office/admin/people', '#/office/admin/people', null, SHELL], ['of-admin-clients', '#/office/admin/clients', '#/office/admin/clients', null, SHELL],
   ['of-admin-roles', '#/office/admin/roles', '#/office/admin/roles', null, SHELL], ['of-admin-review', '#/office/admin/review', '#/office/admin/review', null, SHELL],
   ['of-admin-storage', '#/office/admin/storage', '#/office/admin/storage', null, SHELL], ['of-admin-branding', '#/office/admin/branding', '#/office/admin/branding', null, SHELL],
+  ['tk-today', '#/tasks/today', '#/tasks/today', null, SHELL], ['tk-upcoming', '#/tasks/upcoming', '#/tasks/upcoming', null, SHELL], ['tk-inbox', '#/tasks/inbox', '#/tasks/inbox', null, SHELL],
+  ['tk-teammates', '#/tasks/teammates', '#/tasks/teammates', null, SHELL], ['tk-mine', '#/tasks/list/MINE', '#/tasks/list/mine', null, SHELL], ['tk-team', '#/tasks/list/TEAM', '#/tasks/list/team', null, SHELL],
   ['clients-list', '#/clients', '#/clients/list', null, SHELL],
   ['drive-home', '#/drive', '#/drive/home', null, SHELL],
   ['projects-home', '#/projects', '#/projects/home', null, SHELL],
@@ -81,7 +83,18 @@ for (const [key, ours, v8, act, sels] of PAGES) for (const [w, hgt, size] of SIZ
   // the prototype loads Geist (variable) from Google Fonts; serve the same variable files locally so both sides render the same font
   await ref.route(/fonts\.googleapis\.com/, (r) => r.fulfill({ contentType: 'text/css', body: '@font-face{font-family:"Geist";font-weight:100 900;src:url(https://fonts.gstatic.com/geist.woff2) format("woff2")}@font-face{font-family:"Geist Mono";font-weight:100 900;src:url(https://fonts.gstatic.com/geist-mono.woff2) format("woff2")}@font-face{font-family:"Bricolage Grotesque";font-weight:700;src:url(https://fonts.gstatic.com/bricolage.woff2) format("woff2")}' }));
   await ref.route(/fonts\.gstatic\.com/, (r) => { const f = { 'geist.woff2': 'geist-variable.woff2', 'geist-mono.woff2': 'geist-mono-variable.woff2', 'bricolage.woff2': 'bricolage-grotesque-latin-700.woff2' }[r.request().url().split('/').pop()]; return f ? r.fulfill({ contentType: 'font/woff2', body: readFileSync(new URL(`../apps/web/fonts/${f}`, import.meta.url)) }) : r.abort(); });
-  await mine.goto(`${base}/${ours}`); await mine.waitForTimeout(2200);
+  let addr = ours;
+  if (addr.includes('MINE') || addr.includes('TEAM')) {   // Tasks: the person's own lists exist only after a first visit (My tasks is made on first use)
+    if (!globalThis.__tk) { await mine.goto(`${base}/#/tasks/today`); await mine.waitForTimeout(2500);
+      const lists = await q('select id, is_default from task_lists where owner_id = $1', [uid]); let team = lists.find((x) => !x.is_default)?.id;
+      if (!team) { team = (await q("insert into task_lists (workspace_id, owner_id, space, name, colour, icon) values ($1,$2,'team','Build team','#2B63F6','team') returning id", [L, uid]))[0].id; await q("insert into task_blocks (workspace_id, list_id, name) values ($1,$2,'Open')", [L, team]); }
+      const mineId = lists.find((x) => x.is_default)?.id; const blocks = await q('select id from task_blocks where list_id = $1 order by position', [mineId]);
+      const seed = [['Write the quiz questions', 0, null], ['Reply to DMs', 0, 'now()'], ['Record intro video', 0, null], ['Update tracker', 0, 'now()'], ['Plan next week', 1, null]];
+      for (const [t, b, d] of seed) await q(`insert into task_items (workspace_id, list_id, block_id, title, due_date, created_by, done_at) values ($1,$2,$3,$4,current_date,$5,${d ?? 'null'})`, [L, mineId, blocks[b].id, t, uid]);
+      globalThis.__tk = { MINE: mineId, TEAM: team }; }
+    addr = addr.replace('MINE', globalThis.__tk.MINE).replace('TEAM', globalThis.__tk.TEAM);
+  }
+  await mine.goto(`${base}/${addr}`); await mine.waitForTimeout(2200);
   await ref.goto(`${PROTO}${v8}`); await ref.waitForTimeout(1200);
   if (act) { await act(ref, 'v8'); await act(mine, 'ours'); }
   const [a, bb] = [await ref.screenshot(), await mine.screenshot()];

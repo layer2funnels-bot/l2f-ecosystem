@@ -172,3 +172,4 @@
 @keyframes tpbeat{50%{opacity:.35}}
 @media (prefers-reduced-motion:reduce){.tpill .rec{animation:none}}
 @media (pointer:coarse){.tpill .tp-stop{width:44px;height:44px}.tpill{min-height:44px}}
+.shell.v8[data-app=tasks] .side .nav a,.shell.v8[data-app=tasks] .tside a{font-size:15.5px;line-height:1.5;min-height:42px}   /* V8 04_TASKS: sidebar 15.5 px, 42 px rows */
