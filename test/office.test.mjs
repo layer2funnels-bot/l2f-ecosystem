@@ -73,5 +73,30 @@ const vl = await J('office.avatar.versions', { avatar: av.row.id }, U.LVW, ORG.L
 check('OF24', 'Saving a version keeps a snapshot and moves the avatar to v1.1; the team can see the history', sv.row?.version === 'v1.1' && vl.rows.length === 1 && vl.rows[0].version === 'v1.0' && vl.rows[0].snapshot.name === 'John');
 check('OF25', 'A viewer cannot save a version; Aurj sees no history', (await J('office.avatar.versions.save', { avatar: av.row.id }, U.LVW, ORG.L)).row == null && (await J('office.avatar.versions', { avatar: av.row.id }, U.AO, ORG.A)).rows.length === 0);
 
+// ---- Admin & Access (0058)
+await db.exec('reset role');
+const CL = id(); await db.query("insert into clients (id, workspace_id, name) values ($1, $2, 'Harry Kaye PT')", [CL, ORG.L]);
+const ownerSet = await J('clients.apps.set', { client: CL, app: 'forms', enabled: false }, U.LO, ORG.L);
+const adminSet = await J('clients.apps.set', { client: CL, app: 'drive', enabled: true }, U.LAD, ORG.L);
+check('OF26', 'Client Access Matrix: owners AND admins can change which apps a client gets', ownerSet.status === 200 && adminSet.status === 200 && (await J('clients.apps.matrix', {}, U.LAD, ORG.L)).row.cells.length === 2);
+check('OF27', 'Client Access Matrix: an editor can neither see nor change it', (await J('clients.apps.set', { client: CL, app: 'forms', enabled: true }, U.LED, ORG.L)).status >= 400 && (await J('clients.apps.matrix', {}, U.LED, ORG.L)).row.cells.length === 0);
+check('OF28', 'Client defaults are saved per organization; Aurj sees none of them', (await J('clients.apps.defaults.set', { apps: ['projects', 'drive'] }, U.LAD, ORG.L)).rows.length === 2 && (await J('clients.apps.matrix', {}, U.AO, ORG.A)).row.defaults.length === 0);
+await db.query("insert into workspace_apps (workspace_id, app_key, enabled) values ($1, 'clients', true) on conflict (workspace_id, app_key) do update set enabled = true", [ORG.L]);
+const g1 = await J('access.app.set', { user: U.LED, app: 'clients', on: true }, U.LAD, ORG.L);
+check('OF29', 'An admin turns an app on for a teammate; it shows in their apps', g1.status === 200 && (await J('access.apps.of', { user: U.LED }, U.LAD, ORG.L)).rows.some((r) => r.app_key === 'clients'));
+check('OF30', 'Nobody changes their own access or an owner’s; an editor cannot change anyone’s', (await J('access.app.set', { user: U.LAD, app: 'clients', on: true }, U.LAD, ORG.L)).status >= 400
+  && (await J('access.app.set', { user: U.LO, app: 'clients', on: false }, U.LAD, ORG.L)).status >= 400 && (await J('access.app.set', { user: U.LVW, app: 'clients', on: true }, U.LED, ORG.L)).status >= 400);
+const perm = (await db.query("select key from permissions where floor_role <> 'owner' and app_key = 'drive' order by key limit 1")).rows[0].key;
+const fs1 = await J('access.feature.set', { user: U.LED, permission: perm, effect: 'deny' }, U.LAD, ORG.L);
+const eff = (await J('access.effective', { user: U.LED }, U.LAD, ORG.L)).rows.find((r) => r.permission_key === perm);
+check('OF31', 'A feature switched off for a person is enforced by the server (effective access says no) and can be reset to the role', fs1.status === 200 && eff && eff.allowed === false
+  && (await J('access.features.of', { user: U.LED }, U.LAD, ORG.L)).rows.length === 1 && (await J('access.feature.set', { user: U.LED, permission: perm, effect: 'reset' }, U.LAD, ORG.L)).status === 200 && (await J('access.features.of', { user: U.LED }, U.LAD, ORG.L)).rows.length === 0);
+await J('access.app.touch', { app: 'office' }, U.LED, ORG.L);
+const rv = await J('access.review.list', {}, U.LAD, ORG.L);
+check('OF32', 'Access review lists teammates’ apps with when they were last used (owners and admins only)', rv.status === 200 && rv.rows.some((r) => r.user_id === U.LED && r.app_key === 'office' && r.last_used_at) && (await J('access.review.list', {}, U.LED, ORG.L)).rows.length === 0);
+const PNG = 'data:image/png;base64,iVBORw0KGgo=';
+check('OF33', 'Branding: only an owner replaces the logo; the whole team sees it', (await J('branding.set', { slot: 'icon', data: PNG }, U.LAD, ORG.L)).status >= 400 && (await J('branding.set', { slot: 'icon', data: PNG }, U.LO, ORG.L)).status === 200
+  && (await J('branding.get', {}, U.LVW, ORG.L)).row?.brand_icon === PNG && (await J('branding.get', {}, U.AO, ORG.A)).row?.brand_icon == null);
+
 for (const r of results) console.log(`${r.ok ? 'PASS' : 'FAIL'}  ${r.id.padEnd(5)} ${r.name}${r.ok ? '' : `  ${r.detail ?? ''}`}`);
 const pc = results.filter((r) => r.ok).length; console.log(`\n${pc}/${results.length} checks passed`); await db.close(); process.exit(pc === results.length ? 0 : 1);
