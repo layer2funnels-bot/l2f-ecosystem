@@ -44,5 +44,16 @@ check('PF12', 'A client account has its own profile too: it can set a name and p
 check('PF13', 'Removing the photo clears it', (await UP(U.LED, { clear_photo: true }, ORG.L)).status === 200 && (await G(U.LED, ORG.L)).row.avatar_data === null);
 check('PF14', 'A person with no profile row yet still gets one on first update', (await UP(U.LVW, { name: 'Vera Viewer' }, ORG.L)).status === 200 && (await G(U.LVW, ORG.L)).row.display_name === 'Vera Viewer');
 
+// V8 profile fields (0055): full name, job title, time zone, about; own only; empty clears; unknown time zone refused
+const D = (u, org) => J('profile.details', {}, u, org); const DS = (u, input, org) => J('profile.details.set', input, u, org);
+check('PF15', 'A person saves full name, job title, time zone and about, and reads them back', (await DS(U.LED, { full_name: ' Edda Quinn Editor ', job_title: 'Designer', time_zone: 'Asia/Karachi', about: 'Funnels in Urdu.' }, ORG.L)).status === 200
+  && JSON.stringify((await D(U.LED, ORG.L)).row) === JSON.stringify({ full_name: 'Edda Quinn Editor', job_title: 'Designer', time_zone: 'Asia/Karachi', about: 'Funnels in Urdu.' }));
+check('PF16', 'An empty value clears a field; a field not sent stays', (await DS(U.LED, { job_title: '' }, ORG.L)).status === 200 && (await D(U.LED, ORG.L)).row.job_title === null && (await D(U.LED, ORG.L)).row.about === 'Funnels in Urdu.');
+check('PF17', 'An unknown time zone is refused and the old one stays', (await DS(U.LED, { time_zone: 'Mars/Olympus' }, ORG.L)).status >= 400 && (await D(U.LED, ORG.L)).row.time_zone === 'Asia/Karachi');
+check('PF18', 'Too-long text is refused', (await DS(U.LED, { about: 'x'.repeat(601) }, ORG.L)).status >= 400 && (await DS(U.LED, { job_title: 'x'.repeat(81) }, ORG.L)).status >= 400);
+check('PF19', 'Nobody reads or changes another person’s details: each person sees only their own row, and a person argument is rejected',
+  (await D(U.LO, ORG.L)).row?.about == null && (await D(U.AO, ORG.A)).row?.about == null && (await DS(U.LED, { about: 'Hacked', user: U.LO }, ORG.L)).status === 422 && (await D(U.LO, ORG.L)).row?.about == null);
+check('PF20', 'A client account keeps its own details too', (await DS(U.CL, { job_title: 'CEO' }, ORG.L)).status === 200 && (await D(U.CL, ORG.L)).row.job_title === 'CEO');
+
 for (const x of results) console.log(`${x.ok ? 'PASS' : 'FAIL'}  ${x.id.padEnd(5)} ${x.name}`);
 const pc = results.filter((x) => x.ok).length; console.log(`\n${pc}/${results.length} checks passed`); await db.close(); process.exit(pc === results.length ? 0 : 1);

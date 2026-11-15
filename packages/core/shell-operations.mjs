@@ -14,6 +14,10 @@ export const shellOperations = [
   // the caller's own name and photo only (the function has no person argument); the photo is a small JPEG data URL made by the browser
   defineOperation({ name: 'profile.update', class: 'write', allowNoOrg: true, input: { name: { type: 'text', max: 120 }, photo: { type: 'text', max: 12000 }, clear_photo: { type: 'bool' } },
     run: (q, _c, i) => q('select profile_update($1, $2, $3)', [i.name ?? null, i.photo ?? null, i.clear_photo ?? false]) }),
+  // V8 profile fields (0055): the caller's own only
+  defineOperation({ name: 'profile.details', class: 'read', allowNoOrg: true, run: (q) => q('select full_name, job_title, time_zone, about from profile_details()') }),
+  defineOperation({ name: 'profile.details.set', class: 'write', allowNoOrg: true, input: { full_name: { type: 'text', min: 0, max: 120 }, job_title: { type: 'text', min: 0, max: 80 }, time_zone: { type: 'text', min: 0, max: 64 }, about: { type: 'text', min: 0, max: 600 } },
+    run: (q, _c, i) => q('select profile_details_set($1, $2, $3, $4)', [i.full_name ?? null, i.job_title ?? null, i.time_zone ?? null, i.about ?? null]) }),
   defineOperation({ name: 'profile.photo', class: 'read', audience: 'staff', input: { user: { type: 'uuid', required: true } }, run: (q, _c, i) => q('select profile_photo($1) as photo', [i.user]) }),
   defineOperation({ name: 'profile.touch', class: 'write', allowNoOrg: true, input: { name: { type: 'text', max: 120 } }, run: (q, _c, i) => q('select profile_touch($1)', [i.name ?? null]) }),
   defineOperation({ name: 'invitation.preview', class: 'sensitive', allowNoOrg: true, single: true, input: { token: { type: 'text', required: true, max: 200 } }, run: async (q, _c, i) => { const rows = await q('select org_name, org_slug, kind, role, inviter_name, email from invitation_preview($1)', [i.token]); if (rows.length) await q('select invitation_mark_opened($1)', [i.token]); return rows; } }),

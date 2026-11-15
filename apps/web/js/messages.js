@@ -14,6 +14,7 @@ export const MESSAGES = {
   storage_limit: 'The storage limit has been reached, so this file was not saved. Delete files you no longer need, or ask an admin.',
   storage_unavailable: 'File storage is not available right now.',
   weather_unavailable: 'Weather is not available right now. The Launcher shows the time of day instead.',
+  timeout: 'This is taking longer than it should. Your work is safe. Try again in a moment.',
   offline: "You appear to be offline. Nothing was saved. Check your connection and try again.",
 };
 export const messageFor = (code) => MESSAGES[code] ?? MESSAGES.failed;

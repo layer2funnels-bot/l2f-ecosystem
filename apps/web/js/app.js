@@ -8,6 +8,7 @@ import { messageFor } from './messages.js';
 import { dirty } from './dirty.js';
 import { createTheme } from './theme.js';
 import { loadRegistry } from './registry.js';
+import { openSearch } from './views/search.js';
 import { docView } from './modules/docs.js';
 import { boardView } from './modules/whiteboard.js';
 import { projectsV2View, unmountProjects, projectsMountedFor } from './modules/projects-v2.js';
@@ -25,12 +26,12 @@ import { pdfView } from './modules/pdfeditor.js';
 import { plannerView, unmountPlanner, plannerMountedFor, plannerSection, PLANNER_PAGES } from './modules/planner.js';
 import { strategiesListView, strategyView } from './views/strategies.js';
 import { documentsView, teamView, appsView } from './views/office.js';
-import { loadWeather, weatherOff, setWeatherOff } from './sky.js';
+import { loadWeather } from './sky.js';
 import { permissionSet, canWith, canAnywhereWith } from './perm.js';
 import { switchOrganization } from '/packages/core/org-switch.mjs';
 import { dialog, toast, btn, notice, skeleton, notFoundState, designBadge, icon, emptyState } from './ui.js';
 import * as authViews from './views/auth.js';
-import { shellView, markAppNav, setHeaderAvatar } from './views/shell.js';
+import { shellView, markAppNav, setHeaderAvatar, shortcutsDialog } from './views/shell.js';
 import { profileView } from './views/profile.js';
 import { launcherView, appNotBuiltView } from './views/launcher.js';
 import { officeHomeView } from './views/home.js';
@@ -194,6 +195,18 @@ const appApi = {
     if (name) { const tok = await freshToken(); if (tok) auth.updateUser(tok, { data: { full_name: name } }); const c = session.get(); if (c) session.set({ access_token: c.access, refresh_token: c.refresh, expires_at: c.expiresAt / 1000, user: { email: c.email, id: c.userId, user_metadata: { full_name: name } } }); }
     await loadMe(); setHeaderAvatar(me); return { ok: true };
   },
+  async getProfileDetails() {
+    const r = await api.call('profile.details', {}, { org: NO_ORG }); return r.ok ? { ok: true, data: r.data?.[0] ?? {} } : { ok: false };
+  },
+  async saveProfileDetails(v) {
+    const r = await api.call('profile.details.set', v, { org: NO_ORG });
+    return r.ok ? { ok: true } : { ok: false, message: r.status === 429 ? messageFor('rate_limited') : 'We couldn’t save your profile. Try again.' };
+  },
+  async notificationPrefs() { const r = await api.call('notifications.prefs', {}); return r.ok ? { ok: true, data: r.data ?? [] } : { ok: false }; },
+  async setNotificationPref(app, inApp) {
+    const r = await api.call('notifications.prefs.set', { app, in_app: inApp });
+    return r.ok ? { ok: true } : { ok: false, message: r.status === 429 ? messageFor('rate_limited') : 'We couldn’t save that setting. Try again.' };
+  },
   async changeEmail(email) {
     const tok = await freshToken(); if (!tok) return { ok: false, message: 'Your sign-in has expired. Sign in again.' };
     const r = await auth.updateUser(tok, { email }); const soft = offlineOrBusy(r); if (soft) return { ok: false, message: soft };
@@ -351,9 +364,9 @@ const notifications = {
     if (!fresh && bell.org === org && Date.now() - bell.at < 60000) return bell.n;
     const r = await api.call('notifications.unread', {}); bell.org = org; bell.at = Date.now(); bell.n = r.ok ? r.data[0].n : null; return bell.n;
   },
-  async list() { const r = await api.call('notifications.list', { limit: 30 }); return r.ok ? r.data : null; },
+  async list(group = 'all', app = null) { const r = await api.call('notifications.inbox', { limit: 50, group, ...(app ? { app } : {}) }); return r.ok ? r.data : null; },
   async read(ids) { await api.call('notifications.read', ids === 'all' ? { all: true } : { ids }); bell.at = 0; },
-  href: (r) => `#/projects/p/${r.project_id}?task=${r.entity_id}`,
+  href: (r) => r.href ?? '#/launcher',
 };
 
 const theme = createTheme(); theme.apply();
@@ -395,7 +408,7 @@ async function render(opts = {}) {
     }
     put(root, authViews.inviteView({ app: appApi, token, preview: p?.ok ? p.data[0] : null, email: session.get()?.email })); return focusTitle(root);
   }
-  if (route.name === 'profile' && !ctx?.active) { put(root, centered(profileView({ app: appApi, me }))); document.title = 'Your profile'; return focusTitle(root); }
+  if (route.name === 'profile' && !ctx?.active) { put(root, centered(profileView({ app: appApi, me, tab: route.params.tab, orgs: ctx?.orgs ?? [], theme }))); document.title = 'Your profile'; return focusTitle(root); }
   if (route.name === 'no-org' || !ctx?.active) { put(root, authViews.noOrgView(appApi, session.get()?.email)); return focusTitle(root); }
 
   // inside the ecosystem
@@ -420,7 +433,7 @@ async function render(opts = {}) {
     switch (route.name) {
       case 'home': case 'launcher': case 'signin': case 'signup': case 'check-email': case 'forgot': case 'invite':
         content = launcherView({ catalog: ctx.catalog, error: ctx.catalogError, org, orgs: ctx.orgs, role, name: session.get()?.name, registry, loadWeather: () => loadWeather({ api, store: localStorage }), onSwitch: (i) => switchFlow(i), retry: async () => { await loadOrgContext(org); render(); } }); break;
-      case 'profile': content = profileView({ app: appApi, me }); break;
+      case 'profile': content = profileView({ app: appApi, me, tab: route.params.tab, orgs: ctx.orgs, active: org, catalog: ctx.catalog, registry, theme }); break;
       case 'office': content = officeHomeView({ org, role, isAdmin, api, live, portalState: ctx.catalog.find((a) => a.app_key === 'portal')?.state }); break;
       case 'office-page': {
         const pg = route.params.page;
@@ -469,10 +482,12 @@ async function render(opts = {}) {
       default: content = notFoundState(hrefFor.office());
     }
   }
-  const view = shellView({ app: appApi, orgs: ctx.orgs, active: org, email: session.get()?.email, name: session.get()?.name, route, content, banner: bannerEl(), isAdmin, inOffice, launcherCurrent: route.name === 'launcher' || route.name === 'home',
+  // global search (V8 02 §5): the rail button and Ctrl K open it, scoped to the current app when that app is searchable; staff only (the operation refuses client contacts)
+  startSearch = org.member_kind === 'client' ? null : (initial = '') => openSearch({ api, registry, catalog: ctx.catalog, isAdmin, currentApp: inOffice ? 'office' : (route.name === 'clients' ? 'clients' : route.name === 'projects' ? 'projects' : route.name === 'planner' ? 'planner' : ['doc', 'sheet', 'image', 'pdf', 'drive'].includes(route.name) ? 'drive' : null), initial });
+  const view = shellView({ onSearch: startSearch, app: appApi, orgs: ctx.orgs, active: org, email: session.get()?.email, name: session.get()?.name, route, content, banner: bannerEl(), isAdmin, inOffice, launcherCurrent: route.name === 'launcher' || route.name === 'home',
     notifications: org.member_kind === 'client' ? null : notifications,
     catalog: ctx.catalog, registry, currentApp: inOffice ? 'office' : route.name === 'doc' || route.name === 'sheet' || route.name === 'image' || route.name === 'pdf' || route.name === 'drive' ? 'drive' : route.name === 'board' ? 'whiteboard' : route.name === 'projects' ? 'projects' : route.name === 'clients' ? 'clients' : route.name === 'portal' ? 'portal' : route.name === 'forms' ? 'forms' : route.name === 'ladder' ? 'value_ladder' : route.name === 'boards' ? 'whiteboard' : route.name === 'social' ? 'social_planner' : route.name === 'planner' ? 'planner' : route.name === 'app' ? route.params.app : null, theme,
-    me, weather: { on: () => !weatherOff(localStorage), set: (on) => { setWeatherOff(localStorage, !on); try { sessionStorage.removeItem('l2f.wx'); } catch { /* none */ } render(); } } });
+    me });
   put(root, view, designBadge('Built to design'));
   document.title = `${pageLabel(route)} · ${org.name}`;
   if (toastLater) { toast(toastLater); toastLater = null; }
@@ -500,6 +515,18 @@ window.addEventListener('hashchange', () => {
 });
 window.addEventListener('beforeunload', (e) => { if (dirty.isDirty()) { e.preventDefault(); e.returnValue = ''; } });
 window.addEventListener('offline', () => announce('You are offline. Changes will not be saved.'));
+let startSearch = null;
+document.addEventListener('keydown', (e) => {                      // Ctrl K / Cmd K: global search from anywhere (V8 02 §5)
+  if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'k' && startSearch) { e.preventDefault(); startSearch(); }
+});
+let gAt = 0;                                                         // "G then L" opens the Launcher (V8 apps menu shortcut)
+document.addEventListener('keydown', (e) => {
+  if (e.ctrlKey || e.metaKey || e.altKey || /input|textarea|select/i.test(document.activeElement?.tagName ?? '') || document.activeElement?.isContentEditable) return;
+  const k = e.key.toLowerCase();
+  if (k === 'g') { gAt = Date.now(); return; }
+  if (k === 'l' && Date.now() - gAt < 1200 && session.signedIn() && ctx?.active) { gAt = 0; e.preventDefault(); location.hash = '#/launcher'; return; }
+  if (e.key === '?' && session.signedIn()) { e.preventDefault(); shortcutsDialog(); }   // the profile menu's "Keyboard shortcuts
+});
 document.addEventListener('keydown', (e) => {                      // "/" focuses search where search exists
   if (e.key === '/' && !/input|textarea|select/i.test(document.activeElement?.tagName ?? '')) { const s = document.querySelector('.search input:not(:disabled)'); if (s) { e.preventDefault(); s.focus(); } }
 });

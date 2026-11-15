@@ -24,13 +24,18 @@ const srv = createServer((req, res) => {
 await new Promise((r) => srv.on('listening', r));
 const base = `http://127.0.0.1:${srv.address().port}`;
 const browser = await chromium.launch();
+// V8: phones and tablets are touch screens. Chromium reports a coarse pointer only when it is started as one (CDP media emulation is
+// overwritten by Playwright's own reduced-motion emulation), so touch widths use a second browser started that way.
+const touchBrowser = await chromium.launch({ args: ['--blink-settings=primaryPointerType=2,availablePointerTypes=2,primaryHoverType=1,availableHoverTypes=1'] });
 const results = []; const check = (id, n, ok, d = '') => results.push({ id, n, ok: !!ok, d });
 const problems = [];
 const lum = (c) => { const v = c.map((x) => x / 255).map((x) => (x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4)); return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
 
 for (const org of ['l2f', 'aurj']) for (const theme of ['light', 'dark']) for (const w of [390, 768, 1366]) {
   const tag = `${org}/${theme}/${w}`;
-  const ctx = await browser.newContext({ viewport: { width: w, height: 900 }, reducedMotion: w === 768 ? 'reduce' : 'no-preference' });
+  // V8: phone and tablet are touch screens (every control 44 px); the desktop has a mouse (controls 38 px, small 32 px)
+  const touch = w < 1366;
+  const ctx = await (touch ? touchBrowser : browser).newContext({ viewport: { width: w, height: 900 }, reducedMotion: w === 768 ? 'reduce' : 'no-preference', hasTouch: touch });
   const p = await ctx.newPage();
   p.on('console', (m) => { if (['error', 'warning'].includes(m.type())) problems.push(`${tag} ${m.type()}: ${m.text().slice(0, 140)} @ ${JSON.stringify(m.location()).slice(0, 120)}`); });
   p.on('pageerror', (e) => problems.push(`${tag} pageerror: ${e.message}`));
@@ -38,12 +43,13 @@ for (const org of ['l2f', 'aurj']) for (const theme of ['light', 'dark']) for (c
   await p.evaluate(() => document.fonts.ready);
   await p.screenshot({ path: `${SHOTS}/gallery-${org}-${theme}-${w}.png`, fullPage: true });
   const m = await p.evaluate(() => {
-    const out = { overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth, small: [], fonts: [...document.fonts].filter((f) => f.status === 'loaded').map((f) => f.family.replace(/"/g, '')) };
+    const min = matchMedia('(pointer:coarse)').matches ? 43.5 : 25.5;   // V8 01_DESIGN_SYSTEM §4: 44 px on touch; with a mouse V8's smallest controls are 26 px (small icon button) and 28 px (segmented button)
+    const out = { coarse: matchMedia('(pointer:coarse)').matches, overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth, small: [], fonts: [...document.fonts].filter((f) => f.status === 'loaded').map((f) => f.family.replace(/"/g, '')) };
     for (const e of document.querySelectorAll('button, a[href], input, select, textarea')) {
       if (e.closest('.docpage')) continue;
       if (e.closest('.dx-tabs, .dx-menurow, .dx-tbar, .dx-toolbar, .dx-imgtools, .dx-statusbar, .dx-cbar') && matchMedia('(pointer:fine)').matches) continue;   // editor toolbars are compact for a mouse, 44px on touch (DOC-2)          // links inside running text are exempt (WCAG 2.5.8 inline exception)
       const r = e.getBoundingClientRect(); if (!r.width) continue;
-      if (r.height < 43.5 || r.width < 43.5) out.small.push(`${e.tagName.toLowerCase()} "${(e.innerText || e.getAttribute('aria-label') || e.id || '').slice(0, 24)}" ${Math.round(r.width)}x${Math.round(r.height)}`);
+      if (r.height < min || r.width < min) out.small.push(`${e.tagName.toLowerCase()} "${(e.innerText || e.getAttribute('aria-label') || e.id || '').slice(0, 24)}" ${Math.round(r.width)}x${Math.round(r.height)}`);
     }
     const rgba = (s) => { const v = s.match(/[\d.]+/g).map(Number); const k = s.startsWith('color(srgb') ? 255 : 1; return [v[0] * k, v[1] * k, v[2] * k, v.length > 3 ? v[3] : 1]; };   // color-mix() computes to color(srgb 0-1 ...)
     const over = (top, under) => [0, 1, 2].map((i) => top[i] * top[3] + under[i] * (1 - top[3])).concat(1);
@@ -54,9 +60,10 @@ for (const org of ['l2f', 'aurj']) for (const theme of ['light', 'dark']) for (c
   });
   const lowC = m.text.filter((x) => !x.dis && x.op === '1').map((x) => { const [a, b] = [lum(x.fg), lum(x.bg)].sort((s, t) => t - s); return { ...x, r: (a + 0.05) / (b + 0.05) }; }).filter((x) => x.r < 4.5);
   check(`G1 ${tag}`, 'No sideways scrolling', m.overflow <= 0, `overflow ${m.overflow}`);
-  check(`G2 ${tag}`, 'Every control is at least 44x44', m.small.length === 0, m.small.slice(0, 4).join('; '));
+  check(`G2 ${tag}`, `Every control is at least ${touch ? '44x44 on a touch screen' : '26x26 with a mouse'} (V8)`, m.coarse === touch && m.small.length === 0, `coarse=${m.coarse} ` + m.small.slice(0, 4).join('; '));
   check(`G3 ${tag}`, 'Computed text contrast is at least 4.5:1 on enabled text', lowC.length === 0, lowC.slice(0, 3).map((x) => `"${x.t}" ${x.r.toFixed(2)}`).join('; '));
-  check(`G4 ${tag}`, 'The v4 fonts are loaded from our own files', ['Geist', 'Bricolage Grotesque'].every((f) => m.fonts.includes(f)), m.fonts.join(','));
+  // V8: Geist everywhere; Geist Mono only for shortcuts and timers (V8 removed monospace numbers), Bricolage only on the Launcher hero, Nastaliq for Urdu
+  check(`G4 ${tag}`, 'The V8 fonts are loaded from our own files (Geist everywhere; Bricolage only on the Launcher hero)', m.fonts.includes('Geist') && m.fonts.every((f) => ['Geist', 'Geist Mono', 'Bricolage Grotesque', 'Noto Nastaliq Urdu'].includes(f)), m.fonts.join(','));
   const org2 = await p.evaluate(() => [document.documentElement.dataset.org, document.documentElement.dataset.theme, getComputedStyle(document.body).backgroundColor]);
   check(`G5 ${tag}`, 'Organization and theme attributes apply', org2[0] === org && org2[1] === theme);
   if (w === 1366 && theme === 'light') {
@@ -94,7 +101,7 @@ for (const org of ['l2f', 'aurj']) for (const theme of ['light', 'dark']) for (c
   await ctx.close();
 }
 check('G11', 'No console errors, policy violations or script errors on any gallery page', problems.length === 0, problems.slice(0, 3).join(' | '));
-await browser.close(); srv.close();
+await browser.close(); await touchBrowser.close(); srv.close();
 for (const r of results) console.log(`${r.ok ? 'PASS' : 'FAIL'}  ${r.id.padEnd(16)} ${r.n}${r.ok ? '' : '  -> ' + r.d}`);
 const pc = results.filter((r) => r.ok).length; console.log(`\n${pc}/${results.length} checks passed`);
 process.exit(pc === results.length ? 0 : 1);

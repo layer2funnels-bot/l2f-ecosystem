@@ -1,6 +1,6 @@
 /* Form Builder (v4). Tokens only. */
 .fb-head{display:flex;justify-content:space-between;gap:var(--space-3);flex-wrap:wrap;align-items:flex-start;margin-bottom:var(--space-3)}
-.fb-embedded .fb-head h1{font-size:22px}
+.fb-embedded .fb-head h1{font-size:calc(22px * var(--ts, 1))}
 .fb-grid{display:grid;grid-template-columns:200px minmax(0,1fr) 300px;gap:var(--space-4);align-items:start}
 .fb-pal{display:grid;gap:var(--space-2)}
 .fb-pal .btn{justify-content:flex-start;gap:var(--space-2)}

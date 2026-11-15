@@ -1,0 +1,182 @@
+/* Design V8 "Ledger" shell (02_GLOBAL_SHELL §1, §10): rail 64 px · app sidebar 248 px · app bar 52 px.
+   Taken from the V8 prototype (prototype-source v5.css rail rules + v7/v8 overrides), scoped under .shell.v8 so it cannot
+   reach any other markup (V8_BUG_FIXES: most v7 defects were class names shared between apps). The rail is dark in both themes. */
+.shell.v8{--rail:#121317;--rail-ink:#C9CBD1;background:linear-gradient(to right,var(--rail) 64px,transparent 64px);display:grid;grid-template-columns:64px 248px minmax(0,1fr);min-height:100vh;min-height:100dvh}
+.shell.v8.is-full{grid-template-columns:64px minmax(0,1fr)}
+.shell.v8.sidecol{grid-template-columns:64px 0 minmax(0,1fr)}
+.shell.v8.sidecol>.side{visibility:hidden;padding:0;border:0;overflow:hidden}
+/* editors hide the app sidebar (ui.css .shell:has(.ed-full)); the content then takes the sidebar's column too.
+   The fully focused editor frame (no rail, one 52 px top bar) arrives with the editors in P05. */
+.shell.v8:has(.ed-full){grid-template-columns:64px minmax(0,1fr)}
+
+/* ---- rail ---- */
+.shell.v8 .rail{position:sticky;top:0;height:100vh;height:100dvh;z-index:40;display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 0;background:var(--rail);color:var(--rail-ink);border-right:1px solid rgba(255,255,255,.06)}
+.shell.v8 .r-wrap{position:relative}
+.shell.v8 .r-div{width:28px;height:1px;background:rgba(255,255,255,.1);margin:4px 0}
+.shell.v8 .r-apps{display:grid;gap:6px}
+.shell.v8 .r-sp{flex:1}
+.shell.v8 .rail .r-btn,.shell.v8 .rail .r-org,.shell.v8 .rail .launch-btn,.shell.v8 .rail #bell,.shell.v8 .rail .who{width:44px;height:44px;min-height:44px;padding:0;border-radius:12px;display:grid;place-items:center;color:var(--rail-ink);background:none;border:0;position:relative;transition:background 160ms}
+.shell.v8 .rail .who{border-radius:50%;overflow:hidden}
+.shell.v8 .rail .who img{width:36px;height:36px;border-radius:50%;object-fit:cover}
+.shell.v8 .rail .r-btn:hover,.shell.v8 .rail .r-org:hover,.shell.v8 .rail .launch-btn:hover,.shell.v8 .rail #bell:hover{background:rgba(255,255,255,.08);color:#fff}
+.shell.v8 .rail .r-btn[aria-disabled="true"]{opacity:.55;cursor:not-allowed}
+.shell.v8 .rail svg.i{width:20px;height:20px}
+.shell.v8 .r-app{width:44px;height:44px;display:grid;place-items:center;border-radius:12px;position:relative}
+.shell.v8 .r-app:hover{background:rgba(255,255,255,.08)}
+.shell.v8 .r-app[aria-current="page"]::before{content:"";position:absolute;left:-10px;top:10px;bottom:10px;width:3px;border-radius:0 3px 3px 0;background:#F3F1EB}
+.shell.v8 .rail .plate{box-shadow:none;border-radius:9px}
+.shell.v8 .rail .plate::before{display:none}
+.shell.v8 .rail #bell .badge{position:absolute;top:6px;right:6px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:#FF5A47;color:#fff;font:700 calc(10.5px * var(--ts, 1))/calc(17px * var(--ts, 1)) var(--font);text-align:center;box-shadow:0 0 0 2px var(--rail)}
+.shell.v8 .rail :focus-visible{outline:2px solid var(--action);outline-offset:2px}
+/* menus open to the right of the rail; the lower ones grow upwards */
+.shell.v8 .rail .menu{left:calc(100% + 10px);right:auto;top:0;transform-origin:top left}
+.shell.v8 .rail .r-bell .menu,.shell.v8 .rail .r-me .menu{top:auto;bottom:0;transform-origin:bottom left}
+
+/* ---- app sidebar (structure and text sizes unchanged; V8 active item) ---- */
+.shell.v8>.side{padding:12px 10px;background:var(--surface2);border-right:var(--bw) solid var(--line);overflow-x:hidden;min-width:0}
+.shell.v8 .side-top{display:flex;align-items:center;gap:10px;padding:6px 8px 14px}
+.shell.v8 .side-top b{font:650 calc(17px * var(--ts, 1))/1 var(--font);letter-spacing:-.01em}   /* V8 measured 17 / 650 / 17 */
+.shell.v8 .side-top .plate,.shell.v8 .side .plate{box-shadow:none}
+.shell.v8 .side-top .plate::before{display:none}
+.shell.v8 .side .nav a[aria-current="page"]{background:var(--sunk);box-shadow:none;color:var(--text)}   /* V8: --sunk fill, no accent bar */
+.shell.v8 .side .nav a span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ---- app bar: solid background, bottom rule (v7 used blur glass) ---- */
+.shell.v8 .hdr{min-height:52px;padding:4px 16px;background:var(--bg);-webkit-backdrop-filter:none;backdrop-filter:none;border-bottom:var(--bw) solid var(--line);gap:8px}
+.shell.v8 .hdr .crumb{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* app identity colour for the active marker (01_DESIGN_SYSTEM §2) */
+.shell.v8[data-app="office"]{--app:#C98F00}.shell.v8[data-app="projects"]{--app:#2B5CF0}.shell.v8[data-app="tasks"]{--app:#0EA5A4}.shell.v8[data-app="clients"]{--app:#EF5235}
+.shell.v8[data-app="drive"]{--app:#6B4FF0}.shell.v8[data-app="planner"]{--app:#5E9C14}.shell.v8[data-app="fmp"]{--app:#10B981}.shell.v8[data-app="agents"]{--app:#7E5BF2}
+
+/* ---- phone ≤760: rail and sidebar hidden; the org mark opens the apps-and-account sheet; bottom bar stays ---- */
+@media (max-width:760px){
+  .shell.v8,.shell.v8.is-full,.shell.v8.sidecol{grid-template-columns:minmax(0,1fr);background:none}
+  .shell.v8 .rail,.shell.v8>.side{display:none}
+  .shell.v8 .hdr{padding:4px 16px}
+}
+@media (pointer:coarse){.shell.v8 .hdr .iconbtn{min-width:44px;min-height:44px}}
+
+/* apps-and-account sheet */
+.acct-sheet{display:grid;gap:8px}
+.acct-sheet .over{margin:10px 0 2px;font:600 calc(12.5px * var(--ts, 1))/1.3 var(--font);color:var(--muted)}
+.acct-sheet .btn{justify-content:flex-start;gap:10px;min-height:44px}
+.acct-sheet .opt-org small{margin-left:auto;color:var(--muted)}
+.acct-sheet .opt-org[aria-pressed="true"]{border-color:var(--action)}
+.acct-apps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.acct-apps .appitem{display:grid;justify-items:center;gap:6px;padding:10px 2px;border-radius:10px;font-size:calc(12.5px * var(--ts, 1));font-weight:550;color:var(--text2);text-align:center;text-decoration:none;min-height:44px}
+.acct-apps .appitem:hover{background:var(--surface2);color:var(--text)}
+@media (prefers-reduced-motion:reduce){.shell.v8 .rail *{transition:none!important}}
+
+/* ---- global search (V8 02 §5): dialog 680 px, scope row, grouped results with app marks, key hints; full screen on phones ---- */
+.gsx-scrim{position:fixed;inset:0;z-index:calc(var(--z-dialog) + 5);background:rgba(10,11,14,.42);display:flex;justify-content:center;align-items:flex-start;padding:72px 16px 16px;animation:fade 160ms}
+.gsx{width:min(680px,100%);max-height:76vh;display:flex;flex-direction:column;background:var(--surface);color:var(--text);border:var(--bw) solid var(--line);border-radius:24px;box-shadow:var(--sh3);overflow:hidden;font:400 calc(14.5px * var(--ts, 1))/1.5 var(--font)}   /* V8 .cmdk: radius 24 */
+.gsx-in{display:flex;align-items:center;gap:12px;padding:0 18px;min-height:70px;border-bottom:var(--bw) solid var(--line)}
+.gsx-in svg.i{width:20px;height:20px;color:var(--muted)}
+.gsx-in input{flex:1;min-width:0;border:0;outline:0;background:none;color:var(--text);font:400 calc(17px * var(--ts, 1))/1.4 var(--font);min-height:44px}
+.gsx-in input::-webkit-search-cancel-button{display:none}
+.gsx kbd{font:500 calc(11.5px * var(--ts, 1))/1 var(--mono);padding:3px 6px;border-radius:5px;background:var(--sunk);color:var(--text2)}
+.gsx-scopes{display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:var(--bw) solid var(--line);overflow-x:auto}
+.gsx-lbl{font:600 calc(12.5px * var(--ts, 1))/1 var(--font);color:var(--muted);white-space:nowrap}
+.gsx-scope{display:flex;gap:6px}
+.gsx-scope button{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;min-height:32px;padding:0 12px 0 8px;border-radius:999px;border:var(--bw) solid var(--line2);background:var(--surface);color:var(--text2);font:550 calc(13px * var(--ts, 1))/1 var(--font);cursor:pointer}
+.gsx-scope button[aria-pressed="true"]{background:var(--text);border-color:var(--text);color:var(--surface)}
+.gsx-scope button .plate{box-shadow:none;border-radius:5px}.gsx-scope button .plate::before{display:none}.gsx-scope button svg.i{width:15px;height:15px}
+.gsx-res{overflow-y:auto;padding:6px 8px 10px;flex:1;min-height:120px}
+.gsx-h{font:600 calc(12px * var(--ts, 1))/1.3 var(--font);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:12px 10px 6px}
+.gsx-row{display:flex;align-items:center;gap:12px;min-height:52px;padding:6px 10px;border-radius:10px;color:var(--text);text-decoration:none}
+.gsx-row:hover,.gsx-row[aria-selected="true"]{background:var(--sunk)}
+.gsx-row .plate{box-shadow:none;flex:none}.gsx-row .plate::before{display:none}
+.gsx-main{display:grid;min-width:0;flex:1}
+.gsx-main b{font:600 calc(15px * var(--ts, 1))/1.3 var(--font);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gsx-main b mark{background:var(--brand-soft);color:inherit;border-radius:3px;padding:0 1px}
+.gsx-main small{font-size:calc(13px * var(--ts, 1));color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gsx-row .pill{flex:none}
+.gsx-hint{margin:10px 8px;font-size:calc(13.5px * var(--ts, 1));color:var(--muted)}
+.gsx-empty{display:grid;gap:4px;padding:24px 8px;text-align:center}.gsx-empty span{color:var(--muted);font-size:calc(13.5px * var(--ts, 1))}
+.gsx-ai{display:flex;align-items:center;gap:10px;margin:8px;padding:10px 12px;border:var(--bw) dashed var(--line2);border-radius:8px;color:var(--muted);font-size:calc(13.5px * var(--ts, 1))}.gsx-ai span:nth-child(2){flex:1}
+.gsx-foot{display:flex;flex-wrap:wrap;align-items:center;gap:14px;padding:8px 16px;border-top:var(--bw) solid var(--line);background:var(--surface2);font-size:calc(12.5px * var(--ts, 1));color:var(--muted)}
+.gsx-foot .grow{flex:1}.gsx-foot .btn.link{min-height:32px;font-size:calc(13px * var(--ts, 1))}
+@media (max-width:760px){.gsx-scrim{padding:0}.gsx{width:100%;max-height:none;height:100dvh;border-radius:0;border:0}.gsx-foot>span:not(.grow){display:none}}
+@media (prefers-reduced-motion:reduce){.gsx-scrim{animation:none}}
+
+/* ---- notifications drawer (V8 02 §6): 520 px from the right, kind tabs, app chips, rows with avatar, app mark, time and unread dot ---- */
+.nfx{position:fixed;top:0;right:0;bottom:0;z-index:calc(var(--z-dialog) + 4);width:min(520px,100vw);display:flex;flex-direction:column;background:var(--surface);color:var(--text);border-left:var(--bw) solid var(--line);box-shadow:var(--sh3);font:400 calc(14.5px * var(--ts, 1))/1.45 var(--font);animation:nfxin 260ms var(--e-out)}
+@keyframes nfxin{from{transform:translateX(24px);opacity:0}}
+.nfx-head{display:flex;align-items:center;gap:8px;min-height:64px;padding:12px 16px 4px 26px}
+.nfx-head h2{flex:1;margin:0;font:650 calc(21px * var(--ts, 1))/1.25 var(--font);letter-spacing:-.015em}   /* V8 .drawer h2 */
+.nfx-head .btn.link{text-decoration:none;color:var(--text2);font:550 calc(14px * var(--ts, 1))/1 var(--font)}
+.nfx-kinds{display:inline-flex;align-self:flex-start;gap:2px;margin:8px 26px 0;padding:3px;border-radius:8px;background:var(--sunk);overflow-x:auto;max-width:calc(100% - 52px)}
+.nfx-kinds button{min-height:30px;padding:0 10px;border:var(--bw) solid transparent;border-radius:6px;background:none;color:var(--text2);font:550 calc(13.5px * var(--ts, 1))/1 var(--font);cursor:pointer;white-space:nowrap}
+.nfx-kinds button[aria-selected="true"]{color:var(--text);background:var(--surface);border-color:var(--line2)}
+.nfx-apps{display:flex;gap:6px;flex-wrap:wrap;padding:14px 26px 2px}
+.nfx-apps:empty{display:none}
+.nfx-apps button{display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:0 10px 0 8px;border-radius:999px;border:var(--bw) solid var(--line2);background:var(--surface);color:var(--text2);font:550 calc(13px * var(--ts, 1))/1 var(--font);cursor:pointer}
+.nfx-apps button[aria-pressed="true"]{background:var(--text);border-color:var(--text);color:var(--surface)}
+.nfx-apps .plate,.nfx-item .plate{box-shadow:none;border-radius:5px;display:inline-grid;vertical-align:-3px}.nfx-apps .plate::before,.nfx-item .plate::before{display:none}
+.nfx-list{flex:1;overflow-y:auto;padding:8px 18px 8px 26px;display:grid;align-content:start;gap:6px}
+.nfx-item{display:flex;align-items:flex-start;gap:12px;padding:10px;border-radius:14px;color:var(--text);text-decoration:none;position:relative;font-size:calc(14px * var(--ts, 1))}   /* V8 .nitem */
+.nfx-item:hover{background:var(--surface2)}
+.nfx-item .avatar{--s:34px;flex:none}
+.nfx-tx{display:grid;gap:4px;min-width:0;flex:1}
+.nfx-line{font-size:calc(14.5px * var(--ts, 1));line-height:1.4;overflow-wrap:anywhere}
+.nfx-item small{font-size:calc(13px * var(--ts, 1));color:var(--muted)}
+.nfx-item.unread{background:color-mix(in srgb,var(--action) 6%,transparent)}.nfx-item.unread .nfx-line{color:var(--text)}.nfx-item:not(.unread) .nfx-line{color:var(--text2)}
+.nfx-dot{flex:none;width:7px;height:7px;margin-top:6px;border-radius:50%;background:#FF5A47}
+.nfx-hint{margin:16px 12px;color:var(--muted);font-size:calc(13.5px * var(--ts, 1))}
+.nfx-empty{display:grid;justify-items:center;gap:6px;padding:48px 16px;text-align:center}.nfx-empty svg.i{width:28px;height:28px;color:var(--muted)}.nfx-empty span{color:var(--muted);font-size:calc(13.5px * var(--ts, 1))}
+.nfx-foot{padding:16px 26px 20px}.nfx-foot a{display:inline-flex;align-items:center;gap:10px;color:var(--text);font:600 calc(14.5px * var(--ts, 1))/1.3 var(--font);text-decoration:none;min-height:44px}.nfx-foot a svg.i{width:18px;height:18px;color:var(--text2)}
+@media (prefers-reduced-motion:reduce){.nfx{animation:none}}
+/* Your profile cover (V8 02 §7, prototype .prof-cover): the same in both themes and both organizations */
+.pf8-cover{background:radial-gradient(60% 140% at 10% 0%,#FFC633,transparent 60%),linear-gradient(120deg,#2B63F6,#16171B)}
+/* focused layout (V8 "Your profile"): rail + title bar, no app sidebar */
+@media (min-width:761px){.shell.v8.focused{grid-template-columns:64px minmax(0,1fr)}}   /* phones keep the one-column layout */
+.shell.v8 .hdr-ttl{display:grid;min-width:0;line-height:1.2}.shell.v8 .hdr-ttl b{font:650 calc(15px * var(--ts, 1))/1.2 var(--font)}.shell.v8 .hdr-ttl small{font-size:calc(12px * var(--ts, 1));color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.gsx-more{display:flex;align-items:center;gap:8px;width:100%;min-height:44px;margin:4px 0;padding:0 10px;border-radius:8px;color:var(--action);font:500 calc(14px * var(--ts, 1))/1.2 var(--font);text-align:left}.gsx-more:hover{background:var(--sunk)}.gsx-more .i{width:16px;height:16px}
+.shell.v8 .profile-menu,#profile-menu{width:290px}   /* V8 rail menus are 290 px */
+.nfx{box-shadow:-20px 0 50px -30px rgba(20,24,20,.35)}   /* V8 drawer shadow */
+/* profile menu (V8 prototype .menu.railmenu, measured at 1440): 290 px, padding 8; header 48 px photo; rows 44 px radius 12, 14 / 550, icon 18;
+   Appearance choices 36 px radius 12, 12.5 / 550, chosen = ink fill; shortcut key 11.5 / 500 mono */
+.pm8{width:290px;padding:8px;border-radius:8px}
+.pm8-who{display:flex;gap:12px;align-items:center;padding:8px 10px 12px}.pm8-who b{display:block;font:700 calc(14.5px * var(--ts, 1))/1.2 var(--font)}.pm8-who small{display:block;font-size:calc(12px * var(--ts, 1));line-height:1.5;color:var(--muted);overflow-wrap:anywhere}
+.pm8-photo{width:48px;height:48px;border-radius:50%;overflow:hidden;flex:none;display:grid;place-items:center;background:var(--brand);color:var(--brand-ink);font:700 calc(15px * var(--ts, 1))/1 var(--font)}.pm8-photo img{width:100%;height:100%;object-fit:cover}
+.pm8-link{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:0 10px;border-radius:12px;font:550 calc(14px * var(--ts, 1))/1.5 var(--font);color:var(--text);text-decoration:none;text-align:left}
+.pm8-link:hover,.pm8-link:focus-visible{background:var(--sunk)}.pm8-link .i{width:18px;height:18px}
+.pm8-link kbd{margin-left:auto;padding:4px 6px;border:var(--bw) solid var(--line2);border-radius:6px;background:var(--surface);font:500 calc(11.5px * var(--ts, 1))/1 var(--mono);color:var(--muted)}
+.pm8-app{display:grid;gap:6px;padding:6px 10px}.pm8-app .over{margin:0 0 6px;padding:8px 10px 6px}
+.pm8-theme{display:flex;align-items:center;gap:12px;width:100%;min-height:36px;padding:6px 10px;border-radius:12px;border:var(--bw) solid var(--line);background:var(--surface);font:550 calc(12.5px * var(--ts, 1))/1.5 var(--font);color:var(--text2);text-align:left}
+.pm8-theme+.pm8-theme{margin-top:0}.pm8-theme .i{width:16px;height:16px}
+.pm8-theme[aria-checked=true]{background:var(--text);border-color:var(--text);color:var(--bg)}
+@media (pointer:coarse){.pm8-theme{min-height:44px}}
+/* keyboard shortcuts dialog */
+.kbds{display:grid;grid-template-columns:auto 1fr;gap:10px 16px;margin:0;align-items:center}.kbds dt{white-space:nowrap;color:var(--text2);font-size:calc(13px * var(--ts, 1))}.kbds dd{margin:0;color:var(--text)}
+.kbds kbd{display:inline-block;padding:4px 6px;border:var(--bw) solid var(--line2);border-radius:6px;background:var(--surface);font:500 calc(11.5px * var(--ts, 1))/1 var(--mono);color:var(--text2)}
+/* focused layout top bar (V8 prototype .fbar5, measured; named focusbar because the base layer has its own .fbar at 1440): 48 px, surface, hairline below, padding 4 x 10, gap 8; title 15 / 700, line 12 muted.
+   The page under it carries its own padding (V8 .prof 20 px), so the content area adds none. */
+.shell.v8.focused .hdr.focusbar{min-height:48px;margin:0;border-radius:0;padding:4px 10px;gap:8px;background:var(--surface);border-bottom:var(--bw) solid var(--line)}
+.shell.v8 .focusbar .hdr-back svg{transform:scaleX(-1)}
+.shell.v8 .focusbar .appsw{position:relative}.shell.v8 .focusbar .launch-btn{display:inline-grid;place-items:center;width:38px;height:38px;border-radius:6px;color:var(--text2)}.shell.v8 .focusbar .launch-btn:hover{background:var(--sunk)}
+.shell.v8 .focusbar-photo{width:26px;height:26px;border-radius:50%;overflow:hidden;flex:none;display:grid;place-items:center;background:var(--brand);color:var(--brand-ink);font:700 calc(10.5px * var(--ts, 1))/1 var(--font)}.shell.v8 .focusbar-photo img{width:100%;height:100%;object-fit:cover}
+.shell.v8 .focusbar .hdr-ttl{line-height:1.15}.shell.v8 .focusbar .hdr-ttl b{font:700 calc(15px * var(--ts, 1))/1.15 var(--font)}.shell.v8 .focusbar .hdr-ttl small{font-size:calc(12px * var(--ts, 1));line-height:1.15;color:var(--muted)}
+.shell.v8.focused main.content{padding:0;max-width:none}
+@media (pointer:coarse){.shell.v8 .focusbar .launch-btn{width:44px;height:44px}}
+/* focused top bar: the apps menu drops down below the bar (it opened upwards, off-screen, and covered the bar) */
+.shell.v8 .focusbar{position:relative;z-index:30;overflow:visible}
+.shell.v8 .focusbar .appsw .menu{top:calc(100% + 6px);bottom:auto;left:0;right:auto;transform-origin:top left;max-height:calc(100vh - 70px);overflow:auto}
+@media (max-width:760px){.shell.v8 .focusbar .appsw .menu{position:fixed;top:54px;left:12px;right:12px;width:auto}}
+/* focused top bar on a phone: the title keeps its room (shortened with …); status pills give way to the actions */
+.shell.v8 .focusbar .hdr-ttl{min-width:0}.shell.v8 .focusbar .hdr-ttl b,.shell.v8 .focusbar .hdr-ttl small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:760px){.shell.v8 .focusbar-acts>.pill,.shell.v8 .focusbar-photo{display:none}.shell.v8 .focusbar-acts{gap:4px}}
+/* focused top bar: the rail already has the apps button, so the bar shows its own only on a phone (where the rail is hidden) */
+.shell.v8 .focusbar .appsw{display:none}   /* the rail (desktop) or the organization mark sheet (phone) already opens every app */
+/* focused top bar on a phone: Back already cancels, so Cancel gives way; the actions never push the page sideways */
+@media (max-width:760px){.shell.v8 .focusbar-acts>.btn.quiet{display:none}.shell.v8 .focusbar-acts{flex:none;min-width:0}.shell.v8 .focusbar .hdr-ttl small{display:none}.shell.v8 .focusbar-acts .btn{padding:0 10px}}
+@media (max-width:760px){.shell.v8 .focusbar-acts .btn svg{display:none}.shell.v8 .focusbar{gap:4px;padding:4px 8px}}
+/* phone: the organization mark button (opens Apps and account) — centred, the mark at its true square size (was squeezed narrow) */
+@media (max-width:760px){.hdr .acct-btn.only-m{display:inline-grid;place-items:center;flex:none;width:44px;height:44px;padding:0}
+  .hdr .acct-btn .mark{width:28px;height:28px;min-width:28px;flex:none;--s:28px}}
+/* Apps and account sheet: scrolls inside itself so Close and Sign out are always reachable */
+.acct-sheet{max-height:calc(100dvh - 120px);overflow-y:auto}
+.hdr .acct-btn .mark b{width:auto;height:auto;white-space:nowrap;font-size:calc(11.5px * var(--ts, 1));line-height:1}
+.hdr .acct-btn .mark.m-l2f i{top:auto;bottom:17%;left:24%;right:24%;width:auto;height:2px;min-height:0}

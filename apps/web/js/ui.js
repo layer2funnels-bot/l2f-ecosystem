@@ -12,9 +12,14 @@ export function toast(text, ok = true) {
   clearTimeout(toastTimer); toastTimer = setTimeout(() => { toastEl.dataset.show = 'false'; }, 3600);
 }
 
-// ---- dialog: focus is trapped, Esc closes (unless `modal: 'strict'`), focus returns to what opened it
+// ---- dialog: focus is trapped, Esc closes (unless `modal: 'strict'`), focus returns to what opened it.
+// Single instance (V8 03 §6): opening a dialog that is already open (same `key`, default its title) brings the open one forward
+// instead of stacking a copy, so a double click never opens two.
+const openDialogs = new Map();
 const focusables = (root) => [...root.querySelectorAll('button, input, select, textarea, a[href], [tabindex]:not([tabindex="-1"])')].filter((e) => !e.disabled && e.offsetParent !== null);
-export function dialog({ title, body, actions = [], wide = false, role = 'dialog', onClose, describedBy }) {
+export function dialog({ title, body, actions = [], wide = false, role = 'dialog', onClose, describedBy, key = title }) {
+  const open = openDialogs.get(key);
+  if (open?.overlay.isConnected) { (open.overlay.querySelector('[autofocus]') ?? focusables(open.overlay)[0])?.focus(); return open.close; }
   const prev = document.activeElement;
   const titleId = `dlt-${Math.random().toString(36).slice(2, 8)}`;
   const bar = h('div', { class: 'acts' });
@@ -23,7 +28,7 @@ export function dialog({ title, body, actions = [], wide = false, role = 'dialog
   const overlay = h('div', { class: 'ovl' }, panel);
   let closed = false;
   const close = () => {
-    if (closed) return; closed = true; overlay.remove(); onClose?.();
+    if (closed) return; closed = true; overlay.remove(); if (openDialogs.get(key)?.overlay === overlay) openDialogs.delete(key); onClose?.();
     if (prev && prev.isConnected && prev.focus) prev.focus();
   };
   const buttons = actions.map((a) => {
@@ -49,7 +54,7 @@ export function dialog({ title, body, actions = [], wide = false, role = 'dialog
     const i = f.indexOf(document.activeElement);
     if (e.shiftKey && i <= 0) { e.preventDefault(); f[f.length - 1].focus(); } else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); }
   });
-  document.body.append(overlay);
+  document.body.append(overlay); openDialogs.set(key, { overlay, close });
   const first = overlay.querySelector('[autofocus]') ?? (actions.findIndex((a) => a.focus) >= 0 ? buttons[actions.findIndex((a) => a.focus)] : null) ?? focusables(overlay)[0];
   first?.focus();
   if (first?.tagName === 'INPUT' && first.value && /^(text|search)$/.test(first.type)) first.select();     // a name field opens with its text selected, ready to type over

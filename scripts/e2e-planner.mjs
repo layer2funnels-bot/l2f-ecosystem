@@ -63,7 +63,7 @@ await page.goto(`${base}/#/planner`); const t0 = Date.now(); await page.reload()
 const loadMs = Date.now() - t0; const text0 = await pl(page);
 check('PB1', 'Planner opens inside the shell from the ecosystem session, with no second sign-in, and shows its content', /Plans|plan/.test(text0) && !/Sign in first/.test(text0), text0.slice(0, 120));
 const frame = await page.evaluate(() => { const r = document.querySelector('.planner-mount')?.shadowRoot;
-  return { header: document.querySelectorAll('header.hdr').length, sw: !!document.querySelector('#org-switcher'), nav: document.querySelector('.nav .appname')?.textContent, cur: document.querySelector('.nav a[aria-current=page]')?.textContent,
+  return { header: document.querySelectorAll('header.hdr').length, sw: !!document.querySelector('#org-switcher'), nav: document.querySelector('.side-top b')?.textContent, cur: document.querySelector('.nav a[aria-current=page]')?.textContent,
     rail: !!r?.querySelector('.rail'), theme: !!r?.querySelector('.themebtn'), orgSelect: !!r?.querySelector('select[aria-label=Organization]'), appCur: document.querySelector('#app-switcher') ? 'ok' : null }; });
 check('PB1b', 'One header for the whole ecosystem: the shell\'s header, organization switcher and a "Planner" menu bar; no second Planner menu, organization picker or theme button', frame.header === 1 && frame.sw && frame.nav === 'Planner' && frame.cur === 'Home' && !frame.rail && !frame.theme && !frame.orgSelect, JSON.stringify(frame));
 check('PB2', 'Loading Planner downloads no database engine or WebAssembly (the old cause of slow loads)', !reqs.some((r) => /pglite|\.wasm|\.data$/.test(r.path)), reqs.map((r) => r.path).filter((p) => /pglite|wasm/.test(p)).join(','));
@@ -83,9 +83,9 @@ await shot(page, '01-home-light');
 // ---- A2. the old address and the Launcher both lead here
 await page.goto(`${base}/planner/#/planner/plans`); await page.waitForURL(/\/#\/planner\/plans/, { timeout: 8000 }).catch(() => {});
 check('PB1c', 'The old /planner/ address (and its links) opens the same page inside the shell', new URL(page.url()).pathname === '/' && /#\/planner\/plans/.test(page.url()), page.url());
-await page.goto(`${base}/#/launcher`); await page.waitForTimeout(1200);
+await page.goto(`${base}/#/office`); await page.waitForTimeout(1200);   // the app switcher lives in the rail of every app (V8), not on the Launcher
 await page.click('#app-switcher'); const appHref = await page.getAttribute('#apps-menu a[data-app=planner]', 'href').catch(() => null);
-check('PB14', 'The header\'s app switcher opens Planner (not the "isn\'t built yet" page)', appHref === '#/planner', String(appHref));
+check('PB14', 'The rail\'s app switcher opens Planner (not the "isn\'t built yet" page)', appHref === '#/planner', String(appHref));
 await page.click('#apps-menu a[data-app=planner]'); await ready(page); await page.waitForTimeout(800);
 check('PB14b', 'Choosing Planner from the app switcher shows Planner', /plan/i.test(await pl(page)) && !/isn’t built yet/.test(await page.locator('body').innerText()));
 
@@ -112,11 +112,11 @@ await page.keyboard.press('Escape');
 // ---- B2. the shell's theme reaches Planner
 await page.evaluate(() => localStorage.setItem('l2f.theme', 'dark')); await page.reload(); await ready(page); await page.waitForTimeout(1200);
 const dark = await page.evaluate(() => ({ html: document.documentElement.dataset.theme, bg: getComputedStyle(document.querySelector('.planner-mount').shadowRoot.querySelector('.stage .topbar')).backgroundColor }));
-check('PB17', 'Choosing dark in the shell\'s profile menu turns Planner dark too (shared tokens)', dark.html === 'dark' && dark.bg === 'rgb(12, 13, 16)', JSON.stringify(dark));
+check('PB17', 'Choosing dark in the shell\'s profile menu turns Planner dark too (shared tokens)', dark.html === 'dark' && dark.bg === 'rgb(14, 15, 14)'   /* V8 dark --bg #0E0F0E */, JSON.stringify(dark));
 await shot(page, '03-plans-dark');
 await page.evaluate(() => localStorage.removeItem('l2f.theme'));
 await page.setViewportSize({ width: 390, height: 844 }); await page.reload(); await ready(page); await page.waitForTimeout(1200);
-const phone = await page.evaluate(() => ({ bnav: getComputedStyle(document.querySelector('.bnav')).display, over: document.documentElement.scrollWidth - innerWidth }));
+const phone = await page.evaluate(() => ({ bnav: getComputedStyle(document.querySelector('nav.bbar')).display, over: document.documentElement.scrollWidth - innerWidth }));
 check('PB19', 'On a phone Planner\'s sections are in the shell\'s bottom bar and nothing scrolls sideways', phone.bnav === 'flex' && phone.over <= 1, JSON.stringify(phone));
 await shot(page, '04-plans-phone');
 await page.setViewportSize({ width: 1366, height: 860 });

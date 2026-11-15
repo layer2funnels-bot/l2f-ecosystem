@@ -5,8 +5,15 @@
 import { createOrgCache, orgHeaders } from '../../../packages/core/org-switch.mjs';   // in the browser this resolves to /packages/core/… (a path cannot climb above the site root); in Node, to the repository file
 export const NO_ORG = '00000000-0000-0000-0000-000000000000';
 export const BATCH_MAX = 4;   // same limit as the server (packages/core/http.mjs)
+// Reads (V8 03 §7 shared states): the same read asked twice while the first is still on its way is sent once and both callers get the
+// answer (each its own copy); and a read that has no answer after READ_TIMEOUT_MS ends as an error the screen can show with
+// "Try again", instead of loading forever. Writes are never merged or cut short. The suffixes are those of every read operation in
+// packages/core (no write operation ends with one of them; test/api-client.test.mjs keeps it so).
+export const READ_SUFFIXES = new Set(['calendar', 'catalog', 'channels', 'counts', 'deadlines', 'details', 'download', 'effective', 'events', 'files', 'full', 'get', 'history', 'home', 'inbox', 'list', 'match', 'me', 'mine', 'overview', 'panel', 'path', 'people', 'photo', 'portfolio', 'prefs', 'protection', 'query', 'recent', 'report', 'roles', 'running', 'search', 'status', 'summary', 'trashed', 'unread', 'url', 'usage', 'version', 'versions', 'work', 'workload']);
+export const isRead = (op) => READ_SUFFIXES.has(String(op).split('.').pop());
+export const READ_TIMEOUT_MS = 10000;
 
-export function createApiClient({ session, auth, fetchImpl = (...a) => fetch(...a), onExpired, onRateLimited, batching = true }) {
+export function createApiClient({ session, auth, fetchImpl = (...a) => fetch(...a), onExpired, onRateLimited, batching = true, readTimeoutMs = READ_TIMEOUT_MS }) {
   const cache = createOrgCache(null);
   const state = { org: null };
   const post = async (path, body, org) => {
@@ -52,7 +59,18 @@ export function createApiClient({ session, auth, fetchImpl = (...a) => fetch(...
     return new Promise((resolve) => { queue.push({ op, input, org, resolve }); if (queue.length === 1) queueMicrotask(flush); });
   };
 
-  async function call(op, input, { org = state.org } = {}) {
+  const inflight = new Map();
+  const copy = (r) => { try { return structuredClone(r); } catch { return r; } };
+  function call(op, input, { org = state.org } = {}) {
+    if (!isRead(op)) return callOnce(op, input, org);
+    const key = `${org ?? NO_ORG}|${op}|${JSON.stringify(input ?? {})}`;
+    const same = inflight.get(key); if (same) return same.then(copy);
+    let timer;
+    const late = new Promise((resolve) => { timer = setTimeout(() => resolve({ ok: false, status: 0, error: { code: 'timeout' } }), readTimeoutMs); });
+    const p = Promise.race([callOnce(op, input, org), late]).finally(() => { clearTimeout(timer); inflight.delete(key); });
+    inflight.set(key, p); return p;
+  }
+  async function callOnce(op, input, org) {
     if (session.needsRefresh() && !(await refresh()) && session.expired()) { onExpired?.(); return { ok: false, status: 401, error: { code: 'session_expired' } }; }
     let res = await send(op, input, org);
     if (res.status === 401 && (await refresh())) res = await send(op, input, org);   // the retries after one shared refresh go out together again

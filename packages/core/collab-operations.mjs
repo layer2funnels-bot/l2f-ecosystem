@@ -50,14 +50,25 @@ export const collabOperations = [
     name: 'notifications.list', class: 'read', input: { limit: { type: 'int', min: 1, max: 100 } },
     run: (q, _c, i) => q('select * from my_notifications($1)', [i.limit ?? 30]),
   }),
+  // V8 inbox (migration 0054): every app, the current organization only; group = all | mentions | assigned | approvals | updates
   defineOperation({
-    // counts what the list would show (records the reader can still open), so the badge never promises more than the list
+    name: 'notifications.inbox', class: 'read', input: { limit: { type: 'int', min: 1, max: 200 }, group: { type: 'enum', values: ['all', 'mentions', 'assigned', 'approvals', 'updates'] }, app: { type: 'text', max: 40 } },
+    run: (q, _c, i) => q('select * from my_inbox($1, $2, $3)', [i.limit ?? 50, i.group ?? 'all', i.app ?? null]),
+  }),
+  defineOperation({
+    // counts what the inbox would show in this organization, so the badge never promises more than the list
     name: 'notifications.unread', class: 'read', single: true,
-    run: (q) => q('select count(*)::int as n from my_notifications(100) where read_at is null'),
+    run: (q) => q('select count(*)::int as n from my_inbox(200) where read_at is null'),
+  }),
+  defineOperation({ name: 'notifications.prefs', class: 'read', run: (q, ctx) => q('select app, in_app from notification_prefs where workspace_id = $1 and user_id = $2 order by app', [ctx.orgId, ctx.userId]) }),
+  defineOperation({
+    name: 'notifications.prefs.set', class: 'write', single: true, input: { app: { type: 'text', required: true, max: 40 }, in_app: { type: 'bool', required: true } },
+    run: (q, ctx, i) => q(`insert into notification_prefs (workspace_id, user_id, app, in_app) values ($1, $2, $3, $4)
+      on conflict (workspace_id, user_id, app) do update set in_app = excluded.in_app, updated_at = now() returning app, in_app`, [ctx.orgId, ctx.userId, i.app, i.in_app]),
   }),
   defineOperation({
     name: 'notifications.read', class: 'write', single: true, input: { ids: { type: 'list', items: 'uuid', max: 100 }, all: { type: 'bool' } },
-    run: (q, ctx, i) => q(`with done as (update notifications set read_at = now() where user_id = $1 and read_at is null and ($2 or id = any ($3::uuid[])) returning 1)
-      select count(*)::int as n from done`, [ctx.userId, i.all ?? false, i.ids ?? []]),
+    run: (q, ctx, i) => q(`with done as (update notifications set read_at = now() where user_id = $1 and workspace_id = $4 and read_at is null and ($2 or id = any ($3::uuid[])) returning 1)
+      select count(*)::int as n from done`, [ctx.userId, i.all ?? false, i.ids ?? [], ctx.orgId]),
   }),
 ];

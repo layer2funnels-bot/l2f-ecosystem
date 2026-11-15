@@ -15,6 +15,9 @@
     "e2e:docs": "node scripts/e2e-docs.mjs",
     "tokens:build": "node scripts/build-tokens.mjs",
     "check:tokens": "node scripts/build-tokens.mjs --check",
+    "css:ledger": "node scripts/build-ledger-css.mjs",
+    "check:ledger": "node scripts/build-ledger-css.mjs --check",
+    "check:textscale": "node scripts/textscale.mjs --check",
     "stack:start": "supabase start -x studio,imgproxy,edge-runtime,logflare,vector,realtime,storage-api,mailpit,supavisor",
     "stack:stop": "supabase stop",
     "test:stack": "PG_URL=postgres://supabase_admin:postgres@127.0.0.1:54332/postgres DRIVERS=pg node test/run.mjs",
@@ -34,7 +37,9 @@
     "test:e2e:media": "node scripts/e2e-media.mjs",
     "build:media": "node scripts/build-media.mjs",
     "test:e2e:drive": "node scripts/e2e-drive.mjs",
-    "test:e2e:sweep": "node scripts/e2e-sweep.mjs"
+    "test:e2e:sweep": "node scripts/e2e-sweep.mjs",
+    "icons": "node scripts/build-icons.mjs",
+    "check:icons": "node scripts/build-icons.mjs --check"
   },
   "dependencies": {
     "@electric-sql/pglite": "0.3.10",

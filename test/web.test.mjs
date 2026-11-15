@@ -1,7 +1,7 @@
 // Browser-side logic that must not depend on a browser: input validation rules shared with the server. UI state tests are added below.
 import { recorder } from './lib.mjs';
 import { validate } from '../packages/core/validate.mjs';
-import { createApiClient } from '../apps/web/js/api.js';
+import { createApiClient, isRead } from '../apps/web/js/api.js';
 const ORG_A = '11111111-1111-4111-8111-111111111111', ORG_B = '22222222-2222-4222-8222-222222222222';
 import { parseRoute, routeForPage, pageKeyFor, defaultOrg, hrefFor, FUNNEL_TYPES, OFFICE_PAGES } from '../apps/web/js/routes.js';
 import { PLANNER_PAGES, plannerSection } from '../apps/web/js/modules/planner.js';
@@ -136,6 +136,34 @@ check('W33', 'Projects (V2) owns every #/projects address and routes its own pag
   const r = await api.call('x.y', {});
   check('W34', 'When the server says "too many requests", the shell is told (with the wait), so people see that instead of "check your connection"', r.status === 429 && told === 9);
 }
+
+{
+  // V8 shared states: the same read twice at once goes out once (each caller gets its own copy); a read with no answer in time ends as "timeout"; writes are never merged
+  const sent = []; let hang = false;
+  const session = { get: () => ({ access: 't' }), needsRefresh: () => false, expired: () => false };
+  const fetchImpl = async (url, init) => { sent.push({ url, body: JSON.parse(init.body) }); if (hang) await new Promise(() => {}); return { status: 200, json: async () => ({ ok: true, data: [{ n: 1 }] }) }; };
+  const api = createApiClient({ session, auth: {}, batching: false, fetchImpl, readTimeoutMs: 40 });
+  const [a, b] = await Promise.all([api.call('projects.list', { q: 1 }), api.call('projects.list', { q: 1 })]);
+  a.data[0].n = 99;
+  check('W35', 'Two identical reads made together are sent once; each caller gets its own copy of the answer', sent.length === 1 && b.ok && b.data[0].n === 1);
+  sent.length = 0; await Promise.all([api.call('projects.create', { name: 'x' }), api.call('projects.create', { name: 'x' })]);
+  check('W36', 'Writes are never merged, even when identical', sent.length === 2);
+  sent.length = 0; await Promise.all([api.call('projects.list', { q: 1 }), api.call('projects.list', { q: 2 })]);
+  check('W37', 'Reads with different input are separate requests', sent.length === 2);
+  hang = true; const t = await api.call('projects.list', { q: 3 });
+  check('W38', 'A read with no answer in time ends as a "timeout" error (screens show Try again instead of loading forever)', !t.ok && t.error.code === 'timeout');
+  hang = false; sent.length = 0; const again = await api.call('projects.list', { q: 3 });
+  check('W39', 'After a timeout the same read can be asked again', again.ok && sent.length === 1);
+}
+{
+  // every operation's class agrees with the browser's read list (so no write is ever merged or cut short)
+  const fs = await import('node:fs');
+  const ops = []; for (const f of fs.readdirSync('packages/core').filter((x) => /operations\.mjs$/.test(x))) for (const m of fs.readFileSync(`packages/core/${f}`, 'utf8').matchAll(/name: '([^']+)', class: '(\w+)'/g)) ops.push([m[1], m[2]]);
+  const wrong = ops.filter(([n, c]) => isRead(n) !== (c === 'read'));
+  check('W40', 'The browser treats exactly the read operations as reads', ops.length > 300 && wrong.length === 0, wrong.map((x) => x.join(':')).join(','));
+}
+check('W41', 'Each profile tab has its own address (V8 #/profile/about, account, notifications, appearance); #/profile is the first tab',
+  parseRoute('#/profile').name === 'profile' && !parseRoute('#/profile').params.tab && ['about', 'account', 'notifications', 'appearance'].every((t) => parseRoute(`#/profile/${t}`).params.tab === t) && parseRoute('#/profile/x').name !== 'profile');
 
 // ---- Planner inside the shell (apps/web/js/modules/planner.js mounts apps/planner/src/embed.tsx)
 check('W27', 'Planner has one address inside the shell: #/planner/<page> keeps its page and query; the old #/app/planner and #/office/planner lead there too',
