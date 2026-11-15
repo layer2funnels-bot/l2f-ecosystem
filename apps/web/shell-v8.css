@@ -184,3 +184,4 @@
 @media (min-width:761px){.shell.v8 .focusbar .appsw{display:none}}
 /* focused top bar on a phone: Back already cancels, so Cancel gives way; the actions never push the page sideways */
 @media (max-width:760px){.shell.v8 .focusbar-acts>.btn.quiet{display:none}.shell.v8 .focusbar-acts{flex:none;min-width:0}.shell.v8 .focusbar .hdr-ttl small{display:none}.shell.v8 .focusbar-acts .btn{padding:0 10px}}
+@media (max-width:760px){.shell.v8 .focusbar-acts .btn svg{display:none}.shell.v8 .focusbar{gap:4px;padding:4px 8px}}
