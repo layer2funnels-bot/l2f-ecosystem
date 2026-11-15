@@ -4,13 +4,14 @@ export function resolveTheme(pref, prefersDark) { return pref === 'light' || pre
 export function orgKey(org) { return org && org.slug === 'aurj' ? 'aurj' : 'l2f'; }
 function read(store) { try { return store.getItem(THEME_KEY); } catch { return null; } }
 // V8 Appearance (02 §7): "Reduce motion" and "Compact density" are per person and per device, like the theme.
-export const MOTION_KEY = 'l2f.motion'; export const DENSITY_KEY = 'l2f.density';
+export const MOTION_KEY = 'l2f.motion'; export const DENSITY_KEY = 'l2f.density'; export const TEXT_KEY = 'l2f.text';   // text size: standard | large (default) | larger
 const readKey = (store, k) => { try { return store.getItem(k); } catch { return null; } };
 export function createTheme({ root = document.documentElement, store = localStorage, media = (typeof matchMedia === 'function' ? matchMedia('(prefers-color-scheme: dark)') : null) } = {}) {
   const apply = () => {
     root.dataset.theme = resolveTheme(read(store), !!media?.matches);
     if (readKey(store, MOTION_KEY) === 'reduce') root.dataset.motion = 'reduce'; else delete root.dataset.motion;
     if (readKey(store, DENSITY_KEY) === 'compact') root.dataset.density = 'compact'; else delete root.dataset.density;
+    const t = readKey(store, TEXT_KEY); root.dataset.text = t === 'standard' || t === 'larger' ? t : 'large';
   };
   const flag = (k, v) => { try { v ? store.setItem(k, v) : store.removeItem(k); } catch { /* private mode */ } apply(); };
   media?.addEventListener?.('change', apply);
@@ -23,5 +24,7 @@ export function createTheme({ root = document.documentElement, store = localStor
     setReduceMotion(on) { flag(MOTION_KEY, on ? 'reduce' : null); },
     compact: () => readKey(store, DENSITY_KEY) === 'compact',
     setCompact(on) { flag(DENSITY_KEY, on ? 'compact' : null); },
+    textSize: () => { const t = readKey(store, TEXT_KEY); return t === 'standard' || t === 'larger' ? t : 'large'; },
+    setTextSize(v) { flag(TEXT_KEY, v === 'large' ? null : v); },
   };
 }

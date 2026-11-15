@@ -71,7 +71,7 @@
 .pm-res__title { border: 0; background: transparent; padding: 0; text-align: left; font-weight: 620; color: var(--pm-text); display: block; max-width: 100%; }
 .pm-res__title:hover { color: var(--pm-accent-text); text-decoration: underline; }
 .pm-res__metarow { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: var(--pm-fs-xs); }
-.pm-res__badge { flex: none; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 620; background: var(--pm-info-soft); color: var(--pm-text-2); white-space: nowrap; }
+.pm-res__badge { flex: none; padding: 1px 8px; border-radius: 999px; font-size:calc(11px * var(--ts, 1)); font-weight: 620; background: var(--pm-info-soft); color: var(--pm-text-2); white-space: nowrap; }
 .pm-res__badge.is-embed { background: var(--pm-accent-soft); color: var(--pm-accent-text); }
 .pm-res__badge.is-file { background: var(--pm-surface-active); }
 .pm-res__actions { display: flex; align-items: center; justify-content: flex-end; gap: 6px; padding: 4px 10px 10px; }

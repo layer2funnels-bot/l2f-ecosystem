@@ -94,7 +94,7 @@
 .pm-tl__hcell--month { font-weight: 620; color: var(--pm-text); background: var(--pm-surface-2); }
 .pm-tl__hcell:not(.pm-tl__hcell--day) > span { position: sticky; left: calc(var(--left) + 6px); }
 .pm-tl__hcell.is-today { color: var(--pm-danger); font-weight: 650; }
-.pm-tl__hcell--day { flex-direction: column; justify-content: center; align-items: center; padding: 0; gap: 1px; font-size: 10px; line-height: 1.1; text-transform: uppercase; color: var(--pm-text-3); }
+.pm-tl__hcell--day { flex-direction: column; justify-content: center; align-items: center; padding: 0; gap: 1px; font-size:calc(10px * var(--ts, 1)); line-height: 1.1; text-transform: uppercase; color: var(--pm-text-3); }
 .pm-tl__hcell--day b { font-size: var(--pm-fs-sm); font-weight: 600; color: var(--pm-text-2); text-transform: none; }
 .pm-tl__hcell--day.is-today { background: var(--pm-danger-soft); }
 .pm-tl__hcell--day.is-today b { color: var(--pm-danger); }
@@ -109,7 +109,7 @@
   background-size: calc(var(--px) * 7) 100%, calc(var(--px) * 7) 100%, var(--px) 100%; }
 .pm-tl__today { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--pm-danger); opacity: 0.85; }
 .pm-tl__mark { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1px dashed color-mix(in srgb, var(--pm-accent) 65%, transparent); }
-.pm-tl__mark > span { position: absolute; top: 2px; left: 4px; padding: 0 5px; border-radius: 4px; font-size: 10px; font-weight: 650; text-transform: uppercase; letter-spacing: 0.04em; background: var(--pm-accent-soft); color: var(--pm-accent-text); }
+.pm-tl__mark > span { position: absolute; top: 2px; left: 4px; padding: 0 5px; border-radius: 4px; font-size:calc(10px * var(--ts, 1)); font-weight: 650; text-transform: uppercase; letter-spacing: 0.04em; background: var(--pm-accent-soft); color: var(--pm-accent-text); }
 .pm-tl__mark--end > span { left: auto; right: 4px; }
 
 .pm-tl__row { position: relative; display: grid; border-bottom: 1px solid color-mix(in srgb, var(--pm-border) 55%, transparent); }

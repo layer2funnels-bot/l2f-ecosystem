@@ -17,6 +17,7 @@
     "check:tokens": "node scripts/build-tokens.mjs --check",
     "css:ledger": "node scripts/build-ledger-css.mjs",
     "check:ledger": "node scripts/build-ledger-css.mjs --check",
+    "check:textscale": "node scripts/textscale.mjs --check",
     "stack:start": "supabase start -x studio,imgproxy,edge-runtime,logflare,vector,realtime,storage-api,mailpit,supavisor",
     "stack:stop": "supabase stop",
     "test:stack": "PG_URL=postgres://supabase_admin:postgres@127.0.0.1:54332/postgres DRIVERS=pg node test/run.mjs",

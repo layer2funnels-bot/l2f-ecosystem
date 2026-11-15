@@ -10,4 +10,4 @@
 .cl .tbl .fname{text-decoration:none}
 .cl .tbl td a{display:inline-flex;align-items:center;min-height:44px}
 .cav.lg{width:60px;height:60px}
-@media (max-width:760px){.cl-title h1{font-size:24px}}
+@media (max-width:760px){.cl-title h1{font-size:calc(24px * var(--ts, 1))}}

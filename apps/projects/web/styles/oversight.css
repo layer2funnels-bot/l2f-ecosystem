@@ -135,8 +135,8 @@ a.pm-sp-row__main:hover { background: var(--pm-surface-2); }
 .pm-wk__axis { stroke: var(--pm-border-strong); stroke-width: 1; }
 .pm-wk__bar { fill: var(--pm-st-done); }
 .pm-wk__zero { fill: var(--pm-border-strong); }
-.pm-wk__val { fill: var(--pm-text); font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums; }
-.pm-wk__lbl { fill: var(--pm-text-2); font-size: 11px; }
+.pm-wk__val { fill: var(--pm-text); font-size:calc(12px * var(--ts, 1)); font-weight: 650; font-variant-numeric: tabular-nums; }
+.pm-wk__lbl { fill: var(--pm-text-2); font-size:calc(11px * var(--ts, 1)); }
 .pm-wk__cap { margin: 4px 0 0; font-size: var(--pm-fs-sm); }
 .pm-rp-scroll { overflow-x: auto; margin: -4px -8px; }
 .pm-rp-table { width: 100%; border-collapse: collapse; font-size: var(--pm-fs); min-width: 640px; }

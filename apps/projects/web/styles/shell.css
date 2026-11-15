@@ -38,7 +38,7 @@
 .pm-sbrow__link { flex: 1; min-width: 0; display: flex; align-items: center; gap: 9px; min-height: 30px; padding: 4px 6px 4px 10px; border-radius: var(--pm-r-md); color: var(--pm-text-2); font-weight: 480; }
 .pm-sbrow__link:hover { color: var(--pm-text); text-decoration: none; }
 .pm-sbrow.is-active .pm-sbrow__link { color: var(--pm-text); font-weight: 620; }
-.pm-sbrow__badge { flex: none; margin-left: auto; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--pm-danger); color: #fff; font-size: 10.5px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+.pm-sbrow__badge { flex: none; margin-left: auto; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--pm-danger); color: #fff; font-size:calc(10.5px * var(--ts, 1)); font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
 .pm-sbrow__actions { flex: none; display: inline-flex; align-items: center; padding-right: 2px; }
 .pm-sbrow__btn.pm-btn { width: 22px; height: 22px; min-height: 0; padding: 0; border-radius: 5px; }
 .pm-sbrow__btn .pm-icon { width: 14px; height: 14px; }

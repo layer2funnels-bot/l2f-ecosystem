@@ -18,7 +18,7 @@
 .lb-fbtn .pm-icon { color: currentColor; opacity: 0.75; }
 .lb-fbtn--danger { color: var(--pm-danger); }
 .lb-fbtn--danger:hover { background: var(--pm-danger-soft); color: var(--pm-danger); }
-.lb-fbtn__n { min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--pm-accent); color: var(--pm-on-accent); font-size: 10.5px; font-weight: 650; display: inline-flex; align-items: center; justify-content: center; }
+.lb-fbtn__n { min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--pm-accent); color: var(--pm-on-accent); font-size:calc(10.5px * var(--ts, 1)); font-weight: 650; display: inline-flex; align-items: center; justify-content: center; }
 .lb-active { display: inline-flex; align-items: center; gap: 8px; font-size: var(--pm-fs-sm); color: var(--pm-text-2); margin-left: 4px; }
 .lb-linkbtn { border: 0; background: none; padding: 0; color: var(--pm-accent-text); font-size: var(--pm-fs-sm); font-weight: 560; cursor: pointer; }
 .lb-linkbtn:hover { text-decoration: underline; }
