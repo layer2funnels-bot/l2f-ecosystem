@@ -64,5 +64,14 @@ check('OF19', 'Member page: a teammate’s role, open work, week and projects (o
 check('OF20', 'Aurj cannot open a Layer2Funnels member', (await J('office.member.get', { user: U.LED }, U.AO, ORG.A)).row == null);
 check('OF21', 'Working on now answers for the whole team in one call', (await J('office.team.now', {}, U.LVW, ORG.L)).status === 200);
 
+// ---- Customer Avatar Studio (0057)
+const av = await J('funnels.avatars.create', { name: 'John', tagline: 'the One Comma Club chaser', role: 'Course creator', market: 'Wealth', look: 3, profile: { wants: ['$10K/month'], facts: [['Age', '30+']] } }, U.LED, ORG.L);
+check('OF22', 'An avatar keeps its look, role, market and full profile', av.status === 200 && av.row.look === 3 && av.row.profile.wants[0] === '$10K/month' && av.row.version === 'v1.0');
+check('OF23', 'A look outside V8’s ten is refused', (await J('funnels.avatars.create', { name: 'X', look: 12 }, U.LED, ORG.L)).status === 422);
+const sv = await J('office.avatar.versions.save', { avatar: av.row.id, note: 'First draft' }, U.LED, ORG.L);
+const vl = await J('office.avatar.versions', { avatar: av.row.id }, U.LVW, ORG.L);
+check('OF24', 'Saving a version keeps a snapshot and moves the avatar to v1.1; the team can see the history', sv.row?.version === 'v1.1' && vl.rows.length === 1 && vl.rows[0].version === 'v1.0' && vl.rows[0].snapshot.name === 'John');
+check('OF25', 'A viewer cannot save a version; Aurj sees no history', (await J('office.avatar.versions.save', { avatar: av.row.id }, U.LVW, ORG.L)).row == null && (await J('office.avatar.versions', { avatar: av.row.id }, U.AO, ORG.A)).rows.length === 0);
+
 for (const r of results) console.log(`${r.ok ? 'PASS' : 'FAIL'}  ${r.id.padEnd(5)} ${r.name}${r.ok ? '' : `  ${r.detail ?? ''}`}`);
 const pc = results.filter((r) => r.ok).length; console.log(`\n${pc}/${results.length} checks passed`); await db.close(); process.exit(pc === results.length ? 0 : 1);

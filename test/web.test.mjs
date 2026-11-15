@@ -33,6 +33,7 @@ check('W2', 'A record route never maps to a record page after a switch: it lands
 check('W3', 'The switch never lands on the Launcher: unknown pages fall back to the app home, other apps to their own placeholder', routeForPage('office', 'whatever') === '#/office' && routeForPage('projects', null) === '#/projects' && !routeForPage('office', null).includes('launcher'));
 check('W4', 'Page keys sent to resolve_org_switch match the registry in migration 0006', pageKeyFor(parseRoute('#/office/funnels/avatars')).page === 'funnels.avatars' && pageKeyFor(parseRoute('#/office/funnels/avatars/abc')).page === 'funnels.avatar' && pageKeyFor(parseRoute('#/office')).page === 'home');
 import { readFileSync } from 'node:fs';
+import { matchChapter, toSections, sectionsToProfile } from '../apps/web/js/modules/avatarimport.js';
 const sql = readFileSync(new URL('../migrations/0006_funnels_foundation.sql', import.meta.url), 'utf8');
 check('W5', 'Every page key the UI uses is registered in app_pages', FUNNEL_TYPES.every((t) => sql.includes(`'${t.page}'`) && sql.includes(`'${t.record}'`)) && sql.includes("'funnels',"));
 check('W6', 'First sign-in default: highest role, then name', defaultOrg([{ name: 'Aurj', role: 'editor' }, { name: 'Layer2Funnels', role: 'owner' }]).name === 'Layer2Funnels' && defaultOrg([{ name: 'B', role: 'admin' }, { name: 'A', role: 'admin' }]).name === 'A');
@@ -41,7 +42,7 @@ const codes = Object.values(errors).filter((e) => e && typeof e === 'object' && 
 check('W7', 'Every API error code in the contract has a plain-words message in the browser', codes.length >= 9 && codes.every((c) => MESSAGES[c]));
 check('W8', 'Messages never contain technical words', Object.values(MESSAGES).every((m) => !/constraint|policy|rls|postgres|sql|jwt|token|42501|uuid/i.test(m)) && messageFor('weird') === MESSAGES.failed && fieldLabel('zzz') === 'a field');
 // ---- UI field definitions vs server specs (no field the server would refuse, none missing)
-const V8_FORM = { offers: ['offer_type', 'status', 'billing', 'guarantee', 'delivery_time', 'included', 'bonuses', 'avatar_ids', 'ladder_step', 'internal_notes'],   // 0056 fields: edited by the V8 New/Edit forms
+const V8_FORM = { avatars: ['tagline', 'role', 'market', 'look', 'stage', 'profile', 'source_file_id'], offers: ['offer_type', 'status', 'billing', 'guarantee', 'delivery_time', 'included', 'bonuses', 'avatar_ids', 'ladder_step', 'internal_notes'],   // 0056 fields: edited by the V8 New/Edit forms
   stories: ['before_text', 'after_text', 'best_quote', 'permission', 'consent_file_id', 'use_in'], brand_kits: ['is_main', 'logo_dark_file_id', 'icon_file_id', 'voice_say', 'voice_never', 'asset_file_ids', 'color_names'] };
 const NOT_YET = Object.fromEntries(Object.keys(V8_FORM).map((k) => [k, [...V8_FORM[k], ...(k === 'brand_kits' ? ['logo_file_id'] : [])]]));   // logos are Drive files; the picker arrives with Drive
 const sameFields = Object.entries(SERVER_TYPES).every(([k, spec]) => JSON.stringify(Object.keys(spec.fields).filter((f) => !(NOT_YET[k] ?? []).includes(f)).sort()) === JSON.stringify(FIELD_DEFS[k].map((f) => f.k).sort()));
@@ -186,5 +187,14 @@ check('W28', 'The Launcher and the app switcher open Planner in the shell (V8: P
 check('W29', 'Planner\'s menu in the shell covers every Planner page once, and only Strategy model needs plan management',
   ['overview', 'mine', 'plans', 'map', 'reviews', 'settings', 'alignment', 'reports', 'goals', 'metrics', 'model', 'templates'].every((pg) => PLANNER_PAGES.filter((x) => x.pages.includes(pg)).length === 1)
   && PLANNER_PAGES.filter((x) => x.manage).map((x) => x.key).join() === 'model' && plannerSection('metrics') === 'reports' && plannerSection(undefined) === 'overview');
+// ---- Customer Avatar import (V8 New customer avatar)
+{
+  const secs = toSections([{ t: 'h', x: '4. WHAT DRIVES HIM' }, { t: 'li', x: '$10K/month' }, { t: 'h', x: '5. BELIEFS' }, { t: 'p', x: 'I am behind.' }, { t: 'h', x: 'Russell’s vocabulary list' }, { t: 'p', x: 'VSL' }, { t: 'h', x: 'Empty' }]);
+  check('W44', 'Avatar import: headings split the file into sections (empty ones dropped) and each is matched to a chapter with a confidence',
+    secs.length === 3 && matchChapter(secs[0].heading).key === 'drives' && matchChapter('5. BELIEFS').confidence === 'High' && matchChapter('Russell’s vocabulary list').key === 'custom' && matchChapter('Russell’s vocabulary list').confidence === 'Low');
+  const p = sectionsToProfile(secs, ['drives', 'beliefs', 'custom']);
+  check('W45', 'Avatar import: checked sections fill the chapters; anything else becomes a custom chapter, and Skip leaves it out',
+    p.wants[0] === '$10K/month' && p.beliefs[0][1] === 'I am behind.' && p.custom[0].title === 'Russell’s vocabulary list' && !sectionsToProfile(secs, ['skip', 'skip', 'skip']).wants);
+}
 for (const x of results) console.log(`${x.ok ? 'PASS' : 'FAIL'}  ${x.id.padEnd(4)} ${x.name}`);
 const p = results.filter((x) => x.ok).length; console.log(`\n${p}/${results.length} checks passed`); process.exit(p === results.length ? 0 : 1);

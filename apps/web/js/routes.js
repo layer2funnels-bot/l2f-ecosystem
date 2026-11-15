@@ -84,6 +84,8 @@ export function parseRoute(hash) {
     if (byKey[c] && seg.length === 3) return r('funnel-list', { type: c });
     if (byKey[c] && d === 'new' && seg.length === 4) return r('funnel-record', { type: c, id: 'new' });
     if (byKey[c] && d && seg.length === 4) return r('funnel-record', { type: c, id: d });
+    if (c === 'avatars' && d && d !== 'new' && seg[4] === 'edit' && seg.length <= 6) return r('funnel-record', { type: c, id: d, edit: true, chapter: seg[5] });
+    if (c === 'avatars' && d && d !== 'new' && ['deep', 'use', 'evidence'].includes(seg[4]) && seg.length === 5) return r('funnel-record', { type: c, id: d, tab: seg[4] });
     if (['offers', 'stories', 'brand_kits'].includes(c) && d && seg[4] === 'edit' && seg.length === 5) return r('funnel-record', { type: c, id: d, edit: true });
   }
   return r('not-found');

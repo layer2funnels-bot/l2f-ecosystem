@@ -8,7 +8,9 @@ const T = (max = 8000) => ({ type: 'text', min: 0, max });
 export const FUNNEL_TYPES = Object.freeze({
   avatars: {
     table: 'funnel_avatars', one: 'avatar', order: 'name',
-    fields: { name: { type: 'text', required: true, max: 200 }, summary: T(4000), pains: T(), desires: T(), objections: T() },
+    fields: { name: { type: 'text', required: true, max: 200 }, summary: T(4000), pains: T(), desires: T(), objections: T(),
+      // V8 Customer Avatar Studio (0057)
+      tagline: T(200), role: T(200), market: T(80), look: { type: 'int', min: 0, max: 9 }, stage: { type: 'enum', values: ['draft', 'validated'] }, profile: { type: 'json', max: 400000 }, source_file_id: { type: 'uuid' } },
   },
   offers: {
     table: 'funnel_offers', one: 'offer', order: 'name',
@@ -42,7 +44,7 @@ export const FUNNEL_TYPES = Object.freeze({
     },
   },
 });
-const JSON_COLS = new Set(['colors', 'fonts', 'included']);
+const JSON_COLS = new Set(['colors', 'fonts', 'included', 'profile']);
 const val = (col, v) => (JSON_COLS.has(col) ? JSON.stringify(v) : v);
 
 const makeOps = (plural, { table, order, fields }) => {

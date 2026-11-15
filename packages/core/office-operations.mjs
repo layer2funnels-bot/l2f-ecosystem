@@ -110,4 +110,22 @@ export const officeOperations = [
       return [{ ...m, now: now ?? null, tasks, week: week[0], projects }];
     },
   }),
+  // ---- Customer Avatar Studio: saved versions (0057). Saving snapshots the avatar as it is now and moves it to the next version number.
+  defineOperation({
+    name: 'office.avatar.versions', class: 'read', input: { avatar: { type: 'uuid', required: true } },
+    run: (q, _c, i) => q(`select v.id, v.version, v.note, v.created_at, coalesce(nullif(p.display_name, ''), 'Someone') as by_name, v.snapshot from avatar_versions v left join profiles p on p.id = v.created_by
+      where v.avatar_id = $1 order by v.created_at desc limit 50`, [i.avatar]),
+  }),
+  defineOperation({
+    name: 'office.avatar.versions.save', class: 'write', single: true, input: { avatar: { type: 'uuid', required: true }, note: { type: 'text', max: 300 }, major: { type: 'bool' } },
+    run: async (q, ctx, i) => {
+      const [a] = await q('select id, workspace_id, client_id, name, tagline, role, market, look, stage, version, profile, summary, pains, desires, objections from funnel_avatars where id = $1 and archived_at is null', [i.avatar]);
+      if (!a) return [];
+      await q('insert into avatar_versions (workspace_id, avatar_id, client_id, version, note, snapshot, created_by) values ($1, $2, $3, $4, $5, $6, $7)',
+        [a.workspace_id, a.id, a.client_id, a.version, i.note ?? '', JSON.stringify(a), ctx.userId]);
+      const m = /^v?(\d+)(?:\.(\d+))?/.exec(a.version) ?? [null, '1', '0'];
+      const next = i.major ? `v${Number(m[1]) + 1}.0` : `v${m[1]}.${Number(m[2] ?? 0) + 1}`;
+      return q('update funnel_avatars set version = $2 where id = $1 returning id, version', [a.id, next]);
+    },
+  }),
 ];

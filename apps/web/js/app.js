@@ -40,7 +40,8 @@ import { funnelsHomeView, funnelListView, funnelRecordView } from './views/funne
 import { documentsView as documentsV8 } from './views/office-docs.js';
 import { offersListView, offerView, offerFormView } from './views/office-offers.js';
 import { storiesListView, storyView, storyFormView, brandKitsListView, brandKitView, brandKitFormView } from './views/office-records.js';
-const V8REC = { offers: [offersListView, offerView, offerFormView], stories: [storiesListView, storyView, storyFormView], brand_kits: [brandKitsListView, brandKitView, brandKitFormView] };
+import { avatarsListView, avatarNewView, avatarStudioView, avatarEditView } from './views/office-avatars.js';
+const V8REC = { avatars: [avatarsListView, (c, id, prm) => avatarStudioView(c, id, prm?.tab ?? 'profile'), (c, id, prm) => (id ? avatarEditView(c, id, prm?.chapter) : avatarNewView(c))], offers: [offersListView, offerView, offerFormView], stories: [storiesListView, storyView, storyFormView], brand_kits: [brandKitsListView, brandKitView, brandKitFormView] };
 
 const cfg = window.L2F_CONFIG;
 const root = document.getElementById('app');
@@ -453,7 +454,7 @@ async function render(opts = {}) {
       case 'strategy': content = strategyView(c, route.params.id); break;
       case 'funnel-list': { const v = V8REC[route.params.type]; content = v ? v[0](c) : funnelListView(c, route.params.type); break; }
       case 'funnel-record': { const v = V8REC[route.params.type]; const { id } = route.params;
-        content = !v ? funnelRecordView(c, route.params.type, id) : id === 'new' ? v[2](c) : route.params.edit ? v[2](c, id) : v[1](c, id); break; }
+        content = !v ? funnelRecordView(c, route.params.type, id) : id === 'new' ? v[2](c, null, route.params) : route.params.edit ? v[2](c, id, route.params) : v[1](c, id, route.params); break; }
       case 'doc': content = docView({ api, id: route.params.id, ctx: c }); break;
       case 'social': content = socialView({ api, ctx: c, route: { view: route.params.view, id: route.params.id, query: route.query } }); break;
       case 'boards': content = boardsView({ api, ctx: c, route: { query: route.query } }); break;
