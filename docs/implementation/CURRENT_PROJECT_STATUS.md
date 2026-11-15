@@ -30,8 +30,8 @@ Everything is described in `recovery/AUDIT_TRACKER.md` (30 rows: defect → fix 
 | e2e-ui | **265/265** |
 | e2e-local | **71/71** |
 | e2e-recovery (new: avatars, stories, brand kits, launcher, teammate switches, org, documents, Tasks slow network, folders) | **43/43** (last clean run on the bundle; the final run was disturbed by a rebuild mid-run) |
-| e2e-tasks | 34/35 → the failure was a 15 px sideways scroll on phones (task row too wide); fixed in `v8-base.css` (last commit) — **re-run pending** |
-| e2e-onboarding | not re-run in the final pass (unchanged areas) |
+| e2e-tasks | **35/35** (after fixing a 15 px sideways scroll of task rows on phones) |
+| e2e-onboarding | **22/22** |
 
 ## Not verified
 - **Nothing of this session is verified on live** (not deployed; no safe live test account was provided). After merge: sign in on live with a
