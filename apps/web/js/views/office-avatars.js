@@ -159,7 +159,7 @@ export function avatarStudioView(ctx, id, tab = 'profile') {
   const setBar = (acts) => { root.__focused.actions = acts; document.querySelector('.focusbar-acts')?.replaceChildren(...acts); const t = document.querySelector('.focusbar .hdr-ttl b'); if (t) t.textContent = root.__focused.title; };
   const view = async (pre) => {
     const [r, offers] = await Promise.all([pre ? { ok: true, data: [pre] } : ctx.api.call('funnels.avatars.get', { id }), tab === 'profile' ? ctx.api.call('funnels.offers.list', {}) : { ok: true, data: [] }]); if (!ctx.live()) return;
-    if (!r.ok || !r.data?.[0]) return put(wrap, r.ok || r.status === 404 || r.status === 400 ? notFoundState(hrefFor.list('avatars'), 'Back to Customer Avatars') : errorState(() => view()));
+    if (!r.ok || !r.data?.[0]) return put(wrap, r.ok || (r.status >= 400 && r.status < 500 && ![401, 408, 429].includes(r.status)) ? notFoundState(hrefFor.list('avatars'), 'Back to Customer Avatars') : errorState(() => view()));
     const a = r.data[0]; a.version ??= 'v1.0'; a.stage ??= 'draft'; const p = normalize(a.profile ?? {}); const [c] = lookOf(a.look); const done = completeness(p); wrap.style.setProperty('--c', c);
     const canEdit = ctx.can('funnels.avatar.edit', a.client_id) && !a.archived_at; const m = recordManager(ctx, 'avatars', { view: (x) => view(x), backTo: hrefFor.list('avatars') });
     const used = (offers.data ?? []).filter((o) => (o.avatar_ids ?? []).includes(a.id) || o.avatar_id === a.id);
@@ -255,7 +255,7 @@ export function avatarStudioView(ctx, id, tab = 'profile') {
 function pickCards(p, saveProfile, a) {
   const chosen = new Set(p.cards.map((k) => `${k.sid}|${k.sub}`)); const order = p.cards.map((k) => `${k.sid}|${k.sub}`);
   const box = (key, label, small) => { const i = h('input', { type: 'checkbox', ...(chosen.has(key) ? { checked: true } : {}), onchange: () => { if (i.checked) { chosen.add(key); if (!order.includes(key)) order.push(key); } else chosen.delete(key); } });
-    return h('label', { class: `chk ${small ? 'sub' : ''}`.trim() }, i, ` ${label}`); };
+    return h('label', { class: `chk ${small ? 'sub' : ''}`.trim() }, i, ' ', label); };
   const list = h('div', { class: 'cardpick' }, ...p.sections.map((s) => h('div', { class: 'cp-sec' }, box(`${s.id}|`, h('b', {}, s.title)),
     s.blocks.some((b) => b.t === 'table') ? box(`${s.id}|#table`, 'Its first table (At a glance)', true) : null, ...subHeadings(s).map((x) => box(`${s.id}|${x}`, x, true)))));
   dialog({ title: `What ${a.name}’s profile shows`, wide: true, body: [h('p', { class: 'hint' }, 'Tick a section to show all of it, or tick parts of it. Unticking only takes it off the profile; the Full profile keeps everything.'), list],
@@ -270,7 +270,7 @@ export function avatarEditView(ctx, id, chapter = 'about') {
   root.__focused = { title: 'Editing avatar', sub: 'Changes update the profile and the full profile together', back: base(id), actions: [h('a', { class: 'btn quiet sm', href: base(id) }, 'Cancel')] };
   (async () => {
     let d = drafts.get(id);
-    if (!d) { const r = await ctx.api.call('funnels.avatars.get', { id }); if (!ctx.live()) return; if (!r.ok || !r.data?.[0]) return put(wrap, r.ok || r.status === 404 || r.status === 400 ? notFoundState(hrefFor.list('avatars'), 'Back to Customer Avatars') : errorState(() => ctx.rerender()));
+    if (!d) { const r = await ctx.api.call('funnels.avatars.get', { id }); if (!ctx.live()) return; if (!r.ok || !r.data?.[0]) return put(wrap, r.ok || (r.status >= 400 && r.status < 500 && ![401, 408, 429].includes(r.status)) ? notFoundState(hrefFor.list('avatars'), 'Back to Customer Avatars') : errorState(() => ctx.rerender()));
       const a = r.data[0]; if (!ctx.can('funnels.avatar.edit', a.client_id) || a.archived_at) return put(wrap, emptyState({ title: 'You can’t edit this avatar', body: a.archived_at ? 'Restore it first.' : 'Ask an owner or admin for access.' }));
       d = { a, p: normalize(structuredClone(a.profile ?? {})), changed: false }; drafts.set(id, d); }
     const { a, p } = d; wrap.style.setProperty('--c', lookOf(a.look)[0]);

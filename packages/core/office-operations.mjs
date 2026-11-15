@@ -169,7 +169,7 @@ export const officeOperations = [
   defineOperation({ name: 'org.rename', class: 'write', single: true, input: { name: { type: 'text', required: true, min: 2, max: 80 } }, run: (q, _c, i) => q('select public.workspace_rename($1) as name', [i.name]) }),
   defineOperation({ name: 'org.icons', class: 'read', audience: 'any', run: (q) => q('select org_id, brand_icon from public.my_org_icons()') }),
   defineOperation({ name: 'launcher.order.set', class: 'write', single: true, input: { apps: { type: 'list', items: 'text', max: 60, itemMax: 40, required: true } }, run: (q, _c, i) => q('select public.launcher_order_set($1::text[]) as n', [i.apps]) }),
-  defineOperation({ name: 'office.avatar.settings', class: 'read', single: true, run: (q, ctx) => q('select sections, updated_at from avatar_settings where workspace_id = $1', [ctx.orgId]) }),
+  defineOperation({ name: 'office.avatar.settings', class: 'read', run: (q, ctx) => q('select sections, updated_at from avatar_settings where workspace_id = $1', [ctx.orgId]) }),
   defineOperation({ name: 'office.avatar.settings.set', class: 'write', single: true, input: { sections: { type: 'json', required: true } },
     run: (q, ctx, i) => {
       const list = Array.isArray(i.sections) ? i.sections : null;
