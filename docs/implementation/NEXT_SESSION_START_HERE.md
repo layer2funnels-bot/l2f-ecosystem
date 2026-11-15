@@ -16,7 +16,7 @@ Then read, in this order: `CURRENT_PROJECT_STATUS.md` → `MASTER_HANDOFF.md` �
 - Migrations 0054–0058 written and tested locally; **not applied to production** (blocked: no verified backup possible from the cloud session).
 
 ## 3. Your first task
-**Unblock and apply the P00 + P01 migrations — only after a verified backup:**
+**Migrations 0054–0059 are applied on production (15 Nov). Start P03 Drive with editors.**
 1. Ask the owner to run the backup on their machine (never paste secrets in chat):
    `SUPABASE_DB_URL=… AGE_RECIPIENT=… bash scripts/backup-supabase.sh` and confirm the `l2f-backup-<stamp>.tar.age` file exists and is non-empty
    (or approve enabling `.github/workflows/backup.yml.disabled` with those two repository secrets and confirm a successful run + artifact).
