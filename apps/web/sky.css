@@ -42,8 +42,8 @@
 /* ---- V8 Launcher sizes (verbatim from the V8 prototype: prototype-source v7.css "Launcher: a little more zoomed in" + v8.css):
    content 1240 px, tiles min 176 px (150 px above 1100 px so no app sits alone on a row), 96 px plates, names 16.5 px,
    descriptions 13.5 px, hero up to 76 px in Bricolage Grotesque (the Launcher is the only place it appears), search 52 px. ---- */
-.lx .l-wrap{max-width:1240px}.lx .l-grid{grid-template-columns:repeat(auto-fill,minmax(176px,1fr));gap:10px}.lx .tile{padding:24px 10px 20px}.lx .t-name{font-size:16.5px}.lx .t-desc{font-size:13.5px}.lx .l-hero h1{font-size:clamp(46px,6vw,76px);font-family:"Bricolage Grotesque",var(--font)}.lx .l-find{min-height:52px;font-size:16px}.lx .l-group h2{font-size:13px}
+.lx .l-wrap{max-width:1240px}.lx .l-grid{grid-template-columns:repeat(auto-fill,minmax(176px,1fr));gap:10px}.lx .tile{padding:24px 10px 20px}.lx .t-name{font-size:calc(16.5px * var(--ts, 1))}.lx .t-desc{font-size:calc(13.5px * var(--ts, 1))}.lx .l-hero h1{font-size:clamp(46px,6vw,76px);font-family:"Bricolage Grotesque",var(--font)}.lx .l-find{min-height:52px;font-size:calc(16px * var(--ts, 1))}.lx .l-group h2{font-size:calc(13px * var(--ts, 1))}
 .lx .tile .plate{--s:96px}
 @media (min-width:1101px){.lx .l-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}}
-@media (max-width:760px){.lx .l-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.lx .tile{padding:14px 2px 10px}.lx .t-name{font-size:13.5px}.lx .tile .plate{--s:62px}}
+@media (max-width:760px){.lx .l-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.lx .tile{padding:14px 2px 10px}.lx .t-name{font-size:calc(13.5px * var(--ts, 1))}.lx .tile .plate{--s:62px}}
 .lx .l-hero p.sub,.l-hero .sub{margin:0}   /* V8: the line under the greeting has no margin (the hero gap of 14 px spaces it) */

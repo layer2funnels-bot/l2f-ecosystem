@@ -191,6 +191,8 @@ export function profileView({ app, me, tab = 'about', orgs = [], active = null, 
       };
       pane.append(h('div', { class: 'panel pf8-card pf8-narrow' },
         h('h3', {}, 'Theme'), themeSeg,
+        h('h3', { style: 'margin-top:16px' }, 'Text size'), seg([['standard', 'Standard'], ['large', 'Large'], ['larger', 'Larger']], theme?.textSize?.() ?? 'large', (v) => { theme?.setTextSize?.(v); toast(`Text size: ${v}.`); }, 'Text size'),
+        h('p', { class: 'fine' }, 'Large is the default. Standard matches the design exactly; Larger is easier to read on small or distant screens.'),
         sw('Reduce motion', 'Turns off animations everywhere, including the Launcher weather. Your device setting also does this.', () => theme?.reduceMotion?.(), (v) => theme?.setReduceMotion?.(v), 'pf-motion'),
         sw('Compact density', 'Tighter spacing, so more fits on the screen. Buttons stay easy to tap.', () => theme?.compact?.(), (v) => theme?.setCompact?.(v), 'pf-density'),
         h('p', { class: 'fine' }, 'The Launcher sky follows the time of day and the weather in your area by itself. These settings are saved on this device.')));

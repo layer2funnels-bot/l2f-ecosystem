@@ -34,7 +34,7 @@
 .pp-sheet__btn { min-height: 44px; min-width: 64px; padding: 0 12px; border: 0; background: transparent; border-radius: var(--pm-r-md); color: var(--pm-text-2); font-weight: 560; font-size: var(--pm-fs-md); }
 .pp-sheet__btn--primary { color: var(--pm-accent-text); font-weight: 650; }
 .pp-sheet .pm-menu__search { height: 48px; }
-.pp-sheet .pm-menu__search input { font-size: 16px; }
+.pp-sheet .pm-menu__search input { font-size:calc(16px * var(--ts, 1)); }
 .pp-sheet .pp-opt { min-height: 52px; }
 .pp-sheet .pp-chip { height: 32px; }
 .pp-sheet .pp-chip__x { width: 28px; height: 28px; }
