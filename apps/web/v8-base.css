@@ -104,28 +104,23 @@ h3{font:650 calc(16px * var(--ts, 1))/1.25 var(--font);letter-spacing:-.005em}  
 .v8p-office .iconbtn.xs{min-width:28px;min-height:28px}.v8p-office .lk,.v8p-office .linkbtn{min-height:28px;min-width:28px}
 .v8p-office .cagrid .cell{min-height:32px;min-width:32px}
 /* touch screens: every control on the rebuilt pages reaches 44 px (V8 v6.css @media (pointer:coarse)); !important because the generated page rules are more specific */
-@media (pointer:coarse){
   .v8p-office .btn,.v8p-office .btn.sm,.v8p-office input:not([type=checkbox]):not([type=radio]):not([type=file]),.v8p-office select,.v8p-office .tabs6 a,.v8p-office .studio-tabs a,.v8p-office .lk,.v8p-office .addrow,.v8p-office .chip,.v8p-office .chips6 button,.v8p-office .seg3 button,.v8p-office .linkbtn{min-height:44px!important}
   .v8p-office .iconbtn,.v8p-office .iconbtn.xs,.v8p-office .cagrid .cell{min-width:44px!important;min-height:44px!important}
   .v8p-office .btn,.v8p-office .linkbtn{min-width:44px!important}
   .v8p-office .tabs6 a{flex-shrink:0}
 }
-<<<<<<< HEAD
 /* Tasks (V8 04_TASKS): document sheet hairline / radius 8 / no shadow / max 980; task 15.5; block heading 19; Show/Hide completed 14.5; touch 44 px */
 .v8p-tasks .tdoc{max-width:980px;border:var(--bw) solid var(--line);border-radius:8px;box-shadow:none}
 .v8p-tasks .ol-t{font-size:calc(15.5px * var(--ts, 1))}.v8p-tasks .tb-h h2{font-size:calc(19px * var(--ts, 1))}.v8p-tasks .showdone{font-size:calc(14.5px * var(--ts, 1))}
 .v8p-tasks .iconbtn.xs{min-width:28px;min-height:28px}
-@media (pointer:coarse){
   .v8p-tasks .btn,.v8p-tasks .btn.sm,.v8p-tasks input:not([type=checkbox]):not([type=radio]),.v8p-tasks select,.v8p-tasks .tabs6 button,.v8p-tasks .vsw button,.v8p-tasks .addt,.v8p-tasks .addblock,.v8p-tasks .showdone,.v8p-tasks .chip,.v8p-tasks .linkrow,.v8p-tasks .mng,.tside a,.tside .addrow,.tside summary{min-height:44px!important}
   .v8p-tasks .iconbtn,.v8p-tasks .iconbtn.xs,.v8p-tasks .ol-cb{min-width:44px!important;min-height:44px!important}
   .v8p-tasks .btn{min-width:44px!important}
   .v8p-tasks .ol-timer,.v8p-tasks .ol-more{opacity:1}
 }
-=======
 /* Avatar Studio profile: the summary cards on each side are spaced (14 px, as V8's avatar profile) */
 .v8p-office .studio .specs{display:grid;gap:14px;align-content:start}
 /* tab strips never break a label over two lines; on a narrow screen the strip scrolls sideways inside itself */
 .v8p-office .studio-tabs,.v8p-office .tabs6{overflow-x:auto;scrollbar-width:none;max-width:100%}
 .v8p-office .studio-tabs a,.v8p-office .tabs6 a,.v8p-office .tabs6 button{white-space:nowrap;flex:none}
->>>>>>> p01-office
 .v8p-tasks .tabs6{overflow-x:auto;scrollbar-width:none;max-width:100%}.v8p-tasks .tabs6 button{white-space:nowrap;flex:none}
