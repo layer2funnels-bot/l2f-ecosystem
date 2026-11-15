@@ -21,7 +21,7 @@ Short by design: it points to the original documents instead of copying them. Cu
 6. V8 visual fidelity: typography, weights, spacing, sizes, colours, icons, responsive layouts, interactions.
 7. **No merge, deploy or production data/schema change without explicit owner approval.** Never ask for credentials in chat. $0/month.
 8. Use Claude economically: no repeated doc reviews; targeted tests while building, full suites at milestones; short reports.
-9. Sequence: P00 → P01 → **Tasks next** (owner, 15 Nov). Order after Tasks: confirm with the owner (two lists given; see status file).
+9. Approved sequence (owner, 15 Nov 2026): P00 Foundation and Global Shell → P01 Office → **P02 Tasks** → P03 Drive with editors → P04 Projects → P05 Planner → P06 Clients → P07 Funnel Mapper → P08 Portal → P09 Whiteboard → P10 Forms → P11 Value Ladder → P12 Social Planner → P13 Agents → P14 Final Ecosystem Verification.
 
 Planning documents (read once, don't redo): `V8_DOCUMENTATION_REVIEW.md`, `V8_IMPLEMENTATION_TRACKER.md` (requirements OR-01…OR-63, every page),
 `ECOSYSTEM_PLAN.md`, `V8_CRITICAL_REQUIREMENTS_QA.md`, `SHELL_AND_LAUNCHER_PLAN.md`, `OFFICE_PLAN.md`, `V8_FIDELITY_REPORT.md`, `P00_NOTES.md`.
@@ -77,4 +77,4 @@ Unit 66 suites green; office 33/33; web 56/56; e2e-ui 265/265; onboarding 22/22;
 ## 10. Next steps
 1. Backup (owner) → apply 0054–0058 → verify (§7) → update the status file.
 2. Owner decisions on merging #56 and #57.
-3. Next application: **Tasks** (confirm the remaining order first). Follow the same method: read its V8 app folder once, audit V4, build the whole app, one PR.
+3. Next application: **P02 Tasks**, then Drive with editors, Projects, Planner, Clients. Follow the same method: read its V8 app folder once, audit V4, build the whole app, one PR.

@@ -2,11 +2,9 @@
 
 Legend: **Done** (built and tested) · **Incomplete** · **Untested** · **Blocked** (needs the owner).
 
-## Application sequence
-P00 Foundation and Global Shell → P01 Office → **next: Tasks** (owner, 15 Nov 2026: "We will do tasks next").
-The owner gave two different orders for the apps after that (A: Projects, Tasks, Drive, Planner, Clients; B: Clients, Projects, Tasks, Drive, Planner),
-both followed by Funnel Mapper, Portal, Whiteboard, Forms, Value Ladder, Social Planner, Agents and P14 Final Ecosystem Verification.
-**Confirm the order after Tasks with the owner** before planning it. Page IDs in `V8_IMPLEMENTATION_TRACKER.md` (P02-xx …) are reference IDs, not the order.
+## Application sequence (owner, 15 Nov 2026 — final)
+P00 Foundation and Global Shell → P01 Office → **P02 Tasks** → P03 Drive with editors → P04 Projects → P05 Planner → P06 Clients → P07 Funnel Mapper → P08 Portal → P09 Whiteboard → P10 Forms → P11 Value Ladder → P12 Social Planner → P13 Agents → P14 Final Ecosystem Verification.
+Next application: **P02 Tasks**. Page IDs in `V8_IMPLEMENTATION_TRACKER.md` (P02-xx …) are older reference IDs, not this order.
 
 ## P00 — Foundation and Global Shell: **Done** (not merged)
 - Branch `claude/epic-bohr-nc9jar`, head `105494b` (variable Geist fix). PR [#56](https://github.com/layer2funnels-bot/l2f-ecosystem/pull/56): draft, CI green, Cloudflare preview green. **Not merged.**

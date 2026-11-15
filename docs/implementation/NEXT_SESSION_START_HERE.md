@@ -25,7 +25,7 @@ Then read, in this order: `CURRENT_PROJECT_STATUS.md` → `MASTER_HANDOFF.md` �
    Client Access Matrix policy uses `clients.apps.manage` (owner + admin), the preview's bell, Profile details and Office pages load.
 5. Update `CURRENT_PROJECT_STATUS.md`.
 
-**Then the next application is Tasks** (owner, 15 Nov 2026). Confirm the order of the apps after Tasks with the owner (two different lists were given).
+**Then the next application is P02 Tasks.** Approved order (owner, 15 Nov 2026): P00 Foundation and Global Shell → P01 Office → **P02 Tasks** → P03 Drive with editors → P04 Projects → P05 Planner → P06 Clients → P07 Funnel Mapper → P08 Portal → P09 Whiteboard → P10 Forms → P11 Value Ladder → P12 Social Planner → P13 Agents → P14 Final Ecosystem Verification.
 Do not start a new app until the owner says so; do not start Tasks before the migrations question is settled or explicitly deferred by the owner.
 
 ## 4. Never
