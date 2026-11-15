@@ -100,3 +100,21 @@ For every app: `APP_OVERVIEW.md`, `FEATURES_AND_FUNCTIONALITY.md` (§1 change re
 2. Dream 100 workbook: **received 14 Nov**, stored as `test/fixtures/Aurj_Dream100_Tracker.xlsx` for the spreadsheet acceptance test (OR-37).
 3. "Pro notification" (C10): **the notification inbox (bell).**
 4. D6 (client's own Office content) and D9 (version thinning 30/90 days): the documented assumptions are used unless the owner says otherwise.
+
+## 9. Drive (P04) review — 15 Nov 2026 (Drive session)
+
+Read **in full** at the start of the Drive build (not only parsed):
+`07_PROMPTS/P05_DRIVE_AND_EDITORS.md`; `01_APPLICATIONS/05_DRIVE_AND_EDITORS/` — `APP_OVERVIEW.md`, `FEATURES_AND_FUNCTIONALITY.md` (§1–§4),
+`PAGES_AND_NAVIGATION.md` (all 13 pages; control lists truncated in the file itself are completed from the prototype source), `COMPONENTS_AND_INTERACTIONS.md`,
+`USER_FLOWS_AND_WORKFLOWS.md`, `RESPONSIVE_DESIGN.md`, `IMPLEMENTATION_NOTES.md`; `09_FINAL_HANDOFF/reference/EDITORS_DESIGN_BRIEF.md`;
+`00_MASTER_DOCUMENTATION/03_PERMISSIONS_DATA_INTEGRATIONS.md` §4–§5; `04_OPEN_DECISIONS.md` D5, D9, D13–D15; `V8_BUG_FIXES.md` #1–#4;
+`04_RESPONSIVE_DESIGN/APP_SPECIFIC_MOBILE_REQUIREMENTS.md` (Drive); `05_STRATEGY_AND_ARCHITECTURE/CROSS_APP_WORKFLOWS.md` (Drive lines).
+Owner requirements OR-22…OR-37 and the owner's session brief Part 6. Real-world fixture `test/fixtures/Aurj_Dream100_Tracker.xlsx` opened and inspected
+(7 sheets, 675 formulas, 13 validation rules, 5 conditional formats, frozen panes, filters).
+Prototype source and screenshots: read per page while building (recorded in `DRIVE_REPORT.md`).
+
+Findings and conflicts for Drive:
+- F1: V4/V8 describe a Slides editor; **none exists in the repo** — built new.
+- F2: The prompt says "stop after the plan and wait for go"; the owner's brief says begin after the review — the owner's later instruction is followed.
+- F3: 03 §5 "every change as small ops/deltas" vs the repo's full-snapshot versions: snapshots kept (proven, restorable); storage controlled by thinning (D9). Recorded in `DRIVE_PLAN.md`.
+- F4: D5 (presence) vs owner C3 (live cursors): presence by heartbeat now; cursors depend on a realtime channel (see plan §5).
