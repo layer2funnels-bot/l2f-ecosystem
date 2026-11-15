@@ -117,7 +117,7 @@ export function offerFormView(ctx, id = null) {
         included: st.included.map((x) => x.trim()).filter(Boolean), bonuses: bonuses.value.trim(), avatar_ids: st.avatar_ids, ladder_step: ladder.value, internal_notes: notes.value, ...(amount != null && !Number.isNaN(amount) ? { price_amount: amount, currency: cur2.value } : {}) };
       const r = await ctx.api.call(id ? 'funnels.offers.update' : 'funnels.offers.create', id ? { id, ...body } : { kind: 'offer', ...body, ...(who?.value ? { client: who.value } : {}) });
       if (!r.ok) return toast(messageFor(r.error?.code), false);
-      dirty.clear(); toast(id ? 'Offer saved.' : asDraft ? 'Saved as draft.' : 'Offer created.'); if (!leaving) ctx.go(hrefFor.record('offers', r.data[0].id)); return true;
+      dirty.clear(); toast(id ? 'Offer saved.' : asDraft ? 'Saved as draft.' : 'Offer created.'); if (!leaving) ctx.go(hrefFor.list('offers')); return true;
     };
     root.__focused.actions.splice(0, root.__focused.actions.length, h('a', { class: 'btn quiet sm', href: back }, 'Cancel'), ...(id ? [] : [btn('Save draft', () => save(true), 'ghost sm')]), btn(id ? 'Save offer' : 'Create offer', () => save(false), 'primary sm'));
     document.querySelector('.focusbar-acts')?.replaceChildren(...root.__focused.actions);

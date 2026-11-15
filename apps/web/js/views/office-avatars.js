@@ -187,7 +187,7 @@ export function avatarStudioView(ctx, id, tab = 'profile') {
       const cardEl = (k, i) => { const s = byId.get(k.sid); const bl = cardBlocks(s, k.sub);
         return h('section', { class: 'sp avcardp', style: `--i:${i}` }, h('h3', {}, icon(k.sub === '#table' ? 'user' : 'target'), h('span', { class: 'grow' }, cardTitle(s, k.sub)),
           canEdit ? h('button', { class: 'iconbtn xs', type: 'button', 'aria-label': `Remove “${cardTitle(s, k.sub)}” from the profile`, title: 'Remove from the profile (the content stays in the Full profile)', onclick: () => saveProfile({ ...p, cards: p.cards.filter((x) => x !== k) }, 'Removed from the profile. It’s still in the Full profile.') }, icon('x')) : null),
-          h('div', { class: 'avb clamp' }, ...renderBlocks(bl)), h('a', { class: 'avb-more', href: `${base(a.id)}/deep?c=${s.id}` }, 'Open in the Full profile'));
+          clampBox(renderBlocks(bl)));
       };
       const left = cards.filter((_, i) => i % 2 === 0); const right = cards.filter((_, i) => i % 2 === 1);
       put(body, h('div', { class: 'studio' },
@@ -249,6 +249,16 @@ export function avatarStudioView(ctx, id, tab = 'profile') {
       for (const b of s.blocks) { if (b.t === 'h') blocks.push({ t: 'h3', c: t(b.x) }); else if (b.t === 'table') for (const r of b.rows) blocks.push({ t: 'p', c: t(r.filter(Boolean).join(' — ')) }); else blocks.push({ t: 'p', c: t(b.t === 'li' ? `• ${b.x}` : b.x) }); } }
     try { await printBlocks({ blocks, page: { size: 'a4', margin: 'normal' }, title: a.name, imageSrc: async () => null }); } catch { toast('Couldn’t open the print window.', false); } };
   view(); return root;
+}
+
+/** A card body that shows its start; when the content is longer, clicking or pressing Enter on it opens the rest in place (no extra buttons). */
+function clampBox(kids) {
+  const box = h('div', { class: 'avb clamp' }, ...kids);
+  requestAnimationFrame(() => { if (box.scrollHeight <= box.clientHeight + 4) { box.classList.remove('clamp'); return; }
+    box.tabIndex = 0; box.setAttribute('role', 'button'); box.setAttribute('aria-expanded', 'false'); box.title = 'Show all';
+    const toggle = () => { const open = box.classList.toggle('open'); box.setAttribute('aria-expanded', String(open)); box.title = open ? 'Show less' : 'Show all'; };
+    box.addEventListener('click', (e) => { if (!e.target.closest('a')) toggle(); }); box.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } }); });
+  return box;
 }
 
 /** Choose the Profile cards: any section, its first table, or any of its sub-headings. Removing a card never deletes content. */

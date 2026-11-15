@@ -98,11 +98,14 @@ export function storyFormView(ctx, id = null) {
     const save = async (leaving = false) => {
       if (!title.value.trim()) { title.focus(); return toast('Give the story a headline.', false); }
       const b = { title: title.value.trim(), kind: st.kind, body: body.value, before_text: before.value.trim(), after_text: after.value.trim(), best_quote: quote.value.trim(), permission: st.permission, use_in: st.use_in, ...(st.consent ? { consent_file_id: st.consent } : {}) };
+      if (saving) return false; saving = true; saveBtn.disabled = true;   // one save at a time: a double click never creates two stories
       const r = await ctx.api.call(id ? 'funnels.stories.update' : 'funnels.stories.create', id ? { id, ...b } : { ...b, ...(who?.value ? { client: who.value } : {}) });
-      if (!r.ok) return toast(messageFor(r.error?.code), false);
-      dirty.clear(); toast('Story saved.'); if (!leaving) ctx.go(hrefFor.record('stories', r.data[0].id)); return true;
+      saving = false; saveBtn.disabled = false;
+      if (!r.ok || !r.data?.[0]) { toast(r.ok ? 'Couldn’t save the story. Try again.' : messageFor(r.error?.code), false); return false; }   // stays on the form: nothing typed is lost
+      dirty.clear(); toast(id ? 'Story saved.' : 'Story created.'); if (!leaving) ctx.go(hrefFor.list('stories')); return true;
     };
-    focusedActions(root, [h('a', { class: 'btn quiet sm', href: back }, 'Cancel'), btn('Save story', save, 'primary sm')]);
+    let saving = false; const saveBtn = btn('Save story', () => save(), 'primary sm');
+    focusedActions(root, [h('a', { class: 'btn quiet sm', href: back }, 'Cancel'), saveBtn]);
     put(root, h('div', { class: 'formpage' }, h('div', { class: 'formcol' }, ...sections([
       ['The story', [seg3(KINDS, st.kind, (k) => { st.kind = k; }, markDirty), field('Headline', title, true), who ? field('Who is it about?', who) : null, field('The story', body)].filter(Boolean)],
       ['Before → after', [h('div', { class: 'row2' }, field('Before', before), field('After', after)), field('Best quote', quote)]],
@@ -114,6 +117,14 @@ export function storyFormView(ctx, id = null) {
 }
 
 // ---------------- Brand Kits
+/** Can this font family actually be drawn here? A font the browser doesn't have falls back, so its text measures exactly like the fallback in all three
+ *  generic families. Fonts built into the app (fonts.css) are loaded first so they count. Never trusts the name alone. */
+export async function fontRenders(name, weight = 400) {
+  if (!name) return false;
+  try { await document.fonts.load(`${weight} 32px '${name}'`); } catch { /* not one of ours */ }
+  const c = document.createElement('canvas').getContext('2d'); if (!c) return false; const text = 'mmmmmmmmmwwwwwwwllIIi10 AaQq';
+  return ['monospace', 'serif', 'sans-serif'].some((fb) => { c.font = `${weight} 32px ${fb}`; const a = c.measureText(text).width; c.font = `${weight} 32px '${name}', ${fb}`; return Math.abs(c.measureText(text).width - a) > 0.5; });
+}
 const swatches = (k) => h('span', { class: 'bk-sw' }, ...(k.colors ?? []).slice(0, 6).map((c) => h('i', { style: `--c:${c}` })));
 const fileImg = async (ctx, fid, alt) => { if (!fid) return null; const r = await ctx.api.call('drive.files.download', { id: fid }); return r.ok && r.data?.[0]?.url ? h('img', { src: r.data[0].url, alt, style: 'max-width:100%;max-height:72px;object-fit:contain' }) : null; };
 
@@ -179,9 +190,15 @@ export function brandKitFormView(ctx, id = null) {
         h('input', { value: c, class: 'mono', 'aria-label': `Colour ${i + 1} hex`, maxlength: 7, oninput: (e) => { st.colors[i][1] = e.target.value.trim(); if (HEX.test(st.colors[i][1])) { sw.style.setProperty('--c', st.colors[i][1]); paintPrev(); } markDirty(); } }),
         h('button', { class: 'iconbtn xs', type: 'button', 'aria-label': `Remove ${role || 'colour'}`, onclick: () => { st.colors.splice(i, 1); paintRows(); paintPrev(); markDirty(); } }, icon('trash'))); }),
     st.colors.length < 24 ? h('button', { class: 'addrow', type: 'button', onclick: () => { st.colors.push(['', '#888888']); paintRows(); } }, icon('plus'), 'Add colour') : null); };
-    const fontSel = (opts, val) => { const s = h('select', {}, ...[...new Set([...(val ? [val] : []), ...opts])].map((f) => h('option', { value: f }, f))); s.value = val || opts[0]; return s; };
-    const hf = fontSel(HEAD_FONTS, k.fonts?.[0]); const bf = fontSel(BODY_FONTS, k.fonts?.[1]);
-    const sample = h('p', { style: `font:700 28px '${hf.value}',var(--font-d)` }, 'Aa Headline sample'); hf.addEventListener('change', () => { sample.style.fontFamily = `'${hf.value}',var(--font-d)`; paintPrev(); markDirty(); }); bf.addEventListener('change', () => { paintPrev(); markDirty(); });
+    // any font family by name (owner, 15 Nov 2026): suggestions from the list, live preview, and an honest check that it can actually be drawn here
+    const fontIn = (opts, val, id2) => { const dl = h('datalist', { id: id2 }, ...opts.map((f) => h('option', { value: f }))); const i = h('input', { value: val || opts[0], list: id2, maxlength: 100, autocomplete: 'off', spellcheck: 'false' }); return [i, dl]; };
+    const [hf, hdl] = fontIn(HEAD_FONTS, k.fonts?.[0], 'bk-hf'); const [bf, bdl] = fontIn(BODY_FONTS, k.fonts?.[1], 'bk-bf');
+    const sample = h('p', { style: `font:700 28px '${hf.value}',var(--font-d)` }, 'Aa Headline sample'); const bsample = h('p', { style: `font:400 17px '${bf.value}',var(--font)` }, 'The quick brown fox jumps over the lazy dog.');
+    const hst = h('small'); const bst = h('small');
+    const check = async (inp, el, stEl, weight, size) => { const nm = inp.value.trim().replace(/['"\\;{}<>]/g, ''); el.style.fontFamily = `'${nm}',sans-serif`;
+      const ok = await fontRenders(nm, weight); stEl.className = `fontst ${ok ? 'ok' : 'no'}`; stEl.textContent = !nm ? 'Type a font name.' : ok ? `“${nm}” shows on this device.` : `“${nm}” can’t be shown here: it isn’t installed on this device or built into the app. People will see the standard font instead. You can still save the name for your designers.`; };
+    const recheckH = () => check(hf, sample, hst, 700, 28); const recheckB = () => check(bf, bsample, bst, 400, 17);
+    hf.addEventListener('input', () => { recheckH(); paintPrev(); markDirty(); }); bf.addEventListener('input', () => { recheckB(); paintPrev(); markDirty(); }); recheckH(); recheckB();
     const words = h('input', { value: k.voice ?? (fresh ? '' : ''), placeholder: 'Confident, plain English, warm', maxlength: 4000 });
     const say = h('textarea', { rows: 2, maxlength: 2000, placeholder: 'Your funnel, done in 30 days.' }); say.value = k.voice_say ?? '';
     const never = h('textarea', { rows: 2, maxlength: 2000, placeholder: '10X your income overnight!!' }); never.value = k.voice_never ?? '';
@@ -194,17 +211,20 @@ export function brandKitFormView(ctx, id = null) {
     const save = async (leaving = false) => {
       if (!name.value.trim()) { name.focus(); return toast('Give the brand kit a name.', false); }
       const cols = st.colors.filter(([, c]) => c); const bad = cols.find(([, c]) => !HEX.test(c)); if (bad) return toast(`${bad[1]} isn’t a colour code like #2B63F6.`, false);
-      const b = { name: name.value.trim(), colors: cols.map(([, c]) => c.toUpperCase()), color_names: cols.map(([r]) => r.trim().slice(0, 40)), fonts: [hf.value, bf.value], voice: words.value.trim(), voice_say: say.value.trim(), voice_never: never.value.trim(), notes: notes.value.trim(), asset_file_ids: st.assets,
+      const b = { name: name.value.trim(), colors: cols.map(([, c]) => c.toUpperCase()), color_names: cols.map(([r]) => r.trim().slice(0, 40)), fonts: [hf.value, bf.value].map((v, j) => v.replace(/['"\\;{}<>]/g, '').trim() || [HEAD_FONTS, BODY_FONTS][j][0]), voice: words.value.trim(), voice_say: say.value.trim(), voice_never: never.value.trim(), notes: notes.value.trim(), asset_file_ids: st.assets,
         ...(st.logo ? { logo_file_id: st.logo } : {}), ...(st.dark ? { logo_dark_file_id: st.dark } : {}), ...(st.icon ? { icon_file_id: st.icon } : {}) };
+      if (saving) return false; saving = true; saveBtn.disabled = true;
       const r = await ctx.api.call(id ? 'funnels.brand_kits.update' : 'funnels.brand_kits.create', id ? { id, ...b } : { ...b, ...(who?.value ? { client: who.value } : {}) });
-      if (!r.ok) return toast(messageFor(r.error?.code), false);
-      dirty.clear(); toast('Brand kit saved.'); if (!leaving) ctx.go(hrefFor.record('brand_kits', r.data[0].id)); return true;
+      saving = false; saveBtn.disabled = false;
+      if (!r.ok || !r.data?.[0]) { toast(r.ok ? 'Couldn’t save the brand kit. Try again.' : messageFor(r.error?.code), false); return false; }
+      dirty.clear(); toast(id ? 'Brand kit saved.' : 'Brand kit created.'); if (!leaving) ctx.go(hrefFor.list('brand_kits')); return true;
     };
-    focusedActions(root, [h('a', { class: 'btn quiet sm', href: back }, 'Cancel'), btn('Save brand kit', save, 'primary sm')]);
+    let saving = false; const saveBtn = btn('Save brand kit', () => save(), 'primary sm');
+    focusedActions(root, [h('a', { class: 'btn quiet sm', href: back }, 'Cancel'), saveBtn]);
     put(root, h('div', { class: 'formpage' }, h('div', { class: 'formcol' }, ...sections([
       ['Name', [field('Brand kit name', name, true), who ? field('Belongs to', who) : null].filter(Boolean)],
       ['Logos', [h('div', { class: 'grid2' }, drop('On light backgrounds', 'logo', false), drop('On dark backgrounds', 'dark', true)), h('div', { style: 'margin-top:8px;display:flex;align-items:center' }, btn([icon('upload'), 'Icon / favicon'], () => iconIn.click(), 'ghost sm'), iconNote, iconIn)]],
-      ['Colours', [rows]], ['Fonts', [h('div', { class: 'row2' }, field('Headings', hf), field('Body', bf)), sample]],
+      ['Colours', [rows]], ['Fonts', [h('div', { class: 'row2' }, h('div', {}, field('Headings', hf), hdl, sample, hst), h('div', {}, field('Body', bf), bdl, bsample, bst))]],
       ['Voice and tone', [field('Words that describe it', words), h('div', { class: 'row2' }, field('We say', say), field('We never say', never)), field('How it sounds', notes)]],
       ['Assets', [h('div', { style: 'display:flex;align-items:center' }, btn([icon('upload'), 'Upload photos, icons, templates'], () => assetIn.click(), 'ghost sm'), assetNote, assetIn)]]])),
     h('aside', { class: 'formprev' }, h('p', { class: 'over' }, 'Preview'), prev)));

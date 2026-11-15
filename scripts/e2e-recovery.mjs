@@ -22,6 +22,7 @@ const watch = (p) => { p.on('response', async (r) => { if (r.url().includes('/ap
 const shot = (p, n) => p.screenshot({ path: `${SHOTS}/${n}.png`, fullPage: true });
 const toastText = (p) => p.locator('.toast[data-show=true]').last().innerText().catch(() => '');
 const L = (await q("select id from workspaces where slug = 'layer2funnels'"))[0].id;
+await q('delete from avatar_settings where workspace_id = $1', [L]);   // each run starts from the standard defaults
 const stamp = Date.now(); const PW = 'correct-horse-battery-staple';
 async function person(name, role) {
   const email = `rc.${name.split(' ')[0].toLowerCase()}.${stamp}@example.com`; const c = await browser.newContext(); const p = await c.newPage();
@@ -59,9 +60,9 @@ const secs = av?.profile?.sections ?? [];
 check('AV6', 'The avatar is saved with flexible sections (v2): its document sections plus “What drives them” and “Beliefs” built from moved parts', av?.profile?.v === 2 && secs.length === 14 && secs.some((x) => x.type === 'drives') && secs.some((x) => x.title === 'Pain & Problems'), `${secs.length}`);
 const allText = JSON.stringify(secs);
 check('AV7', 'No content was silently dropped: text from the last section and from tables is there', allText.includes('domestic conflicts') && allText.includes('Teacher will not be able to satisfy') && allText.includes('Optimistic'));
-const cardsTxt = await page.locator('.avcardp h3').allInnerTexts();
+await page.waitForSelector('.avcardp .avb-t', { timeout: 9000 }).catch(() => {}); const cardsTxt = await page.locator('.avcardp h3').allInnerTexts();
 check('AV8', 'The Profile shows chosen cards (At a glance, Scared of …), the facts table with a real header (not “Attribute / Detail” as data)', cardsTxt.some((t) => /at a glance/i.test(t)) && cardsTxt.some((t) => /scared/i.test(t))
-  && !(await page.locator('.avcardp .avb-t td').allInnerTexts()).includes('Attribute'));
+  && !(await page.locator('.avcardp .avb-t td').allInnerTexts()).includes('Attribute'), cardsTxt.join('|'));
 const orbit = await page.locator('.orbit').count();
 check('AV9', 'At most three short facts circle the figure (they never cover the face)', orbit <= 3);
 await shot(page, 'rc-av-profile');
@@ -124,6 +125,38 @@ const ed = await signIn(E); await ed.goto(`${base}/#/office/funnels/avatars/sett
 const r403 = await ed.evaluate(async () => (await fetch('/api/office.avatar.settings.set', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${JSON.parse(localStorage.getItem('l2f.session') ?? sessionStorage.getItem('l2f.session') ?? '{}').access ?? ''}` }, body: '{"sections":[{"type":"custom","title":"x"}]}' })).status).catch(() => 0);
 const stAfter = (await q('select sections from avatar_settings where workspace_id = $1', [L]))[0].sections;
 check('AV20', 'An editor sees the settings read-only and the server refuses their change', (await ed.locator('.setrow input').first().isDisabled()) && stAfter.length === st.length, `status ${r403}`);
+
+// =============================================================== Stories and Brand Kits: create, edit, return to the list, persists after refresh
+await page.goto(`${base}/#/office/funnels/stories/new`); await page.waitForSelector('input[placeholder="From 0 to 41 booked calls"]');
+await page.fill('input[placeholder="From 0 to 41 booked calls"]', `Recovery story ${stamp}`); await page.getByRole('radio', { name: 'Testimonial' }).click();
+await page.locator('.formcol textarea').first().fill('She doubled her calls.'); await page.fill('input[placeholder="2 calls a week"]', '2 calls'); await page.fill('input[placeholder="41 calls in 30 days"]', '41 calls');
+await page.getByRole('radio', { name: 'Ask consent' }).click(); await page.getByRole('button', { name: 'Emails' }).click(); await page.getByRole('button', { name: 'Ads' }).click();
+await page.locator('.focusbar-acts').getByRole('button', { name: 'Save story' }).dblclick(); await page.waitForURL(/funnels\/stories$/, { timeout: 9000 });
+const sto = await q("select id, kind, permission, use_in, before_text, body from funnel_stories where title = $2 and workspace_id = $1", [L, `Recovery story ${stamp}`]);
+check('ST1', 'A new story saves once (a double click doesn’t make two) with its type, before/after, consent setting and uses, then returns to the list', sto.length === 1 && sto[0].kind === 'testimonial' && sto[0].permission === 'ask' && sto[0].use_in.join() === 'Emails,Ads' && sto[0].before_text === '2 calls');
+await page.reload(); await page.waitForSelector(`text=Recovery story ${stamp}`, { timeout: 9000 });
+check('ST2', 'The new story is in the list after a refresh', true);
+await page.goto(`${base}/#/office/funnels/stories/${sto[0].id}/edit`); await page.waitForSelector('.formcol textarea');
+await page.locator('.formcol textarea').first().fill('She tripled her calls.'); await page.getByRole('radio', { name: 'Consent given' }).click();
+await page.locator('.focusbar-acts').getByRole('button', { name: 'Save story' }).click(); await page.waitForURL(/funnels\/stories$/, { timeout: 9000 });
+const sto2 = (await q('select body, permission from funnel_stories where id = $1', [sto[0].id]))[0];
+check('ST3', 'Editing a story updates its content and consent and returns to the list', sto2.body === 'She tripled her calls.' && sto2.permission === 'given');
+await page.goto(`${base}/#/office/funnels/stories/new`); await page.waitForSelector('input[placeholder="From 0 to 41 booked calls"]');
+await page.locator('.focusbar-acts').getByRole('button', { name: 'Save story' }).click(); await page.waitForTimeout(600);
+check('ST4', 'Saving without a headline stays on the form and says what is missing', /stories\/new/.test(page.url()) && /headline/i.test(await toastText(page)));
+
+await page.goto(`${base}/#/office/funnels/brand_kits/new`); await page.waitForSelector('input[placeholder="e.g. Funnel Done Right Challenge"]');
+await page.fill('input[placeholder="e.g. Funnel Done Right Challenge"]', `Recovery kit ${stamp}`);
+await page.locator('input[list=bk-hf]').fill('Totally Made Up Font Zz'); await page.waitForTimeout(400);
+const noFont = await page.locator('.fontst').first().getAttribute('class');
+await page.locator('input[list=bk-hf]').fill('Geist'); await page.waitForTimeout(500);
+const yesFont = await page.locator('.fontst').first().getAttribute('class');
+check('BK1', 'A typed font name is checked for real: an unknown font is said not to show, a built-in one shows', /no/.test(noFont) && /ok/.test(yesFont), `${noFont} / ${yesFont}`);
+await page.locator('input[list=bk-bf]').fill('Arial Rounded Whatever');
+await page.locator('.focusbar-acts').getByRole('button', { name: 'Save brand kit' }).click(); await page.waitForURL(/funnels\/brand_kits$/, { timeout: 9000 });
+const bk = (await q("select fonts from funnel_brand_kits where name = $2 and workspace_id = $1", [L, `Recovery kit ${stamp}`]))[0];
+await page.waitForSelector(`text=Recovery kit ${stamp}`, { timeout: 9000 }).catch(() => {});
+check('BK2', 'The brand kit saves any typed font names and returns to the list, where it is visible', bk?.fonts?.join() === 'Geist,Arial Rounded Whatever' && await page.locator(`text=Recovery kit ${stamp}`).first().isVisible());
 
 console.log(`\n${results.filter((r) => r.ok).length}/${results.length} checks passed`);
 if (problems.length) console.log('page problems:\n' + [...new Set(problems)].slice(0, 15).join('\n'));
