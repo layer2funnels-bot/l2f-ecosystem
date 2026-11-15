@@ -88,7 +88,8 @@ export function offerFormView(ctx, id = null) {
     const who = id ? null : h('select', {}, h('option', { value: '' }, ctx.orgName), ...ctx.clientsWhere('funnels.offer.create').map(([i, n]) => h('option', { value: i }, `A client: ${n}`)));
     const [fProm, promise] = inp('Promise (one line)', o.promise, { placeholder: 'A finished funnel that books calls, in 30 days.', maxlength: 400 });
     const [fPrice, priceIn] = inp('Price', o.price_amount ?? '', { placeholder: '3,000', inputmode: 'decimal' }); const [fCur, cur2] = sel('Currency', CURRENCIES.map((c) => [c, c]), o.currency ?? 'USD');
-    const billing = seg(BILLING, st.billing, (k) => { st.billing = k; paintPrev(); }, 'Billing');
+    const billing = h('div', { class: 'seg3', role: 'radiogroup', 'aria-label': 'Billing' });
+    const paintBill = () => billing.replaceChildren(...BILLING.map(([k, l]) => h('button', { type: 'button', role: 'radio', 'aria-checked': String(k === st.billing), onclick: () => { st.billing = k; paintBill(); paintPrev(); markDirty(); } }, l))); paintBill();
     const [fGuar, guarantee] = inp('Guarantee', o.guarantee, { placeholder: '30 days of fixes', maxlength: 300 }); const [fDel, delivery] = inp('Delivery time', o.delivery_time, { placeholder: '30 days', maxlength: 120 });
     const incl = h('div', { class: 'edtable' });
     const paintIncl = () => incl.replaceChildren(...st.included.map((x, i) => { const v = h('input', { value: x, 'aria-label': `Included item ${i + 1}`, maxlength: 300, oninput: (e) => { st.included[i] = e.target.value; markDirty(); } });
