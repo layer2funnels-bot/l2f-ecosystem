@@ -17,7 +17,7 @@ const levelPill = (r) => pill(LABEL[r] ?? r, r === 'owner' ? 'primary' : '');
 const statusPill = (s) => (s === 'active' ? pill('Active', 'ok', 'check') : s === 'invited' ? pill('Invited', 'warn', 'mail') : s === 'expired' ? pill('Expired', 'bad', 'clock') : pill('Deactivated'));
 const day = (iso) => (iso ? new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : '');
 /** One plain line about the invitation e-mail (never the link itself). */
-const emailLine = (m) => (m.email_status === 'sent' ? `Email sent ${day(m.email_at)}${m.opened_at ? ' · opened' : ''}` : m.email_status === 'failed' ? `Email not delivered (${m.email_error ?? 'error'}). Use Resend or pass the link on.` : m.email_status === 'not_configured' ? 'No email sent (email is not set up yet). Pass the link on.' : '');
+export const emailLine = (m) => (m.email_status === 'sent' ? `Email sent ${day(m.email_at)}${m.opened_at ? ' · opened' : ''}` : m.email_status === 'failed' ? `Email not delivered (${m.email_error ?? 'error'}). Use Resend or pass the link on.` : m.email_status === 'not_configured' ? 'No email sent (email is not set up yet). Pass the link on.' : '');
 const failText = (res) => (res.error?.code === 'not_found' ? 'That didn’t go through. Nothing was changed.' : messageFor(res.error?.code));
 
 // ---- why chips (effective access): plain words for the database's reasons

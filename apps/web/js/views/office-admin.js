@@ -5,7 +5,7 @@
 import { h, put, icon, btn, toast, dialog, skeleton, errorState, emptyState, notFoundState, avatar, roleLabel } from '../ui.js';
 import { hrefFor } from '../routes.js';
 import { plateOf, loadRegistry } from '../registry.js';
-import { adminView } from './admin.js';
+import { adminView, emailLine } from './admin.js';
 
 const TABS = [['people', 'People'], ['teammates', 'Teammate access'], ['clients', 'Client access'], ['roles', 'Roles'], ['review', 'Access review'], ['storage', 'Storage & versions'], ['branding', 'Branding'], ['audit', 'Audit log']];
 export const ADMIN_V8_TABS = TABS.map(([k]) => k);
@@ -42,14 +42,14 @@ export function adminV8View({ api, ctx, org, role, route, go }) {
         if (r.kind === 'client') { const c = r.x; return h('div', { class: 'tr' }, h('span', { class: 't1c' }, avatar(c.person_name || c.email || 'C', 26), h('b', {}, c.person_name || c.email)), h('span', {}, rel('Client')), h('span', {}, c.client_name ?? ''), h('span', { class: 'mono' }, '—'),
           h('span', {}, h('span', { class: 'pill' }, c.status === 'active' ? 'Portal locked' : ({ invited: 'Invited', suspended: 'Suspended' })[c.status] ?? c.status ?? '')), h('span', {}, '—')); }
         const x = r.x; const c = cnt.get(x.user_id); const all = x.role === 'owner' || x.role === 'admin';
-        const cells = [h('span', { class: 't1c' }, avatar(name(x), 26), h('b', {}, name(x), x.is_you ? ' (you)' : '')), h('span', {}, rel('Teammate'), r.both ? [' ', rel('Client')] : null), h('span', {}, roleLabel(x.role)),
-          h('span', { class: 'mono' }, all ? 'All' : String(c?.apps ?? 0)), h('span', {}, h('span', { class: `pill ${x.status === 'active' ? 'blue' : ''}`.trim() }, x.row_kind === 'invitation' ? 'Invited' : x.status === 'active' ? 'Active' : 'Deactivated')), h('span', {}, ago(c?.last_used_at))];
+        const cells = [h('span', { class: 't1c' }, avatar(name(x), 26), h('span', {}, h('b', {}, name(x), x.is_you ? ' (you)' : ''), x.row_kind === 'invitation' && x.email_status ? h('small', { class: 'muted', style: 'display:block', 'data-email-status': x.email_status }, emailLine(x)) : null)), h('span', {}, rel('Teammate'), r.both ? [' ', rel('Client')] : null), h('span', {}, roleLabel(x.role)),
+          h('span', { class: 'mono' }, all ? 'All' : String(c?.apps ?? 0)), h('span', {}, h('span', { class: `pill ${x.status === 'active' ? 'blue' : ''}`.trim() }, x.row_kind === 'invitation' ? (x.status === 'expired' ? 'Expired' : 'Invited') : x.status === 'active' ? 'Active' : 'Deactivated')), h('span', {}, ago(c?.last_used_at))];
         return x.row_kind === 'member' ? h('a', { class: 'tr', href: `#/office/admin/person/${x.user_id}` }, ...cells) : h('button', { class: 'tr', type: 'button', style: 'text-align:left;width:100%;border:0;background:none;font:inherit;color:inherit', onclick: () => parts.manage(x, owners) }, ...cells); }));
       if (!list.length) tbl.append(h('p', { class: 'hint', style: 'padding:14px' }, 'No one matches.')); };
     const chips = h('div', { class: 'chips6' }); const paintChips = () => chips.replaceChildren(...[['all', 'Everyone', rows.length], ['team', 'Teammates', rows.filter((r) => r.kind === 'team').length], ['client', 'Clients', rows.filter((r) => r.kind === 'client' || r.both).length], ['both', 'Both', rows.filter((r) => r.both).length]]
       .map(([k, l, n]) => h('button', { type: 'button', 'aria-pressed': String(filter === k), onclick: () => { filter = k; paintChips(); paint(); } }, `${l} ${n}`)));
     q.addEventListener('input', paint); paintChips(); paint();
-    put(body, h('div', { class: 'tb6' }, h('label', { class: 'inp sm' }, icon('search'), q), chips, h('span', { class: 'grow' }), btn([icon('plus'), 'Invite'], () => parts.invite(), 'primary sm')), tbl,
+    put(body, h('div', { class: 'tb6' }, h('label', { class: 'inp sm' }, icon('search'), q), chips, h('span', { class: 'grow' }), btn([icon('plus'), 'Invite'], () => parts.invite(), 'primary sm', { id: 'invite' })), tbl,
       h('p', { class: 'hint', style: 'margin-top:8px' }, 'One person, one sign-in. A person can be a teammate and a client at once; each relationship has its own access. Invitations open to resend or cancel.'));
   }
 
