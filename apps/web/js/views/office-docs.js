@@ -33,6 +33,21 @@ export function documentsView({ api, ctx }) {
     if (n) { toast(`${n} file${n > 1 ? 's' : ''} uploaded to ${s.name}.`); load(); }
   };
   const pickFiles = (s) => { const i = h('input', { type: 'file', multiple: true, hidden: true, accept: '.doc,.docx,.pdf,.xls,.xlsx,.csv,.ppt,.pptx,.txt,image/*', onchange: () => upload(s, [...i.files]) }); document.body.append(i); i.click(); setTimeout(() => i.remove(), 60000); };
+  // Add a document straight from Drive: the file is LINKED into the section (not copied, not moved). It stays where it is in Drive and keeps
+  // Drive's own access: someone who can't open it there doesn't see it here either. Only the organization's shared files can be linked.
+  const fromDrive = (s, already) => {
+    const q2 = h('input', { type: 'search', placeholder: 'Search Drive', 'aria-label': 'Search Drive', autocomplete: 'off' }); const res = h('div', { class: 'dpick' }, skeleton(2)); let picked = null; let t2 = null;
+    const find = async () => { const term = q2.value.trim(); const r = await api.call('drive.files.list', { space: 'shared', anywhere: true, ...(term ? { q: term } : {}) });
+      if (!r.ok) return res.replaceChildren(errorState(find));
+      const list = r.data.filter((f) => !already.has(f.id)).slice(0, 60);
+      res.replaceChildren(...(list.length ? list.map((f, j) => h('button', { type: 'button', class: 'dpick-i', 'aria-pressed': 'false', onclick: (e) => { res.querySelectorAll('.dpick-i').forEach((x) => x.setAttribute('aria-pressed', 'false')); e.currentTarget.setAttribute('aria-pressed', 'true'); picked = f; } },
+        docIc(j), h('span', {}, h('b', {}, f.name), h('small', {}, `${kindOf(f)} · updated ${ago(f.updated_at)}`)))) : [h('p', { class: 'hint', style: 'padding:8px' }, term ? 'Nothing in Drive matches.' : 'No files in the shared Drive yet.')])); };
+    q2.addEventListener('input', () => { clearTimeout(t2); t2 = setTimeout(find, 200); }); find();
+    dialog({ title: `Add from Drive to ${s.name}`, wide: true, body: [h('label', { class: 'inp' }, icon('search'), q2), res, h('p', { class: 'hint', style: 'margin-top:8px' }, 'The file is linked, not copied: it stays in its Drive folder, there is still one copy, and changes show in both places.')],
+      actions: [{ label: 'Add link', cls: 'primary', on: async () => { if (!picked) { toast('Choose a file first.', false); return false; }
+        const r = await api.call('office.doclinks.add', { section: s.id, file: picked.id }); if (!r.ok) { toast(r.status === 403 || r.status === 404 ? 'You can’t add documents to this section.' : 'Couldn’t add it.', false); return false; }
+        toast(`${picked.name} linked into ${s.name}.`); load(); } }, { label: 'Cancel' }] });
+  };
   const sectionDialog = (s = null) => {
     const name = field({ id: 'ds-name', label: 'Section name', value: s?.name ?? '', maxlength: 80, placeholder: 'e.g. Training' });
     const vis = h('select', { id: 'ds-vis' }, h('option', { value: 'everyone' }, `Everyone in ${ctx.orgName}`), h('option', { value: 'admins' }, 'Admins only')); vis.value = s?.visibility ?? 'everyone';
@@ -48,16 +63,19 @@ export function documentsView({ api, ctx }) {
       const r = await api.call('office.sections.delete', { id: s.id }); if (!r.ok || !r.data?.[0]) { toast('Couldn’t delete the section.', false); return false; } toast('Section deleted. Its files are still in Drive.'); load(); } }, { label: 'Cancel' }] }); } }] : []),
     { label: 'Cancel' }] });
   };
-  const sectionEl = async (s, si) => {
-    const [files, sops] = await Promise.all([s.folder_id ? api.call('drive.files.list', { space: 'shared', folder: s.folder_id }) : { ok: true, data: [] }, s.owner_protected ? api.call('drive.sops.list', {}) : null]);
-    const list = [...(sops?.ok ? sops.data : []), ...(files.ok ? files.data : [])].filter((f, i, a) => a.findIndex((x) => x.id === f.id) === i);
+  const sectionEl = async (s, si, links, sopsP) => {
+    const [files, sops] = await Promise.all([s.folder_id ? api.call('drive.files.list', { space: 'shared', folder: s.folder_id }) : { ok: true, data: [] }, s.owner_protected ? sopsP : null]);
+    const linked = links.filter((l) => l.section_id === s.id);
+    const list = [...(sops?.ok ? sops.data : []), ...(files.ok ? files.data : []), ...linked].filter((f, i, a) => a.findIndex((x) => x.id === f.id) === i);
     const drop = canAdd(s) ? h('button', { class: 'docc drop', type: 'button', onclick: () => pickFiles(s) }, icon('upload'), h('span', {}, 'Drop Word or PDF files')) : null;
     if (drop) { drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('on'); }); drop.addEventListener('dragleave', () => drop.classList.remove('on'));
       drop.addEventListener('drop', (e) => { e.preventDefault(); drop.classList.remove('on'); upload(s, [...(e.dataTransfer?.files ?? [])]); }); }
     return h('section', { class: 'card6 docsec' }, h('header', {}, h('h2', {}, icon(ICON(s)), ' ', s.name), h('span', { class: 'cnt' }, String(list.length)), s.visibility === 'admins' ? h('span', { class: 'pill', style: 'height:20px' }, 'Admins only') : null, h('span', { class: 'grow' }),
-      canAdd(s) ? btn([icon('plus'), 'New document'], () => newDoc(s), 'quiet sm') : null, canAdd(s) ? btn([icon('upload'), 'Upload'], () => pickFiles(s), 'quiet sm') : null,
+      canAdd(s) ? btn([icon('plus'), 'New document'], () => newDoc(s), 'quiet sm') : null, canAdd(s) ? btn([icon('drive'), 'Add from Drive'], () => fromDrive(s, new Set(list.map((f) => f.id))), 'quiet sm') : null, canAdd(s) ? btn([icon('upload'), 'Upload'], () => pickFiles(s), 'quiet sm') : null,
       isAdmin ? h('button', { class: 'iconbtn xs', type: 'button', 'aria-label': `${s.name} section settings`, onclick: () => sectionDialog(s) }, icon('more')) : null),
-    h('div', { class: 'docrow' }, ...list.map((f, j) => h('a', { class: 'docc', href: hrefOf(f) }, docIc(si * 3 + j), h('span', {}, h('b', {}, f.name), h('small', {}, `${f.protected_sop ? 'Owner protected · ' : ''}${kindOf(f)} · updated ${ago(f.updated_at)}`)))),
+    h('div', { class: 'docrow' }, ...list.map((f, j) => h('div', { class: 'docw' }, h('a', { class: 'docc', href: hrefOf(f) }, docIc(si * 3 + j), h('span', {}, h('b', {}, f.name), h('small', {}, `${f.link_id ? 'Linked from Drive · ' : ''}${f.protected_sop ? 'Owner protected · ' : ''}${kindOf(f)} · updated ${ago(f.updated_at)}`))),
+      f.link_id && (isAdmin || f.created_by === ctx.userId) ? h('button', { class: 'iconbtn xs unlink', type: 'button', 'aria-label': `Remove the link to ${f.name} (the file stays in Drive)`, title: 'Remove the link (the file stays in Drive)', onclick: async () => {
+        const r = await api.call('office.doclinks.remove', { id: f.link_id }); if (!r.ok) return toast('Couldn’t remove the link.', false); toast(`Link removed. ${f.name} is still in Drive.`); load(); } }, icon('x')) : null)),
       !list.length && !drop ? h('p', { class: 'hint', style: 'padding:6px 2px' }, 'Nothing here yet.') : null, drop));
   };
   async function load() {
@@ -72,7 +90,9 @@ export function documentsView({ api, ctx }) {
     const r = await api.call('office.sections.list', {}); if (!ctx.live()) return;
     if (!r.ok) return put(body, errorState(load));
     if (!r.data.length) return put(body, emptyState({ title: 'No sections yet', body: isAdmin ? 'Make a section for anything your team needs to find.' : 'An owner or admin sets up the sections.', ic: 'doc', action: isAdmin ? btn('New section', () => sectionDialog(), 'primary') : null }));
-    const els = await Promise.all(r.data.map(sectionEl));
+    const [lk] = await Promise.all([api.call('office.doclinks.list', {})]); if (!ctx.live()) return; const links = lk.ok ? lk.data : [];
+    const sopsP = r.data.some((x) => x.owner_protected) ? api.call('drive.sops.list', {}) : null;   // once, not once per protected section
+    const els = await Promise.all(r.data.map((x, i) => sectionEl(x, i, links, sopsP)));
     // V4: library documents that are in no section stay findable here
     const loose = await api.call('drive.files.list', { space: 'shared', kind: 'document' }); if (!ctx.live()) return;
     const other = (loose.ok ? loose.data : []).filter((f) => !f.folder_id);

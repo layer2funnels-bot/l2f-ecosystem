@@ -74,7 +74,7 @@ export function parseRoute(hash) {
   if (a === 'office' && b === 'member' && c && seg.length === 3) return r('office-page', { page: 'team', member: c });
   if (a === 'office' && b === 'admin') {
     if (seg.length === 2) return r('admin', { tab: 'members', v8: 'people' });
-    if (['people', 'teammates', 'roles', 'review', 'branding', 'audit'].includes(c) && seg.length === 3) return r('admin', { tab: c, v8: c });
+    if (['people', 'teammates', 'roles', 'branding', 'audit'].includes(c) && seg.length === 3) return r('admin', { tab: c, v8: c });
     if (c === 'person' && d && seg.length === 4) return r('admin', { tab: 'people', v8: 'people', person: d });
     if (c === 'members' && seg.length === 3) return r('admin', { tab: 'members', v8: 'people' });
     if (c === 'storage' && seg.length === 3) return r('admin', { tab: 'storage', v8: 'storage' });

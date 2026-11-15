@@ -75,16 +75,18 @@ check('T8', 'Ctrl Enter completes the task being edited', (await q("select done_
 
 // =============================================================== flow 2: run a team list (acceptance 4)
 await page.locator('.tside .addrow').click(); await page.waitForSelector('.dlg');
+check('T8b', 'New list or folder: People is hidden while the list is personal (V8 “team only”)', !(await page.locator('.dlg .ppchips').isVisible()));
 await page.locator('.dlg').getByLabel('Name').fill('Build team'); await page.locator('.dlg').getByLabel('Where').selectOption('team');
-for (const u of [S, B]) await page.locator('.dlg .pprow', { hasText: u.name }).locator('input[type=checkbox]').check();
-await page.locator('.dlg .pprow', { hasText: B.name }).locator('select').selectOption('view');
+check('T8c', 'New list or folder: choosing Team shows people as V8 chips, without you in the list', await page.locator('.dlg .ppchips').isVisible() && (await page.locator('.dlg .ppchips .chip', { hasText: O.name.split(' ')[0] }).count()) === 0);
+for (const u of [S, B]) await page.locator('.dlg .ppchips .chip', { hasText: u.name.split(' ')[0] }).click();
+await page.locator('.dlg .pplv-row', { hasText: B.name }).getByRole('radio', { name: 'Can view' }).click();
 await page.getByRole('button', { name: 'Create', exact: true }).click(); await page.waitForSelector('.tl-head .mng', { timeout: 9000 });
 const teamId = (await q("select id from task_lists where owner_id = $1 and name = 'Build team' order by created_at desc limit 1", [O.id]))[0].id;
 const acc = await q('select user_id, level from task_list_access where list_id = $1', [teamId]);
 check('T9', 'New list or folder: a Team list with two people picked at once (Can edit / Can view); the header says Manage access', acc.length === 2 && acc.find((a) => a.user_id === B.id)?.level === 'view' && (await page.locator('.tl-head').innerText()).includes('Shared with 3 people'));
-await page.locator('.tl-head .mng').click(); await page.locator('.dlg .pprow', { hasText: F.name }).locator('input[type=checkbox]').check(); await page.getByRole('button', { name: 'Save access' }).click(); await page.waitForTimeout(600);
+await page.locator('.tl-head .mng').click(); await page.locator('.dlg .ppchips .chip', { hasText: F.name.split(' ')[0] }).click(); await page.getByRole('button', { name: 'Save access' }).click(); await page.waitForTimeout(600);
 check('T10', 'Manage access adds a third person; folders and lists pass access to every block and task', (await q('select count(*)::int n from task_list_access where list_id = $1', [teamId]))[0].n === 3);
-await page.locator('.tl-head .mng').click(); await page.locator('.dlg .pprow', { hasText: F.name }).locator('input[type=checkbox]').uncheck(); await page.getByRole('button', { name: 'Save access' }).click(); await page.waitForTimeout(600);
+await page.locator('.tl-head .mng').click(); await page.locator('.dlg .ppchips .chip', { hasText: F.name.split(' ')[0] }).click(); await page.getByRole('button', { name: 'Save access' }).click(); await page.waitForTimeout(600);
 await page.getByRole('button', { name: 'Add block' }).click(); await page.waitForTimeout(600);
 check('T11', '"+ Add block" adds a block to the list', (await q('select count(*)::int n from task_blocks where list_id = $1', [teamId]))[0].n === 2);
 await page.locator('.tblock').first().getByRole('button', { name: 'Add task' }).click(); await page.waitForTimeout(600); await page.keyboard.type('Set up quiz scoring'); await page.keyboard.press('Escape'); await page.locator('h1').click(); await page.waitForTimeout(500);
@@ -97,7 +99,7 @@ check('T14', 'A fourth person (not given access) gets the not-found screen for t
 
 // =============================================================== flow 3: give a task to a teammate (acceptance 2)
 await page.locator('#tasks-add').click(); await wait(page, 'Add a task'); await shot(page, 'tk-add-dialog');
-await page.locator('.dlg').getByLabel('Task').fill('Record intro video'); for (const u of [S, B]) await page.locator('.dlg .pprow', { hasText: u.name }).locator('input[type=checkbox]').check();
+await page.locator('.dlg').getByLabel('Task').fill('Record intro video'); for (const u of [S, B]) await page.locator('.dlg .ppchips .chip', { hasText: u.name.split(' ')[0] }).click();
 await page.locator('.dlg').getByLabel('List').selectOption(teamId); const today = new Date(); const tISO = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 await page.locator('.dlg').getByLabel('Due').fill(tISO); await page.locator('.dlg').getByRole('button', { name: 'Add task', exact: true }).click(); await page.waitForTimeout(800);
 const sana = await signIn(S); await sana.goto(`${base}/#/tasks/today`); await sana.reload(); await wait(sana, 'Record intro video');

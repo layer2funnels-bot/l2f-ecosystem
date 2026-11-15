@@ -33,7 +33,7 @@ check('W2', 'A record route never maps to a record page after a switch: it lands
 check('W3', 'The switch never lands on the Launcher: unknown pages fall back to the app home, other apps to their own placeholder', routeForPage('office', 'whatever') === '#/office' && routeForPage('projects', null) === '#/projects' && !routeForPage('office', null).includes('launcher'));
 check('W4', 'Page keys sent to resolve_org_switch match the registry in migration 0006', pageKeyFor(parseRoute('#/office/funnels/avatars')).page === 'funnels.avatars' && pageKeyFor(parseRoute('#/office/funnels/avatars/abc')).page === 'funnels.avatar' && pageKeyFor(parseRoute('#/office')).page === 'home');
 import { readFileSync } from 'node:fs';
-import { matchChapter, toSections, sectionsToProfile } from '../apps/web/js/modules/avatarimport.js';
+import { matchType, toOutline, suggestMapping, buildSections, normalize, legacyToSections, completeness, cleanHeading } from '../apps/web/js/modules/avatarmodel.js';
 import { parseCapture, visibleTree, doneCount, dueChip } from '../apps/web/js/modules/tasksmodel.js';
 const sql = readFileSync(new URL('../migrations/0006_funnels_foundation.sql', import.meta.url), 'utf8');
 check('W5', 'Every page key the UI uses is registered in app_pages', FUNNEL_TYPES.every((t) => sql.includes(`'${t.page}'`) && sql.includes(`'${t.record}'`)) && sql.includes("'funnels',"));
@@ -190,12 +190,13 @@ check('W29', 'Planner\'s menu in the shell covers every Planner page once, and o
   && PLANNER_PAGES.filter((x) => x.manage).map((x) => x.key).join() === 'model' && plannerSection('metrics') === 'reports' && plannerSection(undefined) === 'overview');
 // ---- Customer Avatar import (V8 New customer avatar)
 {
-  const secs = toSections([{ t: 'h', x: '4. WHAT DRIVES HIM' }, { t: 'li', x: '$10K/month' }, { t: 'h', x: '5. BELIEFS' }, { t: 'p', x: 'I am behind.' }, { t: 'h', x: 'Russell’s vocabulary list' }, { t: 'p', x: 'VSL' }, { t: 'h', x: 'Empty' }]);
-  check('W44', 'Avatar import: headings split the file into sections (empty ones dropped) and each is matched to a chapter with a confidence',
-    secs.length === 3 && matchChapter(secs[0].heading).key === 'drives' && matchChapter('5. BELIEFS').confidence === 'High' && matchChapter('Russell’s vocabulary list').key === 'custom' && matchChapter('Russell’s vocabulary list').confidence === 'Low');
-  const p = sectionsToProfile(secs, ['drives', 'beliefs', 'custom']);
-  check('W45', 'Avatar import: checked sections fill the chapters; anything else becomes a custom chapter, and Skip leaves it out',
-    p.wants[0] === '$10K/month' && p.beliefs[0][1] === 'I am behind.' && p.custom[0].title === 'Russell’s vocabulary list' && !sectionsToProfile(secs, ['skip', 'skip', 'skip']).wants);
+  const o = toOutline([{ t: 'h', lvl: 1, x: '4. WHAT DRIVES HIM' }, { t: 'li', x: '$10K/month' }, { t: 'h', lvl: 2, x: 'What They Are Scared Of' }, { t: 'li', x: 'Wasting money' }, { t: 'h', lvl: 1, x: '5. BELIEFS' }, { t: 'p', x: 'I am behind.' }, { t: 'h', lvl: 1, x: 'Russell’s vocabulary list' }, { t: 'p', x: 'VSL' }, { t: 'h', lvl: 1, x: 'Empty' }]);
+  check('W-AV1', 'The avatar import keeps the document’s own sections (top headings; empty ones dropped) and suggests a kind for each', o.length === 3 && matchType(o[0].heading).key === 'drives' && matchType('5. BELIEFS').confidence === 'High' && matchType('Russell’s vocabulary list').key === 'custom');
+  const m = suggestMapping(o); const secs = buildSections(o, m);
+  check('W-AV2', 'Each document section becomes its own section with all its text; leaving one out is explicit', secs.length === 3 && secs[0].blocks.some((b) => b.x === 'Wasting money') && secs[2].title === 'Russell’s vocabulary list'
+    && buildSections(o, m.map((x) => ({ ...x, target: 'skip' }))).length === 0 && cleanHeading('4. WHAT DRIVES HIM') === 'What drives him');
+  const legacy = normalize({ facts: [['Age', '30+']], wants: ['Freedom'], custom: [{ title: 'Calls', text: 'One' }] });
+  check('W-AV3', 'An avatar saved in the old fixed-chapter shape converts to sections without losing anything', legacy.v === 2 && legacy.sections.length === 3 && JSON.stringify(legacy).includes('Freedom') && legacy.cards.length >= 1 && completeness(legacy) === 100 && legacyToSections({}).sections.length === 0);
 }
 // ---- Tasks (V8 04_TASKS): capture bar and completed tasks hidden in place
 {

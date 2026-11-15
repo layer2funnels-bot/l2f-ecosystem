@@ -34,8 +34,13 @@ export function tasksView({ api, ctx, route, org = null }) {
       const row = (l) => h('a', { href: `#/tasks/list/${l.id}`, ...(page === 'list' && id === l.id ? { 'aria-current': 'page' } : {}), 'data-list': l.id, oncontextmenu: (e) => { e.preventDefault(); listMenu(l, e.clientX, e.clientY); } },
         h('span', { class: 'tl-ic', style: `--c:${l.colour}` }, icon(l.icon)), h('span', {}, l.name), h('span', { class: 'count' }, l.open ? String(l.open) : ''));
       return [...lists.filter((l) => !l.folder_id || !folders.some((f) => f.id === l.folder_id)).map(row),
-        ...folders.map((f) => h('details', { class: 'coll fold', open: true }, h('summary', { class: 'side-sec sx', oncontextmenu: (e) => { e.preventDefault(); folderMenu(f, e.clientX, e.clientY); } }, icon('down'), icon('folder'), ` ${f.name}`),
-          h('div', { class: 'side-list' }, ...lists.filter((l) => l.folder_id === f.id).map(row))))]; };
+        // a folder is a row in the tree (not a card): open/close, its lists indented under it, + adds a list inside, ⋯ for the rest
+        ...folders.map((f) => { const inside = lists.filter((l) => l.folder_id === f.id); const canAdd = f.level !== 'view';
+          return h('details', { class: 'tfold', open: !state.closedFolders?.has(f.id), ontoggle: (e) => { state.closedFolders ??= new Set(); if (e.currentTarget.open) state.closedFolders.delete(f.id); else state.closedFolders.add(f.id); } },
+            h('summary', { class: 'tfold-h', oncontextmenu: (e) => { e.preventDefault(); folderMenu(f, e.clientX, e.clientY); } }, h('span', { class: 'tw' }, icon('down')), icon('folder'), h('span', { class: 'nm' }, f.name), h('span', { class: 'count' }, inside.length ? String(inside.length) : ''),
+              canAdd ? h('button', { class: 'iconbtn xs fa', type: 'button', 'aria-label': `New list in ${f.name}`, title: `New list in ${f.name}`, onclick: (e) => { e.preventDefault(); e.stopPropagation(); newListDialog({ folder: f }); } }, icon('plus')) : null,
+              h('button', { class: 'iconbtn xs fa', type: 'button', 'aria-label': `Folder menu: ${f.name}`, onclick: (e) => { e.preventDefault(); e.stopPropagation(); const b = e.currentTarget.getBoundingClientRect(); folderMenu(f, b.left - 180, b.bottom + 4); } }, icon('more'))),
+            h('div', { class: 'tfold-in' }, ...inside.map(row), inside.length ? null : (canAdd ? h('button', { class: 'tfold-empty', type: 'button', onclick: () => newListDialog({ folder: f }) }, icon('plus'), 'Add a list to this folder') : h('p', { class: 'tfold-empty' }, 'No lists yet')))); })]; };
     side.replaceChildren(
       h('details', { class: 'coll', open: true }, h('summary', { class: 'side-sec sx' }, icon('down'), icon('lock'), ' Personal'), h('div', { class: 'side-list' }, ...group('personal'))),
       h('details', { class: 'coll', open: true }, h('summary', { class: 'side-sec sx' }, icon('down'), icon('team'), ` Team · ${ctx.orgName}`), h('div', { class: 'side-list' }, ...group('team'))),
@@ -58,17 +63,24 @@ export function tasksView({ api, ctx, route, org = null }) {
   const longPress = (el, fn) => { let t = null; el.addEventListener('touchstart', (e) => { const p = e.touches[0]; t = setTimeout(() => fn(p.clientX, p.clientY), 550); }, { passive: true }); for (const ev of ['touchend', 'touchmove', 'touchcancel']) el.addEventListener(ev, () => clearTimeout(t), { passive: true }); };
 
   // ---------------------------------------------------------------- dialogs
+  // V8 people picker (tasks6 `newlist`): a row of toggle chips (avatar + first name). With access levels, each chosen person gets a small
+  // Can edit / Can view switch underneath; "Everyone" chooses the whole team. You are not in the list: the creator always has access.
   function peoplePicker(selected = [], { levels = null } = {}) {
     const sel = new Map(selected.map((s) => (typeof s === 'string' ? [s, 'edit'] : [s.user, s.level])));
-    const q = h('input', { placeholder: levels ? 'Add people or a group' : 'Search people', 'aria-label': 'Search people', type: 'search' }); const listEl = h('div', { class: 'pplist' });
-    const paint = () => { const t = q.value.trim().toLowerCase(); listEl.replaceChildren(...people().filter((p) => !t || p.name.toLowerCase().includes(t)).map((p) => {
-      const cb = h('input', { type: 'checkbox', ...(sel.has(p.id) ? { checked: true } : {}), onchange: () => { if (cb.checked) sel.set(p.id, lv?.value ?? 'edit'); else sel.delete(p.id); } });
-      const lv = levels ? h('select', { class: 'sel sm', style: 'margin-left:auto', 'aria-label': `${p.name}: access`, onchange: () => { if (sel.has(p.id)) sel.set(p.id, lv.value); } }, h('option', { value: 'edit' }, 'Can edit'), h('option', { value: 'view' }, 'Can view')) : null;
-      if (lv) lv.value = sel.get(p.id) ?? 'edit';
-      return h('label', { class: 'pprow' }, cb, av(p.id, 26), h('b', {}, p.name), lv); })); };
+    const others = () => people().filter((p) => !levels || p.id !== ctx.userId);
+    const q = h('input', { placeholder: levels ? 'Find people' : 'Search people', 'aria-label': 'Search people', type: 'search' });
+    const chipsEl = h('div', { class: 'chipsel ppchips' }); const lvEl = h('div', { class: 'pplv' });
+    const paint = () => {
+      const t = q.value.trim().toLowerCase(); const all = others(); const everyone = all.length > 0 && all.every((p) => sel.has(p.id));
+      chipsEl.replaceChildren(...(levels && all.length > 1 && !t ? [h('button', { type: 'button', class: 'chip sm', 'aria-pressed': String(everyone), onclick: () => { if (everyone) for (const p of all) sel.delete(p.id); else for (const p of all) if (!sel.has(p.id)) sel.set(p.id, 'edit'); paint(); } }, icon('team'), 'Everyone')] : []),
+        ...all.filter((p) => !t || p.name.toLowerCase().includes(t)).map((p) => h('button', { type: 'button', class: 'chip sm', 'aria-pressed': String(sel.has(p.id)), title: p.name,
+          onclick: () => { if (sel.has(p.id)) sel.delete(p.id); else sel.set(p.id, 'edit'); paint(); } }, av(p.id, 18), all.filter((o) => o.name.split(' ')[0] === p.name.split(' ')[0]).length > 1 ? p.name : p.name.split(' ')[0])));
+      if (!all.length) chipsEl.replaceChildren(h('p', { class: 'hint' }, 'No teammates to add yet.'));
+      lvEl.replaceChildren(...(levels ? all.filter((p) => sel.has(p.id)).map((p) => h('div', { class: 'pplv-row' }, av(p.id, 22), h('span', { class: 'grow' }, p.name),
+        h('div', { class: 'seg3 xs', role: 'radiogroup', 'aria-label': `${p.name}: access` }, ...[['edit', 'Can edit'], ['view', 'Can view']].map(([k, l]) => h('button', { type: 'button', role: 'radio', 'aria-checked': String(sel.get(p.id) === k), onclick: () => { sel.set(p.id, k); paint(); } }, l))))) : []));
+    };
     q.addEventListener('input', paint); paint();
-    const all = levels ? h('div', { class: 'chiprow' }, h('button', { class: 'chip sm', type: 'button', onclick: () => { for (const p of people()) if (!sel.has(p.id)) sel.set(p.id, 'edit'); paint(); } }, 'Select everyone')) : null;
-    return { el: [h('label', { class: 'inp', style: 'margin:12px 0 8px' }, icon('search'), q), listEl, all], value: () => [...sel].map(([user, level]) => (levels ? { user, level } : user)) };
+    return { el: [people().length > 8 ? h('label', { class: 'inp sm', style: 'margin:8px 0' }, icon('search'), q) : null, chipsEl, lvEl].filter(Boolean), value: () => [...sel].map(([user, level]) => (levels ? { user, level } : user)) };
   }
   function addTaskDialog({ due = null, list = null, forUser = null }) {
     const text = h('input', { placeholder: 'What needs doing? e.g. “Call Harry tomorrow 3pm !high”', 'aria-label': 'Task' }); const pick = peoplePicker(forUser ? [forUser] : []);
@@ -89,16 +101,21 @@ export function tasksView({ api, ctx, route, org = null }) {
     dialog({ title: `Who can open “${name}”`, body: scoped(...pick.el, h('p', { class: 'hint' }, 'Applies to every block and task in this list. Folders pass access to the lists inside.')),
       actions: [{ label: 'Save access', cls: 'primary', on: async () => { const r = await call('tasks.access.set', { ...(list ? { list } : { folder }), entries: pick.value() }); if (!r.ok) { fail(r, 'save access'); return false; } toast('Access saved.'); render(); } }, { label: 'Cancel' }] });
   }
-  function newListDialog() {
+  function newListDialog({ folder: preset = null } = {}) {
     let kind = 'list'; const name = h('input', { 'aria-label': 'Name', maxlength: 120 }); const canTeam = ctx.canAnywhere('tasks.team.create');
     const where = h('select', { 'aria-label': 'Where' }, h('option', { value: 'personal' }, 'Personal · only you'), ...(canTeam ? [h('option', { value: 'team' }, `Team · ${ctx.orgName}`)] : []));
     const folderSel = h('select', { 'aria-label': 'Folder' }, h('option', { value: '' }, 'No folder'), ...(home?.folders ?? []).map((f) => h('option', { value: f.id }, `${f.name} · ${f.space === 'team' ? 'Team' : 'Personal'}`)));
-    const pick = peoplePicker([], { levels: true }); const ppl = h('div', { class: 'field' }, h('label', {}, 'People (team only)'), ...pick.el);
+    const pick = peoplePicker([], { levels: true }); const ppl = h('div', { class: 'field' }, h('label', {}, 'People'), ...pick.el);
     const seg = h('div', { class: 'seg3', style: 'margin-top:12px', role: 'radiogroup' }); const fRow = h('div', { class: 'field' }, h('label', {}, 'Folder'), folderSel);
+    const hintEl = h('p', { class: 'hint' });
     const paint = () => { seg.replaceChildren(...[['list', 'tasks', 'List'], ['folder', 'folder', 'Folder']].map(([k, ic, l]) => h('button', { type: 'button', role: 'radio', 'aria-checked': String(kind === k), onclick: () => { kind = k; paint(); } }, icon(ic), l)));
-      ppl.hidden = where.value !== 'team'; fRow.hidden = kind === 'folder'; };
+      hintEl.textContent = kind === 'folder' ? 'A folder groups lists, like “Clients” holding one list per client. People you add here can open every list inside it.' : 'A list holds tasks in blocks. Put it in a folder to keep related lists together.';
+      // the folder choice follows "Where": a personal list goes in a personal folder, a team list in a team folder
+      const sp = where.value; for (const o of folderSel.options) if (o.value) o.hidden = (home?.folders ?? []).find((f) => f.id === o.value)?.space !== sp; if (folderSel.selectedOptions[0]?.hidden) folderSel.value = '';
+      ppl.hidden = sp !== 'team'; fRow.hidden = kind === 'folder' || !folderSel.querySelectorAll('option:not([hidden])').length || folderSel.options.length < 2; };
+    if (preset) { where.value = preset.space; folderSel.value = preset.id; }
     where.addEventListener('change', paint); paint();
-    dialog({ title: 'New list or folder', body: scoped(seg, h('p', { class: 'hint' }, 'A folder groups lists, like “Clients” holding one list per client.'), h('div', { class: 'field' }, h('label', {}, 'Name'), name), h('div', { class: 'field' }, h('label', {}, 'Where'), where), fRow, ppl),
+    dialog({ title: preset ? `New list in ${preset.name}` : 'New list or folder', body: scoped(preset ? null : seg, preset ? null : hintEl, h('div', { class: 'field' }, h('label', {}, 'Name'), name), h('div', { class: 'field' }, h('label', {}, 'Where'), where), fRow, ppl),
       actions: [{ label: 'Create', cls: 'primary', on: async () => {
         if (!name.value.trim()) { toast('Give it a name.', false); return false; }
         const f = folderSel.value ? home.folders.find((x) => x.id === folderSel.value) : null; const space = f ? f.space : where.value;
@@ -114,12 +131,15 @@ export function tasksView({ api, ctx, route, org = null }) {
       ...(edit ? [['edit', 'Rename', () => rename('list', l)], ['brand', 'Icon and colour', () => looks(l)]] : []),
       ['copy', 'Duplicate', async () => { const r = await call('tasks.lists.duplicate', { id: l.id }); if (!r.ok) return fail(r, 'duplicate'); toast('Duplicated.'); await refreshHome(); ctx.go(`#/tasks/list/${r.data[0].id}`); }],
       ...(l.space === 'team' && edit ? [['share', 'Share / access', async () => { const g = await call('tasks.lists.get', { id: l.id }); accessDialog({ list: l.id, name: l.name, current: (g.data?.[0]?.access ?? []).filter((a) => a.via === 'list').map((a) => ({ user: a.user_id, level: a.level })) }); }]] : []),
+      ...(own && (home?.folders ?? []).some((f) => f.space === l.space) ? [['folder', 'Move to folder…', () => {
+        ctxMenu([...(home.folders.filter((f) => f.space === l.space && f.id !== l.folder_id).map((f) => ['folder', f.name, async () => { const u = await call('tasks.lists.update', { id: l.id, folder: f.id }); if (!u.ok) return fail(u, 'move it'); toast(`Moved to ${f.name}.`); await refreshHome(); render(); }])),
+          ...(l.folder_id ? [['x', 'Out of the folder', async () => { const u = await call('tasks.lists.update', { id: l.id, no_folder: true }); if (!u.ok) return fail(u, 'move it'); toast('Moved out of the folder.'); await refreshHome(); render(); }]] : [])], x, y); }]] : []),
       ...(edit ? [['projects', 'Turn into a project', () => turnIntoProject(l)]] : []),
       ...(own && !l.is_default ? ['-', ['archive', 'Archive', async () => { const r = await call('tasks.lists.update', { id: l.id, archived: true }); if (!r.ok) return fail(r, 'archive'); toast('Archived.'); await refreshHome(); if (id === l.id) ctx.go('#/tasks/today'); }, 'danger']] : []),
     ], x, y);
   }
   function folderMenu(f, x, y) {
-    ctxMenu([['edit', 'Rename', () => rename('folder', f)], ...(f.space === 'team' ? [['share', 'Share / access', () => accessDialog({ folder: f.id, name: f.name })]] : []),
+    ctxMenu([...(f.level !== 'view' ? [['plus', 'New list in this folder', () => newListDialog({ folder: f })]] : []), ['edit', 'Rename', () => rename('folder', f)], ...(f.space === 'team' ? [['share', 'Share / access', () => accessDialog({ folder: f.id, name: f.name })]] : []),
       ['archive', 'Archive folder', async () => { const r = await call('tasks.folders.update', { id: f.id, archived: true }); if (!r.ok) return fail(r, 'archive'); toast('Folder archived. Its lists stay.'); refreshHome(); }, 'danger']], x, y);
   }
   function rename(kind, o) {
@@ -207,7 +227,10 @@ export function tasksView({ api, ctx, route, org = null }) {
       ...(edit ? ['-', ['trash', 'Delete', () => del(it), 'danger', 'Del']] : []),
     ], x, y);
   }
-  async function addBelow(it, list, { child = false } = {}) {
+  // one create at a time per place: on a slow connection a second Enter or click must not make a second task (live, 15 Nov 2026: duplicates)
+  const creating = new Set(); const once = async (key, fn) => { if (creating.has(key)) return; creating.add(key); try { return await fn(); } finally { creating.delete(key); } };
+  async function addBelow(it, list, { child = false } = {}) { return once(`below:${it.id}`, () => addBelow1(it, list, { child })); }
+  async function addBelow1(it, list, { child = false } = {}) {
     const r = await call('tasks.items.create', { list: list.id, block: it.block_id ?? undefined, ...(child ? { parent: it.id } : { after: it.id, ...(it.parent_id ? { parent: it.parent_id } : {}) }), title: 'New task' });
     if (!r.ok) return fail(r, 'add a task'); state.focus = r.data[0].id; refreshHome(); render();
   }
@@ -260,7 +283,9 @@ export function tasksView({ api, ctx, route, org = null }) {
       const p = parseCapture(inp.value, { people: people(), lists: home?.lists ?? [] }); if (!p.title) return;
       const input = { title: p.title, list: p.list ?? home?.mine, due_date: p.due_date ?? iso(new Date()), ...(p.due_time ? { due_time: p.due_time } : {}), priority: p.priority, ...(p.people.length ? { assignees: p.people } : {}) };
       if (!navigator.onLine) { queueOffline(input); inp.value = ''; return toast('You’re offline. Saved here; it’s added when you’re back online.'); }
-      const r = await call('tasks.items.create', input); if (!r.ok) return fail(r, 'add the task'); inp.value = ''; toast('Added to Today.'); await refreshHome(); render(); });
+      // the box empties at once (the next task can be typed straight away); if saving fails, what was typed comes back
+      const typed = inp.value; inp.value = '';
+      const r = await call('tasks.items.create', input); if (!r.ok) { if (!inp.value) inp.value = typed; return fail(r, 'add the task'); } toast('Added to Today.'); await refreshHome(); render(); });
     return h('div', { class: 'capture' }, h('span', {}, icon('plus')), inp, h('kbd', {}, 'Enter'));
   };
   async function today() {
@@ -366,12 +391,13 @@ export function tasksView({ api, ctx, route, org = null }) {
             ['down', 'Move down', async () => { const i = l.blocks.indexOf(b); if (i < l.blocks.length - 1) { await call('tasks.blocks.update', { id: b.id, position: l.blocks[i + 1].position + 0.5 }); render(); } }],
             '-', ['trash', 'Delete block', () => dialog({ title: `Delete “${b.name}”?`, body: h('p', {}, `Its ${its.length} task${its.length === 1 ? '' : 's'} are deleted too.`), actions: [{ label: 'Delete block', cls: 'dng', on: async () => { const x = await call('tasks.blocks.delete', { id: b.id }); if (!x.ok) { fail(x, 'delete'); return false; } refreshHome(); render(); } }, { label: 'Cancel' }] }), 'danger']], r2.left - 180, r2.bottom + 4); } }, icon('more')) : null),
         collapsed ? null : h('ul', { class: 'outline' }, ...rows),
-        !collapsed && edit ? h('button', { class: 'addt', type: 'button', onclick: async () => { const x = await call('tasks.items.create', { list: l.id, ...(b.id ? { block: b.id } : {}), title: 'New task' }); if (!x.ok) return fail(x, 'add a task'); state.focus = x.data[0].id; refreshHome(); render(); } }, icon('plus'), 'Add task') : null); };
+        !collapsed && edit ? h('button', { class: 'addt', type: 'button', onclick: async (ev) => { const me = ev.currentTarget; if (me.disabled) return; me.disabled = true; const x = await call('tasks.items.create', { list: l.id, ...(b.id ? { block: b.id } : {}), title: 'New task' }); me.disabled = false; if (!x.ok) return fail(x, 'add a task'); state.focus = x.data[0].id; refreshHome(); render(); } }, icon('plus'), 'Add task') : null); };
       const blocks = [...l.blocks, ...(l.items.some((x) => !x.block_id && !x.parent_id) ? [{ id: null, name: 'More', position: 1e9 }] : [])];
       view = h('div', { class: 'tdoc' }, ...(l.items.length || blocks.length ? blocks.map(blockEl) : []),
         !l.items.some((x) => !x.done_at) && !n ? h('p', { class: 'hint', style: 'text-align:center;padding:10px' }, 'Add your first task.') : null,
-        edit ? h('button', { class: 'addblock', type: 'button', onclick: async () => { const x = await call('tasks.blocks.create', { list: l.id, name: 'New block' }); if (!x.ok) return fail(x, 'add a block'); toast('Block added. Click its name to rename.'); render(); } }, icon('plus'), 'Add block') : null,
-        n ? h('button', { class: 'showdone', type: 'button', onclick: () => { state.showDone[l.id] = !show; render(); } }, `${show ? 'Hide' : 'Show'} completed (${n})`) : null,
+        edit ? h('button', { class: 'addblock', type: 'button', onclick: async (ev) => { const me = ev.currentTarget; if (me.disabled) return; me.disabled = true; const x = await call('tasks.blocks.create', { list: l.id, name: 'New block' }); me.disabled = false; if (!x.ok) return fail(x, 'add a block'); toast('Block added. Click its name to rename.'); render(); } }, icon('plus'), 'Add block') : null,
+        // V8: one Show/Hide completed (n) control at the bottom of every list, always there (hiding never deletes anything)
+        h('button', { class: 'showdone', type: 'button', 'aria-pressed': String(show), disabled: !n && !show, title: n ? '' : 'No completed tasks in this list yet', onclick: () => { state.showDone[l.id] = !show; render(); } }, `${show ? 'Hide' : 'Show'} completed (${n})`),
         h('p', { class: 'hint', style: 'text-align:center;margin-top:10px' }, `Created by ${l.owner_id === ctx.userId ? 'you' : l.owner_name} · ${l.space === 'team' ? `shared with ${who.length} ${who.length === 1 ? 'person' : 'people'}` : 'only you'}`));
     } else if (v === 'board') {
       const top = l.items.filter((x) => !x.parent_id); const t = iso(new Date());

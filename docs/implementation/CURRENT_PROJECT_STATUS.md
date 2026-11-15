@@ -1,51 +1,52 @@
-# Current project status — verified 15 Nov 2026
+# Current project status — 15 Nov 2026 (end of the quality-recovery session)
 
-Legend: **Done** (built and tested) · **Incomplete** · **Untested** · **Blocked** (needs the owner).
+Sequence (owner): P00 Shell ✔ · P01 Office ✔ (repaired) · **P02 Projects — NOT rebuilt to V8, deferred** · P03 Tasks ✔ (built as “p02-tasks”, repaired) ·
+**P04 Drive — next session (owner's explicit instruction, sequence exception)** · P05 Planner … P14.
 
-## Application sequence (owner, 15 Nov 2026 — final)
-P00 Foundation and Global Shell → P01 Office → **P02 Tasks** → P03 Drive with editors → P04 Projects → P05 Planner → P06 Clients → P07 Funnel Mapper → P08 Portal → P09 Whiteboard → P10 Forms → P11 Value Ladder → P12 Social Planner → P13 Agents → P14 Final Ecosystem Verification.
-Next application: **P02 Tasks**. Page IDs in `V8_IMPLEMENTATION_TRACKER.md` (P02-xx …) are older reference IDs, not this order.
+## Merged and live (before this session)
+PR #56 (P00), #57 (P01), #58 (Tasks) merged to `main` and deployed; migrations 0054–0059 applied on production (backup schema `backup_20261115`).
 
-## P00 — Foundation and Global Shell: **Done, merged (PR #56)**
-- Branch `claude/epic-bohr-nc9jar`, head `105494b` (variable Geist fix). PR [#56](https://github.com/layer2funnels-bot/l2f-ecosystem/pull/56): draft, CI green, Cloudflare preview green. **Not merged.**
-- Needs migrations 0054 and 0055 on production for the bell (notifications) and Profile details to work on the preview/live site.
+## This session: quality recovery — branch `claude/epic-bohr-nc9jar` (restarted from `main`), pushed, **not merged, not deployed**
+Everything is described in `recovery/AUDIT_TRACKER.md` (30 rows: defect → fix → test) and `recovery/PERFORMANCE_REPORT.md`. Headlines:
+- Live defects found from production data/logs/screenshots and fixed: teammate switches failing after 5 changes/min; tasks created 2–4 times on a
+  slow connection (production has 18 tasks with 5 distinct titles — **left as they are**, not modified); Tasks list stuck/overlapping and hidden on
+  tablets; folder drawn as a card with no way to add a list; New list dialog broken; avatar import putting content in the wrong places; avatar page
+  “We couldn’t load this” on a bad address; Client Access Matrix crash (introduced and fixed in this session).
+- Features: flexible Avatar Studio (any number of sections, review before import, block editor, profile cards, settings), Organization settings
+  (name, logo everywhere, default strategy template), Documents linked from Drive, client access to Office (matrix + projection), Launcher arrange +
+  V8 bell, Access Review removed, Stories/Brand Kits/Offers return to the list, typed fonts with a render check.
+- Performance: lazy apps, esbuild production bundle, immutable caching of hashed assets, Urdu font only for Arabic text. Sign-in page 66 → 14 requests,
+  ready 2.6 s → 1.5 s; reload on Tasks 4.1 s → 2.5 s (150 ms / 10 Mbit/s). API latency (new DB connection per request) remains — Hyperdrive needs the owner.
 
-## P01 — Office: **Done** (not merged)
-- Branch `p01-office` (pushed), head `0f892ee` + the handoff-docs commit. Built on top of P00.
-- PR [#57](https://github.com/layer2funnels-bot/l2f-ecosystem/pull/57): draft, base `claude/epic-bohr-nc9jar` (shows Office only). Cloudflare preview deployed; GitHub CI result: check the PR. **Not merged.**
-- Report: `docs/implementation/OFFICE_REPORT.md` (what was built, known differences from V8).
-- Needs migrations 0056, 0057 and 0058 on production.
+## Database
+- **0060_recovery.sql: written, tested locally (up, down, up), NOT applied to production.** The recovery code needs it: apply 0060 (after a fresh
+  backup) **before or with** merging this branch. Checklist: `MASTER_HANDOFF.md` §6.
+- Next free migration number: **0061**.
 
-## P02 — Tasks: **Done** (not merged)
-- Branch `p02-tasks` (stacked on `p01-office`), draft PR (see `TASKS_REPORT.md`). Migration 0059 local only.
-- Tests: `tasks.test` 20/20, `e2e-tasks` 33/33, regression suites green.
+## Tests (local Supabase stack, bundled build `WEB_ROOT=dist/web` unless noted)
+| Suite | Result |
+|---|---|
+| Unit (`npm test`, all suites) | all green (audit 63/63, office 37/37, portal 57/57, funnels 38/38, web 59/59, tasks) |
+| e2e-ui | **265/265** |
+| e2e-local | **71/71** |
+| e2e-recovery (new: avatars, stories, brand kits, launcher, teammate switches, org, documents, Tasks slow network, folders) | **43/43** (last clean run on the bundle; the final run was disturbed by a rebuild mid-run) |
+| e2e-tasks | **35/35** (after fixing a 15 px sideways scroll of task rows on phones) |
+| e2e-onboarding | **22/22** |
 
-## Database migrations — **applied to production (15 Nov 2026)**
-0054 notifications_every_app · 0055 profile_details · 0056 office_v8 · 0057 avatar_studio · 0058 admin_access_v8 · 0059 tasks — all applied to
-Supabase `l2f-ecosystem` (ref `dfitnxilkezepkhdmzuh`) with the exact file SQL, in order, owner-authorized.
-Verified: `schema_migrations` lists 0054–0059; the 14 new tables exist with row-level security on; no new function or table is reachable by
-anon/authenticated; `clients.apps.manage` default role = admin; app `tasks` enabled for both organizations.
-Each has a rollback in `migrations/rollback/`.
+## Not verified
+- **Nothing of this session is verified on live** (not deployed; no safe live test account was provided). After merge: sign in on live with a
+  test account and run through the audit tracker's rows; re-measure the sign-in page (`scripts/perf-measure.mjs` method).
+- Visual fidelity was checked by screenshots for the changed screens only (avatar profile, Launcher, New list dialog), not a full V8 comparison.
 
-## Backup status
-- In-database snapshot schema `backup_20261115` (owner-approved method) taken before applying: copies of notifications, profiles, funnel_offers,
-  funnel_stories, funnel_brand_kits, funnel_strategies, funnel_avatars, permissions, workspaces, apps, workspace_apps, app_grants (row counts matched live).
+## Remaining issues (honest list)
+- M: API latency ≈0.27 s median per request until Hyperdrive is added (owner: create the Hyperdrive config with the Supabase session-pooler string,
+  bind it as `HYPERDRIVE` to the Pages project; the code already uses it).
+- M: the bundled stylesheet is one 420 KB file (≈60 KB gzipped); per-app CSS splitting would help first paint.
+- M: duplicate tasks already on production (owner may delete them in Tasks).
+- L: avatar import of PDFs uses font-size heuristics for heading levels (Word files are exact).
+- L: Launcher drag-and-drop is mouse-only (touch uses the arrows, by design).
+- L: e2e drag test was flaky once (fixed with real mouse movement; arrows are the reliable path).
 
-## Git (verified 15 Nov)
-- `claude/epic-bohr-nc9jar` — P00, pushed, = PR #56.
-- `p01-office` — P01, pushed (nothing local-only after the handoff commit is pushed).
-- `main` — has the V8 handoff docs (PR #55 merged), no P00/P01 code.
-- Uncommitted changes: none.
-
-## Tests (local Supabase stack, 15 Nov, on `p01-office`)
-- `npm test`: 66 suites, no failures. `office.test` 33/33, `web.test` 56/56, `migration-rollback`, `audit`, `authz`, `shell-admin` green.
-- Browser: `e2e-ui` 265/265, `e2e-onboarding` 22/22, `e2e-local` 71/71. Static checks green (fmp-copy needs full history: green in CI).
-- V8 comparison: `scripts/v8-compare.mjs of-` (22 Office pages × 3 sizes) — shell measurements match.
-- **Untested against production data**: everything (migrations not applied there).
-
-## Outstanding issues
-- None for P00–P02 migrations (applied).
-- Merge decisions for #56 then #57 (owner).
-- Office known differences from V8 (deliberate, no fake controls): see `OFFICE_REPORT.md` › Known differences.
-- Projects V2 list operations are slow (0.5–9 s, per-row `pm.project_role` RLS) — for the Projects phase.
-- Local stack only: after `e2e-onboarding`, reset `apps.lifecycle='coming_soon'` for forms, value_ladder, social_planner, whiteboard before `e2e-ui`.
+## Git
+- `main` = P00 + P01 + Tasks (merged 15 Nov). `claude/epic-bohr-nc9jar` = recovery (this session), pushed; **draft PR to be opened/merged only with the owner's go**.
+- Uncommitted work: none after the final commit of this session.

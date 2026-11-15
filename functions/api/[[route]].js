@@ -10,6 +10,8 @@ import { createServer, createSharedState } from '../../packages/core/server.mjs'
 let shared;
 export async function onRequest({ request, env, waitUntil }) {
   shared ??= createSharedState(env);
-  const server = createServer({ ...env, DB_POOL_MAX: '1' }, { shared });
+  // Hyperdrive (Cloudflare connection pooling, free plan): when the owner adds a binding named HYPERDRIVE to the Pages project, every request uses
+  // its pooled connection instead of opening a new one to Supabase (≈0.1–0.2 s saved per request). Without it, nothing changes.
+  const server = createServer({ ...env, ...(env.HYPERDRIVE?.connectionString ? { DATABASE_URL: env.HYPERDRIVE.connectionString } : {}), DB_POOL_MAX: '1' }, { shared });
   try { return await server.handle(request); } finally { waitUntil(server.close()); }
 }

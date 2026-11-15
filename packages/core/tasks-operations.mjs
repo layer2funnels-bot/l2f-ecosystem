@@ -27,7 +27,7 @@ export const tasksOperations = [
     run: async (q, ctx) => {
       const [{ id: mine }] = await q('select public.tasks_my_default() as id');
       const [folders, lists, counts] = await Promise.all([
-        q('select id, space, name, icon, colour, position, owner_id from task_folders where workspace_id = $1 and archived_at is null order by space, position, name', [ctx.orgId]),
+        q('select id, space, name, icon, colour, position, owner_id, private.task_folder_level(id) as level from task_folders where workspace_id = $1 and archived_at is null order by space, position, name', [ctx.orgId]),
         q(`select ${LIST_COLS}, private.task_list_level(l.id) as level from task_lists l where l.workspace_id = $1 and l.archived_at is null order by l.is_default desc, l.position, l.name`, [ctx.orgId]),
         q(`select
              (select count(*)::int from task_items i where i.workspace_id = $1 and i.done_at is null and i.due_date <= $2::date
@@ -87,7 +87,7 @@ export const tasksOperations = [
   }),
   // ---- who can open a list or folder (multi-select at once)
   defineOperation({
-    name: 'tasks.access.set', class: 'sensitive', input: { list: { type: 'uuid' }, folder: { type: 'uuid' }, entries: { type: 'json', required: true, max: 20000 } },
+    name: 'tasks.access.set', class: 'write', input: { list: { type: 'uuid' }, folder: { type: 'uuid' }, entries: { type: 'json', required: true, max: 20000 } },
     run: async (q, ctx, i) => {
       if (!i.list === !i.folder) throw { code: '22023', message: 'choose a list or a folder' };
       const entries = (Array.isArray(i.entries) ? i.entries : []).filter((e) => /^[0-9a-f-]{36}$/i.test(e?.user) && ['edit', 'view'].includes(e?.level)).slice(0, 500);
@@ -191,7 +191,7 @@ export const tasksOperations = [
   defineOperation({ name: 'tasks.timer.stop', class: 'write', single: true,
     run: (q) => q('update task_time_entries e set ended_at = now() from task_items i where i.id = e.item_id and e.user_id = private.current_user_id() and e.ended_at is null returning e.id, e.item_id, i.title, extract(epoch from (e.ended_at - e.started_at))::int as seconds') }),
   // the one running timer, whichever app started it (the shell's pill)
-  defineOperation({ name: 'timer.running', class: 'read', single: true,
+  defineOperation({ name: 'timer.running', class: 'read',   // no timer = an empty answer, not "not found"
     run: (q) => q(`select 'tasks' as app, e.item_id as ref, i.title, e.started_at, '#/tasks/list/' || coalesce(i.list_id::text, 'inbox') as href from task_time_entries e join task_items i on i.id = e.item_id
         where e.user_id = private.current_user_id() and e.ended_at is null
       union all select 'projects', e.task_id, t.title, e.started_at, '#/projects/p/' || e.project_id::text || '/list?task=' || e.task_id::text from pm_time_entries e join pm_tasks t on t.id = e.task_id

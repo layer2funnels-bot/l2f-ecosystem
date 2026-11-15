@@ -195,6 +195,23 @@ check('G41', 'A client cannot create a project, file, client, task or approval r
   errCode(() => db.query("insert into memberships (workspace_id,user_id,kind,role) values ($1,$2,'staff','owner')", [L, U.CL1])),
 ])).every((c) => c === '42501'));
 
+// ---- Office for clients (0060): shared Office records reach a client only while Office is on for THEIR client in the Client Access Matrix
+await asSuper();
+await db.query(`insert into funnel_offers (workspace_id, client_id, name, client_visible, internal_notes, promise) values ($1,$2,'Shared offer',true,'INTERNAL-OFFER-NOTES','Grow'),($1,$2,'Hidden offer',false,'x','y'),($1,$3,'Other client offer',true,'x','y')`, [L, C1, C2]);
+await db.query(`insert into funnel_avatars (workspace_id, client_id, name, client_visible, profile) values ($1,$2,'Shared avatar',true,$3)`, [L, C1, JSON.stringify({ v: 2, sections: [{ id: 's1', type: 'custom', title: 'Who', blocks: [] }], cards: [], ev: [['INTERNAL-EVIDENCE', '', 'a']], interviews: [{ note: 'INTERNAL-INTERVIEW' }] })]);
+const off1 = await cj('portal.office.list', {});
+check('G50', 'With Office off for the client (the default), shared Office records stay hidden from them', off1.status === 200 && off1.data[0].offers.length === 0 && off1.data[0].avatars.length === 0);
+await asUser(U.ADM);
+const onR = await J('clients.apps.set', { client: C1, app: 'office', enabled: true }, U.ADM);
+const off2 = (await cj('portal.office.list', {})).data?.[0] ?? {};
+check('G51', 'An admin switches Office on for one client; that client sees only what was shared with them, never internal notes, evidence or interviews', onR.status === 200 && off2.offers?.length === 1 && off2.offers[0].name === 'Shared offer'
+  && !JSON.stringify(off2).includes('INTERNAL-') && off2.avatars?.length === 1 && off2.avatars[0].profile.sections.length === 1);
+check('G52', 'Another client of the same organization still sees none of it, and can’t switch Office on for themselves', (await cj('portal.office.list', {}, U.CL2)).data[0].offers.length === 0
+  && (await J('clients.apps.set', { client: C2, app: 'office', enabled: true }, U.CL2)).status >= 400);
+check('G53', 'A client can’t read Office records through the staff operations', (await cj('funnels.offers.list', {})).status >= 400 && (await cj('funnels.offers.get', { id: (await rows("select id from funnel_offers where name='Shared offer'"))[0]?.id ?? id() })).status >= 400);
+await asUser(U.ADM); await J('clients.apps.set', { client: C1, app: 'office', enabled: false }, U.ADM);
+check('G54', 'Switching Office off again hides it at once', (await cj('portal.office.list', {})).data[0].offers.length === 0);
+
 // ---- kill switch and deactivation take effect at once
 await asUser(U.OWN);
 await db.query("update workspace_apps set enabled = false where workspace_id=$1 and app_key='portal'", [L]);

@@ -9,22 +9,8 @@ import { dirty } from './dirty.js';
 import { createTheme } from './theme.js';
 import { loadRegistry } from './registry.js';
 import { openSearch } from './views/search.js';
-import { docView } from './modules/docs.js';
-import { boardView } from './modules/whiteboard.js';
 import { projectsV2View, unmountProjects, projectsMountedFor } from './modules/projects-v2.js';
-import { clientsView } from './modules/clients.js';
-import { driveView } from './modules/drive.js';
-import { publicView } from './modules/publicview.js';
-import { portalView } from './modules/portal.js';
-import { formsView } from './modules/forms.js';
-import { ladderView } from './modules/ladder.js';
-import { boardsView } from './modules/boards.js';
-import { socialView } from './modules/social.js';
-import { sheetView } from './modules/sheets.js';
-import { imageView } from './modules/imageeditor.js';
-import { pdfView } from './modules/pdfeditor.js';
 import { plannerView, unmountPlanner, plannerMountedFor, plannerSection, PLANNER_PAGES } from './modules/planner.js';
-import { strategiesListView, strategyTemplateView, strategyView } from './views/strategies.js';
 import { teamView, memberView, appsView, notificationSettingsView } from './views/office-team.js';
 import { loadWeather } from './sky.js';
 import { permissionSet, canWith, canAnywhereWith } from './perm.js';
@@ -37,11 +23,9 @@ import { launcherView, appNotBuiltView } from './views/launcher.js';
 import { officeHomeView } from './views/home.js';
 import { adminView } from './views/admin.js';
 import { funnelsHomeView, funnelListView, funnelRecordView } from './views/funnels.js';
-import { documentsView as documentsV8 } from './views/office-docs.js';
 import { offersListView, offerView, offerFormView } from './views/office-offers.js';
 import { storiesListView, storyView, storyFormView, brandKitsListView, brandKitView, brandKitFormView } from './views/office-records.js';
 import { adminV8View } from './views/office-admin.js';
-import { tasksView } from './modules/tasks.js';
 import { avatarsListView, avatarNewView, avatarStudioView, avatarEditView } from './views/office-avatars.js';
 let lastTouched = null;   // the app last reported to access.app.touch
 const V8REC = { avatars: [avatarsListView, (c, id, prm) => avatarStudioView(c, id, prm?.tab ?? 'profile'), (c, id, prm) => (id ? avatarEditView(c, id, prm?.chapter) : avatarNewView(c))], offers: [offersListView, offerView, offerFormView], stories: [storiesListView, storyView, storyFormView], brand_kits: [brandKitsListView, brandKitView, brandKitFormView] };
@@ -144,9 +128,11 @@ async function boot() {
 }
 let bootFailure = null;     // which call failed and how (status and error code only): shown on the load-error screen so a failure can be reported precisely
 async function loadOrgs() {
-  const res = await api.call('org.list', {}, { org: NO_ORG });
+  // the organizations and their own logos, in one request (an organization without a logo keeps its mark)
+  const [res, icons] = await Promise.all([api.call('org.list', {}, { org: NO_ORG }), api.call('org.icons', {}, { org: NO_ORG })]);
   if (!res.ok) { if (res.error?.code === 'session_expired') { ready = true; goExpired(); return 'expired'; } bootFailure = `org.list · ${res.status || 'no answer'} · ${res.error?.code ?? 'failed'}`; return null; }
-  return res.data;
+  const icon = new Map((icons.ok ? icons.data : []).map((x) => [x.org_id, x.brand_icon]));
+  return res.data.map((o) => ({ ...o, brand_icon: icon.get(o.org_id) ?? null }));
 }
 async function refreshNow() { const c = session.get(); if (!c?.refresh) return false; const r = await auth.refresh(c.refresh); if (r.ok && r.data?.access_token) { session.set(r.data); return true; } return false; }
 
@@ -377,6 +363,16 @@ const notifications = {
   href: (r) => r.href ?? '#/launcher',
 };
 
+// Each app's code loads when that app is first opened (not on every page): the editors, Drive, Clients, Tasks… are large, and the sign-in page and
+// the Launcher need none of them. The browser keeps a loaded module, so opening the app again costs nothing.
+const LAZY = {
+  doc: () => import('./modules/docs.js'), board: () => import('./modules/whiteboard.js'), clients: () => import('./modules/clients.js'), drive: () => import('./modules/drive.js'),
+  public: () => import('./modules/publicview.js'), portal: () => import('./modules/portal.js'), forms: () => import('./modules/forms.js'), ladder: () => import('./modules/ladder.js'),
+  boards: () => import('./modules/boards.js'), social: () => import('./modules/social.js'), sheet: () => import('./modules/sheets.js'), image: () => import('./modules/imageeditor.js'),
+  pdf: () => import('./modules/pdfeditor.js'), tasks: () => import('./modules/tasks.js'), strategies: () => import('./views/strategies.js'), strategy: () => import('./views/strategies.js'),
+  documents: () => import('./views/office-docs.js'),
+};
+const lazyKey = (route) => (route.name === 'office-page' && route.params.page === 'documents' ? 'documents' : route.name);
 const theme = createTheme(); theme.apply();
 async function render(opts = {}) {
   const id = ++renderId; const live = () => id === renderId;
@@ -389,7 +385,7 @@ async function render(opts = {}) {
   if (!ready) { put(root, centered(skeleton(3))); return; }
   if (opts.bootError) { put(root, centered(h('h1', { 'data-page-title': true }, 'We couldn’t load this'), h('p', { class: 'sub' }, 'Your work is safe. Check your connection and try again.'), bootFailure ? h('p', { class: 'fine muted' }, `Reference: ${bootFailure}`) : null, btn('Try again', () => boot(), 'primary'))); return focusTitle(root); }
 
-  if (route.name === 'public') { document.body.classList.remove('hasb'); put(root, publicView({ token: route.params.token })); return; }
+  if (route.name === 'public') { document.body.classList.remove('hasb'); const { publicView } = await LAZY.public(); if (!live()) return; put(root, publicView({ token: route.params.token })); return; }
   // signed-out and account screens
   if (!session.signedIn()) {
     const inv = inviteStore.get();
@@ -421,7 +417,9 @@ async function render(opts = {}) {
 
   // inside the ecosystem
   const org = ctx.active;
-  const registry = await loadRegistry(); if (!live()) return;   // before any view starts: a view that finished loading before it was attached to the page would drop its own result
+  const [registry, M] = await Promise.all([loadRegistry(), LAZY[lazyKey(route)]?.().catch(() => null) ?? null]); if (!live()) return;   // before any view starts: a view that finished loading before it was attached to the page would drop its own result
+  // the app's code didn't arrive (offline, or a new version was published since this page opened): a reload fetches the current version
+  if (LAZY[lazyKey(route)] && !M) { put(root, centered(h('h1', { 'data-page-title': true }, 'We couldn’t load this'), h('p', { class: 'sub' }, 'Your work is safe. Check your connection and try again.'), btn('Try again', () => location.reload(), 'primary'))); return focusTitle(root); }
   theme.setOrg(org);
   const role = org.role; const isAdmin = role === 'owner' || role === 'admin';
   const c = {
@@ -440,12 +438,12 @@ async function render(opts = {}) {
   } else {
     switch (route.name) {
       case 'home': case 'launcher': case 'signin': case 'signup': case 'check-email': case 'forgot': case 'invite':
-        content = launcherView({ catalog: ctx.catalog, error: ctx.catalogError, org, orgs: ctx.orgs, role, name: session.get()?.name, registry, loadWeather: () => loadWeather({ api, store: localStorage }), onSwitch: (i) => switchFlow(i), retry: async () => { await loadOrgContext(org); render(); } }); break;
+        content = launcherView({ catalog: ctx.catalog, error: ctx.catalogError, org, orgs: ctx.orgs, role, name: session.get()?.name, registry, loadWeather: () => loadWeather({ api, store: localStorage }), onSwitch: (i) => switchFlow(i), retry: async () => { await loadOrgContext(org); render(); }, saveOrder: (keys) => api.call('launcher.order.set', { apps: keys }) }); break;
       case 'profile': content = profileView({ app: appApi, me, tab: route.params.tab, orgs: ctx.orgs, active: org, catalog: ctx.catalog, registry, theme }); break;
       case 'office': content = officeHomeView({ org, role, isAdmin, api, live, portalState: ctx.catalog.find((a) => a.app_key === 'portal')?.state, name: me?.name ?? session.get()?.name, catalog: ctx.catalog }); break;
       case 'office-page': {
         const pg = route.params.page;
-        if (pg === 'documents') content = documentsV8({ api, ctx: c });
+        if (pg === 'documents') content = M.documentsView({ api, ctx: c });
         else if (pg === 'team') content = route.params.member ? memberView({ api, ctx: c, id: route.params.member }) : teamView({ api, ctx: c });
         else if (pg === 'settings') content = notificationSettingsView({ api, ctx: c });
         else if (pg === 'apps') content = appsView({ catalog: ctx.catalog, registry, org, orgs: ctx.orgs });
@@ -453,22 +451,22 @@ async function render(opts = {}) {
         break;
       }
       case 'funnels': content = funnelsHomeView(c); break;
-      case 'strategies': content = route.params.template ? strategyTemplateView(c) : strategiesListView(c); break;
-      case 'strategy': content = strategyView(c, route.params.id); break;
+      case 'strategies': content = route.params.template ? M.strategyTemplateView(c) : M.strategiesListView(c); break;
+      case 'strategy': content = M.strategyView(c, route.params.id); break;
       case 'funnel-list': { const v = V8REC[route.params.type]; content = v ? v[0](c) : funnelListView(c, route.params.type); break; }
       case 'funnel-record': { const v = V8REC[route.params.type]; const { id } = route.params;
         content = !v ? funnelRecordView(c, route.params.type, id) : id === 'new' ? v[2](c, null, route.params) : route.params.edit ? v[2](c, id, route.params) : v[1](c, id, route.params); break; }
-      case 'doc': content = docView({ api, id: route.params.id, ctx: c }); break;
-      case 'social': content = socialView({ api, ctx: c, route: { view: route.params.view, id: route.params.id, query: route.query } }); break;
-      case 'boards': content = boardsView({ api, ctx: c, route: { query: route.query } }); break;
-      case 'ladder': content = ladderView({ api, ctx: c, route: { view: route.params.view, id: route.params.id, query: route.query } }); break;
-      case 'forms': content = formsView({ api, ctx: c, route: { view: route.params.view, id: route.params.id } }); break;
-      case 'portal': content = portalView({ api, ctx: c, route: { client: route.params.client, page: route.params.page } }); break;
-      case 'drive': content = driveView({ api, ctx: c, route: { view: route.params.view, space: route.params.space, folder: route.params.folder, token: route.params.token } }); break;
-      case 'sheet': content = sheetView({ api, id: route.params.id, ctx: c }); break;
-      case 'image': content = imageView({ api, id: route.params.id, ctx: c }); break;
-      case 'pdf': content = pdfView({ api, id: route.params.id, ctx: c }); break;
-      case 'clients': content = clientsView({ api, ctx: c, route: { view: route.params.view, id: route.params.id, query: route.query } }); break;
+      case 'doc': content = M.docView({ api, id: route.params.id, ctx: c }); break;
+      case 'social': content = M.socialView({ api, ctx: c, route: { view: route.params.view, id: route.params.id, query: route.query } }); break;
+      case 'boards': content = M.boardsView({ api, ctx: c, route: { query: route.query } }); break;
+      case 'ladder': content = M.ladderView({ api, ctx: c, route: { view: route.params.view, id: route.params.id, query: route.query } }); break;
+      case 'forms': content = M.formsView({ api, ctx: c, route: { view: route.params.view, id: route.params.id } }); break;
+      case 'portal': content = M.portalView({ api, ctx: c, route: { client: route.params.client, page: route.params.page } }); break;
+      case 'drive': content = M.driveView({ api, ctx: c, route: { view: route.params.view, space: route.params.space, folder: route.params.folder, token: route.params.token } }); break;
+      case 'sheet': content = M.sheetView({ api, id: route.params.id, ctx: c }); break;
+      case 'image': content = M.imageView({ api, id: route.params.id, ctx: c }); break;
+      case 'pdf': content = M.pdfView({ api, id: route.params.id, ctx: c }); break;
+      case 'clients': content = M.clientsView({ api, ctx: c, route: { view: route.params.view, id: route.params.id, query: route.query } }); break;
       case 'projects': {
         // the database refuses Projects without the app switched on here and the person's grant; this only explains it instead of mounting an app that can show nothing
         const entry = ctx.catalog.find((a) => a.app_key === 'projects');
@@ -477,10 +475,10 @@ async function render(opts = {}) {
         content = projectsV2View({ api, org, orgs: ctx.orgs, me: { id: s?.userId, name: s?.name || s?.email || 'You' } });
         break;
       }
-      case 'board': content = boardView({ api, id: route.params.id, ctx: c }); break;
+      case 'board': content = M.boardView({ api, id: route.params.id, ctx: c }); break;
       case 'tasks': {
         const entry = ctx.catalog.find((a) => a.app_key === 'tasks');
-        content = !ctx.catalogError && entry && entry.state !== 'available' ? appNotBuiltView('Tasks') : tasksView({ api, ctx: c, route, org }); break;
+        content = !ctx.catalogError && entry && entry.state !== 'available' ? appNotBuiltView('Tasks') : M.tasksView({ api, ctx: c, route, org }); break;
       }
       case 'planner': {
         // the database refuses Planner without the app switched on here and the person's grant; this only explains it instead of mounting an app that can show nothing

@@ -58,7 +58,7 @@ export const weatherChip = (w) => h('span', { class: 'wxchip', 'data-wx-chip': w
 const GREET = { morning: 'Good morning', afternoon: 'Good afternoon', evening: 'Good evening', night: 'Working late' };
 const LINE = { morning: 'Fresh start. ', afternoon: '', evening: 'Winding down. ', night: 'It’s late, so only what matters. ' };
 
-export function launcherView({ catalog, error, org, orgs, role, name, registry, loadWeather: getWeather, now = () => new Date(), onSwitch, retry }) {
+export function launcherView({ catalog, error, org, orgs, role, name, registry, loadWeather: getWeather, now = () => new Date(), onSwitch, retry, saveOrder }) {
   const part = partOfDay(now().getHours());
   const wxLayer = h('div', { class: 'wx', 'aria-hidden': 'true' });
   const root = h('section', { class: `launcher lx t-${part} w-clear`, 'data-part': part, 'data-wx': 'none' },
@@ -127,15 +127,39 @@ export function launcherView({ catalog, error, org, orgs, role, name, registry, 
   const describe = (a) => (a.state === 'not_set_up' ? `${a.name} isn’t set up for ${org.name}.` : (META[a.app_key] ?? ['gen', ''])[1]);
   const find = h('input', { type: 'search', id: 'app-find', placeholder: 'Find an app', autocomplete: 'off', 'aria-label': 'Find an app' });
   const shelf = h('div', { class: 'shelf' });
+  // Arranging (owners and admins): drag a tile onto another to put it there, or use the arrows (keyboard and touch). The order is saved for the whole
+  // organization; the server refuses anyone else. While arranging, tiles don't open.
+  const canArrange = Boolean(saveOrder) && (role === 'owner' || role === 'admin'); let arranging = false; let dragKey = null;
+  const ordered = () => groupCatalog(catalog, registry).flatMap(([, apps]) => apps.map((a) => a.app_key));
+  const persist = async (keys) => {
+    const before = catalog.map((a) => [a, a.position]); keys.forEach((k, i) => { const a = catalog.find((x) => x.app_key === k); if (a) a.position = i; }); draw();
+    const r = await saveOrder(keys); if (!r?.ok) { before.forEach(([a, p]) => { a.position = p; }); draw(); toast(r?.status === 403 || r?.status === 404 ? 'Only owners and admins can arrange the Launcher.' : 'Couldn’t save the order. Try again.', false); return; }
+    toast(`Order saved for everyone in ${org.name}.`);
+  };
+  const moveTo = (key, target, after) => { const keys = ordered().filter((k) => k !== key); const at = keys.indexOf(target); keys.splice(at < 0 ? keys.length : at + (after ? 1 : 0), 0, key); persist(keys); };
+  const step = (key, dir) => { const g = groupCatalog(catalog, registry).find(([, apps]) => apps.some((a) => a.app_key === key))[1].map((a) => a.app_key); const i = g.indexOf(key); const j = i + dir;
+    if (j < 0 || j >= g.length) return; moveTo(key, g[j], dir > 0); };
   const draw = () => {
-    const shown = findApps(catalog, find.value, describe);
+    const shown = arranging ? catalog : findApps(catalog, find.value, describe);
+    shelf.classList.toggle('arranging', arranging);
     shelf.replaceChildren(...(shown.length ? groupCatalog(shown, registry).map(([group, apps]) => h('div', { class: 'l-group' }, h('h2', {}, group),
       h('div', { class: 'l-grid' }, ...apps.map((a, i) => {
-        const tile = h('button', { type: 'button', class: `tile ${cls[a.state] ?? 'ok'}`, style: `--i:${i}`, 'data-app': a.app_key, 'data-st': dataSt[a.state] ?? 'ok', 'aria-label': a.name, onclick: () => open(a, tile) },
+        const tile = h('button', { type: 'button', class: `tile ${cls[a.state] ?? 'ok'}`, style: `--i:${i}`, 'data-app': a.app_key, 'data-st': dataSt[a.state] ?? 'ok', 'aria-label': arranging ? `${a.name}: drag to move, or use the arrows` : a.name, onclick: () => (arranging ? null : open(a, tile)) },
           badge(a.state), h('span', { class: 'shadowf' }), plateOf(registry?.get(a.app_key) ?? { id: a.app_key }, 96, 'available'), h('span', { class: 't-name' }, a.name), h('span', { class: 't-desc' }, describe(a)));
-        return tile;
+        if (!arranging) return tile;
+        tile.draggable = true;
+        tile.addEventListener('dragstart', (e) => { dragKey = a.app_key; tile.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', a.app_key); } catch { /* old browsers */ } });
+        tile.addEventListener('dragend', () => { dragKey = null; tile.classList.remove('dragging'); shelf.querySelectorAll('.drop-before,.drop-after').forEach((x) => x.classList.remove('drop-before', 'drop-after')); });
+        const side = (e) => { const r = tile.getBoundingClientRect(); return e.clientX > r.left + r.width / 2; };
+        tile.addEventListener('dragover', (e) => { if (!dragKey || dragKey === a.app_key) return; e.preventDefault(); const after = side(e); tile.classList.toggle('drop-after', after); tile.classList.toggle('drop-before', !after); });
+        tile.addEventListener('dragleave', () => tile.classList.remove('drop-before', 'drop-after'));
+        tile.addEventListener('drop', (e) => { e.preventDefault(); const k = dragKey; if (!k || k === a.app_key) return; moveTo(k, a.app_key, side(e)); });
+        return h('div', { class: 'tile-arr' }, tile, h('span', { class: 'arr-btns' },
+          h('button', { type: 'button', class: 'arr', 'aria-label': `Move ${a.name} earlier`, disabled: i === 0, onclick: () => step(a.app_key, -1) }, h('span', { style: 'display:inline-flex;transform:rotate(180deg)' }, icon('right'))),
+          h('button', { type: 'button', class: 'arr', 'aria-label': `Move ${a.name} later`, disabled: i === apps.length - 1, onclick: () => step(a.app_key, 1) }, icon('right'))));
       })))) : [h('p', { class: 'l-empty', role: 'status' }, `No app matches “${find.value.trim()}”. Try another word.`)]));
   };
+  const arrangeBtn = canArrange ? h('button', { type: 'button', class: 'l-arrange', 'aria-pressed': 'false', onclick: () => { arranging = !arranging; arrangeBtn.setAttribute('aria-pressed', String(arranging)); arrangeBtn.replaceChildren(icon(arranging ? 'check' : 'grid'), arranging ? 'Done' : 'Arrange apps'); find.disabled = arranging; draw(); } }, icon('grid'), 'Arrange apps') : null;
   find.addEventListener('input', draw);
   find.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); shelf.querySelector('.tile')?.click(); } else if (e.key === 'Escape' && find.value) { find.value = ''; draw(); } });
   // "/" jumps to the search box from anywhere on the Launcher (not while typing in a field)
@@ -143,7 +167,7 @@ export function launcherView({ catalog, error, org, orgs, role, name, registry, 
   document.addEventListener('keydown', slash);
   draw();
   return wrap(hero(sub, h('label', { class: 'l-find' }, icon('search'), h('span', { class: 'sr' }, 'Find an app'), find, h('kbd', { 'aria-hidden': 'true' }, '/'))), shelf,
-    h('p', { class: 'l-foot' }, `You see the apps you’ve been given in ${org.name}. The sky follows your time of day and local weather.`), attrib);
+    h('p', { class: 'l-foot' }, `You see the apps you’ve been given in ${org.name}. The sky follows your time of day and local weather.`, arrangeBtn ? [' ', arrangeBtn] : null), attrib);
 }
 
 // An app that is on for this person but has no screens in this build yet (shared "not built" state, never a fake page).
