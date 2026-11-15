@@ -191,7 +191,7 @@ export const tasksOperations = [
   defineOperation({ name: 'tasks.timer.stop', class: 'write', single: true,
     run: (q) => q('update task_time_entries e set ended_at = now() from task_items i where i.id = e.item_id and e.user_id = private.current_user_id() and e.ended_at is null returning e.id, e.item_id, i.title, extract(epoch from (e.ended_at - e.started_at))::int as seconds') }),
   // the one running timer, whichever app started it (the shell's pill)
-  defineOperation({ name: 'timer.running', class: 'read', single: true,
+  defineOperation({ name: 'timer.running', class: 'read',   // no timer = an empty answer, not "not found"
     run: (q) => q(`select 'tasks' as app, e.item_id as ref, i.title, e.started_at, '#/tasks/list/' || coalesce(i.list_id::text, 'inbox') as href from task_time_entries e join task_items i on i.id = e.item_id
         where e.user_id = private.current_user_id() and e.ended_at is null
       union all select 'projects', e.task_id, t.title, e.started_at, '#/projects/p/' || e.project_id::text || '/list?task=' || e.task_id::text from pm_time_entries e join pm_tasks t on t.id = e.task_id

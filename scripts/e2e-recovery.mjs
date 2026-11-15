@@ -215,6 +215,23 @@ if (sec) {
   } else check('DO1', 'Seed a Drive file for the link test', false, fid?.err);
 }
 
+// =============================================================== Tasks on a slow connection (live: duplicates) and the Show completed control
+await q("insert into workspace_apps (workspace_id, app_key, enabled) values ($1, 'tasks', true) on conflict (workspace_id, app_key) do update set enabled = true", [L]);
+const slow = await signIn(O);
+await slow.route('**/api/**', async (r) => { await new Promise((res) => setTimeout(res, 900)); await r.continue(); });   // like the live site on a bad day
+await slow.goto(`${base}/#/tasks/today`); await slow.waitForSelector('#tcapi', { timeout: 20000 });
+await slow.fill('#tcapi', `Slow capture ${stamp}`); await slow.press('#tcapi', 'Enter'); await slow.press('#tcapi', 'Enter'); await slow.press('#tcapi', 'Enter'); await slow.waitForTimeout(4000);
+const capN = (await q('select count(*)::int n from task_items where title = $1', [`Slow capture ${stamp}`]))[0].n;
+check('TK1', 'On a slow connection, pressing Enter three times in the capture bar adds the task once (the box empties at once)', capN === 1, `${capN}`);
+const mine = (await q('select id from task_lists where owner_id = $1 and is_default', [O.id]))[0]?.id;
+await slow.goto(`${base}/#/tasks/list/${mine}`); await slow.waitForSelector('.addt', { timeout: 20000 });
+const tk0 = (await q("select count(*)::int n from task_items where list_id = $1 and title = 'New task'", [mine]))[0].n;
+await slow.locator('.addt').first().click({ clickCount: 1 }); await slow.locator('.addt').first().click({ force: true }).catch(() => {}); await slow.locator('.addt').first().click({ force: true }).catch(() => {}); await slow.waitForTimeout(4000);
+const tk1 = (await q("select count(*)::int n from task_items where list_id = $1 and title = 'New task'", [mine]))[0].n;
+check('TK2', 'Clicking “Add task” three times while it saves adds one task', tk1 - tk0 === 1, `${tk1 - tk0}`);
+const sd = slow.locator('.showdone'); check('TK3', 'Show completed is always at the bottom of the list (V8), with its count', (await sd.count()) === 1 && /completed \(\d+\)/.test(await sd.innerText()));
+await slow.close();
+
 console.log(`\n${results.filter((r) => r.ok).length}/${results.length} checks passed`);
 if (problems.length) console.log('page problems:\n' + [...new Set(problems)].slice(0, 15).join('\n'));
 if (apiErr.length) console.log('api errors:\n' + [...new Set(apiErr)].slice(0, 15).join('\n'));

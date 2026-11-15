@@ -183,3 +183,4 @@ h3{font:650 calc(16px * var(--ts, 1))/1.25 var(--font);letter-spacing:-.005em}  
 .dpick-i[aria-pressed=true]{border-color:var(--brand-deep,var(--accent));box-shadow:0 0 0 2px var(--brand-soft,transparent)}
 .dpick-i small{display:block;color:var(--muted)}
 .dpick{display:grid;gap:6px;max-height:50vh;overflow:auto;margin-top:10px}
+.v8p-tasks .showdone:disabled{opacity:.55;cursor:default}

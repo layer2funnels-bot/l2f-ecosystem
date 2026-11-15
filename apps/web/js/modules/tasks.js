@@ -207,7 +207,10 @@ export function tasksView({ api, ctx, route, org = null }) {
       ...(edit ? ['-', ['trash', 'Delete', () => del(it), 'danger', 'Del']] : []),
     ], x, y);
   }
-  async function addBelow(it, list, { child = false } = {}) {
+  // one create at a time per place: on a slow connection a second Enter or click must not make a second task (live, 15 Nov 2026: duplicates)
+  const creating = new Set(); const once = async (key, fn) => { if (creating.has(key)) return; creating.add(key); try { return await fn(); } finally { creating.delete(key); } };
+  async function addBelow(it, list, { child = false } = {}) { return once(`below:${it.id}`, () => addBelow1(it, list, { child })); }
+  async function addBelow1(it, list, { child = false } = {}) {
     const r = await call('tasks.items.create', { list: list.id, block: it.block_id ?? undefined, ...(child ? { parent: it.id } : { after: it.id, ...(it.parent_id ? { parent: it.parent_id } : {}) }), title: 'New task' });
     if (!r.ok) return fail(r, 'add a task'); state.focus = r.data[0].id; refreshHome(); render();
   }
@@ -260,7 +263,9 @@ export function tasksView({ api, ctx, route, org = null }) {
       const p = parseCapture(inp.value, { people: people(), lists: home?.lists ?? [] }); if (!p.title) return;
       const input = { title: p.title, list: p.list ?? home?.mine, due_date: p.due_date ?? iso(new Date()), ...(p.due_time ? { due_time: p.due_time } : {}), priority: p.priority, ...(p.people.length ? { assignees: p.people } : {}) };
       if (!navigator.onLine) { queueOffline(input); inp.value = ''; return toast('You’re offline. Saved here; it’s added when you’re back online.'); }
-      const r = await call('tasks.items.create', input); if (!r.ok) return fail(r, 'add the task'); inp.value = ''; toast('Added to Today.'); await refreshHome(); render(); });
+      // the box empties at once (the next task can be typed straight away); if saving fails, what was typed comes back
+      const typed = inp.value; inp.value = '';
+      const r = await call('tasks.items.create', input); if (!r.ok) { if (!inp.value) inp.value = typed; return fail(r, 'add the task'); } toast('Added to Today.'); await refreshHome(); render(); });
     return h('div', { class: 'capture' }, h('span', {}, icon('plus')), inp, h('kbd', {}, 'Enter'));
   };
   async function today() {
@@ -366,12 +371,13 @@ export function tasksView({ api, ctx, route, org = null }) {
             ['down', 'Move down', async () => { const i = l.blocks.indexOf(b); if (i < l.blocks.length - 1) { await call('tasks.blocks.update', { id: b.id, position: l.blocks[i + 1].position + 0.5 }); render(); } }],
             '-', ['trash', 'Delete block', () => dialog({ title: `Delete “${b.name}”?`, body: h('p', {}, `Its ${its.length} task${its.length === 1 ? '' : 's'} are deleted too.`), actions: [{ label: 'Delete block', cls: 'dng', on: async () => { const x = await call('tasks.blocks.delete', { id: b.id }); if (!x.ok) { fail(x, 'delete'); return false; } refreshHome(); render(); } }, { label: 'Cancel' }] }), 'danger']], r2.left - 180, r2.bottom + 4); } }, icon('more')) : null),
         collapsed ? null : h('ul', { class: 'outline' }, ...rows),
-        !collapsed && edit ? h('button', { class: 'addt', type: 'button', onclick: async () => { const x = await call('tasks.items.create', { list: l.id, ...(b.id ? { block: b.id } : {}), title: 'New task' }); if (!x.ok) return fail(x, 'add a task'); state.focus = x.data[0].id; refreshHome(); render(); } }, icon('plus'), 'Add task') : null); };
+        !collapsed && edit ? h('button', { class: 'addt', type: 'button', onclick: async (ev) => { const me = ev.currentTarget; if (me.disabled) return; me.disabled = true; const x = await call('tasks.items.create', { list: l.id, ...(b.id ? { block: b.id } : {}), title: 'New task' }); me.disabled = false; if (!x.ok) return fail(x, 'add a task'); state.focus = x.data[0].id; refreshHome(); render(); } }, icon('plus'), 'Add task') : null); };
       const blocks = [...l.blocks, ...(l.items.some((x) => !x.block_id && !x.parent_id) ? [{ id: null, name: 'More', position: 1e9 }] : [])];
       view = h('div', { class: 'tdoc' }, ...(l.items.length || blocks.length ? blocks.map(blockEl) : []),
         !l.items.some((x) => !x.done_at) && !n ? h('p', { class: 'hint', style: 'text-align:center;padding:10px' }, 'Add your first task.') : null,
-        edit ? h('button', { class: 'addblock', type: 'button', onclick: async () => { const x = await call('tasks.blocks.create', { list: l.id, name: 'New block' }); if (!x.ok) return fail(x, 'add a block'); toast('Block added. Click its name to rename.'); render(); } }, icon('plus'), 'Add block') : null,
-        n ? h('button', { class: 'showdone', type: 'button', onclick: () => { state.showDone[l.id] = !show; render(); } }, `${show ? 'Hide' : 'Show'} completed (${n})`) : null,
+        edit ? h('button', { class: 'addblock', type: 'button', onclick: async (ev) => { const me = ev.currentTarget; if (me.disabled) return; me.disabled = true; const x = await call('tasks.blocks.create', { list: l.id, name: 'New block' }); me.disabled = false; if (!x.ok) return fail(x, 'add a block'); toast('Block added. Click its name to rename.'); render(); } }, icon('plus'), 'Add block') : null,
+        // V8: one Show/Hide completed (n) control at the bottom of every list, always there (hiding never deletes anything)
+        h('button', { class: 'showdone', type: 'button', 'aria-pressed': String(show), disabled: !n && !show, title: n ? '' : 'No completed tasks in this list yet', onclick: () => { state.showDone[l.id] = !show; render(); } }, `${show ? 'Hide' : 'Show'} completed (${n})`),
         h('p', { class: 'hint', style: 'text-align:center;margin-top:10px' }, `Created by ${l.owner_id === ctx.userId ? 'you' : l.owner_name} · ${l.space === 'team' ? `shared with ${who.length} ${who.length === 1 ? 'person' : 'people'}` : 'only you'}`));
     } else if (v === 'board') {
       const top = l.items.filter((x) => !x.parent_id); const t = iso(new Date());
