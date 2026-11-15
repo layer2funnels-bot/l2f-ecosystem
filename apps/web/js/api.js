@@ -9,7 +9,7 @@ export const BATCH_MAX = 4;   // same limit as the server (packages/core/http.mj
 // answer (each its own copy); and a read that has no answer after READ_TIMEOUT_MS ends as an error the screen can show with
 // "Try again", instead of loading forever. Writes are never merged or cut short. The suffixes are those of every read operation in
 // packages/core (no write operation ends with one of them; test/api-client.test.mjs keeps it so).
-export const READ_SUFFIXES = new Set(['calendar', 'catalog', 'channels', 'counts', 'deadlines', 'details', 'download', 'effective', 'events', 'feed', 'files', 'full', 'get', 'history', 'home', 'inbox', 'list', 'match', 'me', 'mine', 'now', 'overview', 'panel', 'path', 'people', 'photo', 'portfolio', 'prefs', 'protection', 'query', 'recent', 'report', 'roles', 'running', 'search', 'status', 'summary', 'trashed', 'unread', 'url', 'usage', 'version', 'versions', 'work', 'workload']);
+export const READ_SUFFIXES = new Set(['calendar', 'catalog', 'channels', 'counts', 'deadlines', 'details', 'download', 'effective', 'events', 'feed', 'files', 'full', 'get', 'history', 'home', 'inbox', 'list', 'match', 'matrix', 'me', 'mine', 'now', 'of', 'overview', 'panel', 'path', 'people', 'photo', 'portfolio', 'prefs', 'protection', 'query', 'recent', 'report', 'roles', 'running', 'search', 'status', 'summary', 'trashed', 'unread', 'url', 'usage', 'version', 'versions', 'work', 'workload']);
 export const isRead = (op) => READ_SUFFIXES.has(String(op).split('.').pop());
 export const READ_TIMEOUT_MS = 10000;
 

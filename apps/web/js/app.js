@@ -40,6 +40,7 @@ import { funnelsHomeView, funnelListView, funnelRecordView } from './views/funne
 import { documentsView as documentsV8 } from './views/office-docs.js';
 import { offersListView, offerView, offerFormView } from './views/office-offers.js';
 import { storiesListView, storyView, storyFormView, brandKitsListView, brandKitView, brandKitFormView } from './views/office-records.js';
+import { adminV8View } from './views/office-admin.js';
 import { avatarsListView, avatarNewView, avatarStudioView, avatarEditView } from './views/office-avatars.js';
 const V8REC = { avatars: [avatarsListView, (c, id, prm) => avatarStudioView(c, id, prm?.tab ?? 'profile'), (c, id, prm) => (id ? avatarEditView(c, id, prm?.chapter) : avatarNewView(c))], offers: [offersListView, offerView, offerFormView], stories: [storiesListView, storyView, storyFormView], brand_kits: [brandKitsListView, brandKitView, brandKitFormView] };
 
@@ -484,11 +485,12 @@ async function render(opts = {}) {
         /* the Planner menu comes from appnav.js */
         break;
       }
-      case 'admin': content = adminView({ api, live, org, role, route, rerender: () => render(), go, clients: ctx.clients }); break;
+      case 'admin': content = adminV8View({ api, ctx: c, org, role, route, go }); break;
       case 'app': content = appNotBuiltView(ctx.catalog.find((a) => a.app_key === route.params.app)?.name ?? appLabel(route.params.app)); break;
       default: content = notFoundState(hrefFor.office());
     }
   }
+  { const usedApp = org.member_kind === 'client' ? null : (inOffice ? 'office' : route.name === 'doc' || route.name === 'sheet' || route.name === 'image' || route.name === 'pdf' || route.name === 'drive' ? 'drive' : route.name === 'board' || route.name === 'boards' ? 'whiteboard' : ['projects', 'clients', 'forms', 'planner'].includes(route.name) ? route.name : route.name === 'ladder' ? 'value_ladder' : route.name === 'social' ? 'social_planner' : null); if (usedApp && usedApp !== lastTouched) { lastTouched = usedApp; api.call('access.app.touch', { app: usedApp }).catch(() => {}); } }   // Admin › Access review: when each app was last used
   // global search (V8 02 §5): the rail button and Ctrl K open it, scoped to the current app when that app is searchable; staff only (the operation refuses client contacts)
   startSearch = org.member_kind === 'client' ? null : (initial = '') => openSearch({ api, registry, catalog: ctx.catalog, isAdmin, currentApp: inOffice ? 'office' : (route.name === 'clients' ? 'clients' : route.name === 'projects' ? 'projects' : route.name === 'planner' ? 'planner' : ['doc', 'sheet', 'image', 'pdf', 'drive'].includes(route.name) ? 'drive' : null), initial });
   const view = shellView({ onSearch: startSearch, app: appApi, orgs: ctx.orgs, active: org, email: session.get()?.email, name: session.get()?.name, route, content, banner: bannerEl(), isAdmin, inOffice, launcherCurrent: route.name === 'launcher' || route.name === 'home',
@@ -522,6 +524,7 @@ window.addEventListener('hashchange', () => {
 });
 window.addEventListener('beforeunload', (e) => { if (dirty.isDirty()) { e.preventDefault(); e.returnValue = ''; } });
 window.addEventListener('offline', () => announce('You are offline. Changes will not be saved.'));
+let lastTouched = null;
 let startSearch = null;
 document.addEventListener('keydown', (e) => {                      // Ctrl K / Cmd K: global search from anywhere (V8 02 §5)
   if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'k' && startSearch) { e.preventDefault(); startSearch(); }

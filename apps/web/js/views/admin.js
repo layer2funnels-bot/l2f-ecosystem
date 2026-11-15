@@ -66,7 +66,7 @@ export function levelMatrix(perms) {
   return [...groups].map(([app, rows]) => ({ app: areaName(app), rows }));
 }
 
-export function adminView({ api, live, org, role, route, rerender, go, clients }) {
+export function adminView({ api, live, org, role, route, rerender, go, clients, parts = false }) {
   const isAdmin = role === 'owner' || role === 'admin';
   if (!isAdmin) return h('section', {}, notFoundState(hrefFor.office()));        // same screen as a page that doesn't exist (design 07)
   const tab = route.params.tab; const sub = route.params.sub ?? 'levels';
@@ -374,6 +374,8 @@ export function adminView({ api, live, org, role, route, rerender, go, clients }
           ...spaces.map(([k, v]) => h('tr', {}, h('th', { scope: 'row' }, { shared: 'Shared space', client: 'Client files', personal: 'Personal spaces', funnel_mapper: 'Funnel Mapper images' }[k] ?? k), h('td', {}, size(v))))))));
   }
 
+  // V8 Admin (views/office-admin.js) reuses the V4 dialogs and panes: invite, manage a member or invitation, client portal contacts, access levels
+  if (parts) return { pane, invite, manage, members, clientAccess, inviteClient, access };
   (tab === 'members' ? members : tab === 'storage' ? storage : tab === 'clients' ? clientAccess : access)();
   return section;
 }

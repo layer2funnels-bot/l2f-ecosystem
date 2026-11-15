@@ -130,6 +130,9 @@ export const officeOperations = [
   }),
   // ---- Admin & Access V8 (0058): the database functions decide (owners/admins; never yourself or an owner; branding owners only)
   defineOperation({ name: 'access.app.touch', class: 'write', input: { app: { type: 'text', required: true, max: 40 } }, run: (q, _c, i) => q('select public.app_touch($1) as ok', [i.app]) }),
+  defineOperation({ name: 'access.apps.counts', class: 'read',
+    run: (q, ctx) => q(`select g.user_id, count(*)::int apps, max(u.last_used_at) last_used_at from app_grants g left join app_usage u on u.workspace_id = g.workspace_id and u.user_id = g.user_id
+      where g.workspace_id = $1 group by g.user_id`, [ctx.orgId]) }),
   defineOperation({ name: 'access.apps.of', class: 'read', input: { user: { type: 'uuid', required: true } },
     run: (q, ctx, i) => q('select app_key from app_grants where workspace_id = $1 and user_id = $2 order by app_key', [ctx.orgId, i.user]) }),
   defineOperation({ name: 'access.app.set', class: 'sensitive', single: true, input: { user: { type: 'uuid', required: true }, app: { type: 'text', required: true, max: 40 }, on: { type: 'bool', required: true } },

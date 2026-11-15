@@ -69,12 +69,14 @@ export function parseRoute(hash) {
   if (a === 'office' && OFFICE_OTHER.has(b) && seg.length === 2) return r('office-page', { page: b });
   if (a === 'office' && b === 'member' && c && seg.length === 3) return r('office-page', { page: 'team', member: c });
   if (a === 'office' && b === 'admin') {
-    if (seg.length === 2) return r('admin', { tab: 'members' });
-    if (c === 'members' && seg.length === 3) return r('admin', { tab: 'members' });
-    if (c === 'storage' && seg.length === 3) return r('admin', { tab: 'storage' });
-    if (c === 'clients' && seg.length === 3) return r('admin', { tab: 'clients' });
-    if (c === 'access' && seg.length === 3) return r('admin', { tab: 'access', sub: 'levels' });
-    if (c === 'access' && ADMIN_ACCESS_TABS.includes(d) && seg.length === 4) return r('admin', { tab: 'access', sub: d });
+    if (seg.length === 2) return r('admin', { tab: 'members', v8: 'people' });
+    if (['people', 'teammates', 'roles', 'review', 'branding', 'audit'].includes(c) && seg.length === 3) return r('admin', { tab: c, v8: c });
+    if (c === 'person' && d && seg.length === 4) return r('admin', { tab: 'people', v8: 'people', person: d });
+    if (c === 'members' && seg.length === 3) return r('admin', { tab: 'members', v8: 'people' });
+    if (c === 'storage' && seg.length === 3) return r('admin', { tab: 'storage', v8: 'storage' });
+    if (c === 'clients' && seg.length === 3) return r('admin', { tab: 'clients', v8: 'clients' });
+    if (c === 'access' && seg.length === 3) return r('admin', { tab: 'access', sub: 'levels', v8: 'access' });
+    if (c === 'access' && ADMIN_ACCESS_TABS.includes(d) && seg.length === 4) return r('admin', { tab: 'access', sub: d, v8: 'access' });
   }
   if (a === 'office' && b === 'funnels') {
     if (seg.length === 2) return r('funnels');
