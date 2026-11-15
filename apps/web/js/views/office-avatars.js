@@ -141,7 +141,7 @@ export function avatarStudioView(ctx, id, tab = 'profile') {
   const view = async (pre) => {
     const [r, offers] = await Promise.all([pre ? { ok: true, data: [pre] } : ctx.api.call('funnels.avatars.get', { id }), ctx.api.call('funnels.offers.list', {})]); if (!ctx.live()) return;
     if (!r.ok || !r.data?.[0]) return put(wrap, r.ok || r.status === 404 ? notFoundState(hrefFor.funnels(), 'Back to Funnels') : errorState(() => view()));
-    const a = r.data[0]; const p = a.profile ?? {}; const [c] = lookOf(a.look); const done = completeness(p); wrap.style.setProperty('--c', c);
+    const a = r.data[0]; a.version ??= 'v1.0'; a.stage ??= 'draft'; const p = a.profile ?? {}; const [c] = lookOf(a.look); const done = completeness(p); wrap.style.setProperty('--c', c);
     const canEdit = ctx.can('funnels.avatar.edit', a.client_id) && !a.archived_at; const m = recordManager(ctx, 'avatars', { view: (x) => view(x), backTo: hrefFor.list('avatars') });
     const used = (offers.data ?? []).filter((o) => (o.avatar_ids ?? []).includes(a.id) || o.avatar_id === a.id);
     root.__focused.title = [a.name, a.tagline].filter(Boolean).join(', ');

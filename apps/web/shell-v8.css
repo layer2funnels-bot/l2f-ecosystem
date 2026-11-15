@@ -144,7 +144,7 @@
 .pm8-link{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:0 10px;border-radius:12px;font:550 calc(14px * var(--ts, 1))/1.5 var(--font);color:var(--text);text-decoration:none;text-align:left}
 .pm8-link:hover,.pm8-link:focus-visible{background:var(--sunk)}.pm8-link .i{width:18px;height:18px}
 .pm8-link kbd{margin-left:auto;padding:4px 6px;border:var(--bw) solid var(--line2);border-radius:6px;background:var(--surface);font:500 calc(11.5px * var(--ts, 1))/1 var(--mono);color:var(--muted)}
-.pm8-app{display:grid;gap:0;padding:6px 10px}.pm8-app .over{margin:0 0 6px;padding:8px 10px 6px}
+.pm8-app{display:grid;gap:6px;padding:6px 10px}.pm8-app .over{margin:0 0 6px;padding:8px 10px 6px}
 .pm8-theme{display:flex;align-items:center;gap:12px;width:100%;min-height:36px;padding:6px 10px;border-radius:12px;border:var(--bw) solid var(--line);background:var(--surface);font:550 calc(12.5px * var(--ts, 1))/1.5 var(--font);color:var(--text2);text-align:left}
 .pm8-theme+.pm8-theme{margin-top:0}.pm8-theme .i{width:16px;height:16px}
 .pm8-theme[aria-checked=true]{background:var(--text);border-color:var(--text);color:var(--bg)}
@@ -161,4 +161,14 @@
 .shell.v8 .focusbar .hdr-ttl{line-height:1.15}.shell.v8 .focusbar .hdr-ttl b{font:700 calc(15px * var(--ts, 1))/1.15 var(--font)}.shell.v8 .focusbar .hdr-ttl small{font-size:calc(12px * var(--ts, 1));line-height:1.15;color:var(--muted)}
 .shell.v8.focused main.content{padding:0;max-width:none}
 @media (pointer:coarse){.shell.v8 .focusbar .launch-btn{width:44px;height:44px}}
+<<<<<<< HEAD
 .shell.v8 .focusbar .hdr-ttl{flex:1}.shell.v8 .focusbar-acts{display:flex;align-items:center;gap:8px;margin-left:auto}   /* V8 focusBar right-hand actions */
+=======
+/* focused top bar: the apps menu drops down below the bar (it opened upwards, off-screen, and covered the bar) */
+.shell.v8 .focusbar{position:relative;z-index:30;overflow:visible}
+.shell.v8 .focusbar .appsw .menu{top:calc(100% + 6px);bottom:auto;left:0;right:auto;transform-origin:top left;max-height:calc(100vh - 70px);overflow:auto}
+@media (max-width:760px){.shell.v8 .focusbar .appsw .menu{position:fixed;top:54px;left:12px;right:12px;width:auto}}
+/* focused top bar on a phone: the title keeps its room (shortened with …); status pills give way to the actions */
+.shell.v8 .focusbar .hdr-ttl{min-width:0}.shell.v8 .focusbar .hdr-ttl b,.shell.v8 .focusbar .hdr-ttl small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:760px){.shell.v8 .focusbar-acts>.pill,.shell.v8 .focusbar-photo{display:none}.shell.v8 .focusbar-acts{gap:4px}}
+>>>>>>> claude/epic-bohr-nc9jar
