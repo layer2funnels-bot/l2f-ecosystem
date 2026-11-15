@@ -25,6 +25,7 @@ import { fmpOperations } from './fmp-operations.mjs';
 import { fmpDataOperations } from './fmp-data-operations.mjs';
 import { searchOperations } from './search-operations.mjs';
 import { officeOperations } from './office-operations.mjs';
+import { tasksOperations } from './tasks-operations.mjs';
 
 export const operations = Object.freeze(Object.fromEntries([
   ...funnelOperations,
@@ -33,6 +34,7 @@ export const operations = Object.freeze(Object.fromEntries([
   ...fmpDataOperations,
   ...searchOperations,
   ...officeOperations,
+  ...tasksOperations,
   ...projectsCompatOperations,
   ...collabOperations,
   ...driveOperations,
