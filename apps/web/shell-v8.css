@@ -168,3 +168,5 @@
 /* focused top bar on a phone: the title keeps its room (shortened with …); status pills give way to the actions */
 .shell.v8 .focusbar .hdr-ttl{min-width:0}.shell.v8 .focusbar .hdr-ttl b,.shell.v8 .focusbar .hdr-ttl small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media (max-width:760px){.shell.v8 .focusbar-acts>.pill,.shell.v8 .focusbar-photo{display:none}.shell.v8 .focusbar-acts{gap:4px}}
+/* focused top bar: the rail already has the apps button, so the bar shows its own only on a phone (where the rail is hidden) */
+@media (min-width:761px){.shell.v8 .focusbar .appsw{display:none}}
