@@ -214,3 +214,7 @@ button.tfold-empty:hover{color:var(--text)}
 @media (max-width:1180px){.v8p-tasks ul.outline{display:block}}
 .ppchips{max-height:232px;overflow:auto;padding:2px}
 .seg3.xs button{white-space:nowrap}
+/* a task row never runs past the screen: the title shrinks and wraps, the controls stay on the row */
+.v8p-tasks .ol-row{min-width:0;max-width:100%}
+.v8p-tasks .ol-row .ol-t{flex:1 1 auto;min-width:0;overflow-wrap:anywhere}
+@media (max-width:640px){.v8p-tasks .ol-row{flex-wrap:wrap;row-gap:2px}.v8p-tasks .ol-row .ol-t{flex-basis:calc(100% - 120px)}}

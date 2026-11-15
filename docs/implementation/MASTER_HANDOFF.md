@@ -1,80 +1,73 @@
-# Master handoff — V8 ecosystem, P00 + P01 (sessions up to 15 Nov 2026)
+# Master handoff — V8 ecosystem: P00 Shell, P01 Office, P03 Tasks + the quality recovery (to 15 Nov 2026)
 
-Short by design: it points to the original documents instead of copying them. Current verified state: `CURRENT_PROJECT_STATUS.md`. Quick start: `NEXT_SESSION_START_HERE.md`.
+Short by design: it points to the documents instead of copying them. Current verified state: `CURRENT_PROJECT_STATUS.md`. Quick start:
+`NEXT_SESSION_START_HERE.md`. Recovery details: `recovery/RECOVERY_BRIEF.md` (the owner's brief), `recovery/AUDIT_TRACKER.md` (defects and fixes),
+`recovery/PERFORMANCE_REPORT.md` (measurements).
 
 ## 1. Project and architecture
 - Repo `layer2funnels-bot/l2f-ecosystem`. Static web app `apps/web` (vanilla ES modules, hash routes `apps/web/js/routes.js`, shell `views/shell.js`),
   embedded apps (`apps/projects`, `apps/planner`, `apps/funnel-mapper`, TypeScript), API in `packages/core` (`defineOperation`, run as `app_user`
   with row-level security; Projects V2 ops in `packages/core/pm`), PostgreSQL migrations in `migrations/` (+ `migrations/rollback/`).
-- Hosting: Cloudflare Pages (preview per branch). Database: Supabase project `l2f-ecosystem` (ref `dfitnxilkezepkhdmzuh`), shared by production and previews.
-- Tests: `npm test` (pglite + API, `test/run.mjs`); browser suites `scripts/e2e-ui.mjs`, `e2e-onboarding.mjs`, `e2e-local.mjs` against the local
-  Supabase stack (`dockerd &`, `npm run stack:start && npm run stack:migrate`); Playwright at `PLAYWRIGHT_MODULE=/opt/node22/lib/node_modules/playwright`.
-  CI: `.github/workflows/ci.yml` (static checks, unit, e2e).
+- Hosting: Cloudflare Pages project `l2f-ecosystem` (live: `office.tabishriaz.com` and `l2f-ecosystem.pages.dev`; preview per branch). API = Pages
+  Function `functions/api/[[route]].js` (one DB connection per request; uses a `HYPERDRIVE` binding automatically if the owner adds one).
+- Database: Supabase project `l2f-ecosystem` (ref `dfitnxilkezepkhdmzuh`), shared by production and previews.
+- **Build**: `node scripts/build-web.mjs` → `dist/web`; since the recovery it bundles the app with esbuild (`scripts/bundle-web.mjs`, devDependency):
+  hashed `/assets/app-*.js`, chunks per app (lazy-loaded from `app.js` `LAZY`), one `/assets/app-*.css` from the stylesheets `index.html` lists, and
+  `/assets/*` cached immutably in `_headers`. Development serves the source; `WEB_ROOT=dist/web` makes the dev server serve the build.
+- Tests: `npm test` (pglite + API); browser suites against the local Supabase stack (`dockerd &`, `npm run stack:start && npm run stack:migrate`):
+  `scripts/e2e-ui.mjs`, `e2e-onboarding.mjs`, `e2e-local.mjs`, `e2e-tasks.mjs`, `e2e-recovery.mjs` (Playwright `PLAYWRIGHT_MODULE=/opt/node22/lib/node_modules/playwright`).
+  Performance: `node scripts/perf-measure.mjs` (throttled, before/after with `WEB_ROOT`). CI: `.github/workflows/ci.yml`.
 
 ## 2. Authority and owner rules (mandatory)
-1. **V8 is the design and product authority**: `docs/design/v8/Layer2Funnels_V8_Developer_Handoff/` — `00_MASTER_DOCUMENTATION`, `01_APPLICATIONS/<app>`,
-   `02_DESIGN_SYSTEM`, `07_PROMPTS`, prototype `08_PROTOTYPE_AND_SOURCE/prototype-source/*.js|css` (the visual authority, incl. typography).
-2. **V4 is the functional baseline**: keep every V4 function unless V8 removes it or the owner approves (`V4_FEATURE_PRESERVATION_MATRIX.md`).
-3. Build a **whole application** before its PR; **one consolidated PR per application**; no fake buttons.
-4. Organization and client data isolation; authorization enforced in the **backend/database**, not only the UI.
-5. **Client Access Matrix: owners AND admins** (owner, 15 Nov 2026 — overrides V8's owner-only note); others only with an explicit grant.
-6. V8 visual fidelity: typography, weights, spacing, sizes, colours, icons, responsive layouts, interactions.
-7. **No merge, deploy or production data/schema change without explicit owner approval.** Never ask for credentials in chat. $0/month.
-8. Use Claude economically: no repeated doc reviews; targeted tests while building, full suites at milestones; short reports.
-9. Approved sequence (owner, 15 Nov 2026): P00 Foundation and Global Shell → P01 Office → **P02 Tasks** → P03 Drive with editors → P04 Projects → P05 Planner → P06 Clients → P07 Funnel Mapper → P08 Portal → P09 Whiteboard → P10 Forms → P11 Value Ladder → P12 Social Planner → P13 Agents → P14 Final Ecosystem Verification.
+1. **V8 is the design and product authority**: `docs/design/v8/Layer2Funnels_V8_Developer_Handoff/` (`01_APPLICATIONS/<app>`, prototype `08_PROTOTYPE_AND_SOURCE/prototype-source`).
+2. **V4 is the functional baseline** (`V4_FEATURE_PRESERVATION_MATRIX.md`).
+3. Whole application before its PR; one consolidated PR per application; no fake buttons.
+4. Organization and client isolation; authorization in the backend/database.
+5. **Client Access Matrix: owners AND admins.**
+6. **No merge, deploy or production data/schema change without the owner's explicit approval.** Never ask for credentials in chat. $0/month.
+7. Inspect before changing; fix root causes; don't rebuild working parts; economical use of Claude.
+8. **Sequence (owner, 15 Nov 2026)**: P00 Shell · P01 Office · **P02 Projects** · **P03 Tasks** · P04 Drive · P05 Planner · P06 Clients · P07 Funnel Mapper ·
+   P08 Portal · P09 Whiteboard · P10 Forms · P11 Value Ladder · P12 Social Planner · P13 Agents · P14 Final Verification.
+   Tasks was built under the name “P02” (branch `p02-tasks`, migration `0059_tasks`, `TASKS_PLAN.md`/`TASKS_REPORT.md` keep their names); it is P03.
+   **Projects (P02) is not rebuilt to V8 and not complete.** Owner's explicit instruction: the next session starts **Drive (P04)** — a deliberate
+   sequence exception; Projects stays deferred.
 
-Planning documents (read once, don't redo): `V8_DOCUMENTATION_REVIEW.md`, `V8_IMPLEMENTATION_TRACKER.md` (requirements OR-01…OR-63, every page),
-`ECOSYSTEM_PLAN.md`, `V8_CRITICAL_REQUIREMENTS_QA.md`, `SHELL_AND_LAUNCHER_PLAN.md`, `OFFICE_PLAN.md`, `V8_FIDELITY_REPORT.md`, `P00_NOTES.md`.
+## 3. P00 — Foundation and Global Shell (merged, PR #56)
+V8 tokens and generated cascades (`v8-ledger.css`, `check:*`), shared component layer `v8-base.css`, V8 icons; rail/sidebar/app bar/phone sheet;
+Launcher (Khushab weather); global search; notifications for every app (0054); Profile (0055); variable Geist; text size (`scripts/textscale.mjs`).
+Recovery: Launcher bell in V8 colours; **Arrange apps** (owners/admins drag or use arrows; per organization, `workspace_app_order`); organization
+logos on the rail and menus (`org.icons`); the `[hidden]` attribute always hides (`v8-base.css`).
 
-## 3. P00 — Foundation and Global Shell (branch `claude/epic-bohr-nc9jar`, PR #56)
-- V8 tokens (`packages/ui/tokens.json` → css, `check:tokens`), prototype cascade `apps/web/v8-ledger.css` (generated, `check:ledger`), shared component
-  layer `apps/web/v8-base.css`, V8 icons `apps/web/js/icons-v8.js` (`check:icons`).
-- Shell: rail with org/apps/profile menus, collapsible sidebar, 52 px app bar, phone bottom bar + apps-and-account sheet, focused layout (`.focusbar`).
-- Launcher (V8 sizes, Khushab weather effects automatic, snowfall winter visual; the two switches were removed by the owner).
-- Global search (Ctrl K) with permission-checked providers; notifications for every app (migration 0054, bell drawer, per-app settings);
-  Profile pages (migration 0055).
-- Typography root cause fixed: **variable Geist / Geist Mono** (`apps/web/fonts/*-variable.woff2`, OFL) so V8's 550/560/620/650 weights render.
+## 4. P01 — Office (merged, PR #57) — `OFFICE_REPORT.md`
+Pages from prototype markup with generated scoped CSS (`apps/web/pages/office.css`, root `.v8p-office`). Recovery changes:
+- **Avatar Studio** rebuilt on a flexible section model (`modules/avatarmodel.js`): sections = the document's top headings, parts = sub-headings,
+  content blocks (sub-heading, paragraph, list item, table). Import review (`views/office-avatars.js`) shows each section, its suggested kind,
+  per-part moves and a text preview; nothing is dropped unless chosen. Block editor; add/rename/retype/reorder/delete sections; Profile cards chosen
+  per avatar (a section, its first table, or a sub-heading; removing a card keeps content); **Avatar settings** (defaults for new avatars only,
+  `avatar_settings`). Older fixed-chapter avatars convert on read. Reference document: `recovery/Dream_Customer_Avatar_Farhat_V1.0.docx`.
+- Stories, Brand Kits, Offers return to their list after saving (one save at a time; errors keep the form); Brand Kit fonts are typed freely with
+  a real render check (`fontRenders`).
+- Admin: Teammate access switches in the `write` rate class, re-read after every change, stale-answer guard; **Access Review removed**;
+  **Organization** tab (rename, logo shrunk to 128 px, preview, default strategy template version); Client Access Matrix includes **Office**.
+- Documents: **Add from Drive** links a shared Drive file into a section (`doc_links`; no copy, no move; labelled “Linked from Drive”).
+- Clients and Office: a client contact sees shared Office records only while Office is on for their client (row rule + `portal.office.list`
+  projection without internal notes, evidence or interviews). The Portal itself is still locked (P08).
 
-## 4. P01 — Office (branch `p01-office`, PR #57) — details in `OFFICE_REPORT.md`
-- Page method: prototype markup and class names; scoped CSS generated from the prototype layers by `scripts/build-page-css.mjs` into
-  `apps/web/pages/office.css` (root `.v8p-office`, `check:pages`); compare with `scripts/v8-compare.mjs <filter>`.
-- Files: `views/home.js`, `funnels.js` (overview, `recordManager`, `v8head`), `office-offers.js`, `office-records.js` (Stories, Brand Kits),
-  `office-avatars.js` + `modules/avatarimport.js` (Avatar Studio, Word/PDF import in the browser), `strategies.js` (+ template editor),
-  `office-docs.js`, `office-team.js` (Team, member, Apps, Notification settings), `office-admin.js` (Admin; reuses V4 `admin.js` via `adminView({ parts: true })`).
-- Server: `packages/core/office-operations.mjs` (template, sections, team, avatar versions, access/app/feature switches, review, client matrix, branding),
-  `funnel-operations.mjs` field lists, `pm/server/ops/resources.ts` (`activity.org.feed` + `actor`), `projects-compat-operations.mjs` (`office.projects.list`).
-- Unsaved work: `dirty.set(label, save)` / `dirty.clear()`; save functions return `true` and take `leaving` (no navigation when called by the guard).
-
-## 5. Known gaps / decisions
-- Deliberate differences from V8 (no fake controls): no per-app level select on teammate access; no storage thinning switches; avatar "→ Task"/"Add to strategy" omitted;
-  Client Access Matrix takes effect for clients when the Portal opens; email digest waits for an approved provider.
-- Projects V2 list operations are slow (RLS per row) — fix in the Projects phase.
-- Planner left the Office menu (V8: its own app); old `#/office/planner` links still route to Planner.
+## 5. P03 — Tasks (merged, PR #58) — `TASKS_REPORT.md`
+Recovery: no duplicate tasks on slow connections (one create per place; capture box empties at once); Show/Hide completed always at the list
+bottom; New list or folder with V8 people chips, per-person Can edit/Can view, Everyone, People only for team; folders as tree rows with
+“+ new list here”, ⋯ menu, “Move to folder…” on lists; the task outline is never sticky/hidden on tablets (class collision with the prototype).
 
 ## 6. Database migrations
-| # | File | Phase | What |
+| # | File | Phase | Production |
 |---|---|---|---|
-| 0054 | `0054_notifications_every_app.sql` | P00 | notifications for every app, `private.notify`, `my_inbox`, `notification_prefs` |
-| 0055 | `0055_profile_details.sql` | P00 | profile full name, job title, time zone, about |
-| 0056 | `0056_office_v8.sql` | P01 | offer/story/brand-kit fields, several brand kits (one main), `strategy_templates`, `doc_sections` |
-| 0057 | `0057_avatar_studio.sql` | P01 | avatar look/role/market/stage/version/profile, `avatar_versions` |
-| 0058 | `0058_admin_access_v8.sql` | P01 | `app_usage`, teammate app/feature functions, access review, `client_app_defaults` / `client_app_access` (`clients.apps.manage`: owner + admin), workspace branding |
-All additive, each with `migrations/rollback/<n>.down.sql`. Details of 0054/0055: `MIGRATIONS_0054_0055.md`.
-**Production: at 0053; 0054–0058 NOT applied** (owner authorized 15 Nov, blocked by the backup requirement — see status file).
+| 0054–0059 | notifications, profile, office, avatar studio, admin access, tasks | P00–P03 | **applied 15 Nov** (backup schema `backup_20261115`) |
+| 0060 | `0060_recovery.sql` | recovery | **not applied** — needs the owner's go. Drops Access Review functions + `app_usage.reviewed_at`; adds `workspace_app_order` + `launcher_order_set`, `workspace_rename`, branding for admins, `my_org_icons`, `avatar_settings`, `doc_links`; funnel record select rule requires Office on for client contacts; grants `client_app_enabled` to `app_user`. Rollback tested locally (down → up). |
+Verify after applying: `list_migrations` ends with 0060 · the 3 new tables exist with RLS · `has_function_privilege('anon', 'public.workspace_rename(text)', 'execute')` false ·
+`select count(*) from pg_proc where proname like 'access_review%'` = 0 · `get_advisors(security)` no new findings.
 
-## 7. How to verify after applying
-`list_migrations` shows 0054–0058 after 0053 · `get_advisors(security)` has no new findings · `select has_function_privilege('anon', 'public.my_inbox(int,text,text)', 'execute')` is false (same for the 0055/0058 functions) ·
-policies exist on `notification_prefs`, `strategy_templates`, `doc_sections`, `avatar_versions`, `app_usage`, `client_app_defaults`, `client_app_access` ·
-`select key, default_role from permissions where key = 'clients.apps.manage'` → admin · preview: bell, Profile › About, Office › Funnels/Documents/Admin load.
+## 7. Tests (local stack, 15 Nov)
+See `CURRENT_PROJECT_STATUS.md` › Tests for the final numbers (unit all green; browser suites run against the bundled build).
 
-## 8. Testing results (local, 15 Nov)
-Unit 66 suites green; office 33/33; web 56/56; e2e-ui 265/265; onboarding 22/22; e2e-local 71/71; V8 comparison of 22 Office pages.
-
-## 9. Git
-- `main` (V8 docs, PR #55 merged) · `claude/epic-bohr-nc9jar` (P00, PR #56 draft) · `p01-office` (P01, PR #57 draft, base = P00 branch).
-- Merge order when approved: #56 into `main`, then retarget #57 to `main` and merge.
-
-## 10. Next steps
-1. Backup (owner) → apply 0054–0058 → verify (§7) → update the status file.
-2. Owner decisions on merging #56 and #57.
-3. Next application: **P02 Tasks**, then Drive with editors, Projects, Planner, Clients. Follow the same method: read its V8 app folder once, audit V4, build the whole app, one PR.
+## 8. Known remaining issues
+See `CURRENT_PROJECT_STATUS.md` › Remaining issues and `recovery/PERFORMANCE_REPORT.md` › Remaining bottlenecks.
