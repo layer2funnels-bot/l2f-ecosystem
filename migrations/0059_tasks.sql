@@ -8,7 +8,7 @@
 --   • a private task (personal lists only): its creator only — others get a count from tasks_private_count().
 --   • every table is organization-scoped; Layer2Funnels and Aurj never mix.
 
-insert into public.apps (key, name, scope, standalone_capable, sort_order, lifecycle) values ('tasks', 'Tasks', 'shared', true, 25, 'active')
+insert into public.apps (key, name, scope, standalone_capable, sort_order, lifecycle) values ('tasks', 'Tasks', 'shared', true, 115, 'active')
 on conflict (key) do nothing;
 insert into public.workspace_apps (workspace_id, app_key, enabled) select w.id, 'tasks', true from public.workspaces w
 on conflict (workspace_id, app_key) do nothing;

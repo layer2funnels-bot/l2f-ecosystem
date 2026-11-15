@@ -121,7 +121,7 @@ await page.getByRole('button', { name: 'Check for invitations' }).click(); await
 check('U9', 'After an admin adds them, "Check for invitations" opens the Launcher in the organization theme with the switcher showing it', (await theme()) === 'l2f' && (await page.locator('#org-switcher strong').innerText()) === 'Layer2Funnels' && (await page.locator('.launcher.lx').count()) === 1);
 const tile = (k) => page.locator(`.tile[data-app=${k}]`);
 const keys = await page.locator('.tile').evaluateAll((els) => els.map((e) => e.dataset.app));
-check('U10', 'Owner sees the twelve apps grouped Everyday then Studio in the v4 order, Funnel Mapper Pro among them as a normal tile', keys.join() === 'office,projects,clients,drive,planner,portal,forms,value_ladder,social_planner,whiteboard,funnel_mapper_pro,layer2_agents', keys.join());
+check('U10', 'Owner sees the thirteen apps in the V8 order (Everyday ends with Tasks, then Studio), Funnel Mapper Pro among them as a normal tile', keys.join() === 'office,projects,clients,drive,planner,portal,tasks,forms,value_ladder,social_planner,whiteboard,funnel_mapper_pro,layer2_agents', keys.join());
 const state = async (k) => (await tile(k).getAttribute('class')).split(' ')[1];
 check('U11', 'Tile states come from the real catalog: Client Portal locked, five apps coming soon', (await state('portal')) === 'locked' && (await tile('portal').innerText()).includes('Locked') && (await state('forms')) === 'soon' && (await tile('layer2_agents').innerText()).includes('Soon') && (await state('office')) === 'ok');
 await wait('· Khushab');
