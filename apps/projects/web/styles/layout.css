@@ -64,7 +64,7 @@
 .pm-timer__stop { width: 26px; height: 26px; margin-right: 3px; border-radius: 50%; border: 0; background: var(--pm-accent); color: var(--pm-on-accent); display: inline-flex; align-items: center; justify-content: center; }
 .pm-timer__stop:hover:not(:disabled) { background: var(--pm-accent-hover); }
 .pm-bell { position: relative; display: inline-flex; }
-.pm-bell__badge { position: absolute; top: 1px; right: 1px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px; background: var(--pm-danger); color: #fff; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; pointer-events: none; box-shadow: 0 0 0 2px var(--pm-surface); }
+.pm-bell__badge { position: absolute; top: 1px; right: 1px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px; background: var(--pm-danger); color: #fff; font-size:calc(10px * var(--ts, 1)); font-weight: 700; display: flex; align-items: center; justify-content: center; pointer-events: none; box-shadow: 0 0 0 2px var(--pm-surface); }
 .pm-notifpop { width: 380px; }
 .pm-notif__head { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px 6px 16px; }
 .pm-notif__list { padding: 4px 6px 8px; max-height: 420px; overflow: auto; }
