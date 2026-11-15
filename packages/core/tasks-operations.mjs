@@ -5,7 +5,7 @@ import { defineOperation } from './define.mjs';
 const ID = { type: 'uuid', required: true };
 const T = (max, required = false) => ({ type: 'text', min: required ? 1 : 0, max, required });
 const ITEM_COLS = `i.id, i.list_id, i.block_id, i.parent_id, i.position, i.title, i.done_at, i.due_date, i.due_time, i.priority, i.private, i.notes, i.source_app, i.source_ref,
-  i.project_task_id, i.created_by, i.created_at,
+  i.project_task_id, i.project_id, i.created_by, i.created_at,
   coalesce((select array_agg(a.user_id order by a.added_at) from task_assignees a where a.item_id = i.id), '{}') as assignees`;
 const LIST_COLS = 'l.id, l.folder_id, l.owner_id, l.space, l.name, l.icon, l.colour, l.is_default, l.position, l.archived_at, l.created_at';
 const today = (i) => i?.today ?? new Date().toISOString().slice(0, 10);
@@ -125,7 +125,7 @@ export const tasksOperations = [
     name: 'tasks.items.update', class: 'write', single: true,
     input: { id: ID, title: T(500), notes: T(20000), due_date: { type: 'date' }, clear_due: { type: 'bool' }, due_time: T(5), priority: { type: 'enum', values: ['normal', 'high'] }, private: { type: 'bool' },
       done: { type: 'bool' }, list: { type: 'uuid' }, to_inbox: { type: 'bool' }, block: { type: 'uuid' }, parent: { type: 'uuid' }, no_parent: { type: 'bool' }, position: { type: 'number', min: -1e9, max: 1e9 },
-      assignees: { type: 'list', items: 'uuid', max: 50 }, project_task: { type: 'uuid' } },
+      assignees: { type: 'list', items: 'uuid', max: 50 }, project_task: { type: 'uuid' }, project: { type: 'uuid' } },
     run: async (q, ctx, i) => {
       if (i.done === true) await q('update task_time_entries set ended_at = now() where item_id = $1 and user_id = private.current_user_id() and ended_at is null', [i.id]);   // completing stops its timer
       const moving = i.list !== undefined || i.to_inbox;
@@ -136,10 +136,10 @@ export const tasksOperations = [
           list_id = case when $11 then null when $10::uuid is not null then $10 else list_id end,
           block_id = case when $11 then null when $12::uuid is not null then $12 when $10::uuid is not null and $10 is distinct from list_id then (select id from task_blocks where list_id = $10 order by position limit 1) else block_id end,
           parent_id = case when $14 or ($10::uuid is not null and $10 is distinct from list_id) or $11 then null when $13::uuid is not null then $13 else parent_id end,
-          position = coalesce($15, position), project_task_id = coalesce($16, project_task_id)
+          position = coalesce($15, position), project_task_id = coalesce($16, project_task_id), project_id = coalesce($17, project_id)
         where id = $1 returning id`,
       [i.id, i.title?.trim() ?? null, i.notes ?? null, i.due_date ?? null, i.clear_due ?? false, i.due_time ?? null, i.priority ?? null, i.private ?? null, i.done ?? null,
-        i.list ?? null, i.to_inbox ?? false, i.block ?? null, i.parent ?? null, i.no_parent ?? false, i.position ?? null, i.project_task ?? null]);
+        i.list ?? null, i.to_inbox ?? false, i.block ?? null, i.parent ?? null, i.no_parent ?? false, i.position ?? null, i.project_task ?? null, i.project ?? null]);
       if (!r.length) return [];
       if (moving) await q('update task_items set list_id = (select list_id from task_items where id = $1), block_id = null where parent_id = $1', [i.id]);   // sub-tasks move with their parent
       if (i.assignees) await setAssignees(q, ctx, i.id, i.assignees);

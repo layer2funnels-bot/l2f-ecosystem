@@ -210,7 +210,7 @@ function bottomBar(items, current, appName = '') {
       } }, h('span', { class: 'pillic' }, icon('more')), 'More') : null);
 }
 
-export function shellView({ onSearch = null, app, orgs, active, email, name, route, content, banner, isAdmin, inOffice, launcherCurrent, catalog, registry, currentApp, theme, me = null, notifications = null }) {
+export function shellView({ onSearch = null, app, orgs, active, email, name, route, content, banner, isAdmin, inOffice, launcherCurrent, catalog, registry, currentApp, theme, me = null, notifications = null, timer = null }) {
   offs.forEach((f) => f()); offs = [];
   document.body.classList.remove('hasb');
   const sw = launcherCurrent ? switcher({ orgs, active, onPick: (id) => app.switchOrg(id) }) : null;
@@ -264,9 +264,27 @@ export function shellView({ onSearch = null, app, orgs, active, email, name, rou
       h('div', { class: 'hdr-ttl' }, h('b', {}, focused.title), focused.sub ? h('small', {}, focused.sub) : null),
       h('div', { class: 'focusbar-acts' }, ...(focused.actions ?? [])))   // V8 focusBar `right`: Cancel · Save draft · Create …
     : h('header', { class: full ? 'hdr bar is-full' : 'hdr bar' }, sheetBtn, collapse,
-      full ? h('span', { class: 'hdr-app' }, plateOf(manifest ?? { id: currentApp }, 26)) : null, crumb);
+      full ? h('span', { class: 'hdr-app' }, plateOf(manifest ?? { id: currentApp }, 26)) : null, crumb,
+      h('span', { class: 'hdr-grow' }), timer ? timerPill(timer, currentApp) : null, content.__barRight ?? null);   // an app may add its own bar actions (Tasks: Add task)
   shellEl.append(theRail, ...(full || focused ? [] : [side]), h('div', { class: 'main' }, header, h('main', { class: full ? 'content flush wide is-full' : 'content', id: 'main', 'aria-busy': 'false' }, banner ?? null, content)));
   return h('div', { class: 'app', 'data-org': active.slug ?? '' }, skip, shellEl, items.length ? bottomBar(items, current, appName) : null);
+}
+
+/** V8 (04_TASKS §1): one running timer per person across Tasks and Projects, shown as a pill in the app bar (name, h:mm:ss, stop).
+ *  Projects shows its own pill for its own timer, so there the shell only shows a Tasks timer. Re-reads on the 'l2f:timer' event. */
+function timerPill(timer, currentApp) {
+  const box = h('span', { class: 'tpill-box' }); let tick = null; let painted = false;
+  const fmt = (s) => `${Math.floor(s / 3600)}:${String(Math.floor(s / 60) % 60).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+  const paint = async () => {
+    if (painted && !box.isConnected) { document.removeEventListener('l2f:timer', paint); return; } painted = true; const r = await timer.running().catch(() => null); clearInterval(tick);
+    const t = r?.ok ? r.data?.[0] : null;
+    if (!t || (currentApp === 'projects' && t.app === 'projects')) return box.replaceChildren();
+    const clock = h('b', { class: 'mono' }); const since = new Date(t.started_at).getTime(); const upd = () => { clock.textContent = fmt(Math.max(0, Math.floor((Date.now() - since) / 1000))); }; upd(); tick = setInterval(() => (box.isConnected ? upd() : clearInterval(tick)), 1000);
+    box.replaceChildren(h('span', { class: 'tpill' }, h('i', { class: 'rec', 'aria-hidden': 'true' }), h('a', { class: 'tp-n', href: t.href, title: t.title }, t.title), clock,
+      h('button', { type: 'button', class: 'tp-stop', 'aria-label': `Stop the timer on ${t.title}`, onclick: async () => { await timer.stop(); document.dispatchEvent(new CustomEvent('l2f:timer')); } }, icon('pause'))));
+  };
+  document.addEventListener('l2f:timer', paint); paint();
+  return box;
 }
 
 /** Moves the current-page mark of the app menu on screen (Planner routes its own pages, so the shell does not re-render). */

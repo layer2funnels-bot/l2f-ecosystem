@@ -83,6 +83,7 @@ create table if not exists public.task_items (
   notes text not null default '' check (length(notes) <= 20000),
   source_app text check (length(source_app) <= 40), source_ref text check (length(source_ref) <= 300),
   project_task_id uuid,              -- set by "Send to a project": the Projects task it became
+  project_id uuid,                   -- …and its project (for the link back)
   created_by uuid not null default private.current_user_id(),
   created_at timestamptz not null default now(), updated_at timestamptz not null default now(),
   unique (workspace_id, id),

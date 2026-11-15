@@ -51,7 +51,7 @@ check('DV22', 'The page policy lets only our own pages ask for the location (Lau
 // ---- registry
 const manifests = loadManifests();
 const ids = manifests.map((x) => x.id);
-check('DV12', 'There are twelve manifests, one per app of the Launcher, and each passes the schema', manifests.length === 12 && manifests.every((x) => manifestProblems(x).length === 0));
+check('DV12', 'There are thirteen manifests (Tasks added in V8 P02), one per app of the Launcher, and each passes the schema', manifests.length === 13 && manifests.every((x) => manifestProblems(x).length === 0));
 check('DV13', 'A manifest that switches on AI or an integration is refused (control)', manifestProblems({ ...manifests[0], ai: true }).length > 0 && manifestProblems({ ...manifests[0], integrations: ['ghl'] }).length > 0);
 check('DV14', 'Manifest ids and route prefixes are unique', new Set(ids).size === ids.length && new Set(manifests.map((x) => x.routes)).size === ids.length);
 

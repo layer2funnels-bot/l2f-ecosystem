@@ -35,6 +35,10 @@ export function parseRoute(hash) {
   if (a === 'app' && b === 'clients' && seg.length === 2) return r('clients', { view: 'list' });
   // Planner (apps/planner, mounted by modules/planner.js) routes its own pages: #/planner/<page>?plan=…&goal=…
   if (a === 'planner' && seg.length <= 2) return r('planner', { page: b ?? 'overview' });
+  // Tasks (V8 04_TASKS): #/tasks/today|upcoming|inbox|teammates, #/tasks/teammates/<person>, #/tasks/list/<id>
+  if (a === 'tasks' && seg.length === 1) return r('tasks', { page: 'today' });
+  if (a === 'tasks' && ['today', 'upcoming', 'inbox', 'teammates'].includes(b) && seg.length === 2) return r('tasks', { page: b });
+  if (a === 'tasks' && (b === 'teammates' || b === 'list') && c && seg.length === 3) return r('tasks', { page: b, id: c });
   if ((a === 'app' || a === 'office') && b === 'planner' && seg.length === 2) return r('planner', { page: 'overview' });
   if (a === 'app' && b && seg.length === 2 && b !== 'projects' && b !== 'drive' && b !== 'portal' && b !== 'forms' && b !== 'value_ladder' && b !== 'whiteboard' && b !== 'social_planner') return r('app', { app: b });
   if ((a === 'drive' && !b) || (a === 'app' && b === 'drive' && seg.length === 2)) return r('drive', { view: 'files', space: 'shared' });
@@ -94,7 +98,7 @@ export function parseRoute(hash) {
 }
 export const hrefFor = {
   launcher: () => '#/launcher', office: () => '#/office', funnels: () => '#/office/funnels', page: (p) => `#/office/${p}`,
-  doc: (id) => `#/doc/${id}`, board: (id) => `#/board/${id}`, list: (type) => `#/office/funnels/${type}`, record: (type, id) => `#/office/funnels/${type}/${id}`, app: (k) => (k === 'projects' ? '#/projects' : k === 'clients' ? '#/clients' : k === 'drive' ? '#/drive' : k === 'portal' ? '#/portal' : k === 'forms' ? '#/forms' : k === 'value_ladder' ? '#/ladder' : k === 'whiteboard' ? '#/whiteboards' : k === 'social_planner' ? '#/social' : k === 'planner' ? '#/planner' : `#/app/${k}`),
+  doc: (id) => `#/doc/${id}`, board: (id) => `#/board/${id}`, list: (type) => `#/office/funnels/${type}`, record: (type, id) => `#/office/funnels/${type}/${id}`, app: (k) => (k === 'projects' ? '#/projects' : k === 'clients' ? '#/clients' : k === 'drive' ? '#/drive' : k === 'portal' ? '#/portal' : k === 'forms' ? '#/forms' : k === 'value_ladder' ? '#/ladder' : k === 'whiteboard' ? '#/whiteboards' : k === 'social_planner' ? '#/social' : k === 'planner' ? '#/planner' : k === 'tasks' ? '#/tasks/today' : `#/app/${k}`),
   admin: (tab = 'members', sub) => (tab === 'members' ? '#/office/admin/members' : tab === 'storage' ? '#/office/admin/storage' : tab === 'clients' ? '#/office/admin/clients' : `#/office/admin/access/${sub ?? 'levels'}`),
 };
 export const AUTH_ROUTES = new Set(['signin', 'signup', 'check-email', 'forgot', 'reset', 'invite', 'expired']);
@@ -128,6 +132,7 @@ export function pageKeyFor(route) {
     case 'ladder': return { app: 'value_ladder', page: null };
     case 'boards': return { app: 'whiteboard', page: null };
     case 'social': return { app: 'social_planner', page: null };
+    case 'tasks': return { app: 'tasks', page: null };
     case 'planner': return { app: 'planner', page: null };        // a plan belongs to one organization: after a switch the person lands on Planner's home
     case 'board': return { app: 'whiteboard', page: null };        // a document belongs to one organization: after a switch the person lands on the app, not on a record
     default: return { app: 'office', page: 'home' };

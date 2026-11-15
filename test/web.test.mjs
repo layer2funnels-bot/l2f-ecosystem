@@ -34,6 +34,7 @@ check('W3', 'The switch never lands on the Launcher: unknown pages fall back to 
 check('W4', 'Page keys sent to resolve_org_switch match the registry in migration 0006', pageKeyFor(parseRoute('#/office/funnels/avatars')).page === 'funnels.avatars' && pageKeyFor(parseRoute('#/office/funnels/avatars/abc')).page === 'funnels.avatar' && pageKeyFor(parseRoute('#/office')).page === 'home');
 import { readFileSync } from 'node:fs';
 import { matchChapter, toSections, sectionsToProfile } from '../apps/web/js/modules/avatarimport.js';
+import { parseCapture, visibleTree, doneCount, dueChip } from '../apps/web/js/modules/tasksmodel.js';
 const sql = readFileSync(new URL('../migrations/0006_funnels_foundation.sql', import.meta.url), 'utf8');
 check('W5', 'Every page key the UI uses is registered in app_pages', FUNNEL_TYPES.every((t) => sql.includes(`'${t.page}'`) && sql.includes(`'${t.record}'`)) && sql.includes("'funnels',"));
 check('W6', 'First sign-in default: highest role, then name', defaultOrg([{ name: 'Aurj', role: 'editor' }, { name: 'Layer2Funnels', role: 'owner' }]).name === 'Layer2Funnels' && defaultOrg([{ name: 'B', role: 'admin' }, { name: 'A', role: 'admin' }]).name === 'A');
@@ -195,6 +196,18 @@ check('W29', 'Planner\'s menu in the shell covers every Planner page once, and o
   const p = sectionsToProfile(secs, ['drives', 'beliefs', 'custom']);
   check('W45', 'Avatar import: checked sections fill the chapters; anything else becomes a custom chapter, and Skip leaves it out',
     p.wants[0] === '$10K/month' && p.beliefs[0][1] === 'I am behind.' && p.custom[0].title === 'Russell’s vocabulary list' && !sectionsToProfile(secs, ['skip', 'skip', 'skip']).wants);
+}
+// ---- Tasks (V8 04_TASKS): capture bar and completed tasks hidden in place
+{
+  const now = new Date(2026, 10, 12, 10); const P = [{ id: 's', name: 'Sana Noor' }, { id: 'b', name: 'Bilal Khan' }]; const Ls = [{ id: 'bt', name: 'Build team' }, { id: 'bu', name: 'Build' }];
+  const a = parseCapture('Call Harry tomorrow 3pm @Sana !high', { now, people: P, lists: Ls }); const b = parseCapture('Send invoice fri #Build team', { now, people: P, lists: Ls });
+  check('W46', 'Tasks capture: "tomorrow 3pm", @person, !high and #list (longest name) are understood and leave a clean title',
+    a.title === 'Call Harry' && a.due_date === '2026-11-13' && a.due_time === '15:00' && a.priority === 'high' && a.people.join() === 's' && b.list === 'bt' && b.due_date === '2026-11-13' && b.title === 'Send invoice'
+    && parseCapture('Email @nobody about it', { now, people: P }).title === 'Email @nobody about it');
+  const items = [{ id: 1, position: 0, done_at: 'x' }, { id: 2, position: 1 }, { id: 3, parent_id: 2, position: 0, done_at: 'x' }, { id: 4, position: 2 }];
+  check('W47', 'Completed tasks are hidden in place; Show completed puts them back in their original positions (sub-tasks under their parent)',
+    visibleTree(items).map((x) => x.id).join() === '2,4' && visibleTree(items, { showDone: true }).map((x) => `${x.id}:${x.depth}`).join() === '1:0,2:0,3:1,4:0' && doneCount(items) === 2
+    && dueChip('2026-11-11', null, now).text === 'Overdue' && dueChip('2026-11-12', '15:00:00', now).text === 'Today 15:00');
 }
 for (const x of results) console.log(`${x.ok ? 'PASS' : 'FAIL'}  ${x.id.padEnd(4)} ${x.name}`);
 const p = results.filter((x) => x.ok).length; console.log(`\n${p}/${results.length} checks passed`); process.exit(p === results.length ? 0 : 1);
