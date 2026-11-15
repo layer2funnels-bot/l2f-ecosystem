@@ -39,3 +39,15 @@ begin
 end $$;
 revoke execute on function public.access_review_list(), public.access_review_keep(uuid, text) from public;
 grant execute on function public.access_review_list(), public.access_review_keep(uuid, text) to app_user;
+do $$
+declare pair text[]; t text; o text;
+begin
+  foreach pair slice 1 in array array[['funnel_avatars', 'avatar'], ['funnel_offers', 'offer'], ['funnel_stories', 'story'], ['funnel_brand_kits', 'brandkit']] loop
+    t := pair[1]; o := pair[2];
+    execute format('drop policy if exists %1$s_select on public.%1$I', t);
+    execute format('create policy %1$s_select on public.%1$I for select using (
+      private.has_permission(workspace_id, %2$L, client_id)
+      or (client_visible and archived_at is null and client_id is not null and private.client_of(workspace_id, client_id)))', t, 'funnels.' || o || '.view');
+  end loop;
+end $$;
+revoke execute on function private.client_app_enabled(uuid, uuid, text) from app_user;

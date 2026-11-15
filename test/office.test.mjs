@@ -95,8 +95,21 @@ await J('access.app.touch', { app: 'office' }, U.LED, ORG.L);
 const usage = (await J('access.apps.counts', {}, U.LAD, ORG.L)).rows.find((r) => r.user_id === U.LED);
 check('OF32', 'Access review is gone (owner, 15 Nov 2026): its operations no longer exist; People still shows when each teammate last used their apps', (await J('access.review.list', {}, U.LAD, ORG.L)).status >= 400 && usage?.last_used_at != null);
 const PNG = 'data:image/png;base64,iVBORw0KGgo=';
-check('OF33', 'Branding: only an owner replaces the logo; the whole team sees it', (await J('branding.set', { slot: 'icon', data: PNG }, U.LAD, ORG.L)).status >= 400 && (await J('branding.set', { slot: 'icon', data: PNG }, U.LO, ORG.L)).status === 200
+check('OF33', 'Organization logo: owners and admins replace it (not editors); the whole team sees it; the other organization never does', (await J('branding.set', { slot: 'icon', data: PNG }, U.LED, ORG.L)).status >= 400
+  && (await J('branding.set', { slot: 'icon', data: PNG }, U.LAD, ORG.L)).status === 200 && (await J('branding.set', { slot: 'icon', data: PNG }, U.LO, ORG.L)).status === 200
   && (await J('branding.get', {}, U.LVW, ORG.L)).row?.brand_icon === PNG && (await J('branding.get', {}, U.AO, ORG.A)).row?.brand_icon == null);
+const icons = (await J('org.icons', {}, U.LVW, ORG.L)).rows;
+check('OF34', 'Each person gets the logos of their own organizations only', icons.length === 1 && icons[0].brand_icon === PNG && (await J('org.icons', {}, U.AO, ORG.A)).rows.length === 0);
+check('OF35', 'Renaming the organization: admins and owners yes, editors no; the other organization is untouched', (await J('org.rename', { name: 'Hacked' }, U.LED, ORG.L)).status >= 400
+  && (await J('org.rename', { name: 'Layer2 Renamed' }, U.LAD, ORG.L)).row?.name === 'Layer2 Renamed' && (await J('org.list', {}, U.AO, ORG.A)).rows.every((o) => o.name !== 'Layer2 Renamed'));
+const ord = await J('launcher.order.set', { apps: ['tasks', 'office'] }, U.LAD, ORG.L);
+const cat = (await J('launcher.catalog', {}, U.LVW, ORG.L)).rows; const catA = (await J('launcher.catalog', {}, U.AO, ORG.A)).rows;
+check('OF36', 'Launcher order: an admin sets it, everyone in that organization gets it, the other organization keeps the designed order, an editor cannot change it', ord.status === 200
+  && cat.find((a) => a.app_key === 'office')?.position === 1 && catA.every((a) => a.position == null) && (await J('launcher.order.set', { apps: ['office'] }, U.LED, ORG.L)).status >= 400);
+const setS = await J('office.avatar.settings.set', { sections: [{ type: 'basic', title: 'Basics', profile: true }, { type: 'evil<script>', title: '' }] }, U.LAD, ORG.L);
+check('OF37', 'Avatar settings: admins save defaults (cleaned), editors cannot, the other organization doesn’t see them', setS.status === 200 && setS.row?.sections?.[1]?.type === 'custom' && setS.row.sections[1].title === 'Untitled section'
+  && (await J('office.avatar.settings.set', { sections: [{ type: 'basic', title: 'x' }] }, U.LED, ORG.L)).status >= 400 && (await J('office.avatar.settings', {}, U.AO, ORG.A)).rows.length === 0
+  && (await J('office.avatar.settings', {}, U.LVW, ORG.L)).rows[0]?.sections?.length === 2);
 
 for (const r of results) console.log(`${r.ok ? 'PASS' : 'FAIL'}  ${r.id.padEnd(5)} ${r.name}${r.ok ? '' : `  ${r.detail ?? ''}`}`);
 const pc = results.filter((r) => r.ok).length; console.log(`\n${pc}/${results.length} checks passed`); await db.close(); process.exit(pc === results.length ? 0 : 1);

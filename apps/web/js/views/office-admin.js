@@ -7,7 +7,7 @@ import { hrefFor } from '../routes.js';
 import { plateOf, loadRegistry } from '../registry.js';
 import { adminView, emailLine } from './admin.js';
 
-const TABS = [['people', 'People'], ['teammates', 'Teammate access'], ['clients', 'Client access'], ['roles', 'Roles'], ['storage', 'Storage & versions'], ['branding', 'Branding'], ['audit', 'Audit log']];
+const TABS = [['people', 'People'], ['teammates', 'Teammate access'], ['clients', 'Client access'], ['roles', 'Roles'], ['storage', 'Storage & versions'], ['branding', 'Organization'], ['audit', 'Audit log']];
 export const ADMIN_V8_TABS = TABS.map(([k]) => k);
 const RANK = { viewer: 1, editor: 2, admin: 3, owner: 4 }; const LV = ['No access', 'Viewer', 'Editor', 'Admin'];
 const ago = (iso) => { if (!iso || iso.startsWith('-')) return '—'; const s = (Date.now() - new Date(iso)) / 1000; return s < 120 ? 'Now' : s < 3600 ? `${Math.round(s / 60)} min` : s < 86400 ? `${Math.round(s / 3600)} h` : s < 172800 ? 'Yesterday' : `${Math.round(s / 86400)} days ago`; };
@@ -115,7 +115,7 @@ export function adminV8View({ api, ctx, org, role, route, go }) {
   async function clientsTab() {
     const [cl, mx, R] = await Promise.all([call('clients.list'), call('clients.apps.matrix'), reg()]); if (!live()) return;
     if (!cl.ok || !mx.ok) return put(body, errorState(clientsTab));
-    const apps = (ctx.catalog ?? []).filter((a) => a.app_key !== 'office' && a.app_key !== 'clients' && a.lifecycle !== 'retired'); const { defaults, cells } = mx.data[0];
+    const apps = (ctx.catalog ?? []).filter((a) => a.app_key !== 'clients' && a.lifecycle !== 'retired');   // Office included: a client sees the Office records shared with them only while it is on (0060) const { defaults, cells } = mx.data[0];
     const cell = new Map(cells.map((c) => [`${c.client_id}:${c.app_key}`, c.enabled])); const def = new Set(defaults);
     const clients = cl.data.filter((c) => !c.archived_at);
     const grid = h('div', { class: 'cagrid', style: `--n:${apps.length}` }, h('div', { class: 'cahead' }, h('span', {}, 'Client'), ...apps.map((a) => h('span', { title: a.name }, plateOf(R(a.app_key), 24)))),
@@ -163,21 +163,42 @@ export function adminV8View({ api, ctx, org, role, route, go }) {
   }
 
   // ---------------- Branding (owners change; admins see)
+  // ---------------- Organization: name, logo (owners and admins, 0060) and the default Funnel Strategy template
   async function branding() {
-    const r = await call('branding.get'); if (!live()) return; if (!r.ok) return put(body, errorState(branding));
+    const [r, tp, tv] = await Promise.all([call('branding.get'), call('office.template.get'), call('office.template.versions')]); if (!live()) return; if (!r.ok) return put(body, errorState(branding));
     const b = r.data?.[0] ?? {}; const img = (src, alt, hgt) => (src ? h('img', { src, alt, style: `height:${hgt}px;max-width:220px;object-fit:contain` }) : null);
-    const mark = img(b.brand_icon, `${org.name} icon`, 40) ?? h('span', { class: 'plate', style: '--s:40px' }, org.name[0]);
+    const nameIn = h('input', { value: org.name, maxlength: 80, 'aria-label': 'Organization name' });
+    const prevName = h('b', { style: 'font-size:17px' }, org.name); nameIn.addEventListener('input', () => { prevName.textContent = nameIn.value || org.name; });
+    const saveName = btn('Save name', async (e) => { const nm = nameIn.value.trim(); if (nm.length < 2) return toast('Use 2 to 80 characters.', false); if (nm === org.name) return toast('That is already the name.');
+      e.currentTarget.disabled = true; const x = await call('org.rename', { name: nm }); e.currentTarget.disabled = false; if (!x.ok) return failed(x);
+      toast(`Renamed to ${nm}. Everyone in ${nm} sees it now.`); location.reload(); }, 'primary sm');
+    // the square icon is shrunk to 128 px in the browser before saving, so it is small enough to show on every page without slowing anything down
+    const shrink = (f) => new Promise((res, rej) => { const u = URL.createObjectURL(f); const im = new Image(); im.onload = () => { const c = document.createElement('canvas'); c.width = c.height = 128;
+      const k = Math.min(128 / im.width, 128 / im.height); const w = im.width * k; const hh = im.height * k; c.getContext('2d').drawImage(im, (128 - w) / 2, (128 - hh) / 2, w, hh); URL.revokeObjectURL(u); res(c.toDataURL('image/png')); }; im.onerror = () => { URL.revokeObjectURL(u); rej(new Error('bad image')); }; im.src = u; });
     const upload = (slot, label, maxKB) => btn([icon('upload'), label], () => { const i = h('input', { type: 'file', accept: 'image/png,image/svg+xml,image/webp,image/jpeg', onchange: async () => { const f = i.files?.[0]; if (!f) return;
-      if (f.size > maxKB * 1024) return toast(`That image is over ${maxKB} KB. Use a smaller file.`, false);
-      const data = await new Promise((res) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.readAsDataURL(f); });
-      const x = await call('branding.set', { slot, data }); if (!x.ok) return failed(x); toast(`${label.replace('Replace ', '')} updated.`); branding(); } }); i.click(); }, 'ghost sm', isOwner ? {} : { disabled: true, 'aria-disabled': 'true' });
-    put(body, isOwner ? null : h('div', { class: 'notice', style: 'margin-bottom:12px' }, icon('lock'), h('span', {}, 'Only owners can change branding.')),
-      h('div', { class: 'grid-h' }, h('section', { class: 'card6 pad-s' }, h('div', { style: 'display:flex;gap:12px;align-items:center;margin-bottom:12px' }, mark, h('b', { style: 'font-size:17px' }, org.name)),
-        h('p', { class: 'sec-t' }, 'Logo'), h('div', { class: 'brandprev' }, h('div', { class: 'bp light' }, img(b.brand_icon, '', 40), img(b.brand_wordmark, org.name, 28) ?? h('b', { style: 'font:600 18px var(--font-d)' }, org.name)),
+      let data; try { data = slot === 'icon' || slot === 'favicon' ? await shrink(f) : f.size > maxKB * 1024 ? null : await new Promise((res) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.readAsDataURL(f); }); } catch { return toast('That file isn’t an image we can read.', false); }
+      if (!data) return toast(`That image is over ${maxKB} KB. Use a smaller file.`, false);
+      const x = await call('branding.set', { slot, data }); if (!x.ok) return failed(x); toast(`${label.replace('Replace ', '')} updated.${slot === 'icon' ? ' It shows on the rail and the organization menus.' : ''}`); slot === 'icon' ? location.reload() : branding(); } }); i.click(); }, 'ghost sm');
+    const removeIcon = b.brand_icon ? btn('Remove icon', async () => { const x = await call('branding.set', { slot: 'icon', data: '' }); if (!x.ok) return failed(x); toast('Icon removed.'); location.reload(); }, 'quiet sm') : null;
+    const mark = img(b.brand_icon, `${org.name} icon`, 40) ?? h('span', { class: 'plate', style: '--s:40px' }, org.name[0]);
+    const t = tp.ok ? tp.data[0] : null; const versions = tv.ok ? tv.data : [];
+    const verSel = h('select', { class: 'sel sm', 'aria-label': 'Template version' }, ...versions.map((v) => h('option', { value: String(v.version) }, `v${v.version} · ${new Date(v.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })} · ${v.by_name}`)));
+    const useVer = btn('Make this the default', async () => { const v = Number(verSel.value); if (!v || v === t?.version) return toast('That version is already the default.');
+      const x = await call('office.template.use', { version: v }); if (!x.ok || !x.data?.[0]) return failed(x); toast(`v${v} is the default again (saved as v${x.data[0].version}). Strategies you already wrote don’t change.`); branding(); }, 'ghost sm');
+    put(body, h('div', { class: 'grid-h' },
+      h('section', { class: 'card6 pad-s' }, h('p', { class: 'sec-t', style: 'margin-top:0' }, 'Organization name'), h('div', { class: 'tb6' }, h('label', { class: 'inp grow' }, nameIn), saveName),
+        h('p', { class: 'hint' }, `Shown on the rail, the Launcher, menus and emails for everyone in this organization. ${org.slug === 'aurj' || org.slug === 'layer2funnels' ? 'Its sign-in address doesn’t change.' : ''}`),
+        h('p', { class: 'sec-t' }, 'Logo'), h('div', { style: 'display:flex;gap:12px;align-items:center;margin-bottom:12px' }, mark, prevName),
+        h('div', { class: 'brandprev' }, h('div', { class: 'bp light' }, img(b.brand_icon, '', 40), img(b.brand_wordmark, org.name, 28) ?? h('b', { style: 'font:600 18px var(--font-d)' }, org.name)),
           h('div', { class: 'bp dark' }, img(b.brand_icon, '', 40), img(b.brand_wordmark_dark ?? b.brand_wordmark, org.name, 28) ?? h('b', { style: 'font:600 18px var(--font-d);color:#F3F1EB' }, org.name))),
-        h('div', { class: 'chiprow' }, upload('icon', 'Replace icon', 220), upload('wordmark', 'Replace wordmark', 220), upload('wordmark_dark', 'Wordmark for dark backgrounds', 220), upload('favicon', 'Favicon', 90)),
-        h('p', { class: 'hint' }, 'Square icon shows in the rail, Launcher and switcher; the wordmark on sign-in and exports. We fit it inside a rounded tile and never stretch it.'))));
+        h('div', { class: 'chiprow' }, upload('icon', 'Replace icon', 220), upload('wordmark', 'Replace wordmark', 220), upload('wordmark_dark', 'Wordmark for dark backgrounds', 220), upload('favicon', 'Favicon', 90), removeIcon),
+        h('p', { class: 'hint' }, 'The square icon shows on the rail and in the organization menus; the wordmark on sign-in and exports. Only this organization’s people see them.')),
+      h('section', { class: 'card6 pad-s' }, h('p', { class: 'sec-t', style: 'margin-top:0' }, 'Default Funnel Strategy template'),
+        h('p', { class: 'tx2' }, t?.version ? `New strategies start from v${t.version}: ${(t.sections ?? []).length} sections.` : `New strategies start from the standard template (${(t?.sections ?? []).length} sections).`),
+        h('div', { class: 'tb6' }, h('a', { class: 'btn primary sm', href: '#/office/funnels/strategies/template' }, icon('edit'), 'Edit the template'), versions.length > 1 ? [verSel, useVer] : null),
+        h('p', { class: 'hint' }, 'Strategies you already wrote keep the template they were made from.'))));
   }
+
 
   // ---------------- Audit log
   async function audit() {

@@ -166,6 +166,8 @@ export const orgInk = (o) => (o?.slug === 'aurj' ? '#FFF6F2' : '#1C1504');
 /** The organization's mark (Design v4: Layer2Funnels dark tile with the L2 mark, Aurj the Arabic wordmark placeholder; any other organization gets its initials). */
 export function orgMarkEl(o, size = 32) {
   const s = { class: 'mark', style: `--s:${size}px`, 'aria-hidden': 'true' };
+  // the organization's own logo (Office › Admin › Organization) wins; only an image the server returned as a data: URL is ever used
+  if (typeof o?.brand_icon === 'string' && /^data:image\/(png|webp|jpeg|svg\+xml);base64,/.test(o.brand_icon)) return h('span', { ...s, class: 'mark m-img' }, h('img', { src: o.brand_icon, alt: '' }));
   if (o?.slug === 'aurj') return h('span', { ...s, class: 'mark m-aurj' }, h('b', {}, 'عروج'));
   if (o?.slug === 'layer2funnels' || o?.slug === 'l2f') return h('span', { ...s, class: 'mark m-l2f' }, h('b', {}, 'L2'), h('i'));
   return h('span', { ...s, style: `--s:${size}px;background:${orgColor(o)};color:${orgInk(o)}` }, h('b', {}, orgMark(o)));

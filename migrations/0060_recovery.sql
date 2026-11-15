@@ -130,3 +130,19 @@ begin
     end if;
   end loop;
 end $$;
+
+-- ---- 6. Clients and Office (owner brief Part 3-H): a client contact sees a shared Office record (avatar, offer, story, brand kit) only when Office is
+-- switched on for THEIR client in the Client Access Matrix (owners and admins decide). Staff access is unchanged. Clients reach these rows only through
+-- the portal.office.* projections, which never include internal notes, evidence or interview notes.
+grant execute on function private.client_app_enabled(uuid, uuid, text) to app_user;   -- used inside row rules, which run as the caller
+do $$
+declare pair text[]; t text; o text;
+begin
+  foreach pair slice 1 in array array[['funnel_avatars', 'avatar'], ['funnel_offers', 'offer'], ['funnel_stories', 'story'], ['funnel_brand_kits', 'brandkit']] loop
+    t := pair[1]; o := pair[2];
+    execute format('drop policy if exists %1$s_select on public.%1$I', t);
+    execute format('create policy %1$s_select on public.%1$I for select using (
+      private.has_permission(workspace_id, %2$L, client_id)
+      or (client_visible and archived_at is null and client_id is not null and private.client_of(workspace_id, client_id) and private.client_app_enabled(workspace_id, client_id, %3$L)))', t, 'funnels.' || o || '.view', 'office');
+  end loop;
+end $$;

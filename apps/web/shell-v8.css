@@ -192,3 +192,5 @@
 .acct-sheet{max-height:calc(100dvh - 120px);overflow-y:auto}
 .hdr .acct-btn .mark b{width:auto;height:auto;white-space:nowrap;font-size:calc(11.5px * var(--ts, 1));line-height:1}
 .hdr .acct-btn .mark.m-l2f i{top:auto;bottom:17%;left:24%;right:24%;width:auto;height:2px;min-height:0}
+.mark.m-img{background:var(--surface,#fff);overflow:hidden;padding:0}
+.mark.m-img img{width:100%;height:100%;object-fit:contain;display:block}

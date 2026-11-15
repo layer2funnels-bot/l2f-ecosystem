@@ -529,7 +529,7 @@ check('E8', 'The "Skip to content" link moves focus to the main area and leaves 
 // =============================================================== F. Admin → Members and Access (design 05)
 await visit(page, base + '/#/office/admin'); await wait('One person, one sign-in.');
 check('F1', 'Admin (V8) opens on People: you, marked "(you)", as Owner and Active; eight sections as real links', (await page.locator('.tbl6 .tr', { hasText: 'Teammate' }).count()) === 1 && (await page.locator('.tbl6').innerText()).includes(`${NAME} (you)`) && (await page.locator('.tbl6').innerText()).includes('Owner')
-  && (await page.locator('.tabs6 a').allInnerTexts()).join() === 'People,Teammate access,Client access,Roles,Storage & versions,Branding,Audit log' && (await page.locator('.tabs6 a[href^="#/office/admin/"]').count()) === 7);
+  && (await page.locator('.tabs6 a').allInnerTexts()).join() === 'People,Teammate access,Client access,Roles,Storage & versions,Organization,Audit log' && (await page.locator('.tabs6 a[href^="#/office/admin/"]').count()) === 7);
 await shot(page, 'f1-members');
 await page.getByRole('button', { name: 'Invite', exact: true }).click(); await page.getByRole('button', { name: 'Send invitation' }).click();
 check('F2', 'Inviting with a bad email is explained in the dialog', (await page.locator('#ie-e').innerText()).includes('Enter an email'));

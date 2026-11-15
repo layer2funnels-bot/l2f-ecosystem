@@ -176,3 +176,10 @@ h3{font:650 calc(16px * var(--ts, 1))/1.25 var(--font);letter-spacing:-.005em}  
 .v8p-office .fontst.no{color:var(--warn-ink,#9A6B00)}
 .v8p-office .avcardp .avb.clamp[role=button]{cursor:pointer}
 .v8p-office .avcardp .avb.clamp.open{max-height:none;-webkit-mask-image:none;mask-image:none}
+.v8p-office .docw{position:relative;display:grid}
+.v8p-office .docw .unlink{position:absolute;top:6px;right:6px}
+.v8p-office .dpick{display:grid;gap:6px;max-height:50vh;overflow:auto;margin-top:10px}
+.v8p-office .dpick-i,.dpick-i{display:flex;gap:10px;align-items:center;text-align:left;padding:8px 10px;border-radius:12px;border:var(--bw,1px) solid var(--line);background:var(--surface);font:inherit;color:inherit;cursor:pointer}
+.dpick-i[aria-pressed=true]{border-color:var(--brand-deep,var(--accent));box-shadow:0 0 0 2px var(--brand-soft,transparent)}
+.dpick-i small{display:block;color:var(--muted)}
+.dpick{display:grid;gap:6px;max-height:50vh;overflow:auto;margin-top:10px}

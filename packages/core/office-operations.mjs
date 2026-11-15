@@ -31,6 +31,11 @@ export const officeOperations = [
     run: (q, ctx) => q(`select t.version, t.created_at, coalesce(nullif(p.display_name, ''), 'Someone') as by_name from strategy_templates t left join profiles p on p.id = t.created_by
       where t.workspace_id = $1 order by t.version desc limit 50`, [ctx.orgId]),
   }),
+  // make an earlier version the default again: it is copied as the newest version (strategies already written keep the version they were made from)
+  defineOperation({ name: 'office.template.use', class: 'write', single: true, input: { version: { type: 'int', required: true, min: 1, max: 100000 } },
+    run: (q, ctx, i) => q(`insert into strategy_templates (workspace_id, version, sections, created_by)
+      select $1, (select max(version) from strategy_templates where workspace_id = $1) + 1, sections, $3 from strategy_templates where workspace_id = $1 and version = $2
+      returning version, sections, created_at`, [ctx.orgId, i.version, ctx.userId]) }),
   defineOperation({
     name: 'office.template.save', class: 'write', single: true, input: { sections: { type: 'json', required: true, max: 30000 } },
     run: async (q, ctx, i) => {
@@ -167,7 +172,7 @@ export const officeOperations = [
       returning id, section_id, file_id`, [ctx.orgId, i.section, i.file]) }),
   defineOperation({ name: 'office.doclinks.remove', class: 'write', single: true, input: { id: { type: 'uuid', required: true } }, run: (q, _c, i) => q('delete from doc_links where id = $1 returning id', [i.id]) }),
   defineOperation({ name: 'org.rename', class: 'write', single: true, input: { name: { type: 'text', required: true, min: 2, max: 80 } }, run: (q, _c, i) => q('select public.workspace_rename($1) as name', [i.name]) }),
-  defineOperation({ name: 'org.icons', class: 'read', audience: 'any', run: (q) => q('select org_id, brand_icon from public.my_org_icons()') }),
+  defineOperation({ name: 'org.icons', class: 'read', allowNoOrg: true, run: (q) => q('select org_id, brand_icon from public.my_org_icons()') }),
   defineOperation({ name: 'launcher.order.set', class: 'write', single: true, input: { apps: { type: 'list', items: 'text', max: 60, itemMax: 40, required: true } }, run: (q, _c, i) => q('select public.launcher_order_set($1::text[]) as n', [i.apps]) }),
   defineOperation({ name: 'office.avatar.settings', class: 'read', run: (q, ctx) => q('select sections, updated_at from avatar_settings where workspace_id = $1', [ctx.orgId]) }),
   defineOperation({ name: 'office.avatar.settings.set', class: 'write', single: true, input: { sections: { type: 'json', required: true } },

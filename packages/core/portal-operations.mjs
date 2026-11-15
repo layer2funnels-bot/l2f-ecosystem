@@ -75,4 +75,16 @@ export const portalOperations = [
       return q(`select ${MSG_COLS}, m.client_id from portal_messages m where m.id = $1`, [r.id]);
     },
   }),
+  // Office for clients (0060): what staff shared with this client, only while Office is on for the client in the Client Access Matrix (row rules decide).
+  // Named columns only: never internal notes, avatar evidence or interview notes, consent files or anyone's names.
+  C({ name: 'portal.office.list', class: 'read', run: async (q) => {
+    const [avatars, offers, stories, kits] = await Promise.all([
+      q(`select a.id, a.name, a.tagline, a.role, a.look, jsonb_build_object('v', 2, 'sections', coalesce(a.profile->'sections', '[]'::jsonb), 'cards', coalesce(a.profile->'cards', '[]'::jsonb)) as profile, a.updated_at
+         from funnel_avatars a where a.client_visible and a.archived_at is null order by a.name limit 100`),
+      q(`select o.id, o.name, o.promise, o.description, o.price_amount, o.currency, o.offer_type, o.billing, o.guarantee, o.delivery_time, o.included, o.bonuses, o.updated_at
+         from funnel_offers o where o.client_visible and o.archived_at is null order by o.name limit 100`),
+      q(`select s.id, s.title, s.kind, s.body, s.before_text, s.after_text, s.best_quote, s.updated_at from funnel_stories s where s.client_visible and s.archived_at is null order by s.title limit 100`),
+      q(`select k.id, k.name, k.colors, k.color_names, k.fonts, k.voice, k.voice_say, k.voice_never, k.updated_at from funnel_brand_kits k where k.client_visible and k.archived_at is null order by k.name limit 100`)]);
+    return [{ avatars, offers, stories, brand_kits: kits }];
+  } }),
 ];

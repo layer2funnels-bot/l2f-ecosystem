@@ -128,9 +128,11 @@ async function boot() {
 }
 let bootFailure = null;     // which call failed and how (status and error code only): shown on the load-error screen so a failure can be reported precisely
 async function loadOrgs() {
-  const res = await api.call('org.list', {}, { org: NO_ORG });
+  // the organizations and their own logos, in one request (an organization without a logo keeps its mark)
+  const [res, icons] = await Promise.all([api.call('org.list', {}, { org: NO_ORG }), api.call('org.icons', {}, { org: NO_ORG })]);
   if (!res.ok) { if (res.error?.code === 'session_expired') { ready = true; goExpired(); return 'expired'; } bootFailure = `org.list · ${res.status || 'no answer'} · ${res.error?.code ?? 'failed'}`; return null; }
-  return res.data;
+  const icon = new Map((icons.ok ? icons.data : []).map((x) => [x.org_id, x.brand_icon]));
+  return res.data.map((o) => ({ ...o, brand_icon: icon.get(o.org_id) ?? null }));
 }
 async function refreshNow() { const c = session.get(); if (!c?.refresh) return false; const r = await auth.refresh(c.refresh); if (r.ok && r.data?.access_token) { session.set(r.data); return true; } return false; }
 
