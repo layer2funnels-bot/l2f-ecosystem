@@ -19,6 +19,8 @@ for (const [u, ws] of [[U.ED, L], [U.VW, L], [U.BOTH, L], [U.BOTH, A]])
   await db.query("insert into app_grants (workspace_id,user_id,app_key) values ($1,$2,'office')", [ws, u]);
 const C1 = id(), C2 = id(), CA = id();
 await db.query("insert into clients (id,workspace_id,name) values ($1,$4,'Client 1'),($2,$4,'Client 2'),($3,$5,'Aurj client')", [C1, C2, CA, L, A]);
+// 0060: shared Office records reach a client only while Office is on for that client (Client Access Matrix); on for these clients
+await db.query("insert into client_app_access (workspace_id, client_id, app_key, enabled) values ($1,$2,'office',true),($1,$3,'office',true),($4,$5,'office',true)", [L, C1, C2, A, CA]);
 await db.query("insert into memberships (workspace_id,user_id,kind,client_id) values ($1,$2,'client',$3),($1,$4,'client',$5)", [L, U.CL1, C1, U.CL2, C2]);
 
 const T = [['funnel_avatars', 'avatar', "name"], ['funnel_offers', 'offer', "name"], ['funnel_stories', 'story', "title"], ['funnel_brand_kits', 'brandkit', "name"]];

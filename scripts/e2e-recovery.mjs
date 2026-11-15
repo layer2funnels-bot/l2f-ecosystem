@@ -158,6 +158,63 @@ const bk = (await q("select fonts from funnel_brand_kits where name = $2 and wor
 await page.waitForSelector(`text=Recovery kit ${stamp}`, { timeout: 9000 }).catch(() => {});
 check('BK2', 'The brand kit saves any typed font names and returns to the list, where it is visible', bk?.fonts?.join() === 'Geist,Arial Rounded Whatever' && await page.locator(`text=Recovery kit ${stamp}`).first().isVisible());
 
+// =============================================================== Launcher: bell colour (V8: white on the sky) and arranging apps
+await q('delete from workspace_app_order where workspace_id = $1', [L]);
+await page.goto(`${base}/#/launcher`); await page.waitForSelector('.shelf .tile');
+const bellColor = await page.locator('.in-launcher #bell').evaluate((e) => getComputedStyle(e).color);
+check('LA1', 'The Launcher bell is white on the sky like search (V8), not the dark app-bar style', bellColor === 'rgb(255, 255, 255)', bellColor);
+await page.getByRole('button', { name: 'Arrange apps' }).click(); await page.waitForSelector('.shelf.arranging');
+const firstGroup = page.locator('.l-group').first(); const names0 = await firstGroup.locator('.tile').evaluateAll((ts) => ts.map((t) => t.dataset.app));
+await firstGroup.locator('.tile').nth(1).dragTo(firstGroup.locator('.tile').nth(0), { targetPosition: { x: 5, y: 40 } }); await page.waitForTimeout(1500);
+const names1 = await page.locator('.l-group').first().locator('.tile').evaluateAll((ts) => ts.map((t) => t.dataset.app));
+const saved = (await q('select app_key from workspace_app_order where workspace_id = $1 order by position', [L])).map((r) => r.app_key);
+check('LA2', 'An owner drags an app to a new place; the new order shows at once and is saved for the organization', names1[0] === names0[1] && names1[1] === names0[0] && saved[0] === names0[1], `${names0.join()} → ${names1.join()} saved ${saved.slice(0, 3).join()}`);
+await page.getByRole('button', { name: `Move ${await page.locator('.l-group').first().locator('.tile').nth(0).getAttribute('aria-label').then((x) => x.split(':')[0])} later` }).click(); await page.waitForTimeout(1500);
+const saved2 = (await q('select app_key from workspace_app_order where workspace_id = $1 order by position', [L])).map((r) => r.app_key);
+check('LA3', 'The arrows move an app too (keyboard and touch)', saved2[0] === names0[0] && saved2[1] === names0[1]);
+await page.getByRole('button', { name: 'Done' }).click();
+const ed2 = await signIn(E); await ed2.goto(`${base}/#/launcher`); await ed2.waitForSelector('.shelf .tile');
+const edNames = await ed2.locator('.l-group').first().locator('.tile').evaluateAll((ts) => ts.map((t) => t.dataset.app));
+const edOrder = saved2.filter((k) => edNames.includes(k));
+check('LA4', 'A teammate sees the organization’s order after signing in, and has no Arrange button', JSON.stringify(edNames.slice(0, 2)) === JSON.stringify(edOrder.slice(0, 2)) && (await ed2.getByRole('button', { name: 'Arrange apps' }).count()) === 0);
+await page.reload(); await page.waitForSelector('.shelf .tile');
+check('LA5', 'The order stays after a refresh', (await page.locator('.l-group').first().locator('.tile').first().getAttribute('data-app')) === saved2.filter((k) => names0.includes(k))[0]);
+await shot(page, 'rc-launcher');
+
+// =============================================================== Teammate access: switches show what is saved
+await page.goto(`${base}/#/office/admin/person/${E.id}`); await page.waitForSelector('.acc-row', { timeout: 9000 });
+const row = page.locator('.acc-row', { hasText: 'Drive' }).first(); const sw = row.locator('summary [role=switch]');
+const was = await sw.getAttribute('aria-checked');
+for (let n = 0; n < 8; n++) { await sw.click(); await page.waitForFunction((el) => !el.disabled, await sw.elementHandle()); }
+const grant = (await q("select count(*)::int n from app_grants where workspace_id = $1 and user_id = $2 and app_key = 'drive'", [L, E.id]))[0].n;
+check('TA1', 'Eight quick switches in a row all save (no rate-limit errors) and the switch matches the database afterwards', (await sw.getAttribute('aria-checked')) === was && String(grant === 1) === was && !apiErr.some((e) => e.startsWith('429')), `ui ${await sw.getAttribute('aria-checked')} db ${grant}`);
+await row.locator('summary').click(); const feat = row.locator('.tg-row').first(); const fsw = feat.locator('[role=switch]');
+const f0 = await fsw.getAttribute('aria-checked'); await fsw.click(); await page.waitForTimeout(1200);
+const pill1 = await feat.locator('.pill').innerText(); await fsw.click(); await page.waitForTimeout(1200);
+const pill2 = await feat.locator('.pill').innerText(); const ovs = (await q('select count(*)::int n from permission_overrides where workspace_id = $1 and principal_id = $2', [L, E.id]))[0].n;
+check('TA2', 'A feature switched off shows “Changed”; switched back it returns to the role (no leftover exception in the database)', pill1 === 'Changed' && pill2 !== 'Changed' && (await fsw.getAttribute('aria-checked')) === f0 && ovs === 0, `${pill1}/${pill2}/${ovs}`);
+
+// =============================================================== Organization settings
+await page.goto(`${base}/#/office/admin/branding`); await page.waitForSelector('input[aria-label="Organization name"]');
+const oldName = (await q('select name from workspaces where id = $1', [L]))[0].name;
+await page.fill('input[aria-label="Organization name"]', 'Layer2Funnels Test'); await page.getByRole('button', { name: 'Save name' }).click(); await page.waitForTimeout(2500);
+check('OR1', 'An owner renames the organization; the new name shows after the page reloads', (await q('select name from workspaces where id = $1', [L]))[0].name === 'Layer2Funnels Test' && (await page.locator('body').innerText()).includes('Layer2Funnels Test'));
+await q('update workspaces set name = $2 where id = $1', [L, oldName]);
+
+// =============================================================== Documents: link a Drive file into a section
+const sec = (await q("select id, folder_id from doc_sections where workspace_id = $1 and not owner_protected order by position limit 1", [L]))[0];
+if (sec) {
+  const fid = (await q("insert into files (workspace_id, space, uploaded_by, name, kind, mime_type, in_library) values ($1,'shared',$2,$3,'document','application/vnd.l2f.doc+json',true) returning id", [L, O.id, `Drive doc ${stamp}`]).catch((e) => [{ err: e.message }]))[0];
+  if (fid?.id) {
+    await page.goto(`${base}/#/office/documents`); await page.waitForSelector('.docsec');
+    await page.locator('.docsec').filter({ has: page.locator(`h2:has-text("${(await q('select name from doc_sections where id=$1', [sec.id]))[0].name}")`) }).getByRole('button', { name: 'Add from Drive' }).click();
+    await page.fill('input[aria-label="Search Drive"]', `Drive doc ${stamp}`); await page.waitForSelector(`.dpick-i:has-text("Drive doc ${stamp}")`, { timeout: 9000 });
+    await page.locator('.dpick-i', { hasText: `Drive doc ${stamp}` }).click(); await page.getByRole('button', { name: 'Add link' }).click(); await page.waitForTimeout(1500);
+    const lk = await q('select count(*)::int n from doc_links where section_id = $1 and file_id = $2', [sec.id, fid.id]); const still = await q('select folder_id from files where id = $1', [fid.id]);
+    check('DO1', 'A Drive file is linked into a Documents section without copying or moving it, and is labelled as linked', lk[0].n === 1 && still[0].folder_id === null && (await page.locator('.docc', { hasText: `Drive doc ${stamp}` }).first().innerText({ timeout: 5000 }).catch(async () => { await shot(page, 'rc-docs-fail'); return (await page.locator('main').innerText()).slice(0, 400); })).includes('Linked from Drive'));
+  } else check('DO1', 'Seed a Drive file for the link test', false, fid?.err);
+}
+
 console.log(`\n${results.filter((r) => r.ok).length}/${results.length} checks passed`);
 if (problems.length) console.log('page problems:\n' + [...new Set(problems)].slice(0, 15).join('\n'));
 if (apiErr.length) console.log('api errors:\n' + [...new Set(apiErr)].slice(0, 15).join('\n'));

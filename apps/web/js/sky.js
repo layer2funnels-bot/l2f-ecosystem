@@ -80,7 +80,8 @@ export async function loadWeather({ api, store, geo, session = (typeof sessionSt
 export function groupCatalog(catalog, registry) {
   const groups = { Everyday: [], Studio: [] };
   for (const a of catalog) (groups[registry?.get(a.app_key)?.group] ?? groups.Studio).push(a);
-  const pos = (a) => registry?.get(a.app_key)?.order ?? 99;
+  // the organization's own order (owners and admins drag it, 0060) wins; apps it doesn't mention keep the designed order after them
+  const pos = (a) => (Number.isInteger(a.position) ? a.position : 1000 + (registry?.get(a.app_key)?.order ?? 99));
   return Object.entries(groups).map(([k, v]) => [k, [...v].sort((x, y) => pos(x) - pos(y))]).filter(([, v]) => v.length);
 }
 /** Find an app: name or description, case and accent tolerant; Enter opens the first. */

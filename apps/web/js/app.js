@@ -438,7 +438,7 @@ async function render(opts = {}) {
   } else {
     switch (route.name) {
       case 'home': case 'launcher': case 'signin': case 'signup': case 'check-email': case 'forgot': case 'invite':
-        content = launcherView({ catalog: ctx.catalog, error: ctx.catalogError, org, orgs: ctx.orgs, role, name: session.get()?.name, registry, loadWeather: () => loadWeather({ api, store: localStorage }), onSwitch: (i) => switchFlow(i), retry: async () => { await loadOrgContext(org); render(); } }); break;
+        content = launcherView({ catalog: ctx.catalog, error: ctx.catalogError, org, orgs: ctx.orgs, role, name: session.get()?.name, registry, loadWeather: () => loadWeather({ api, store: localStorage }), onSwitch: (i) => switchFlow(i), retry: async () => { await loadOrgContext(org); render(); }, saveOrder: (keys) => api.call('launcher.order.set', { apps: keys }) }); break;
       case 'profile': content = profileView({ app: appApi, me, tab: route.params.tab, orgs: ctx.orgs, active: org, catalog: ctx.catalog, registry, theme }); break;
       case 'office': content = officeHomeView({ org, role, isAdmin, api, live, portalState: ctx.catalog.find((a) => a.app_key === 'portal')?.state, name: me?.name ?? session.get()?.name, catalog: ctx.catalog }); break;
       case 'office-page': {

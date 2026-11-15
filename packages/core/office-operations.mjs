@@ -168,8 +168,10 @@ export const officeOperations = [
     run: (q, ctx) => q(`select l.id as link_id, l.section_id, l.created_by, f.id, f.name, f.kind, f.mime_type, f.folder_id, f.space, f.protected_sop, f.updated_at
       from doc_links l join files f on f.id = l.file_id where l.workspace_id = $1 and f.archived_at is null order by lower(f.name)`, [ctx.orgId]) }),
   defineOperation({ name: 'office.doclinks.add', class: 'write', single: true, input: { section: { type: 'uuid', required: true }, file: { type: 'uuid', required: true } },
-    run: (q, ctx, i) => q(`insert into doc_links (workspace_id, section_id, file_id) values ($1, $2, $3) on conflict (section_id, file_id) do update set section_id = excluded.section_id
-      returning id, section_id, file_id`, [ctx.orgId, i.section, i.file]) }),
+    run: async (q, ctx, i) => {   // linking the same file twice is not an error: the existing link comes back
+      const made = await q('insert into doc_links (workspace_id, section_id, file_id) values ($1, $2, $3) on conflict (section_id, file_id) do nothing returning id, section_id, file_id', [ctx.orgId, i.section, i.file]);
+      return made.length ? made : q('select id, section_id, file_id from doc_links where section_id = $1 and file_id = $2', [i.section, i.file]);
+    } }),
   defineOperation({ name: 'office.doclinks.remove', class: 'write', single: true, input: { id: { type: 'uuid', required: true } }, run: (q, _c, i) => q('delete from doc_links where id = $1 returning id', [i.id]) }),
   defineOperation({ name: 'org.rename', class: 'write', single: true, input: { name: { type: 'text', required: true, min: 2, max: 80 } }, run: (q, _c, i) => q('select public.workspace_rename($1) as name', [i.name]) }),
   defineOperation({ name: 'org.icons', class: 'read', allowNoOrg: true, run: (q) => q('select org_id, brand_icon from public.my_org_icons()') }),

@@ -68,7 +68,7 @@ export function adminV8View({ api, ctx, org, role, route, go }) {
     roleSel.addEventListener('change', async () => { const r = await call('members.setRole', { user: uid, role: roleSel.value }); if (!r.ok) { roleSel.value = mem.role; return failed(r); } toast('Role changed. Access starts from the new role.'); personPage(uid, selector); });
     const feats = (app) => (perms.data ?? []).filter((p) => p.app_key === app || (app === 'office' && ['funnels', 'platform'].includes(p.app_key)));
     // every feature switch on the page, so that after any saved change all of them are re-read from the server (the switch shows what is saved, never a guess)
-    const featEls = new Map(); const roleGives = (p) => RANK[mem.role] >= RANK[p.default_role ?? 'owner'];
+    const featEls = new Map();
     const paintFeat = (key) => { const x = featEls.get(key); if (!x) return; const e = allowed.get(key); x.sw.setAttribute('aria-checked', String(Boolean(e?.allowed))); x.pill.textContent = changed.has(key) ? 'Changed' : e?.allowed ? 'From role' : 'Off by role'; };
     const resync = async () => { const [e2, o2, g2] = await Promise.all([call('access.effective', { user: uid }), call('access.features.of', { user: uid }), call('access.apps.of', { user: uid })]); if (!live() || my !== personSeq) return;
       if (e2.ok) { allowed.clear(); for (const e of e2.data) allowed.set(e.permission_key, e); } if (o2.ok) { changed.clear(); for (const o of o2.data) changed.set(o.permission_key, o.effect); }
@@ -82,12 +82,12 @@ export function adminV8View({ api, ctx, org, role, route, go }) {
         fs.length ? h('div', { class: 'feat' }, ...fs.map((p) => {
           const pillEl = h('span', { class: 'pill', style: 'height:20px' });
           // back to what the role gives = remove the exception (not a second, identical exception)
-          const fsw = toggle(allowed.get(p.key)?.allowed, p.description, async (v) => { const r = await call('access.feature.set', { user: uid, permission: p.key, effect: v === roleGives(p) ? 'reset' : v ? 'allow' : 'deny' }); if (!r.ok) { failed(r); resync(); return false; } toast('Saved and logged. Enforced by the server on the next request.'); resync(); return true; }, locked || p.floor_role === 'owner' && !isOwner);
+          const fsw = toggle(allowed.get(p.key)?.allowed, p.description, async (v) => { const r = await call('access.feature.set', { user: uid, permission: p.key, effect: changed.has(p.key) ? 'reset' : v ? 'allow' : 'deny' }); if (!r.ok) { failed(r); resync(); return false; } toast('Saved and logged. Enforced by the server on the next request.'); resync(); return true; }, locked || p.floor_role === 'owner' && !isOwner);
           featEls.set(p.key, { sw: fsw, pill: pillEl }); paintFeat(p.key);
           return h('div', { class: 'tg-row' }, h('span', {}, p.description), pillEl, fsw); })) : null);
       return det; }));
-    const reset = async (e) => { e.currentTarget.disabled = true; const rs = await Promise.all([...changed.keys()].map((k) => call('access.feature.set', { user: uid, permission: k, effect: 'reset' })));
-      if (rs.some((r) => !r.ok)) failed(rs.find((r) => !r.ok)); else toast('Back to what the role gives.'); await resync(); e.currentTarget.disabled = false; };
+    const reset = async (e) => { const me = e.currentTarget; me.disabled = true; const rs = await Promise.all([...changed.keys()].map((k) => call('access.feature.set', { user: uid, permission: k, effect: 'reset' })));
+      if (rs.some((r) => !r.ok)) failed(rs.find((r) => !r.ok)); else toast('Back to what the role gives.'); await resync(); me.disabled = false; };
     const resetBtn = btn('Reset to role', reset, 'quiet sm'); resetBtn.hidden = locked || !changed.size;
     const ask = h('input', { placeholder: 'Can they… e.g. delete a project', 'aria-label': 'Check access', type: 'search' }); const answers = h('div', {});
     const paintAsk = () => { const t = ask.value.trim().toLowerCase(); const list = (perms.data ?? []).filter((p) => !t || `${p.description} ${p.key}`.toLowerCase().includes(t)).slice(0, t ? 12 : 4);
@@ -169,8 +169,8 @@ export function adminV8View({ api, ctx, org, role, route, go }) {
     const b = r.data?.[0] ?? {}; const img = (src, alt, hgt) => (src ? h('img', { src, alt, style: `height:${hgt}px;max-width:220px;object-fit:contain` }) : null);
     const nameIn = h('input', { value: org.name, maxlength: 80, 'aria-label': 'Organization name' });
     const prevName = h('b', { style: 'font-size:17px' }, org.name); nameIn.addEventListener('input', () => { prevName.textContent = nameIn.value || org.name; });
-    const saveName = btn('Save name', async (e) => { const nm = nameIn.value.trim(); if (nm.length < 2) return toast('Use 2 to 80 characters.', false); if (nm === org.name) return toast('That is already the name.');
-      e.currentTarget.disabled = true; const x = await call('org.rename', { name: nm }); e.currentTarget.disabled = false; if (!x.ok) return failed(x);
+    const saveName = btn('Save name', async (e) => { const me = e.currentTarget; const nm = nameIn.value.trim(); if (nm.length < 2) return toast('Use 2 to 80 characters.', false); if (nm === org.name) return toast('That is already the name.');
+      me.disabled = true; const x = await call('org.rename', { name: nm }); me.disabled = false; if (!x.ok) return failed(x);
       toast(`Renamed to ${nm}. Everyone in ${nm} sees it now.`); location.reload(); }, 'primary sm');
     // the square icon is shrunk to 128 px in the browser before saving, so it is small enough to show on every page without slowing anything down
     const shrink = (f) => new Promise((res, rej) => { const u = URL.createObjectURL(f); const im = new Image(); im.onload = () => { const c = document.createElement('canvas'); c.width = c.height = 128;
