@@ -147,7 +147,7 @@ export function officeHomeView({ org, role, isAdmin, api, live, portalState, nam
       const box = plans.lastChild; const list = await plan('list_plans', { p_workspace: org.org_id });
       if (list == null) { counts.plan = null; paintSummary(); return fail(box, loadPlans); }
       const main = list.filter((p) => !p.archived_at).find((p) => p.favorite) ?? list.find((p) => !p.archived_at);
-      if (!main) { counts.plan = null; paintSummary(); return box.replaceChildren(h('p', { class: 'hint' }, 'No plan yet. ', h('a', { href: '#/planner' }, 'Start one in Planner'), '.')); }
+      if (!main) { counts.plan = null; paintSummary(); return box.replaceChildren(h('p', { class: 'hint' }, 'No plan yet.'), h('a', { class: 'btn quiet sm', href: '#/planner' }, 'Start one in Planner')); }
       counts.plan = (main.status_counts?.off_track ?? 0) > 0 ? 'off track' : (main.status_counts?.at_risk ?? 0) > 0 ? 'at risk' : 'on track'; paintSummary();
       const detail = await plan('get_plan', { p_plan: main.id }); const v = Math.round(main.progress ?? 0);
       box.replaceChildren(h('div', { style: 'display:flex;gap:16px;align-items:center' }, h('span', { class: 'ring', style: `--v:${v}` }, h('b', {}, `${v}%`)),
