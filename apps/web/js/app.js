@@ -25,7 +25,7 @@ import { imageView } from './modules/imageeditor.js';
 import { pdfView } from './modules/pdfeditor.js';
 import { plannerView, unmountPlanner, plannerMountedFor, plannerSection, PLANNER_PAGES } from './modules/planner.js';
 import { strategiesListView, strategyTemplateView, strategyView } from './views/strategies.js';
-import { documentsView, teamView, appsView } from './views/office.js';
+import { teamView, memberView, appsView, notificationSettingsView } from './views/office-team.js';
 import { loadWeather } from './sky.js';
 import { permissionSet, canWith, canAnywhereWith } from './perm.js';
 import { switchOrganization } from '/packages/core/org-switch.mjs';
@@ -442,7 +442,8 @@ async function render(opts = {}) {
       case 'office-page': {
         const pg = route.params.page;
         if (pg === 'documents') content = documentsV8({ api, ctx: c });
-        else if (pg === 'team') content = teamView({ api, ctx: c });
+        else if (pg === 'team') content = route.params.member ? memberView({ api, ctx: c, id: route.params.member }) : teamView({ api, ctx: c });
+        else if (pg === 'settings') content = notificationSettingsView({ api, ctx: c });
         else if (pg === 'apps') content = appsView({ catalog: ctx.catalog, registry, org, orgs: ctx.orgs });
         else content = appNotBuiltView(OFFICE_PAGES.find((p) => p.key === pg)?.label ?? 'This page');
         break;

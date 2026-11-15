@@ -18,7 +18,7 @@ export const OFFICE_PAGES = [
   { key: 'apps', label: 'Apps', icon: 'apps', href: '#/office/apps', built: true },
   { key: 'admin', label: 'Admin', icon: 'shield', href: '#/office/admin', built: true, adminOnly: true },
 ];
-const OFFICE_OTHER = new Set(['projects', 'documents', 'team', 'apps']);
+const OFFICE_OTHER = new Set(['projects', 'documents', 'team', 'apps', 'settings']);
 export const ADMIN_ACCESS_TABS = ['levels', 'assignments', 'effective', 'history'];
 
 // '#/office/funnels/avatars/abc?x=1' -> { name, params, query }
@@ -67,6 +67,7 @@ export function parseRoute(hash) {
   if (a === 'board' && b && seg.length === 2) return r('board', { id: b });
   if (a === 'office' && seg.length === 1) return r('office');
   if (a === 'office' && OFFICE_OTHER.has(b) && seg.length === 2) return r('office-page', { page: b });
+  if (a === 'office' && b === 'member' && c && seg.length === 3) return r('office-page', { page: 'team', member: c });
   if (a === 'office' && b === 'admin') {
     if (seg.length === 2) return r('admin', { tab: 'members' });
     if (c === 'members' && seg.length === 3) return r('admin', { tab: 'members' });
