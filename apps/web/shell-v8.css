@@ -171,3 +171,5 @@
 @media (max-width:760px){.shell.v8 .focusbar-acts>.pill,.shell.v8 .focusbar-photo{display:none}.shell.v8 .focusbar-acts{gap:4px}}
 /* focused top bar: the rail already has the apps button, so the bar shows its own only on a phone (where the rail is hidden) */
 @media (min-width:761px){.shell.v8 .focusbar .appsw{display:none}}
+/* focused top bar on a phone: Back already cancels, so Cancel gives way; the actions never push the page sideways */
+@media (max-width:760px){.shell.v8 .focusbar-acts>.btn.quiet{display:none}.shell.v8 .focusbar-acts{flex:none;min-width:0}.shell.v8 .focusbar .hdr-ttl small{display:none}.shell.v8 .focusbar-acts .btn{padding:0 10px}}
