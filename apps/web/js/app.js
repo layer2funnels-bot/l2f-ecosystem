@@ -42,6 +42,7 @@ import { offersListView, offerView, offerFormView } from './views/office-offers.
 import { storiesListView, storyView, storyFormView, brandKitsListView, brandKitView, brandKitFormView } from './views/office-records.js';
 import { adminV8View } from './views/office-admin.js';
 import { avatarsListView, avatarNewView, avatarStudioView, avatarEditView } from './views/office-avatars.js';
+let lastTouched = null;   // the app last reported to access.app.touch
 const V8REC = { avatars: [avatarsListView, (c, id, prm) => avatarStudioView(c, id, prm?.tab ?? 'profile'), (c, id, prm) => (id ? avatarEditView(c, id, prm?.chapter) : avatarNewView(c))], offers: [offersListView, offerView, offerFormView], stories: [storiesListView, storyView, storyFormView], brand_kits: [brandKitsListView, brandKitView, brandKitFormView] };
 
 const cfg = window.L2F_CONFIG;
@@ -524,7 +525,6 @@ window.addEventListener('hashchange', () => {
 });
 window.addEventListener('beforeunload', (e) => { if (dirty.isDirty()) { e.preventDefault(); e.returnValue = ''; } });
 window.addEventListener('offline', () => announce('You are offline. Changes will not be saved.'));
-let lastTouched = null;
 let startSearch = null;
 document.addEventListener('keydown', (e) => {                      // Ctrl K / Cmd K: global search from anywhere (V8 02 §5)
   if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'k' && startSearch) { e.preventDefault(); startSearch(); }
