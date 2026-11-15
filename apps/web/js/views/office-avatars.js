@@ -1,7 +1,7 @@
 // Office › Funnels › Customer Avatars, V8 Avatar Studio (prototype avatar5.js `avatarStudio`, office6.js `avatars`, `avatarNew`, `avatarEdit`).
 // One copy of the data (funnel_avatars.profile, migration 0057): the Profile tab shows summaries, the Full profile shows every chapter, Use it turns it into
 // copy angles, Evidence holds proof, interviews and saved versions. Edit mode changes any chapter; the import reads Word/PDF in the browser.
-import { h, put, icon, btn, toast, dialog, skeleton, errorState, emptyState, seg } from '../ui.js';
+import { h, put, icon, btn, toast, dialog, skeleton, errorState, notFoundState, emptyState, seg } from '../ui.js';
 import { hrefFor } from '../routes.js';
 import { messageFor } from '../messages.js';
 import { dirty } from '../dirty.js';
@@ -140,7 +140,7 @@ export function avatarStudioView(ctx, id, tab = 'profile') {
   const setBar = (acts) => { root.__focused.actions = acts; document.querySelector('.focusbar-acts')?.replaceChildren(...acts); const t = document.querySelector('.focusbar .hdr-ttl b'); if (t) t.textContent = root.__focused.title; };
   const view = async (pre) => {
     const [r, offers] = await Promise.all([pre ? { ok: true, data: [pre] } : ctx.api.call('funnels.avatars.get', { id }), ctx.api.call('funnels.offers.list', {})]); if (!ctx.live()) return;
-    if (!r.ok || !r.data?.[0]) return put(wrap, errorState(() => view()));
+    if (!r.ok || !r.data?.[0]) return put(wrap, r.ok || r.status === 404 ? notFoundState(hrefFor.funnels(), 'Back to Funnels') : errorState(() => view()));
     const a = r.data[0]; const p = a.profile ?? {}; const [c] = lookOf(a.look); const done = completeness(p); wrap.style.setProperty('--c', c);
     const canEdit = ctx.can('funnels.avatar.edit', a.client_id) && !a.archived_at; const m = recordManager(ctx, 'avatars', { view: (x) => view(x), backTo: hrefFor.list('avatars') });
     const used = (offers.data ?? []).filter((o) => (o.avatar_ids ?? []).includes(a.id) || o.avatar_id === a.id);
@@ -148,10 +148,10 @@ export function avatarStudioView(ctx, id, tab = 'profile') {
     const more = () => { const cn = a.client_id ? ctx.clients.get(a.client_id) ?? 'the client' : null; const can = ctx.can('funnels.avatar.edit', a.client_id); const canDel = ctx.can('funnels.avatar.delete', a.client_id);
       dialog({ title: 'Avatar', body: h('p', { class: 'hint' }, a.archived_at ? 'This avatar is archived.' : 'Share, archive or change its status.'), actions: [
         ...(can && !a.archived_at ? [{ label: a.stage === 'validated' ? 'Mark as draft' : 'Mark validated', cls: 'ghost', on: async () => { const x = await ctx.api.call('funnels.avatars.update', { id: a.id, stage: a.stage === 'validated' ? 'draft' : 'validated' }); if (!x.ok) return toast(messageFor(x.error?.code), false); toast('Status changed.'); view(x.data[0]); } }] : []),
-        ...(can && a.client_id && !a.archived_at ? [{ label: a.client_visible ? 'Stop sharing' : 'Share with client', cls: 'ghost', on: () => (a.client_visible ? m.unshare(a, cn) : m.share(a)) }] : []),
+        ...(ctx.can('funnels.record.share', a.client_id) && a.client_id && !a.archived_at ? [{ label: a.client_visible ? 'Stop sharing' : 'Share with client', cls: 'ghost', on: () => (a.client_visible ? m.unshare(a, cn) : m.share(a)) }] : []),
         ...(can ? [{ label: a.archived_at ? 'Restore' : 'Archive', cls: 'ghost', on: () => (a.archived_at ? m.act(a, 'restore', 'Restored.') : m.confirmArchive(a)) }] : []),
         ...(canDel && a.archived_at ? [{ label: 'Delete permanently', cls: 'dng', on: () => m.del(a) }] : []), { label: 'Close' }] }); };
-    setBar([h('span', { class: `pill ${a.stage === 'validated' ? 'blue' : 'warn'}` }, `${a.version} · ${a.stage === 'validated' ? 'Validated' : 'Draft'}`), h('span', { class: 'hide-m' }, ring(done, 'sm')),
+    setBar([!canEdit && !a.archived_at ? h('span', { class: 'pill', title: 'You can view this avatar but not change it' }, icon('eye'), 'Read only') : null, h('span', { class: `pill ${a.stage === 'validated' ? 'blue' : 'warn'}` }, `${a.version} · ${a.stage === 'validated' ? 'Validated' : 'Draft'}`), h('span', { class: 'hide-m' }, ring(done, 'sm')),
       btn([icon('download'), 'Export'], () => exportPdf(a), 'ghost sm hide-m'), canEdit ? h('a', { class: 'btn primary sm', href: `${base(a.id)}/edit` }, icon('edit'), 'Edit') : null,
       h('button', { class: 'iconbtn', type: 'button', 'aria-label': 'More actions', onclick: more }, icon('more'))].filter(Boolean));
     const tabs = h('div', { class: 'studio-tabs', role: 'tablist' }, ...[['profile', 'Profile'], ['deep', 'Full profile'], ['use', 'Use it'], ['evidence', 'Evidence']].map(([k, l]) => h('a', { href: k === 'profile' ? base(a.id) : `${base(a.id)}/${k}`, role: 'tab', 'aria-selected': String(k === tab) }, l)));
@@ -260,31 +260,33 @@ export function avatarEditView(ctx, id, chapter = 'about') {
   root.__focused = { title: 'Editing avatar', sub: 'Changes update the profile and the full profile together', back: base(id), actions: [h('a', { class: 'btn quiet sm', href: base(id) }, 'Cancel')] };
   (async () => {
     let d = drafts.get(id);
-    if (!d) { const r = await ctx.api.call('funnels.avatars.get', { id }); if (!ctx.live()) return; if (!r.ok || !r.data?.[0]) return put(wrap, errorState(() => ctx.rerender()));
+    if (!d) { const r = await ctx.api.call('funnels.avatars.get', { id }); if (!ctx.live()) return; if (!r.ok || !r.data?.[0]) return put(wrap, r.ok || r.status === 404 ? notFoundState(hrefFor.funnels(), 'Back to Funnels') : errorState(() => ctx.rerender()));
       const a = r.data[0]; if (!ctx.can('funnels.avatar.edit', a.client_id) || a.archived_at) return put(wrap, emptyState({ title: 'You can’t edit this avatar', body: a.archived_at ? 'Restore it first.' : 'Ask an owner or admin for access.' }));
       d = { a, p: structuredClone(a.profile ?? {}), changed: false }; drafts.set(id, d); }
     const { a, p } = d; wrap.style.setProperty('--c', lookOf(a.look)[0]);
     const st = h('span', { class: `savest ${d.changed ? 'dirty' : ''}`.trim() }, h('i'), d.changed ? 'Unsaved changes' : 'Saved');
-    const touch = () => { d.changed = true; dirty.set(true); st.className = 'savest dirty'; st.lastChild.textContent = 'Unsaved changes'; };
+    const touch = () => { d.changed = true; dirty.set(`changes to ${a.name}`, () => save(true)); st.className = 'savest dirty'; st.lastChild.textContent = 'Unsaved changes'; };
     if (chapter === 'new') {   // Add chapter
       p.custom = [...(p.custom ?? []), { title: 'New chapter', text: '' }]; touch(); history.replaceState(null, '', `${base(id)}/edit/c${p.custom.length - 1}`); chapter = `c${p.custom.length - 1}`;
     }
-    const save = async () => {
+    const save = async (leaving = false) => {
       const r = await ctx.api.call('funnels.avatars.update', { id, name: a.name, tagline: a.tagline ?? '', role: a.role ?? '', market: a.market ?? '', look: a.look ?? 0, profile: p });
       if (!r.ok) return toast(messageFor(r.error?.code), false);
-      drafts.delete(id); dirty.set(false); toast('Saved. The profile is up to date.'); ctx.go(base(id));
+      drafts.delete(id); dirty.clear(); toast('Saved. The profile is up to date.'); if (!leaving) ctx.go(base(id)); return true;
     };
-    const acts = [st, h('a', { class: 'btn quiet sm', href: base(id), onclick: () => { drafts.delete(id); dirty.set(false); } }, 'Cancel'), btn('Save', save, 'primary sm')];
+    const acts = [st, h('a', { class: 'btn quiet sm', href: base(id), onclick: () => { drafts.delete(id); dirty.clear(); } }, 'Cancel'), btn('Save', save, 'primary sm')];
     root.__focused.title = `Editing: ${a.name}`; root.__focused.actions = acts; document.querySelector('.focusbar-acts')?.replaceChildren(...acts); const tt = document.querySelector('.focusbar .hdr-ttl b'); if (tt) tt.textContent = root.__focused.title;
     const chs = [['about', 'Name and look'], ...CHAPTERS, ...(p.custom ?? []).map((c, i) => [`c${i}`, c.title]), ['evidence', 'Evidence']];
     if (!chs.some(([k]) => k === chapter)) chapter = 'about';
-    const nav = h('nav', { class: 'chapters' }, h('p', { class: 'over' }, 'Chapters'), ...chs.map(([k]) => h('a', { href: `${base(id)}/edit/${k}`, ...(k === chapter ? { 'aria-current': 'page' } : {}) }, k === 'about' ? 'Name and look' : titleOf(p, k))),
-      h('a', { class: 'addrow', href: `${base(id)}/edit/new` }, icon('plus'), 'Add chapter'));
+    const within = (e) => { e.preventDefault(); dirty.clear(); ctx.go(e.currentTarget.getAttribute('href')); };   // moving between chapters keeps the draft (re-marked below)
+    const nav = h('nav', { class: 'chapters' }, h('p', { class: 'over' }, 'Chapters'), ...chs.map(([k]) => h('a', { href: `${base(id)}/edit/${k}`, onclick: within, ...(k === chapter ? { 'aria-current': 'page' } : {}) }, k === 'about' ? 'Name and look' : titleOf(p, k))),
+      h('a', { class: 'addrow', href: `${base(id)}/edit/new`, onclick: within }, icon('plus'), 'Add chapter'));
+    if (d.changed) dirty.set(`changes to ${a.name}`, () => save(true));
     const ed = h('div', {}); const isCustom = /^c\d+$/.test(chapter); const ci = isCustom ? Number(chapter.slice(1)) : -1;
     const title = h('input', { class: 'tp-title', 'aria-label': 'Chapter heading', maxlength: 120, value: chapter === 'about' ? 'Name and look' : titleOf(p, chapter), disabled: chapter === 'about' || chapter === 'evidence',
       oninput: (e) => { if (isCustom) p.custom[ci].title = e.target.value; else p.titles = { ...(p.titles ?? {}), [chapter]: e.target.value }; touch(); } });
     const summaryChk = ['basic', 'drives', 'beliefs', 'niche'].includes(chapter) ? h('label', { class: 'chk' }, h('input', { type: 'checkbox', ...(!(p.hide ?? []).includes(chapter) ? { checked: true } : {}), onchange: (e) => { const s = new Set(p.hide ?? []); if (e.target.checked) s.delete(chapter); else s.add(chapter); p.hide = [...s]; touch(); } }), ' Show a summary on the profile') : null;
-    const delBtn = isCustom ? h('button', { class: 'iconbtn', type: 'button', 'aria-label': 'Delete this chapter', onclick: () => dialog({ title: `Delete “${p.custom[ci].title}”?`, body: h('p', {}, 'It is removed when you save.'), actions: [{ label: 'Delete chapter', cls: 'dng', on: () => { p.custom.splice(ci, 1); touch(); ctx.go(`${base(id)}/edit/about`); } }, { label: 'Cancel' }] }) }, icon('trash')) : null;
+    const delBtn = isCustom ? h('button', { class: 'iconbtn', type: 'button', 'aria-label': 'Delete this chapter', onclick: () => dialog({ title: `Delete “${p.custom[ci].title}”?`, body: h('p', {}, 'It is removed when you save.'), actions: [{ label: 'Delete chapter', cls: 'dng', on: () => { p.custom.splice(ci, 1); touch(); dirty.clear(); ctx.go(`${base(id)}/edit/about`); } }, { label: 'Cancel' }] }) }, icon('trash')) : null;
     const fieldEl = (f) => {
       if (f.kind === 'text') { const t = h('textarea', { rows: f.k === 'notes' || f.k === 'now' ? 5 : 2, maxlength: 8000 }); t.value = p[f.k] ?? ''; t.addEventListener('input', () => { p[f.k] = t.value; touch(); }); return h('div', { class: 'field' }, h('label', {}, f.label), t); }
       const box = h('div', { class: 'edtable' }); const blank = () => (f.kind === 'list' ? '' : f.cols.map(([, ty]) => (ty === 'check' ? false : Array.isArray(ty) ? ty[0][0] : '')));

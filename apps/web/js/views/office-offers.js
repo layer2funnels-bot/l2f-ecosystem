@@ -1,7 +1,7 @@
 // Office › Funnels › Offers & Products, V8 (prototype office5.js `offers`/`offer`, office6.js `offerNew`): card list, detail, New offer / edit.
 // Markup and class names from the prototype (styles: pages/office.css, root .v8p-office). Real data through funnels.offers.*; the row rules
 // decide who may see and change what. Every V4 action stays: edit, share with the client, archive / restore, delete permanently.
-import { h, put, icon, btn, toast, errorState, skeleton, emptyState, seg } from '../ui.js';
+import { h, put, icon, btn, toast, errorState, notFoundState, skeleton, emptyState, seg } from '../ui.js';
 import { hrefFor } from '../routes.js';
 import { messageFor } from '../messages.js';
 import { dirty } from '../dirty.js';
@@ -38,13 +38,13 @@ export function offerView(ctx, id) {
   const root = h('div', { class: 'v8p-office' }, skeleton(4));
   const view = async (pre) => {
     const r = pre ? { ok: true, data: [pre] } : await ctx.api.call('funnels.offers.get', { id }); if (!ctx.live()) return;
-    if (!r.ok || !r.data?.[0]) return put(root, errorState(() => view()));
+    if (!r.ok || !r.data?.[0]) return put(root, r.ok || r.status === 404 ? notFoundState(hrefFor.funnels(), 'Back to Funnels') : errorState(() => view()));
     const o = r.data[0]; const m = recordManager(ctx, 'offers', { view: (x) => view(x), backTo: hrefFor.list('offers') });
     const canEdit = ctx.can('funnels.offer.edit', o.client_id); const canDel = ctx.can('funnels.offer.delete', o.client_id);
     const avatars = o.avatar_ids?.length ? ((await ctx.api.call('funnels.avatars.list', {})).data ?? []).filter((a) => o.avatar_ids.includes(a.id)) : [];
     const cn = o.client_id ? ctx.clients.get(o.client_id) ?? 'the client' : null;
     const acts = [canEdit && !o.archived_at ? h('a', { class: 'btn ink sm', href: `#/office/funnels/offers/${o.id}/edit` }, icon('edit'), 'Edit') : null,
-      canEdit && o.client_id && !o.archived_at ? (o.client_visible ? btn('Stop sharing', () => m.unshare(o, cn), 'ghost sm') : btn('Share with client', () => m.share(o), 'ghost sm')) : null,
+      ctx.can('funnels.record.share', o.client_id) && o.client_id && !o.archived_at ? (o.client_visible ? btn('Stop sharing', () => m.unshare(o, cn), 'ghost sm') : btn('Share with client', () => m.share(o), 'ghost sm')) : null,
       canEdit ? (o.archived_at ? btn([icon('undo'), 'Restore'], () => m.act(o, 'restore', 'Restored.'), 'ghost sm') : btn([icon('archive'), 'Archive'], () => m.confirmArchive(o), 'ghost sm')) : null,
       canDel && o.archived_at ? btn([icon('trash'), 'Delete permanently'], () => m.del(o), 'dng sm') : null].filter(Boolean);
     put(root, h('div', { class: 'pagehead' }, backLink(hrefFor.list('offers'), 'All offers'), acts.length ? h('div', { class: 'acts' }, ...acts) : null),
@@ -78,7 +78,8 @@ export function offerFormView(ctx, id = null) {
   (async () => {
     const [cur, avs] = await Promise.all([id ? ctx.api.call('funnels.offers.get', { id }) : { ok: true, data: [{}] }, ctx.api.call('funnels.avatars.list', {})]);
     if (!ctx.live()) return;
-    if (!cur.ok || !cur.data?.[0]) return put(root, errorState(() => ctx.rerender()));
+    if (!cur.ok || !cur.data?.[0]) return put(root, cur.ok || cur.status === 404 ? notFoundState(hrefFor.funnels(), 'Back to Funnels') : errorState(() => ctx.rerender()));
+    const markDirty = () => dirty.set(id ? 'this offer' : 'the new offer', () => save(!id, true));   // leaving: a new offer is kept as a draft
     const o = cur.data[0]; const st = { included: [...(o.included ?? [])], avatar_ids: [...(o.avatar_ids ?? [])], billing: o.billing ?? 'one_off' };
     const inp = (lbl, val = '', attrs = {}) => { const i = h('input', { value: val ?? '', ...attrs }); return [h('div', { class: 'field' }, h('label', {}, lbl, attrs.required ? h('i', { class: 'req' }, ' *') : null), i), i]; };
     const sel = (lbl, opts, val) => { const s = h('select', {}, ...opts.map(([v, l]) => h('option', { value: v }, l))); if (val) s.value = val; return [h('div', { class: 'field' }, h('label', {}, lbl), s), s]; };
@@ -90,32 +91,32 @@ export function offerFormView(ctx, id = null) {
     const billing = seg(BILLING, st.billing, (k) => { st.billing = k; paintPrev(); }, 'Billing');
     const [fGuar, guarantee] = inp('Guarantee', o.guarantee, { placeholder: '30 days of fixes', maxlength: 300 }); const [fDel, delivery] = inp('Delivery time', o.delivery_time, { placeholder: '30 days', maxlength: 120 });
     const incl = h('div', { class: 'edtable' });
-    const paintIncl = () => incl.replaceChildren(...st.included.map((x, i) => { const v = h('input', { value: x, 'aria-label': `Included item ${i + 1}`, maxlength: 300, oninput: (e) => { st.included[i] = e.target.value; dirty.set(true); } });
-      return h('div', { class: 'edr' }, h('span', { class: 'grip' }, icon('grip')), v, h('button', { class: 'iconbtn xs', type: 'button', 'aria-label': `Remove ${x || 'item'}`, onclick: () => { st.included.splice(i, 1); paintIncl(); dirty.set(true); } }, icon('trash'))); }),
+    const paintIncl = () => incl.replaceChildren(...st.included.map((x, i) => { const v = h('input', { value: x, 'aria-label': `Included item ${i + 1}`, maxlength: 300, oninput: (e) => { st.included[i] = e.target.value; markDirty(); } });
+      return h('div', { class: 'edr' }, h('span', { class: 'grip' }, icon('grip')), v, h('button', { class: 'iconbtn xs', type: 'button', 'aria-label': `Remove ${x || 'item'}`, onclick: () => { st.included.splice(i, 1); paintIncl(); markDirty(); } }, icon('trash'))); }),
     h('button', { class: 'addrow', type: 'button', onclick: () => { st.included.push(''); paintIncl(); incl.querySelector('.edr:last-of-type input')?.focus(); } }, icon('plus'), 'Add item'));
     paintIncl();
     const [fBon, bonuses] = inp('Bonuses', o.bonuses, { placeholder: 'Optional', maxlength: 2000 });
     const chips = h('div', { class: 'chipsel' }, ...((avs.ok ? avs.data : []).map((a) => h('button', { type: 'button', class: `chip ${st.avatar_ids.includes(a.id) ? 'on' : ''}`.trim(), 'aria-pressed': String(st.avatar_ids.includes(a.id)),
-      onclick: (e) => { const on = !st.avatar_ids.includes(a.id); st.avatar_ids = on ? [...st.avatar_ids, a.id] : st.avatar_ids.filter((x) => x !== a.id); e.currentTarget.classList.toggle('on', on); e.currentTarget.setAttribute('aria-pressed', String(on)); dirty.set(true); } }, a.name))));
+      onclick: (e) => { const on = !st.avatar_ids.includes(a.id); st.avatar_ids = on ? [...st.avatar_ids, a.id] : st.avatar_ids.filter((x) => x !== a.id); e.currentTarget.classList.toggle('on', on); e.currentTarget.setAttribute('aria-pressed', String(on)); markDirty(); } }, a.name))));
     const [fLad, ladder] = sel('Value Ladder step', STEPS.map((s) => [s, s]), o.ladder_step ?? 'Not on a ladder');
     const notes = h('textarea', { placeholder: 'Never shared with clients', maxlength: 8000 }); notes.value = o.internal_notes ?? '';
     const prev = h('div', { class: 'card6 pad-s', style: 'background:linear-gradient(140deg,color-mix(in srgb,#FFC633 20%,var(--surface)),var(--surface))' });
     const paintPrev = () => prev.replaceChildren(h('b', { style: 'font:700 20px var(--font-d)' }, name.value || 'Your offer'), h('p', { style: 'font:italic 16px var(--font)' }, promise.value || 'The one-line promise.'),
       h('b', { class: 'mono', style: 'font-size:28px' }, priceIn.value ? price({ price_amount: Number(String(priceIn.value).replace(/[^0-9.]/g, '')) || 0, currency: cur2.value }) : '—'),
       h('small', { class: 'muted' }, [label(BILLING, st.billing), label(TYPES, type.value)].join(' · ')));
-    for (const el of [name, promise, priceIn, cur2, type]) el.addEventListener('input', () => { paintPrev(); dirty.set(true); });
+    for (const el of [name, promise, priceIn, cur2, type]) el.addEventListener('input', () => { paintPrev(); markDirty(); });
     paintPrev();
     const sections = [['Basics', [fName, h('div', { class: 'row2' }, fType, fStat), fProm, ...(who ? [h('div', { class: 'field' }, h('label', {}, 'Belongs to'), who)] : [])]], ['Price and terms', [h('div', { class: 'row2' }, fPrice, fCur), billing, h('div', { class: 'row2' }, fGuar, fDel)]],
       ['What’s included', [incl, fBon]], ['Who it’s for', [h('div', { class: 'field' }, h('label', {}, 'Customer avatars'), chips.childElementCount ? chips : h('p', { class: 'hint' }, 'No customer avatars yet.')), fLad]],
       ['Internal notes', [h('div', { class: 'field' }, notes)]]];
-    const save = async (asDraft) => {
+    const save = async (asDraft, leaving = false) => {
       if (!name.value.trim()) { name.focus(); toast('Give the offer a name.', false); return; }
       const amount = String(priceIn.value).trim() ? Number(String(priceIn.value).replace(/[^0-9.]/g, '')) : null;
       const body = { name: name.value.trim(), offer_type: type.value, status: asDraft ? 'draft' : status.value === 'draft' && !id ? 'active' : status.value, promise: promise.value.trim(), billing: st.billing, guarantee: guarantee.value.trim(), delivery_time: delivery.value.trim(),
         included: st.included.map((x) => x.trim()).filter(Boolean), bonuses: bonuses.value.trim(), avatar_ids: st.avatar_ids, ladder_step: ladder.value, internal_notes: notes.value, ...(amount != null && !Number.isNaN(amount) ? { price_amount: amount, currency: cur2.value } : {}) };
       const r = await ctx.api.call(id ? 'funnels.offers.update' : 'funnels.offers.create', id ? { id, ...body } : { kind: 'offer', ...body, ...(who?.value ? { client: who.value } : {}) });
       if (!r.ok) return toast(messageFor(r.error?.code), false);
-      dirty.set(false); toast(id ? 'Offer saved.' : asDraft ? 'Saved as draft.' : 'Offer created.'); ctx.go(hrefFor.record('offers', r.data[0].id));
+      dirty.clear(); toast(id ? 'Offer saved.' : asDraft ? 'Saved as draft.' : 'Offer created.'); if (!leaving) ctx.go(hrefFor.record('offers', r.data[0].id)); return true;
     };
     root.__focused.actions.splice(0, root.__focused.actions.length, h('a', { class: 'btn quiet sm', href: back }, 'Cancel'), ...(id ? [] : [btn('Save draft', () => save(true), 'ghost sm')]), btn(id ? 'Save offer' : 'Create offer', () => save(false), 'primary sm'));
     document.querySelector('.focusbar-acts')?.replaceChildren(...root.__focused.actions);

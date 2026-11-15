@@ -72,7 +72,14 @@ export function documentsView({ api, ctx }) {
     const r = await api.call('office.sections.list', {}); if (!ctx.live()) return;
     if (!r.ok) return put(body, errorState(load));
     if (!r.data.length) return put(body, emptyState({ title: 'No sections yet', body: isAdmin ? 'Make a section for anything your team needs to find.' : 'An owner or admin sets up the sections.', ic: 'doc', action: isAdmin ? btn('New section', () => sectionDialog(), 'primary') : null }));
-    const els = await Promise.all(r.data.map(sectionEl)); if (!ctx.live()) return; put(body, ...els);
+    const els = await Promise.all(r.data.map(sectionEl));
+    // V4: library documents that are in no section stay findable here
+    const loose = await api.call('drive.files.list', { space: 'shared', kind: 'document' }); if (!ctx.live()) return;
+    const other = (loose.ok ? loose.data : []).filter((f) => !f.folder_id);
+    if (other.length) els.push(h('section', { class: 'card6 docsec' }, h('header', {}, h('h2', {}, icon('doc'), ' Other documents'), h('span', { class: 'cnt' }, String(other.length)), h('span', { class: 'grow' }),
+      canFiles ? btn([icon('plus'), 'New document'], () => newDoc({ name: 'the library', folder_id: null }), 'quiet sm') : null),
+      h('div', { class: 'docrow' }, ...other.map((f, j) => h('a', { class: 'docc', href: hrefOf(f) }, docIc(j), h('span', {}, h('b', {}, f.name), h('small', {}, `${f.protected_sop ? 'Owner protected · ' : ''}${kindOf(f)} · updated ${ago(f.updated_at)}`)))))));
+    put(body, ...els);
   }
   let t = null; q.addEventListener('input', () => { clearTimeout(t); t = setTimeout(load, 200); });
   const drive = h('a', { class: 'btn ghost sm', href: '#/drive' }, plateOf({ id: 'drive', plate: ctx.catalog?.find?.((a) => a.key === 'drive' || a.id === 'drive')?.plate }, 18), 'Open Drive');

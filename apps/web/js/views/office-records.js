@@ -1,6 +1,6 @@
 // Office › Funnels › Stories and Brand Kits, V8 (prototype office5.js `stories`, office6.js `storyNew`, `brandkits`, `brandkit`, `brandkitNew`, funnels5.js `brandKit`).
 // Real data through funnels.stories.* / funnels.brand_kits.*; row rules decide. Every V4 action stays (edit, share, archive / restore, delete permanently).
-import { h, put, icon, btn, toast, errorState, skeleton, emptyState, seg } from '../ui.js';
+import { h, put, icon, btn, toast, errorState, notFoundState, skeleton, emptyState, seg } from '../ui.js';
 import { hrefFor } from '../routes.js';
 import { messageFor } from '../messages.js';
 import { dirty } from '../dirty.js';
@@ -19,8 +19,8 @@ const HEX = /^#[0-9a-f]{6}$/i;
 const consentPill = (s) => (s.permission === 'given' ? h('span', { class: 'pill blue', style: 'height:22px' }, icon('check'), 'Consent')
   : s.permission === 'anonymous' ? h('span', { class: 'pill', style: 'height:22px' }, 'Anonymous') : h('span', { class: 'pill warn', style: 'height:22px' }, icon('alert'), 'Ask consent'));
 const field = (lbl, el, req) => h('div', { class: 'field' }, h('label', {}, lbl, req ? h('i', { class: 'req' }, ' *') : null), el);
-const seg3 = (opts, cur, on) => { const box = h('div', { class: 'seg3', role: 'radiogroup' });
-  const paint = (v) => box.replaceChildren(...opts.map(([k, l]) => h('button', { type: 'button', role: 'radio', 'aria-checked': String(k === v), onclick: () => { paint(k); on(k); dirty.set(true); } }, l))); paint(cur); return box; };
+const seg3 = (opts, cur, on, onDirty = () => {}) => { const box = h('div', { class: 'seg3', role: 'radiogroup' });
+  const paint = (v) => box.replaceChildren(...opts.map(([k, l]) => h('button', { type: 'button', role: 'radio', 'aria-checked': String(k === v), onclick: () => { paint(k); on(k); onDirty(); } }, l))); paint(cur); return box; };
 const sections = (list) => list.map(([t, c], i) => h('section', { class: 'fsec6' }, h('h3', {}, h('span', {}, String(i + 1)), t), ...c));
 /** "Belongs to": organization-wide or a client the user may create for (new records only — moving a record between owners is not allowed). */
 const belongsTo = (ctx, perm) => { const s = h('select', {}, h('option', { value: '' }, ctx.orgName), ...ctx.clientsWhere(perm).map(([i, n]) => h('option', { value: i }, `A client: ${n}`))); return s; };
@@ -28,7 +28,7 @@ const focusedActions = (root, acts) => { root.__focused.actions.splice(0, root._
 const detailActs = (ctx, r, m, perm, editHref) => {
   const canEdit = ctx.can(`funnels.${perm}.edit`, r.client_id); const canDel = ctx.can(`funnels.${perm}.delete`, r.client_id); const cn = r.client_id ? ctx.clients.get(r.client_id) ?? 'the client' : null;
   return [canEdit && !r.archived_at ? h('a', { class: 'btn ink sm', href: editHref }, icon('edit'), 'Edit') : null,
-    canEdit && r.client_id && !r.archived_at ? (r.client_visible ? btn('Stop sharing', () => m.unshare(r, cn), 'ghost sm') : btn('Share with client', () => m.share(r), 'ghost sm')) : null,
+    ctx.can('funnels.record.share', r.client_id) && r.client_id && !r.archived_at ? (r.client_visible ? btn('Stop sharing', () => m.unshare(r, cn), 'ghost sm') : btn('Share with client', () => m.share(r), 'ghost sm')) : null,
     canEdit ? (r.archived_at ? btn([icon('undo'), 'Restore'], () => m.act(r, 'restore', 'Restored.'), 'ghost sm') : btn([icon('archive'), 'Archive'], () => m.confirmArchive(r), 'ghost sm')) : null,
     canDel && r.archived_at ? btn([icon('trash'), 'Delete permanently'], () => m.del(r), 'dng sm') : null].filter(Boolean);
 };
@@ -56,7 +56,7 @@ export function storyView(ctx, id) {
   const root = h('div', { class: 'v8p-office' }, skeleton(4));
   const view = async (pre) => {
     const r = pre ? { ok: true, data: [pre] } : await ctx.api.call('funnels.stories.get', { id }); if (!ctx.live()) return;
-    if (!r.ok || !r.data?.[0]) return put(root, errorState(() => view()));
+    if (!r.ok || !r.data?.[0]) return put(root, r.ok || r.status === 404 ? notFoundState(hrefFor.funnels(), 'Back to Funnels') : errorState(() => view()));
     const s = r.data[0]; const m = recordManager(ctx, 'stories', { view: (x) => view(x), backTo: hrefFor.list('stories') });
     const acts = detailActs(ctx, s, m, 'story', `#/office/funnels/stories/${s.id}/edit`);
     put(root, h('div', { class: 'pagehead' }, backLink(hrefFor.list('stories'), 'All stories'), acts.length ? h('div', { class: 'acts' }, ...acts) : null),
@@ -78,7 +78,8 @@ export function storyFormView(ctx, id = null) {
   root.__focused = { title: id ? 'Edit story' : 'New story', sub: 'Office › Funnels › Stories', back, actions: [h('a', { class: 'btn quiet sm', href: back }, 'Cancel')] };
   (async () => {
     const cur = id ? await ctx.api.call('funnels.stories.get', { id }) : { ok: true, data: [{}] }; if (!ctx.live()) return;
-    if (!cur.ok || !cur.data?.[0]) return put(root, errorState(() => ctx.rerender()));
+    if (!cur.ok || !cur.data?.[0]) return put(root, cur.ok || cur.status === 404 ? notFoundState(hrefFor.funnels(), 'Back to Funnels') : errorState(() => ctx.rerender()));
+    const markDirty = () => dirty.set(id ? 'this story' : 'the new story', () => save(true));
     const s = cur.data[0]; const st = { kind: KINDS.some(([k]) => k === s.kind) ? s.kind : 'case_study', permission: s.permission ?? 'given', use_in: [...(s.use_in ?? [])], consent: s.consent_file_id ?? null };
     const title = h('input', { value: s.title ?? '', placeholder: 'From 0 to 41 booked calls', maxlength: 200 });
     const who = id ? null : belongsTo(ctx, 'funnels.story.create');
@@ -90,22 +91,22 @@ export function storyFormView(ctx, id = null) {
       const f = e.target.files?.[0]; if (!f) return; consentName.textContent = 'Uploading…';
       const r = await saveCopy(ctx.api, { space: 'shared', client_id: who?.value || s.client_id || null }, f, f.type || 'application/octet-stream', f.name);
       if (!r.ok) { consentName.textContent = ''; return toast(r.message ?? messageFor(r.error?.code), false); }
-      st.consent = r.data[0].id; consentName.textContent = `${f.name} attached.`; dirty.set(true); } });
+      st.consent = r.data[0].id; consentName.textContent = `${f.name} attached.`; markDirty(); } });
     const chips = h('div', { class: 'chipsel' }, ...USES.map((u) => h('button', { type: 'button', class: `chip ${st.use_in.includes(u) ? 'on' : ''}`.trim(), 'aria-pressed': String(st.use_in.includes(u)),
-      onclick: (e) => { const on = !st.use_in.includes(u); st.use_in = on ? [...st.use_in, u] : st.use_in.filter((x) => x !== u); e.currentTarget.classList.toggle('on', on); e.currentTarget.setAttribute('aria-pressed', String(on)); dirty.set(true); } }, u)));
-    for (const el of [title, body, before, after, quote]) el.addEventListener('input', () => dirty.set(true));
-    const save = async () => {
+      onclick: (e) => { const on = !st.use_in.includes(u); st.use_in = on ? [...st.use_in, u] : st.use_in.filter((x) => x !== u); e.currentTarget.classList.toggle('on', on); e.currentTarget.setAttribute('aria-pressed', String(on)); markDirty(); } }, u)));
+    for (const el of [title, body, before, after, quote]) el.addEventListener('input', () => markDirty());
+    const save = async (leaving = false) => {
       if (!title.value.trim()) { title.focus(); return toast('Give the story a headline.', false); }
       const b = { title: title.value.trim(), kind: st.kind, body: body.value, before_text: before.value.trim(), after_text: after.value.trim(), best_quote: quote.value.trim(), permission: st.permission, use_in: st.use_in, ...(st.consent ? { consent_file_id: st.consent } : {}) };
       const r = await ctx.api.call(id ? 'funnels.stories.update' : 'funnels.stories.create', id ? { id, ...b } : { ...b, ...(who?.value ? { client: who.value } : {}) });
       if (!r.ok) return toast(messageFor(r.error?.code), false);
-      dirty.set(false); toast('Story saved.'); ctx.go(hrefFor.record('stories', r.data[0].id));
+      dirty.clear(); toast('Story saved.'); if (!leaving) ctx.go(hrefFor.record('stories', r.data[0].id)); return true;
     };
     focusedActions(root, [h('a', { class: 'btn quiet sm', href: back }, 'Cancel'), btn('Save story', save, 'primary sm')]);
     put(root, h('div', { class: 'formpage' }, h('div', { class: 'formcol' }, ...sections([
-      ['The story', [seg3(KINDS, st.kind, (k) => { st.kind = k; }), field('Headline', title, true), who ? field('Who is it about?', who) : null, field('The story', body)].filter(Boolean)],
+      ['The story', [seg3(KINDS, st.kind, (k) => { st.kind = k; }, markDirty), field('Headline', title, true), who ? field('Who is it about?', who) : null, field('The story', body)].filter(Boolean)],
       ['Before → after', [h('div', { class: 'row2' }, field('Before', before), field('After', after)), field('Best quote', quote)]],
-      ['Permission', [seg3(PERMS, st.permission, (k) => { st.permission = k; }), h('div', { style: 'margin-top:8px;display:flex;align-items:center' }, btn([icon('upload'), 'Attach consent (email or form)'], () => pick.click(), 'ghost sm'), consentName, pick)]],
+      ['Permission', [seg3(PERMS, st.permission, (k) => { st.permission = k; }, markDirty), h('div', { style: 'margin-top:8px;display:flex;align-items:center' }, btn([icon('upload'), 'Attach consent (email or form)'], () => pick.click(), 'ghost sm'), consentName, pick)]],
       ['Where to use it', [chips]]]))));
     title.focus();
   })();
@@ -125,7 +126,7 @@ export function brandKitView(ctx, id) {
   const root = h('div', { class: 'v8p-office' }, skeleton(4));
   const view = async (pre) => {
     const r = pre ? { ok: true, data: [pre] } : await ctx.api.call('funnels.brand_kits.get', { id }); if (!ctx.live()) return;
-    if (!r.ok || !r.data?.[0]) return put(root, errorState(() => view()));
+    if (!r.ok || !r.data?.[0]) return put(root, r.ok || r.status === 404 ? notFoundState(hrefFor.funnels(), 'Back to Funnels') : errorState(() => view()));
     const k = r.data[0]; const m = recordManager(ctx, 'brand_kits', { view: (x) => view(x), backTo: hrefFor.list('brand_kits') });
     const canNew = ctx.can('funnels.brandkit.create', k.client_id); const canEdit = ctx.can('funnels.brandkit.edit', k.client_id);
     const dup = async () => { const { id: _i, workspace_id: _w, created_at: _c, updated_at: _u, archived_at: _a, client_visible: _v, client_id, is_main: _m, ...rest } = k;
@@ -158,13 +159,14 @@ export function brandKitFormView(ctx, id = null) {
   root.__focused = { title: id ? 'Edit brand kit' : 'New brand kit', sub: 'Office › Funnels › Brand Kits', back, actions: [h('a', { class: 'btn quiet sm', href: back }, 'Cancel')] };
   (async () => {
     const cur = id ? await ctx.api.call('funnels.brand_kits.get', { id }) : { ok: true, data: [{}] }; if (!ctx.live()) return;
-    if (!cur.ok || !cur.data?.[0]) return put(root, errorState(() => ctx.rerender()));
+    if (!cur.ok || !cur.data?.[0]) return put(root, cur.ok || cur.status === 404 ? notFoundState(hrefFor.funnels(), 'Back to Funnels') : errorState(() => ctx.rerender()));
+    const markDirty = () => dirty.set(id ? 'this brand kit' : 'the new brand kit', () => save(true));
     const k = cur.data[0]; const fresh = !id;
     const st = { colors: fresh ? [['Primary', '#2B63F6'], ['Accent', '#FFC633'], ['Text', '#16171B'], ['Background', '#F3F1EB']] : (k.colors ?? []).map((c, i) => [k.color_names?.[i] ?? '', c]),
       logo: k.logo_file_id ?? null, dark: k.logo_dark_file_id ?? null, icon: k.icon_file_id ?? null, assets: [...(k.asset_file_ids ?? [])] };
     const name = h('input', { value: k.name ?? '', placeholder: 'e.g. Funnel Done Right Challenge', maxlength: 200 });
     const who = id ? null : belongsTo(ctx, 'funnels.brandkit.create');
-    const upload = async (f) => { const r = await saveCopy(ctx.api, { space: 'shared', client_id: who?.value || k.client_id || null }, f, f.type || 'application/octet-stream', f.name); if (!r.ok) { toast(r.message ?? messageFor(r.error?.code), false); return null; } dirty.set(true); return r.data[0].id; };
+    const upload = async (f) => { const r = await saveCopy(ctx.api, { space: 'shared', client_id: who?.value || k.client_id || null }, f, f.type || 'application/octet-stream', f.name); if (!r.ok) { toast(r.message ?? messageFor(r.error?.code), false); return null; } markDirty(); return r.data[0].id; };
     const drop = (lbl, key, dark) => { const box = h('label', { class: `logodrop ${dark ? 'dark' : ''}`.trim() }); const inp = h('input', { type: 'file', hidden: true, accept: 'image/svg+xml,image/png', onchange: async (e) => { const f = e.target.files?.[0]; if (!f) return; small.textContent = 'Uploading…'; const fid = await upload(f); if (fid) { st[key] = fid; small.textContent = `${f.name} uploaded.`; } else small.textContent = 'SVG or PNG, at least 512 px'; } });
       const small = h('small', {}, st[key] ? 'Uploaded. Choose a file to replace it.' : 'SVG or PNG, at least 512 px'); box.append(icon('upload'), h('b', {}, lbl), small, inp); return box; };
     const iconNote = h('small', { class: 'muted', style: 'margin-left:8px' }, st.icon ? 'Icon uploaded.' : '');
@@ -173,13 +175,13 @@ export function brandKitFormView(ctx, id = null) {
     const assetIn = h('input', { type: 'file', hidden: true, multiple: true, onchange: async (e) => { for (const f of e.target.files ?? []) { if (st.assets.length >= 50) break; const fid = await upload(f); if (fid) st.assets.push(fid); } assetNote.textContent = `${st.assets.length} file${st.assets.length === 1 ? '' : 's'} attached.`; } });
     const rows = h('div', { class: 'colrows' });
     const paintRows = () => { rows.replaceChildren(...st.colors.map(([role, c], i) => { const sw = h('span', { class: 'csw', style: `--c:${c}` });
-      return h('div', { class: 'edr' }, sw, h('input', { value: role, class: 'sm-in', style: 'width:130px', 'aria-label': `Colour ${i + 1} role`, maxlength: 40, oninput: (e) => { st.colors[i][0] = e.target.value; dirty.set(true); } }),
-        h('input', { value: c, class: 'mono', 'aria-label': `Colour ${i + 1} hex`, maxlength: 7, oninput: (e) => { st.colors[i][1] = e.target.value.trim(); if (HEX.test(st.colors[i][1])) { sw.style.setProperty('--c', st.colors[i][1]); paintPrev(); } dirty.set(true); } }),
-        h('button', { class: 'iconbtn xs', type: 'button', 'aria-label': `Remove ${role || 'colour'}`, onclick: () => { st.colors.splice(i, 1); paintRows(); paintPrev(); dirty.set(true); } }, icon('trash'))); }),
+      return h('div', { class: 'edr' }, sw, h('input', { value: role, class: 'sm-in', style: 'width:130px', 'aria-label': `Colour ${i + 1} role`, maxlength: 40, oninput: (e) => { st.colors[i][0] = e.target.value; markDirty(); } }),
+        h('input', { value: c, class: 'mono', 'aria-label': `Colour ${i + 1} hex`, maxlength: 7, oninput: (e) => { st.colors[i][1] = e.target.value.trim(); if (HEX.test(st.colors[i][1])) { sw.style.setProperty('--c', st.colors[i][1]); paintPrev(); } markDirty(); } }),
+        h('button', { class: 'iconbtn xs', type: 'button', 'aria-label': `Remove ${role || 'colour'}`, onclick: () => { st.colors.splice(i, 1); paintRows(); paintPrev(); markDirty(); } }, icon('trash'))); }),
     st.colors.length < 24 ? h('button', { class: 'addrow', type: 'button', onclick: () => { st.colors.push(['', '#888888']); paintRows(); } }, icon('plus'), 'Add colour') : null); };
     const fontSel = (opts, val) => { const s = h('select', {}, ...[...new Set([...(val ? [val] : []), ...opts])].map((f) => h('option', { value: f }, f))); s.value = val || opts[0]; return s; };
     const hf = fontSel(HEAD_FONTS, k.fonts?.[0]); const bf = fontSel(BODY_FONTS, k.fonts?.[1]);
-    const sample = h('p', { style: `font:700 28px '${hf.value}',var(--font-d)` }, 'Aa Headline sample'); hf.addEventListener('change', () => { sample.style.fontFamily = `'${hf.value}',var(--font-d)`; paintPrev(); dirty.set(true); }); bf.addEventListener('change', () => { paintPrev(); dirty.set(true); });
+    const sample = h('p', { style: `font:700 28px '${hf.value}',var(--font-d)` }, 'Aa Headline sample'); hf.addEventListener('change', () => { sample.style.fontFamily = `'${hf.value}',var(--font-d)`; paintPrev(); markDirty(); }); bf.addEventListener('change', () => { paintPrev(); markDirty(); });
     const words = h('input', { value: k.voice ?? (fresh ? '' : ''), placeholder: 'Confident, plain English, warm', maxlength: 4000 });
     const say = h('textarea', { rows: 2, maxlength: 2000, placeholder: 'Your funnel, done in 30 days.' }); say.value = k.voice_say ?? '';
     const never = h('textarea', { rows: 2, maxlength: 2000, placeholder: '10X your income overnight!!' }); never.value = k.voice_never ?? '';
@@ -187,16 +189,16 @@ export function brandKitFormView(ctx, id = null) {
     const prev = h('div', { class: 'card6 pad-s' });
     const paintPrev = () => prev.replaceChildren(h('span', { class: 'bk-sw' }, ...st.colors.filter(([, c]) => HEX.test(c)).map(([, c]) => h('i', { style: `--c:${c}` }))),
       h('b', { style: `font:700 20px '${hf.value}',var(--font-d)` }, name.value || 'Your brand kit'), h('small', { class: 'muted' }, `${hf.value} · ${bf.value}`));
-    name.addEventListener('input', () => { paintPrev(); dirty.set(true); }); for (const el of [words, say, never, notes]) el.addEventListener('input', () => dirty.set(true));
+    name.addEventListener('input', () => { paintPrev(); markDirty(); }); for (const el of [words, say, never, notes]) el.addEventListener('input', () => markDirty());
     paintRows(); paintPrev();
-    const save = async () => {
+    const save = async (leaving = false) => {
       if (!name.value.trim()) { name.focus(); return toast('Give the brand kit a name.', false); }
       const cols = st.colors.filter(([, c]) => c); const bad = cols.find(([, c]) => !HEX.test(c)); if (bad) return toast(`${bad[1]} isn’t a colour code like #2B63F6.`, false);
       const b = { name: name.value.trim(), colors: cols.map(([, c]) => c.toUpperCase()), color_names: cols.map(([r]) => r.trim().slice(0, 40)), fonts: [hf.value, bf.value], voice: words.value.trim(), voice_say: say.value.trim(), voice_never: never.value.trim(), notes: notes.value.trim(), asset_file_ids: st.assets,
         ...(st.logo ? { logo_file_id: st.logo } : {}), ...(st.dark ? { logo_dark_file_id: st.dark } : {}), ...(st.icon ? { icon_file_id: st.icon } : {}) };
       const r = await ctx.api.call(id ? 'funnels.brand_kits.update' : 'funnels.brand_kits.create', id ? { id, ...b } : { ...b, ...(who?.value ? { client: who.value } : {}) });
       if (!r.ok) return toast(messageFor(r.error?.code), false);
-      dirty.set(false); toast('Brand kit saved.'); ctx.go(hrefFor.record('brand_kits', r.data[0].id));
+      dirty.clear(); toast('Brand kit saved.'); if (!leaving) ctx.go(hrefFor.record('brand_kits', r.data[0].id)); return true;
     };
     focusedActions(root, [h('a', { class: 'btn quiet sm', href: back }, 'Cancel'), btn('Save brand kit', save, 'primary sm')]);
     put(root, h('div', { class: 'formpage' }, h('div', { class: 'formcol' }, ...sections([

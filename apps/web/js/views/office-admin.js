@@ -29,7 +29,7 @@ export function adminV8View({ api, ctx, org, role, route, go }) {
   async function people() {
     const [m, counts, cl] = await Promise.all([call('members.list'), call('access.apps.counts'), call('clients.access.list')]); if (!live()) return;
     if (!m.ok) return put(body, errorState(people));
-    const cnt = new Map((counts.data ?? []).map((x) => [x.user_id, x])); const contacts = cl.ok ? cl.data : [];
+    const cnt = new Map((counts.data ?? []).map((x) => [x.user_id, x])); const contacts = (cl.ok ? cl.data : []).filter((c) => !['revoked', 'declined'].includes(c.status));   // ended relationships are not people here (their history stays in Client access)
     const emails = new Set(contacts.map((c) => (c.email ?? '').toLowerCase()).filter(Boolean));
     const owners = m.data.filter((x) => x.row_kind === 'member' && x.role === 'owner' && x.status === 'active').length;
     const name = (x) => x.display_name || x.email || 'Someone';
@@ -40,7 +40,7 @@ export function adminV8View({ api, ctx, org, role, route, go }) {
       const list = rows.filter((r) => (filter === 'all' || (filter === 'team' && r.kind === 'team') || (filter === 'client' && (r.kind === 'client' || r.both)) || (filter === 'both' && r.both)) && (!t || `${name(r.x)} ${r.x.email ?? ''} ${r.x.client_name ?? ''}`.toLowerCase().includes(t)));
       tbl.replaceChildren(h('div', { class: 'thd' }, ...['Person', 'Relationship', 'Role', 'Apps', 'Status', 'Last active'].map((x) => h('span', {}, x))), ...list.map((r) => {
         if (r.kind === 'client') { const c = r.x; return h('div', { class: 'tr' }, h('span', { class: 't1c' }, avatar(c.person_name || c.email || 'C', 26), h('b', {}, c.person_name || c.email)), h('span', {}, rel('Client')), h('span', {}, c.client_name ?? ''), h('span', { class: 'mono' }, '—'),
-          h('span', {}, h('span', { class: 'pill' }, c.status === 'active' ? 'Portal locked' : c.status ?? '')), h('span', {}, '—')); }
+          h('span', {}, h('span', { class: 'pill' }, c.status === 'active' ? 'Portal locked' : ({ invited: 'Invited', suspended: 'Suspended' })[c.status] ?? c.status ?? '')), h('span', {}, '—')); }
         const x = r.x; const c = cnt.get(x.user_id); const all = x.role === 'owner' || x.role === 'admin';
         const cells = [h('span', { class: 't1c' }, avatar(name(x), 26), h('b', {}, name(x), x.is_you ? ' (you)' : '')), h('span', {}, rel('Teammate'), r.both ? [' ', rel('Client')] : null), h('span', {}, roleLabel(x.role)),
           h('span', { class: 'mono' }, all ? 'All' : String(c?.apps ?? 0)), h('span', {}, h('span', { class: `pill ${x.status === 'active' ? 'blue' : ''}`.trim() }, x.row_kind === 'invitation' ? 'Invited' : x.status === 'active' ? 'Active' : 'Deactivated')), h('span', {}, ago(c?.last_used_at))];
@@ -78,7 +78,7 @@ export function adminV8View({ api, ctx, org, role, route, go }) {
     ask.addEventListener('input', paintAsk); paintAsk();
     put(body, selector ?? null, h('div', { class: 'grid-h' }, h('div', { class: 'stackcol' },
       h('section', { class: 'card6 pad-s' }, h('div', { style: 'display:flex;gap:12px;align-items:center' }, avatar(mem.display_name || mem.email, 48), h('div', { class: 'grow' }, h('b', { style: 'font-size:17px' }, mem.display_name || mem.email), h('p', { class: 'hint' }, `One identity · ${mem.email ?? ''}`)),
-        !mem.is_you ? btn('Manage', () => parts.manage(mem, owners), 'ghost sm') : null),
+        btn('Manage', () => parts.manage(mem, owners), 'ghost sm')),
         h('p', { class: 'sec-t' }, 'Relationships'), h('div', { class: 'relcards' }, h('div', { class: 'relcard' }, h('span', { class: 'wic', style: '--c:#2B63F6' }, icon('team')), h('div', { class: 'grow' }, h('b', {}, `Teammate in ${org.name}`), h('small', {}, `Role: ${roleLabel(mem.role)}${locked ? (mem.is_you ? ' · you can’t change your own' : ' · owners keep full access') : ''}`)), roleSel),
           client ? h('div', { class: 'relcard' }, h('span', { class: 'wic', style: '--c:#13A592' }, icon('portal')), h('div', { class: 'grow' }, h('b', {}, `Client contact · ${client.client_name ?? ''}`), h('small', {}, 'Client apps are set per client')), h('a', { class: 'btn ghost sm', href: '#/office/admin/clients' }, 'Client access')) : null)),
       h('section', { class: 'card6' }, h('header', {}, h('h2', {}, 'App and feature access'), h('span', { class: 'hint' }, all ? 'Owners and admins have every app; features follow the role.' : 'Starts from the role. Change any app, then open it for features.')), accm,
@@ -197,6 +197,6 @@ export function adminV8View({ api, ctx, org, role, route, go }) {
   if (person) { personPage(person); call('members.list').then((m) => { const x = (m.data ?? []).find((y) => y.user_id === person); if (x && live()) head.querySelector('h1').textContent = x.display_name || x.email; }); }
   else ({ people, teammates, clients: clientsTab, roles, review, storage, branding, audit, access: accessV4 }[tab] ?? people)();
   // the V4 dialogs refresh their own pane when they finish: reload this tab then
-  new MutationObserver(() => { if (!live()) return; if (tab === 'people' && !person) people(); }).observe(parts.pane, { childList: true });
+  new MutationObserver(() => { if (!live()) return; if (person) personPage(person); else if (tab === 'people') people(); else if (tab === 'teammates') teammates(); }).observe(parts.pane, { childList: true });
   return root;
 }
