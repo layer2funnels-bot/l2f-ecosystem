@@ -1,5 +1,8 @@
 # V8 ecosystem implementation plan
 
+> **Sequence update (owner, 15 Nov 2026):** P00 → P01 Office → **Tasks next**. The order of the remaining apps must be confirmed with the owner (see `CURRENT_PROJECT_STATUS.md`). The P0x labels below are reference IDs, not the build order.
+
+
 Date: 14 Nov 2026. Inputs: the V8 handoff (`docs/design/v8/`), the owner's three instruction documents (main V8 prompt, critical requirements, final directives) and the live code on `main` (PRs #1–#53). Tracker: `V8_IMPLEMENTATION_TRACKER.md`. Review: `V8_DOCUMENTATION_REVIEW.md`.
 
 ## 1. The rule this plan follows

@@ -1,5 +1,8 @@
 # V8 implementation tracker
 
+> **Sequence update (owner, 15 Nov 2026):** P00 → P01 Office → **Tasks next**. The order of the remaining apps must be confirmed with the owner (see `CURRENT_PROJECT_STATUS.md`). The P0x labels below are reference IDs, not the build order.
+
+
 One list for everything: the V8 handoff (every page, menu, dialog, flow and cross-cutting rule) **merged with the owner's additional requirements, bug reports and final directives** (14 Nov 2026). Nothing is marked done because a screen exists; "Tested and verified" needs the test named in the row.
 
 **Statuses:** Not started · In progress · Implemented · Tested and verified · Blocked · Requires clarification.
