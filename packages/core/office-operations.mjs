@@ -79,4 +79,35 @@ export const officeOperations = [
   }),
   // deleting a section removes it from Documents; its folder and files stay in Drive (nothing is lost)
   defineOperation({ name: 'office.sections.delete', class: 'write', single: true, input: { id: { type: 'uuid', required: true } }, run: (q, _c, i) => q('delete from doc_sections where id = $1 returning id', [i.id]) }),
+  // ---- Team (V8 office5 `team` / `member`): what each person is working on, as far as the VIEWER may see (pm row rules; a private project never shows)
+  defineOperation({
+    name: 'office.team.now', class: 'read',
+    run: (q, ctx) => q(`select distinct on (x.user_id) x.user_id, x.task_id, x.title, x.project_id, x.running, x.started_at from (
+        select te.user_id, t.id task_id, t.title, t.project_id, true running, te.started_at, 0 pri from pm_time_entries te join pm_tasks t on t.id = te.task_id
+          where te.workspace_id = $1 and te.ended_at is null and t.deleted_at is null
+        union all
+        select a.user_id, t.id, t.title, t.project_id, false, t.updated_at, 1 from pm_task_assignees a join pm_tasks t on t.id = a.task_id
+          where t.workspace_id = $1 and t.status = 'in_progress' and t.deleted_at is null) x
+      order by x.user_id, x.pri, x.started_at desc nulls last`, [ctx.orgId]),
+  }),
+  defineOperation({
+    name: 'office.member.get', class: 'read', single: true, input: { user: { type: 'uuid', required: true } },
+    run: async (q, ctx, i) => {
+      const [m] = await q('select user_id, display_name, email, role, is_you, has_photo from team_list() where user_id = $1', [i.user]);
+      if (!m) return [];
+      const [tasks, week, projects] = await Promise.all([
+        q(`select t.id, t.title, t.due_on, t.status, t.project_id, p.name project_name from pm_task_assignees a join pm_tasks t on t.id = a.task_id join pm_projects p on p.id = t.project_id
+           where a.user_id = $2 and t.workspace_id = $1 and t.status <> 'done' and t.deleted_at is null and p.deleted_at is null and p.archived_at is null
+           order by t.due_on nulls last, t.updated_at desc limit 20`, [ctx.orgId, i.user]),
+        q(`select coalesce((select sum(t.estimate_minutes) from pm_task_assignees a join pm_tasks t on t.id = a.task_id where a.user_id = $2 and t.workspace_id = $1 and t.deleted_at is null
+             and t.due_on between date_trunc('week', now())::date and (date_trunc('week', now()) + interval '6 days')::date), 0)::int planned_minutes,
+           coalesce((select sum(extract(epoch from (coalesce(te.ended_at, now()) - te.started_at)) / 60) from pm_time_entries te where te.user_id = $2 and te.workspace_id = $1
+             and te.started_at >= date_trunc('week', now())), 0)::int logged_minutes`, [ctx.orgId, i.user]),
+        q(`select p.id, p.name, p.color from pm_project_members pm join pm_projects p on p.id = pm.project_id where pm.user_id = $2 and p.workspace_id = $1 and p.deleted_at is null
+           and p.archived_at is null and not p.is_template order by p.name limit 20`, [ctx.orgId, i.user])]);
+      const [now] = (await q(`select t.id task_id, t.title, t.project_id, p.name project_name, te.started_at from pm_time_entries te join pm_tasks t on t.id = te.task_id join pm_projects p on p.id = t.project_id
+        where te.user_id = $2 and te.workspace_id = $1 and te.ended_at is null and t.deleted_at is null order by te.started_at desc limit 1`, [ctx.orgId, i.user]));
+      return [{ ...m, now: now ?? null, tasks, week: week[0], projects }];
+    },
+  }),
 ];

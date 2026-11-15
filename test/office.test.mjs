@@ -58,5 +58,11 @@ const k2 = await J('funnels.brand_kits.create', { name: 'Challenge', colors: ['#
 check('OF17', 'Several brand kits, one of them the main kit; colour roles kept in order', k1.status === 200 && k2.status === 200 && k1.row.is_main && k1.row.color_names.join() === 'Primary,Accent');
 check('OF18', 'Only one main kit per organization', (await J('funnels.brand_kits.create', { name: 'Second main', is_main: true }, U.LO, ORG.L)).status >= 400);
 
+// ---- Team
+const mg = await J('office.member.get', { user: U.LED }, U.LVW, ORG.L);
+check('OF19', 'Member page: a teammate’s role, open work, week and projects (only what the viewer may see)', mg.status === 200 && mg.row?.role === 'editor' && Array.isArray(mg.row.tasks) && mg.row.week && 'planned_minutes' in mg.row.week && Array.isArray(mg.row.projects));
+check('OF20', 'Aurj cannot open a Layer2Funnels member', (await J('office.member.get', { user: U.LED }, U.AO, ORG.A)).row == null);
+check('OF21', 'Working on now answers for the whole team in one call', (await J('office.team.now', {}, U.LVW, ORG.L)).status === 200);
+
 for (const r of results) console.log(`${r.ok ? 'PASS' : 'FAIL'}  ${r.id.padEnd(5)} ${r.name}${r.ok ? '' : `  ${r.detail ?? ''}`}`);
 const pc = results.filter((r) => r.ok).length; console.log(`\n${pc}/${results.length} checks passed`); await db.close(); process.exit(pc === results.length ? 0 : 1);
