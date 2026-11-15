@@ -1,4 +1,13 @@
-# Current project status — verified 15 Nov 2026
+# Current project status — 15 Nov 2026 (end of session)
+
+**Now:** P00, P01 and Tasks are merged to `main` and live (PRs #56, #57, #58); migrations 0054–0059 applied to production.
+The owner found serious problems on the live site → **next session = Quality Recovery** (`recovery/RECOVERY_BRIEF.md`), then Drive (P04).
+New sequence: P00 Shell · P01 Office · P02 Projects (not rebuilt, deferred) · P03 Tasks (built as "p02-tasks") · P04 Drive · … (see NEXT_SESSION_START_HERE.md).
+Tasks and Office are **not verified on live while signed in**; the owner reports Tasks broken on live and an avatar page failing to load.
+
+---
+(Earlier detail below; numbering "P02 Tasks" there means P03 now.)
+
 
 Legend: **Done** (built and tested) · **Incomplete** · **Untested** · **Blocked** (needs the owner).
 
