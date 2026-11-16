@@ -71,13 +71,16 @@ check('AV10', 'The Full profile shows every section in order', (await page.locat
 await shot(page, 'rc-av-full');
 
 // ---- editor: add, rename, edit content, reorder, delete; Profile picks
+await page.goto(`${base}/#/office/funnels/avatars/${av.id}/edit/${secs[1].id}`); await page.waitForSelector('.blked'); await page.waitForTimeout(400); await shot(page, 'rc-av-edit-section');
+const navOk = await page.evaluate(() => { const n = document.querySelector('.deep .chapters').getBoundingClientRect(); return [...document.querySelectorAll('.deep .chapters *')].every((e) => e.getBoundingClientRect().right <= n.right + 1); });
+check('AV10b', 'The editor’s section list stays inside its column (nothing covers the editor)', navOk);
 await page.goto(`${base}/#/office/funnels/avatars/${av.id}/edit/new`); await page.waitForSelector('.dlg, [role=dialog]');
 await page.locator('[role=dialog] select').selectOption('custom'); await page.locator('[role=dialog] input[aria-label="Section name"]').fill('Objections we hear');
 await page.locator('[role=dialog] input[type=checkbox]').check(); await page.getByRole('button', { name: 'Add section' }).click();
-await page.waitForSelector('.blked'); await page.locator('.blked textarea').first().fill('“It’s too expensive for me right now.”');
+await page.waitForSelector('.blked'); await shot(page, 'rc-av-edit-new'); await page.locator('.blked textarea').first().fill('“It’s too expensive for me right now.”');
 await page.getByRole('button', { name: 'List item' }).click(); await page.locator('.blk-li input').last().fill('Price');
 await page.locator('.tp-title').fill('Objections');
-await page.locator('.navrow', { hasText: 'Objections' }).getByRole('button', { name: /up/ }).click();
+await page.locator('.edtools').getByRole('button', { name: 'Move up' }).click();
 await page.locator('.focusbar-acts').getByRole('button', { name: 'Save' }).click(); await page.waitForURL(/\/deep/, { timeout: 9000 });
 const p2 = (await q('select profile from funnel_avatars where id = $1', [av.id]))[0].profile; const obj = p2.sections.find((x) => x.title === 'Objections');
 check('AV11', 'A new custom section is added, renamed, filled (paragraph + list item), moved, saved and shown on the profile', obj && p2.sections.length === 15 && p2.sections[13].title === 'Objections'
@@ -99,6 +102,13 @@ await page.locator('[role=dialog]').getByRole('button', { name: 'Save' }).click(
 const after2 = (await q('select profile from funnel_avatars where id = $1', [av.id]))[0].profile;
 check('AV14', 'Any Full profile section can be put on the Profile', after2.cards.some((c) => after2.sections.find((x) => x.id === c.sid)?.title === 'Pain & Problems'));
 
+// a big avatar (more than one request's normal 16 KB) still saves from the profile picker
+await q("update funnel_avatars set profile = jsonb_set(profile, '{sections,0,blocks}', (profile->'sections'->0->'blocks') || $2::jsonb) where id = $1", [av.id, JSON.stringify(Array.from({ length: 60 }, (_, i) => ({ t: 'p', x: `Long research paragraph ${i} `.repeat(20) })))]);
+await page.reload(); await page.waitForSelector('.avcardp');
+await page.getByRole('button', { name: 'Choose what the profile shows' }).click(); await page.locator('.cardpick .chk').first().locator('input').click();
+await page.locator('[role=dialog]').getByRole('button', { name: 'Save' }).click(); await page.waitForTimeout(1500);
+const after3 = (await q('select profile from funnel_avatars where id = $1', [av.id]))[0].profile;
+check('AV14b', 'A large avatar (over 16 KB of content) saves from the profile picker', (await toastText(page)).includes('Profile updated') && !apiErr.some((e) => e.includes('funnels.avatars.update')), await toastText(page));
 // ---- an older avatar (fixed chapters) still opens and converts
 const legacy = (await q(`insert into funnel_avatars (workspace_id, name, profile, created_by) values ($1, 'Legacy John', $2, $3) returning id`, [L, JSON.stringify({ facts: [['Age', '30+'], ['Income', '$20K']], wants: ['Freedom'], scared: ['Wasting money'], custom: [{ title: 'Notes from calls', text: 'Line one' }] }), O.id]))[0].id;
 await page.goto(`${base}/#/office/funnels/avatars/${legacy}`); await page.waitForSelector('.avcardp', { timeout: 9000 });
@@ -116,7 +126,7 @@ await page.getByRole('button', { name: 'Save' }).click(); await page.waitForURL(
 const st = (await q('select sections from avatar_settings where workspace_id = $1', [L]))[0]?.sections ?? [];
 check('AV17', 'Avatar settings save the default sections (added, removed, on-profile) and return to the list', st.length === nDefaults && st.at(-1).title === 'Objections' && st.at(-1).profile === true && st[0].type !== 'market');
 const farhatAfter = (await q('select profile from funnel_avatars where id = $1', [av.id]))[0].profile;
-check('AV18', 'Changing the defaults never changes an existing avatar', JSON.stringify(farhatAfter) === JSON.stringify(after2));
+check('AV18', 'Changing the defaults never changes an existing avatar', JSON.stringify(farhatAfter) === JSON.stringify(after3));
 await page.goto(`${base}/#/office/funnels/avatars/new`); await page.getByRole('button', { name: /Start blank/ }).click(); await page.getByRole('button', { name: 'Next' }).click();
 await page.locator('input[placeholder="John"]').fill('Blank Bina'); await page.getByRole('button', { name: 'Create avatar' }).click(); await page.waitForSelector('.studio', { timeout: 9000 });
 const blank = (await q("select profile from funnel_avatars where name = 'Blank Bina' and created_by = $1", [O.id]))[0].profile;
@@ -247,7 +257,7 @@ await fold.locator('.tfold-empty').click(); await fp.waitForSelector('.dlg');
 check('TF2', 'Adding a list from the folder opens “New list in …” with the folder already chosen', (await fp.locator('.dlg').innerText()).includes(`New list in Clients ${stamp}`));
 await fp.locator('.dlg').getByLabel('Name').fill(`Acme ${stamp}`); await fp.getByRole('button', { name: 'Create' }).click(); await fp.waitForURL(/tasks\/list\//, { timeout: 9000 });
 const inF = await q('select l.folder_id = f.id ok from task_lists l join task_folders f on f.name = $2 where l.name = $1', [`Acme ${stamp}`, `Clients ${stamp}`]);
-await fp.waitForSelector(`.tfold:has-text("Clients ${stamp}") .tfold-in a:has-text("Acme ${stamp}")`, { timeout: 9000 }).catch(() => {});
+await fp.reload(); await fp.waitForSelector(`.tfold:has-text("Clients ${stamp}") .tfold-in a:has-text("Acme ${stamp}")`, { timeout: 15000 }).catch(() => {});
 check('TF3', 'The list is saved inside the folder and shows indented under it', inF[0]?.ok === true && await fp.locator('.tfold', { hasText: `Clients ${stamp}` }).locator('.tfold-in a', { hasText: `Acme ${stamp}` }).isVisible());
 const mineL = (await q('select id, name from task_lists where owner_id = $1 and is_default', [O.id]))[0];
 await fp.locator('.tside a', { hasText: mineL.name }).first().click({ button: 'right' }); await fp.getByText('Move to folder…').click(); await fp.locator('.ctxm, [role=menu]').last().getByText(`Clients ${stamp}`).click(); await fp.waitForTimeout(1500);

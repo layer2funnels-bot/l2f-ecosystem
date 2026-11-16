@@ -42,7 +42,8 @@ Everything is described in `recovery/AUDIT_TRACKER.md` (30 rows: defect → fix 
 | Unit (`npm test`, all suites) | all green (audit 63/63, office 37/37, portal 57/57, funnels 38/38, web 59/59, tasks) |
 | e2e-ui | **265/265** |
 | e2e-local | **71/71** |
-| e2e-recovery (new: avatars, stories, brand kits, launcher, teammate switches, org, documents, Tasks slow network, folders) | **43/43** (last clean run on the bundle; the final run was disturbed by a rebuild mid-run) |
+| e2e-recovery (new: avatars incl. large saves and editor layout, stories, brand kits, launcher, teammate switches, org, documents, Tasks slow network, folders) | **45/45** |
+| Screenshot sweep (`scripts/shot-sweep.mjs`, 27 screens, desktop + phone) | reviewed; fixes after the owner's 16 Nov screenshots: avatar editor layout, large avatar saves, Client Access Matrix grid |
 | e2e-tasks | **35/35** (after fixing a 15 px sideways scroll of task rows on phones) |
 | e2e-onboarding | **22/22** |
 

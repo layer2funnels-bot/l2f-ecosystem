@@ -35,5 +35,11 @@ Severity: **C** critical · **H** high · **M** medium · **L** low. Verificatio
 | 28 | Sign-in page weight | Only what sign-in needs | 73 scripts + 24 stylesheets + 154 KB Urdu font | H | Apps load on first open (lazy); Urdu font only for Arabic script; build bundles + caches | perf report |
 | 29 | Production bundle | Minified, cached | Unbundled, `no-cache` on everything | H | `scripts/bundle-web.mjs` (esbuild), `/assets/*` immutable | e2e-recovery on `WEB_ROOT=dist/web` |
 | 30 | API latency | Fast | New database connection per request (Workers runtime); ~0.27 s median, 0.6 s p90 per call | H | Not changed in code (see report: Hyperdrive needs the owner) | Cloudflare analytics |
+| 31 | Avatar editor layout (owner screenshot) | Section list stays in its column | Up/down arrows of the list spilled over the editor and covered the Kind menu; phone list squeezed to numbers | H | Move up/down moved into the section toolbar; list ellipsis + own scroll; phone: scrollable named chips; readable Delete button; padded inputs | e2e AV10b, screenshot sweep |
+| 32 | Profile picker save (owner screenshot) | Saves | “That request could not be read”: avatar saves capped at 16 KB per request | C | `funnels.avatars.create/update` allowed large bodies (content still capped at 400 KB) | e2e AV14b |
+| 33 | Client Access Matrix (owner screenshot) | One column per app, visible cells | Grid hard-coded to 10 columns (12 apps) and off cells had no outline | H | Columns from the app count; outlined cells | screenshot sweep, e2e-ui F19 |
+| 34 | Organization page | Organization mark when no logo | Empty space | L | Shows the organization's mark | screenshot sweep |
+
+Every changed screen is captured by `node scripts/shot-sweep.mjs` (desktop + phone) for visual review.
 
 Remaining / not verified: see `PERFORMANCE_REPORT.md` and the final report in `CURRENT_PROJECT_STATUS.md`.
