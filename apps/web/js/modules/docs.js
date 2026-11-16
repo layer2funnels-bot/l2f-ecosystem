@@ -4,6 +4,7 @@
 // restore, audit), checked against the version the editor started from so two people never overwrite each other silently.
 // Model and safety rules: docmodel.js (JSON v2 with tabs, never HTML; links, colours, sizes, ids filtered). Surface <-> model: docdom.js.
 // Editing engine (formatting on the model, paste, find, tables, images): docedit.js. Downloads and printing: docexport.js.
+import { attach as attachAsset, url as assetUrl } from './docassets.js';
 import { h, icon, toast, dialog, drawer, btn, notice, skeleton, errorState, noAccessState, readOnlyNotice, field } from '../ui.js';
 import { dirty } from '../dirty.js';
 import { parseBody, serialize, normalize, wordCount, charCount, outline, sizeOf, safeHref, MAX_CHARS, FONTS, SIZES, PAGES, MARGINS, DEFAULT_SIZE, MAX_TAB_DEPTH, MAX_TABS,
@@ -121,8 +122,10 @@ export function docView({ api, id, ctx, opts = {} }) {
     // ---- images (stored as Drive files; the document keeps only the file id)
     const srcCache = new Map();
     const blobToUrl = (b) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(b); });
+    // a picture reference is an attachment of this document (0061: stored once, never a Drive file) or, in older documents, a Drive file id
     const imageSrc = (f) => {
       if (!srcCache.has(f)) srcCache.set(f, (async () => {
+        const a = await assetUrl(api, id, f); if (a) return a;
         const r = await api.call('drive.files.download', { id: f }); const u = r.ok ? r.data[0]?.url : null; if (!u) return null;
         try { const res = await fetch(u); if (res.ok) return await blobToUrl(await res.blob()); } catch { /* the bucket may not allow reads from this page: show the signed address directly */ }
         return u;
@@ -132,8 +135,9 @@ export function docView({ api, id, ctx, opts = {} }) {
     async function uploadImage(blob, name = 'image') {
       if (readOnly) return null;
       const mime = blob.type; if (!IMG_TYPES[mime]) { toast('Only PNG, JPEG, GIF and WebP pictures can be added.', false); return null; }
-      if (blob.size > 10 * 1024 * 1024) { toast('That picture is over 10 MB. Resize it first.', false); return null; }
-      const id2 = await uploadBlob(blob, name, mime, IMG_TYPES[mime]); if (id2) srcCache.set(id2, blobToUrl(blob)); return id2;
+      if (blob.size > 25 * 1024 * 1024) { toast('That picture is over 25 MB. Resize it first.', false); return null; }
+      try { const r = await attachAsset(api, id, blob); if (!r) return null; srcCache.set(r.asset, blobToUrl(blob)); if (r.reused) toast('Picture added (already stored, so nothing was uploaded again).'); return r.asset; }
+      catch (e) { toast(e.message ?? 'The picture could not be added.', false); return null; }
     }
     /** Stores bytes as a Drive file next to this document (same space, client, folder and project) and returns the new file's id. */
     async function uploadBlob(blob, name, mime, ext) {

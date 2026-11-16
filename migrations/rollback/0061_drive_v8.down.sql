@@ -8,6 +8,8 @@ end $$;
 alter table public.files drop constraint if exists files_managed_by_check;
 alter table public.files add constraint files_managed_by_check check (managed_by in ('projects', 'clients', 'portal', 'whiteboard', 'forms', 'social_planner', 'value_ladder', 'funnels', 'planner'));
 drop trigger if exists file_versions_thin on public.file_versions;
+drop trigger if exists file_versions_assets on public.file_versions;
+drop function if exists private.file_versions_assets();
 drop function if exists private.file_versions_thin();
 drop function if exists public.drive_transfer(uuid[], uuid[], text, uuid, boolean);
 drop function if exists public.drive_transfer_preview(uuid[], uuid[]);

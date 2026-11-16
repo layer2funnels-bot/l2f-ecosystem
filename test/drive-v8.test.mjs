@@ -146,6 +146,12 @@ for (const k of ['L', 'A']) {
   const fake = Buffer.from('not the same'); const fh = sha(Buffer.from('claimed')); s = await J('drive.assets.sign', { file: d1.id, sha256: fh, mime_type: 'image/png', size_bytes: fake.length }, ED, o.id); await storage.put(s.row.path, fake);
   check(`AT5${k}`, `${N}: a picture whose bytes do not match its hash is refused (no picture can stand in for another)`, (await J('drive.assets.register', { file: d1.id, sha256: fh, path: s.row.path, mime_type: 'image/png' }, ED, o.id)).status === 422);
   check(`AT6${k}`, `${N}: a viewer cannot attach pictures to a document they cannot edit`, (await J('drive.assets.sign', { file: d1.id, sha256: sha(Buffer.from('v')), mime_type: 'image/png', size_bytes: 1 }, VW, o.id)).status === 404);
+  const d3 = (await J('drive.files.create', { space: 'shared', name: `${k} Copy with picture`, kind: 'document', body: `{"v":2,"tabs":[{"id":"t1","blocks":[{"t":"img","f":"${reg.row.asset}"}]}]}` }, ED, o.id)).row;
+  check(`AT7${k}`, `${N}: a document saved with a picture in its body (a copy, a paste) keeps that picture for its readers`, (await J('drive.assets.url', { file: d3.id, assets: [reg.row.asset] }, VW, o.id)).rows.length === 1);
+  const secret = Buffer.from(`private picture ${k}`); const sh2 = sha(secret); let s2 = await J('drive.assets.sign', { file: d2.id, sha256: sh2, mime_type: 'image/png', size_bytes: secret.length }, ED, o.id); await storage.put(s2.row.path, secret);
+  const priv = await J('drive.assets.register', { file: d2.id, sha256: sh2, path: s2.row.path, mime_type: 'image/png' }, ED, o.id);
+  const d4 = (await J('drive.files.create', { space: 'shared', name: `${k} Steal`, kind: 'document', body: `{"f":"${priv.row.asset}"}` }, ED2, o.id)).row;
+  check(`AT8${k}`, `${N}: naming a picture from someone's private document links nothing (the id alone grants no access)`, (await J('drive.assets.url', { file: d4.id, assets: [priv.row.asset] }, ED2, o.id)).rows.length === 0 && (await J('drive.assets.url', { file: d4.id, assets: [priv.row.asset] }, OWN, o.id)).rows.length === 0);
   // ---------------------------------------------------------------- presence
   await J('drive.presence.beat', { file: d1.id, mode: 'editing' }, ED, o.id);
   const seen = (await J('drive.presence.beat', { file: d1.id }, VW, o.id)).rows;

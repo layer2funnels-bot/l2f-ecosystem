@@ -412,6 +412,25 @@ begin
   return aid;
 end $$;
 
+-- Every saved version keeps its pictures: an attachment named in a document body ({"f": id} or {"a": id}) is linked to that document, so a copy, a
+-- restored version or a pasted block keeps working. Only attachments the saver could already see are linked (their own, or one used by a document
+-- they can open): knowing an id from elsewhere grants nothing.
+create or replace function private.file_versions_assets() returns trigger
+language plpgsql security definer set search_path = '' as $$
+declare uid uuid := private.current_user_id();
+begin
+  if new.body is null or position('"' in new.body) = 0 then return null; end if;
+  insert into public.doc_asset_refs (workspace_id, file_id, asset_id)
+  select new.workspace_id, new.file_id, a.id from public.doc_assets a
+   where a.workspace_id = new.workspace_id
+     and a.id in (select m[1]::uuid from regexp_matches(new.body, '"[fa]":"([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})"', 'g') as m)
+     and (uid is null or a.created_by = uid or exists (select 1 from public.doc_asset_refs r join public.files f on f.id = r.file_id
+           where r.asset_id = a.id and private.can_read_file(f.workspace_id, f.space, f.client_id, f.owner_id, f.client_visible, f.archived_at is not null)))
+  on conflict do nothing;
+  return null;
+end $$;
+create trigger file_versions_assets after insert on public.file_versions for each row execute function private.file_versions_assets();
+
 -- Existing document pictures (Drive files referenced from a document's body as {"f": id}) stop cluttering Drive: they become app-owned
 -- ('docs'), stay exactly where they are and keep opening inside their documents. Nothing is deleted.
 alter table public.files drop constraint if exists files_managed_by_check;
