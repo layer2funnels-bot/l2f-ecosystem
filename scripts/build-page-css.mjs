@@ -14,6 +14,13 @@ const PAGES = {
   // P01 Office (all 39 pages): every class used in the prototype's Office sources (office5.js, office6.js, avatar5.js, funnels5.js)
   'tasks': { root: '.v8p-tasks', ancestors: [{ tag: 'div', cls: ['content'] }, { tag: 'div', cls: ['main'] }, { tag: 'div', cls: ['shell'], attrs: { 'data-app': 'tasks' } }, { tag: 'main', attrs: { id: 'view' } }, { tag: 'body' }, { tag: 'html', attrs: { lang: 'en', 'data-concept': 'signal' } }],
     classes: ['addblock','addrow','addt','av-stack','backlink','big','blue','c6','cal','capture','card6','cardgrid','chip','chiprow','cnt','count','ctx','dc','dh','dn','due-c','ev','field','foot','grid-h','grip','grow','hint','inp','k6','k6c','kanban','kcard','kcol','kcol-h','kpi','kpirow','linkrow','main','mng','mrow','muted','notice','ol-cb','ol-i','ol-more','ol-row','ol-t','ol-timer','ol-tw','outline','pad-s','pflag','ph6','pill','plain','pplist','pprow','row2','seg3','sel','showdone','tabs6','tb-h','tb6','tbl6','tblock','tdoc','thd','tl-head','tl-ic','tr','two','upc','vsw','done','on','today','od','soon','t1','t1c','sm','xs','iconbtn','btn','primary','ghost','quiet','link','lede'] },
+  // P04 Drive (V8 05_DRIVE_AND_EDITORS, prototype drive5.js + drive6.js + v7.js): Home, Library, Personal, folders, category pages, Recent, Starred, Shared, Trash
+  'drive': { root: '.v8p-drive', ancestors: [{ tag: 'div', cls: ['content'] }, { tag: 'div', cls: ['main'] }, { tag: 'div', cls: ['shell'], attrs: { 'data-app': 'drive' } }, { tag: 'main', attrs: { id: 'view' } }, { tag: 'body' }, { tag: 'html', attrs: { lang: 'en', 'data-concept': 'signal' } }],
+    classes: ['typechips', 'ft', 'doc', 'sheet', 'slides', 'pdf', 'image', 'forms', 'big', 'dtools', 'chip', 'tog', 'btn', 'ghost', 'ink', 'primary', 'quiet', 'sm', 'xs', 'over', 'sugg', 'fcard', 'thumb', 'meta', 'folders', 'folder',
+      'tblwrap', 'tbl', 'ftab', 'sq', 't1', 'fname', 'hide-m', 'iconbtn', 'star', 'on', 'selbar', 'dropov', 'cathead', 'hint', 'tpl-row', 'tpl', 'new', 'tb6', 'sel', 'empty', 'notice', 'plain', 'dtree', 'linkrow', 'sub', 'main',
+      'grow', 'fgrid', 'avatar', 'vsw', 'pill', 'mono', 'sr', 'lede'] },
+  'drive-side': { root: '.dside', ancestors: [{ tag: 'aside', cls: ['side'] }, { tag: 'div', cls: ['shell'], attrs: { 'data-app': 'drive' } }, { tag: 'main', attrs: { id: 'view' } }, { tag: 'body' }, { tag: 'html', attrs: { lang: 'en', 'data-concept': 'signal' } }],
+    classes: ['storage', 'bar', 'hint', 'btn', 'primary'] },
   'tasks-side': { root: '.tside', ancestors: [{ tag: 'aside', cls: ['side'] }, { tag: 'div', cls: ['shell'], attrs: { 'data-app': 'tasks' } }, { tag: 'main', attrs: { id: 'view' } }, { tag: 'body' }, { tag: 'html', attrs: { lang: 'en', 'data-concept': 'signal' } }],
     classes: ['coll', 'side-sec', 'sx', 'side-list', 'tl-ic', 'count', 'addrow', 'fold'] },
   'office': { root: '.v8p-office', ancestors: [{ tag: 'div', cls: ['content'] }, { tag: 'div', cls: ['main'] }, { tag: 'div', cls: ['shell'], attrs: { 'data-app': 'office' } }, { tag: 'main', attrs: { id: 'view' } }, { tag: 'body' }, { tag: 'html', attrs: { lang: 'en', 'data-concept': 'signal' } }],
@@ -21,7 +28,15 @@ const PAGES = {
 };
 
 const dir = new URL('../docs/design/v8/Layer2Funnels_V8_Developer_Handoff/08_PROTOTYPE_AND_SOURCE/prototype-source/', import.meta.url);
-const LAYERS = ['base.css', 'v4.css', 'extra.css', 'v5.css', 'v6.css', 'v7.css', 'v8.css'].map((f) => readFileSync(new URL(f, dir), 'utf8').replace(/\/\*[\s\S]*?\*\//g, ''));
+// The prototype's Funnel Mapper rules are written unscoped in v6.css/v7.css and only scoped to .fmpx by its own build (scope.py): they are
+// left out here, exactly as scope.py fences them (V8_BUG_FIXES #1: the dark Funnel Mapper .fcard leaking into Drive's "Suggested for you").
+const fmOut = (name, css) => {
+  const cut = (text, from, until) => { const L = text.split('\n'); const a = L.findIndex((l) => l.includes(from)); if (a < 0) return text; const b = L.findIndex((l, i) => i > a && until(l)); return [...L.slice(0, a + 1), ...L.slice(b < 0 ? L.length : b)].join('\n'); };
+  if (name === 'v6.css') return cut(css, 'FMP v6: its own dark identity', (l) => l.includes('Whiteboard full page'));
+  if (name === 'v7.css') return cut(css, 'Funnel Mapper: one step larger', (l) => l.startsWith('/*'));
+  return css;
+};
+const LAYERS = ['base.css', 'v4.css', 'extra.css', 'v5.css', 'v6.css', 'v7.css', 'v8.css'].map((f) => fmOut(f, readFileSync(new URL(f, dir), 'utf8')).replace(/\/\*[\s\S]*?\*\//g, ''));
 
 function parse(css) {
   const out = []; let i = 0;

@@ -4,27 +4,28 @@ import { MIME as SHEET_MIME } from './sheetmodel.js';
 
 export const DOC_MIME = 'application/vnd.l2f.doc+json';
 export const BOARD_MIME = 'application/vnd.excalidraw+json';
+export const SLIDES_MIME = 'application/vnd.l2f.slides+json';
 export const MAX_FILE_BYTES = 5368709120;      // 5 GiB: the same ceiling the server enforces (drive.uploads.sign)
 
 // ---------------------------------------------------------------- file kinds
 const EXT = {
   image: 'png jpg jpeg gif webp svg avif bmp heic heif ico tif tiff', pdf: 'pdf', video: 'mp4 mov webm mkv avi m4v wmv mpeg mpg', audio: 'mp3 wav m4a ogg oga flac aac aiff opus',
-  zip: 'zip rar 7z tar gz tgz bz2 xz', text: 'txt md rtf log json xml yaml yml html css js', sheet: 'csv tsv xls xlsx ods numbers', document: 'doc docx odt pages ppt pptx key odp',
+  zip: 'zip rar 7z tar gz tgz bz2 xz', text: 'txt md rtf log json xml yaml yml html css js', sheet: 'csv tsv xls xlsx ods numbers', document: 'doc docx odt pages', slides: 'ppt pptx key odp',
 };
 const BY_EXT = Object.fromEntries(Object.entries(EXT).flatMap(([k, v]) => v.split(' ').map((e) => [e, k])));
 /** key → [short label inside the tile, name shown in the Type column]. The colour of each key lives in drive.css (`.ft-<key>`). */
 export const FILE_TYPES = {
-  document: ['DOC', 'Document'], sheet: ['XLS', 'Spreadsheet'], board: ['WB', 'Whiteboard'], image: ['IMG', 'Image'], pdf: ['PDF', 'PDF'], video: ['VID', 'Video'],
+  document: ['DOC', 'Document'], sheet: ['XLS', 'Spreadsheet'], slides: ['PPT', 'Slides'], board: ['WB', 'Whiteboard'], image: ['IMG', 'Image'], pdf: ['PDF', 'PDF'], video: ['VID', 'Video'],
   audio: ['AUD', 'Audio'], zip: ['ZIP', 'Archive'], text: ['TXT', 'Text'], other: ['FILE', 'File'],
 };
 const extOf = (name) => (/\.([A-Za-z0-9]{1,8})$/.exec(String(name ?? ''))?.[1] ?? '').toLowerCase();
 /** The kind of a file or document record ({ name, mime_type, kind }). Our own documents are recognised by their type; uploads by their MIME type, then by the extension. */
 export function fileType(f) {
   const m = String(f?.mime_type ?? '').toLowerCase(); let key = 'other';
-  if (m === DOC_MIME) key = 'document'; else if (m === SHEET_MIME) key = 'sheet'; else if (m === BOARD_MIME) key = 'board';
+  if (m === DOC_MIME) key = 'document'; else if (m === SHEET_MIME) key = 'sheet'; else if (m === SLIDES_MIME) key = 'slides'; else if (m === BOARD_MIME) key = 'board';
   else if (m.startsWith('image/')) key = 'image'; else if (m === 'application/pdf') key = 'pdf'; else if (m.startsWith('video/')) key = 'video'; else if (m.startsWith('audio/')) key = 'audio';
   else if (/zip|compressed|x-tar|x-7z|x-rar|gzip/.test(m)) key = 'zip'; else if (m.startsWith('text/csv') || /spreadsheet|ms-excel/.test(m)) key = 'sheet';
-  else if (/wordprocessing|msword|presentation|powerpoint/.test(m)) key = 'document'; else if (m.startsWith('text/') || m === 'application/json') key = 'text';
+  else if (/presentation|powerpoint/.test(m)) key = 'slides'; else if (/wordprocessing|msword/.test(m)) key = 'document'; else if (m.startsWith('text/') || m === 'application/json') key = 'text';
   else key = BY_EXT[extOf(f?.name)] ?? (f?.kind === 'document' ? 'text' : 'other');
   const [label, name] = FILE_TYPES[key];
   return { key, label, name };
@@ -34,7 +35,8 @@ export function matchesType(f, choice) {
   if (!choice || choice === 'all') return true; const k = fileType(f).key;
   switch (choice) {
     case 'Document': return k === 'document'; case 'Spreadsheet': return k === 'sheet'; case 'Whiteboard': return k === 'board'; case 'image': return k === 'image'; case 'pdf': return k === 'pdf';
-    case 'media': return k === 'video' || k === 'audio'; case 'other': return !['document', 'sheet', 'board', 'image', 'pdf', 'video', 'audio'].includes(k); default: return true;
+    case 'Slides': return k === 'slides';
+    case 'media': return k === 'video' || k === 'audio'; case 'other': return !['document', 'sheet', 'slides', 'board', 'image', 'pdf', 'video', 'audio'].includes(k); default: return true;
   }
 }
 export const isImage = (f) => fileType(f).key === 'image' && f.kind === 'file' && /^image\/(png|jpe?g|gif|webp|avif|bmp)$/i.test(f.mime_type ?? '') && (f.size_bytes ?? 0) <= 15 * 1048576;   // not svg: it could carry script when opened on its own
@@ -121,3 +123,8 @@ export async function fromDrive(api, id) {
     const name = (m.ok && m.data?.[0]?.name) || 'file'; const b = await r.blob(); return new File([b], name, { type: b.type || (m.data?.[0]?.mime_type ?? '') });
   } catch { return null; }
 }
+
+/** V8 type chips and category pages: doc · sheet · slides · pdf · image (null for anything else). */
+export function v8Type(f) { const k = fileType(f).key; return k === 'document' ? 'doc' : ['sheet', 'slides', 'pdf', 'image'].includes(k) ? k : null; }
+/** The V8 file-type tile: [class, short label] (colours in pages/drive.css: .ft.doc, .ft.sheet …). */
+export function v8Tile(f) { const k = fileType(f).key; const t = k === 'document' ? 'doc' : k === 'board' ? 'forms' : ['sheet', 'slides', 'pdf', 'image'].includes(k) ? k : 'doc'; return [t, FILE_TYPES[k][0]]; }

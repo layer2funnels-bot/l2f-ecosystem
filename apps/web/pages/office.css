@@ -589,10 +589,6 @@
 .v8p-office .tbtn.on{background:var(--action-tint);color:var(--action)}
 .v8p-office .verrow.on{background:var(--action-tint)}
 .v8p-office .dtab.on{background:var(--action-tint);color:var(--text);font-weight:600}
-.v8p-office .fbtn.sm{min-height:26px;padding:0 9px;font-size:calc(12px * var(--ts, 1))}
-.v8p-office .fbtn.warn{color:#FBBF24;border-color:#5B4613}
-.v8p-office .fseg.full{display:flex}
-.v8p-office .fseg.full button{flex:1}
 .v8p-office .wbx.tr{right:12px;top:12px;padding:4px 4px 4px 8px}
 @media (max-width:1100px){.v8p-office .formpage{grid-template-columns:1fr}.v8p-office .formprev{position:static}}
 @media (max-width:900px){.v8p-office .grid-h{grid-template-columns:1fr}.v8p-office .pickgrid{grid-template-columns:repeat(3,1fr)}}
@@ -623,7 +619,6 @@
 .v8p-office .tabs6.inline{border-bottom:0;margin:0}
 .v8p-office .ft.big{width:48px;height:48px;border-radius:14px}
 .v8p-office .sel.xs{min-height:32px;font-size:calc(13.5px * var(--ts, 1))}
-.v8p-office .fbtn.sm{min-height:30px;font-size:calc(13px * var(--ts, 1))}
 .v8p-office .tbl6 .tr{font-size:calc(14.5px * var(--ts, 1))}
 .v8p-office .avc-body b{font-size:calc(18px * var(--ts, 1))}
 .v8p-office .docc b{font-size:calc(14.5px * var(--ts, 1))}

@@ -49,7 +49,7 @@ const NOT_YET = Object.fromEntries(Object.keys(V8_FORM).map((k) => [k, [...V8_FO
 const sameFields = Object.entries(SERVER_TYPES).every(([k, spec]) => JSON.stringify(Object.keys(spec.fields).filter((f) => !(NOT_YET[k] ?? []).includes(f)).sort()) === JSON.stringify(FIELD_DEFS[k].map((f) => f.k).sort()));
 check('W9', 'The UI edits exactly the fields the server accepts (logo waits for Drive), for all four record types', sameFields);
 check('W10', 'Every UI route type has all eight server operations', FUNNEL_TYPES.every((t) => ['list', 'get', 'create', 'update', 'archive', 'restore', 'share', 'delete'].every((a) => operations[`funnels.${t.key}.${a}`])));
-check('W11', 'Every operation declares a known rate-limit class, and all mutating funnel operations are write-class', Object.values(operations).every((o) => ['read', 'write', 'sensitive'].includes(o.class)) && ['create', 'update', 'archive', 'restore', 'share', 'delete'].every((a) => operations[`funnels.avatars.${a}`].class === 'write'));
+check('W11', 'Every operation declares a known rate-limit class (save: editors’ autosave), and all mutating funnel operations are write-class', Object.values(operations).every((o) => ['read', 'write', 'save', 'sensitive'].includes(o.class)) && ['create', 'update', 'archive', 'restore', 'share', 'delete'].every((a) => operations[`funnels.avatars.${a}`].class === 'write'));
 // ---- session
 let t = 1_000_000; const mem = new Map(); const storage = { getItem: (k) => mem.get(k) ?? null, setItem: (k, v) => mem.set(k, v), removeItem: (k) => mem.delete(k) };
 const ses = createSession({ storage, now: () => t });

@@ -41,7 +41,12 @@ export function parseRoute(hash) {
   if (a === 'tasks' && (b === 'teammates' || b === 'list') && c && seg.length === 3) return r('tasks', { page: b, id: c });
   if ((a === 'app' || a === 'office') && b === 'planner' && seg.length === 2) return r('planner', { page: 'overview' });
   if (a === 'app' && b && seg.length === 2 && b !== 'projects' && b !== 'drive' && b !== 'portal' && b !== 'forms' && b !== 'value_ladder' && b !== 'whiteboard' && b !== 'social_planner') return r('app', { app: b });
-  if ((a === 'drive' && !b) || (a === 'app' && b === 'drive' && seg.length === 2)) return r('drive', { view: 'files', space: 'shared' });
+  // V8 Drive: Home (suggested, folders, recent files) is the start; Library is #/drive/mydrive; a type chip opens its category page
+  if ((a === 'drive' && (!b || (b === 'home' && seg.length === 2))) || (a === 'app' && b === 'drive' && seg.length === 2)) return r('drive', { view: 'home', space: 'shared' });
+  if (a === 'drive' && b === 'mydrive' && seg.length === 2) return r('drive', { view: 'files', space: 'shared' });
+  if (a === 'drive' && b === 'starred' && seg.length === 2) return r('drive', { view: 'starred', space: 'shared' });
+  if (a === 'drive' && b === 'type' && ['doc', 'sheet', 'slides', 'pdf', 'image', 'form'].includes(c) && seg.length === 3) return r('drive', { view: 'type', space: 'shared', type: c });
+  if (a === 'drive' && b === 'edit' && ['doc', 'sheet', 'image', 'pdf', 'slides'].includes(c) && d && seg.length === 4) return r(c, { id: d });
   if (a === 'drive' && b === 'f' && c && seg.length === 3) return r('drive', { view: 'files', space: 'shared', folder: c });
   if (a === 'drive' && b === 'personal' && seg.length === 2) return r('drive', { view: 'files', space: 'personal' });
   if (a === 'drive' && b === 'personal' && c === 'f' && d && seg.length === 4) return r('drive', { view: 'files', space: 'personal', folder: d });
@@ -59,6 +64,7 @@ export function parseRoute(hash) {
   if ((a === 'portal' && !b) || (a === 'app' && b === 'portal' && seg.length === 2)) return r('portal', {});
   if (a === 'portal' && b && seg.length <= 3) return r('portal', { client: b, page: c ?? 'home' });
   if (a === 'sheet' && b && seg.length === 2) return r('sheet', { id: b });
+  if (a === 'slides' && b && seg.length === 2) return r('slides', { id: b });
   // Projects (apps/projects, mounted by modules/projects-v2.js) routes its own pages: #/projects/<page>… (the old Office
   // addresses #/office/projects/… and #/app/projects land on its home)
   if (a === 'projects' || (a === 'app' && b === 'projects' && seg.length === 2) || (a === 'office' && b === 'projects')) return r('projects', { page: a === 'projects' ? (b ?? 'home') : 'home' });
@@ -124,7 +130,7 @@ export function pageKeyFor(route) {
     case 'funnel-record': return { app: 'office', page: route.params.id === 'new' ? byKey[route.params.type].page : byKey[route.params.type].record };
     case 'admin': return { app: 'office', page: route.params.tab === 'access' ? 'admin.access' : 'admin.members' };
     case 'app': return { app: route.params.app, page: null };
-    case 'doc': case 'sheet': case 'image': case 'pdf': case 'drive': return { app: 'drive', page: null };
+    case 'doc': case 'sheet': case 'slides': case 'image': case 'pdf': case 'drive': return { app: 'drive', page: null };
     case 'projects': return { app: 'projects', page: null };
     case 'clients': return { app: 'clients', page: null };
     case 'portal': return { app: 'portal', page: null };

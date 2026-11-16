@@ -61,7 +61,7 @@ for (const k of ['L', 'A']) {
   const ldoc = await doc(o, ED, 'shared', `${k} Shared plan`);
   await J('drive.shares.set', { file: ldoc.id, user: VW, role: 'editor' }, OWN, o.id);
   await J('drive.links.create', { file: ldoc.id, days: 7 }, OWN, o.id);
-  const prev = await J('drive.transfer.preview', { files: [ldoc.id] }, ED, o.id);
+  const prev = await J('drive.transfer.details', { files: [ldoc.id] }, ED, o.id);
   check(`MP1${k}`, `${N}: the preview names what would be lost (1 person, 1 link)`, prev.row?.people === 1 && prev.row?.links === 1, JSON.stringify(prev.row));
   check(`MP2${k}`, `${N}: a viewer cannot take a Library file into their Personal space`, (await J('drive.transfer', { files: [ldoc.id], to: 'personal' }, VW, o.id)).status === 404);
   check(`MP3${k}`, `${N}: another editor cannot take someone else's Library file`, (await J('drive.transfer', { files: [ldoc.id], to: 'personal' }, ED2, o.id)).status === 404);

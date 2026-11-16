@@ -15,7 +15,7 @@ const FCOLS = `f.id, f.space, f.client_id, f.owner_id, f.folder_id, f.name, f.ki
 export const driveV8Operations = [
   // ---------------------------------------------------------------- Move / Copy
   defineOperation({
-    name: 'drive.transfer.preview', class: 'read', single: true, input: { files: ids(), folders: ids() },
+    name: 'drive.transfer.details', class: 'read', single: true, input: { files: ids(), folders: ids() },
     run: async (q, _c, i) => [(await q('select public.drive_transfer_preview($1::uuid[], $2::uuid[]) as p', [i.files ?? [], i.folders ?? []]))[0].p],
   }),
   defineOperation({
@@ -36,6 +36,17 @@ export const driveV8Operations = [
       if (i.on) await q('insert into drive_stars (workspace_id, file_id, folder_id) values ($1, $2, $3) on conflict do nothing', [ctx.orgId, i.file ?? null, i.folder ?? null]);
       else await q('delete from drive_stars where file_id is not distinct from $1 and folder_id is not distinct from $2', [i.file ?? null, i.folder ?? null]);
       return [{ file_id: i.file ?? null, folder_id: i.folder ?? null, on: i.on }];
+    },
+  }),
+
+  defineOperation({
+    name: 'drive.starred', class: 'read',
+    // what you starred and can still open (the files and folders rules decide), newest star first; folders carry kind 'folder'
+    run: async (q) => {
+      const files = await q(`select ${FCOLS}, s.created_at as starred_at from drive_stars s join files f on f.id = s.file_id where f.archived_at is null order by s.created_at desc limit 500`);
+      const folders = await q(`select d.id, d.space, d.owner_id, d.parent_id, d.name, d.updated_at, 'folder' as kind, (d.locked_at is not null) as locked, s.created_at as starred_at
+        from drive_stars s join drive_folders d on d.id = s.folder_id where d.archived_at is null order by s.created_at desc limit 200`);
+      return [...folders, ...files];
     },
   }),
 

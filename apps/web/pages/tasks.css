@@ -284,8 +284,6 @@
 .v8p-tasks .tbtn.on{background:var(--action-tint);color:var(--action)}
 .v8p-tasks .verrow.on{background:var(--action-tint)}
 .v8p-tasks .dtab.on{background:var(--action-tint);color:var(--text);font-weight:600}
-.v8p-tasks .fbtn.sm{min-height:26px;padding:0 9px;font-size:calc(12px * var(--ts, 1))}
-.v8p-tasks .fav.big{width:52px;height:52px;border-radius:12px;font-size:calc(18px * var(--ts, 1));background:#F1F5F9;color:#0B1220}
 .v8p-tasks .wbx.tr{right:12px;top:12px;padding:4px 4px 4px 8px}
 @media (max-width:900px){.v8p-tasks .grid-h{grid-template-columns:1fr}}
 @media (max-width:760px){.v8p-tasks .tps.two{grid-template-columns:1fr}.v8p-tasks .tdoc{padding:14px}.v8p-tasks .wbx.tr .av-stack{display:none}.v8p-tasks .ph6 .vsw{width:100%}}
@@ -310,7 +308,6 @@
 .v8p-tasks .tabs6.inline{border-bottom:0;margin:0}
 .v8p-tasks .ft.big{width:48px;height:48px;border-radius:14px}
 .v8p-tasks .sel.xs{min-height:32px;font-size:calc(13.5px * var(--ts, 1))}
-.v8p-tasks .fbtn.sm{min-height:30px;font-size:calc(13px * var(--ts, 1))}
 .v8p-tasks .cnt{font-family:var(--font)!important;font-variant-numeric:tabular-nums;letter-spacing:0}
 .v8p-tasks .hint{font-size:calc(13.5px * var(--ts, 1));line-height:1.5}
 .v8p-tasks .card6{border-radius:var(--r-card);box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
