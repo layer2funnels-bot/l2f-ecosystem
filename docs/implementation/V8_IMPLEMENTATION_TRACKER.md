@@ -86,32 +86,32 @@ Columns: ID · App · Kind · Requirement (expected behaviour) · Where V8 cover
 
 | ID | App | Kind | Requirement | V8 reference | Phase | Status | Test | Result | Remaining |
 |---|---|---|---|---|---|---|---|---|---|
-| OR-22 | Drive | V8 | Move **and copy** files **and folders** directly Personal ↔ Library from the sidebar/menu (no download/upload); keep contents, structure, metadata, sharing where appropriate, ownership, versions; links keep working | 03 §4, Drive brief | P05 | Not started | API + E2E both directions, folder recursion, version count, link still opens | — | — |
-| OR-23 | Drive | V8 | No duplicate storage on move; respect personal vs Library vs client-owned files | 03 §4 | P05 | Not started | Storage counter unchanged after move | — | — |
+| OR-22 | Drive | V8 | Move **and copy** files **and folders** directly Personal ↔ Library from the sidebar/menu (no download/upload); keep contents, structure, metadata, sharing where appropriate, ownership, versions; links keep working | 03 §4, Drive brief | P05 | Tested and verified | drive-v8.test MV/MP/CP 89/89; e2e MV1–MV4 | Pass (local) | Live after 0061 |
+| OR-23 | Drive | V8 | No duplicate storage on move; respect personal vs Library vs client-owned files | 03 §4 | P05 | Tested and verified | Storage object count unchanged after move and copy (MV3, CP2) | Pass (local) | — |
 
 ### B7. Document editor (owner §7)
 
 | ID | App | Kind | Requirement | V8 reference | Phase | Status | Test | Result | Remaining |
 |---|---|---|---|---|---|---|---|---|---|
-| OR-24 | Docs | BUG | Correct page frame and dimensions; no layout change after refresh; font sizes and formatting kept after save and after restoring history; consistent across screen sizes | Editors brief | P05 | Not started | Save → reload → DOM/style snapshot equal; restore version → equal | — | — |
-| OR-25 | Docs + all | BUG | No duplicate dialogs, panels, actions or requests on double-click | — | P05 (pattern for all) | Not started | Double-click every menu/dialog trigger → one instance, one request | — | — |
-| OR-26 | Docs | BUG | Copy/paste: keyboard, context menu where the browser allows, from other apps, formatted text, images | Editors brief | P05 | Not started | Clipboard tests (HTML, plain, image) | — | — |
-| OR-27 | Docs | BUG | Never lose content: Drive back button, switching tabs, shortcuts, slash command, switching views; unsaved-change guard; reliable autosave | 03 §5 autosave | P05 | Not started | Scripted sequences per trigger; content hash unchanged | — | — |
-| OR-28 | Docs + Drive | BUG + ADD | Images inside a document are **document attachments**, not separate Drive files; **no new copy per save/version** (content-addressed, shared references); automatic compression with acceptable quality; old versions keep their images; nothing deleted while still referenced | 03 §5 (storage rules) | P05 | Not started | Save 10× → one stored image; restore old version → image present; delete after last reference → freed | — | Needs a migration for existing embedded images |
-| OR-29 | Docs | V8+ | Voice typing: natural English from a non-native speaker; Urdu → Urdu script; English words inside Urdu kept in English; **Roman Urdu** option; mixed speech not forced into one language; user picks the mode | Drive brief voice bar (EN US/UK, Urdu) | P05 | Not started | Manual test with owner (speech); unit tests for mode handling/transliteration | — | Browser speech engines recognise one language at a time: mixed/Roman modes need a documented approach |
-| OR-30 | Docs | BUG | Voice text goes in **at the cursor**, never at the top | — | P05 | Not started | Unit: insert at saved selection | — | — |
-| OR-31 | Docs | BUG | Voice across editor tabs: mic state handled, no repeated stop/start, permission changes and mic failures handled, no duplicate or misplaced text | — | P05 | Not started | Simulated recogniser events across tab switch | — | — |
-| OR-32 | Docs | V8 | Ruler like Google Docs (margins, first-line indent, tab stops, vertical ruler) | Drive brief Docs ruler | P05 | Not started | Drag margin → page margin changes; tab stop affects Tab | — | — |
-| OR-33 | Docs | ADD (C3) | Collaboration: who is viewing/editing, their cursors, presence, no edit conflicts, reliable sync; **Share inside the editor** respecting permissions | V8 top bar Share; presence = D5 "Last edited by" | P05 | Not started | Two browsers: presence + cursor visible; concurrent edits merge | — | Realtime channel choice ($0) documented in P05 plan |
+| OR-24 | Docs | BUG | Correct page frame and dimensions; no layout change after refresh; font sizes and formatting kept after save and after restoring history; consistent across screen sizes | Editors brief | P05 | Not started | — | — | Scripted save/reload/restore audit pending (DRIVE_REPORT §4.3) |
+| OR-25 | Docs + all | BUG | No duplicate dialogs, panels, actions or requests on double-click | — | P05 (pattern for all) | In progress | Dialog helper de-duplicates by title; templates/Move/Reset guarded | Partial | Per-control audit pending |
+| OR-26 | Docs | BUG | Copy/paste: keyboard, context menu where the browser allows, from other apps, formatted text, images | Editors brief | P05 | Not started | — | — | Paste test pending |
+| OR-27 | Docs | BUG | Never lose content: Drive back button, switching tabs, shortcuts, slash command, switching views; unsaved-change guard; reliable autosave | 03 §5 autosave | P05 | In progress | Existing autosave + unsaved guard; voice pauses on tab change | Partial | Scripted sequences pending |
+| OR-28 | Docs + Drive | BUG + ADD | Images inside a document are **document attachments**, not separate Drive files; **no new copy per save/version** (content-addressed, shared references); automatic compression with acceptable quality; old versions keep their images; nothing deleted while still referenced | 03 §5 (storage rules) | P05 | Implemented | drive-v8.test AT1–AT8 | Pass (DB); browser blocked: storage off locally | Browser test with storage double |
+| OR-29 | Docs | V8+ | Voice typing: natural English from a non-native speaker; Urdu → Urdu script; English words inside Urdu kept in English; **Roman Urdu** option; mixed speech not forced into one language; user picks the mode | Drive brief voice bar (EN US/UK, Urdu) | P05 | Not started | — | — | Roman Urdu / mixed modes |
+| OR-30 | Docs | BUG | Voice text goes in **at the cursor**, never at the top | — | P05 | In progress | Insert at saved caret (existing); pause on tab switch | Partial | Manual test with owner |
+| OR-31 | Docs | BUG | Voice across editor tabs: mic state handled, no repeated stop/start, permission changes and mic failures handled, no duplicate or misplaced text | — | P05 | In progress | Pause on document-tab and browser-tab change | Partial | Simulated recogniser test |
+| OR-32 | Docs | V8 | Ruler like Google Docs (margins, first-line indent, tab stops, vertical ruler) | Drive brief Docs ruler | P05 | Not started | — | — | Needs numeric margins in the doc model |
+| OR-33 | Docs | ADD (C3) | Collaboration: who is viewing/editing, their cursors, presence, no edit conflicts, reliable sync; **Share inside the editor** respecting permissions | V8 top bar Share; presence = D5 "Last edited by" | P05 | In progress | Presence heartbeat + Last edited by (D5); Slides frame | Partial | Cursors/merge need realtime; Share in editor |
 
 ### B8. Spreadsheet editor (owner §8)
 
 | ID | App | Kind | Requirement | V8 reference | Phase | Status | Test | Result | Remaining |
 |---|---|---|---|---|---|---|---|---|---|
-| OR-34 | Sheets | BUG | "Not saved, retrying…" stuck; saved shown only when persisted | 03 §5 | P05 | Not started | Save → server row version matches; offline → honest status | — | — |
-| OR-35 | Sheets | BUG | `#NAME?` for supported formulas; meaningful error for unsupported ones | Editors brief §4 | P05 | Not started | Formula suite (every function claimed) | — | — |
-| OR-36 | Sheets | V8 + BUG | Reliable editor: create/open, edit, ranges, copy/paste, rows/columns, resize, formatting (font family/size, B/I/U, colours, fill, borders, alignment), number/currency/percent/date formats, formulas, sort/filter, validation + dropdowns, multiple sheets, undo/redo, autosave, history/recovery, import/export, keyboard navigation, readable columns | Editors brief §4 | P05 | Not started | Feature checklist test per item | — | — |
-| OR-37 | Sheets | ADD | Test with the **Aurj Dream 100 Tracker** (Dashboard, Instructions, Prospects, Interaction Log, Scoring Guide, Target Map, Lists): dashboard calculates from data, dropdowns, priority score, follow-up counts | — | P05 | Not started | Import `test/fixtures/Aurj_Dream100_Tracker.xlsx` → every formula cell equals the values saved in the file (Dashboard B5:B13 = 1, 73, 0, 1, 0, 0, 1, 0, 1) | — | Workbook received 14 Nov: 7 sheets, 675 formulas (IF, IFERROR, INDEX, MATCH, ROUND, COUNT, AND, COUNTIF, COUNTIFS, SUM, TODAY, COUNTA, AVERAGE), quoted sheet names, 13 dropdown rules, 5 conditional formats. First finding: COUNTIFS is not implemented in `sheetformula.js` (would show #NAME?) |
+| OR-34 | Sheets | BUG | "Not saved, retrying…" stuck; saved shown only when persisted | 03 §5 | P05 | Tested and verified | Reproduced with production limits; e2e SH9 (0 refusals in 40 s) | Pass (local) | Live after merge |
+| OR-35 | Sheets | BUG | `#NAME?` for supported formulas; meaningful error for unsupported ones | Editors brief §4 | P05 | Tested and verified | sheetmodel SF1–SF7; unsupported names stay #NAME? | Pass | — |
+| OR-36 | Sheets | V8 + BUG | Reliable editor: create/open, edit, ranges, copy/paste, rows/columns, resize, formatting (font family/size, B/I/U, colours, fill, borders, alignment), number/currency/percent/date formats, formulas, sort/filter, validation + dropdowns, multiple sheets, undo/redo, autosave, history/recovery, import/export, keyboard navigation, readable columns | Editors brief §4 | P05 | In progress | sheetxlsx XL1–XL13; e2e SH4–SH7 | Pass for import | V8 frame, chart panel, styled .xlsx export |
+| OR-37 | Sheets | ADD | Test with the **Aurj Dream 100 Tracker** (Dashboard, Instructions, Prospects, Interaction Log, Scoring Guide, Target Map, Lists): dashboard calculates from data, dropdowns, priority score, follow-up counts | — | P05 | Tested and verified | 675/675 formulas = Excel (SF8); browser SH1–SH12 on a copy, Aurj only | Pass (local) | Live after merge |
 
 ### B9. Tasks, Funnel Mapper (owner §9–10)
 
@@ -475,19 +475,19 @@ Generated from `PAGES_AND_NAVIGATION.md` (all 179 pages) and `07_IMPLEMENTATION_
 
 | # | Page | Route | Controls | Status | Test | Result |
 |---|---|---|---|---|---|---|
-| P05-01 | Home | `#/drive/home` | 47 | Not started | — | — |
-| P05-02 | Library | `#/drive/mydrive` | 43 | Not started | — | — |
-| P05-03 | Personal | `#/drive/personal` | 18 | Not started | — | — |
-| P05-04 | Docs editor | `#/drive/edit/doc/sop` | 64 | Not started | — | — |
-| P05-05 | Sheets editor | `#/drive/edit/sheet/cal` | 265 | Not started | — | — |
-| P05-06 | Slides editor | `#/drive/edit/slides/deck` | 44 | Not started | — | — |
-| P05-07 | Image editor | `#/drive/edit/image/hero` | 56 | Not started | — | — |
-| P05-08 | PDF editor | `#/drive/edit/pdf/prop` | 50 | Not started | — | — |
-| P05-09 | Delivery My Drive Delivery | `#/drive/f/delivery` | 24 | Not started | — | — |
-| P05-10 | Recent | `#/drive/recent` | 38 | Not started | — | — |
-| P05-11 | Starred | `#/drive/starred` | 18 | Not started | — | — |
-| P05-12 | Shared with me | `#/drive/shared` | 22 | Not started | — | — |
-| P05-13 | Trash | `#/drive/trash` | 6 | Not started | — | — |
+| P05-01 | Home | `#/drive/home` | 47 | Implemented | Browser DR1, DR4 | — |
+| P05-02 | Library | `#/drive/mydrive` | 43 | Implemented | Browser MV2 | — |
+| P05-03 | Personal | `#/drive/personal` | 18 | Implemented | Browser MV1 | — |
+| P05-04 | Docs editor | `#/drive/edit/doc/sop` | 64 | In progress | Pictures as attachments; V8 frame pending | — |
+| P05-05 | Sheets editor | `#/drive/edit/sheet/cal` | 265 | In progress | Save + import fixed; V8 frame pending | — |
+| P05-06 | Slides editor | `#/drive/edit/slides/deck` | 44 | Implemented | New editor; browser SL1–SL3 | — |
+| P05-07 | Image editor | `#/drive/edit/image/hero` | 56 | In progress | Reset/Original added; V8 frame pending | — |
+| P05-08 | PDF editor | `#/drive/edit/pdf/prop` | 50 | In progress | Reset added; V8 frame pending | — |
+| P05-09 | Delivery My Drive Delivery | `#/drive/f/delivery` | 24 | Implemented | Folder tiles + table | — |
+| P05-10 | Recent | `#/drive/recent` | 38 | Implemented | Opens-based | — |
+| P05-11 | Starred | `#/drive/starred` | 18 | Implemented | Browser ST1 | — |
+| P05-12 | Shared with me | `#/drive/shared` | 22 | Implemented | Count in sidebar | — |
+| P05-13 | Trash | `#/drive/trash` | 6 | Implemented | Browser TR1–TR2 | — |
 
 **Sidebar menu items** (7)
 

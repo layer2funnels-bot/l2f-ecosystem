@@ -450,7 +450,8 @@ revoke all on function public.drive_transfer(uuid[], uuid[], text, uuid, boolean
   public.drive_asset_register(uuid, text, text, text, bigint, int, int) from public;
 grant execute on function public.drive_transfer(uuid[], uuid[], text, uuid, boolean), public.drive_transfer_preview(uuid[], uuid[]), public.drive_reset_original(uuid, int),
   public.drive_asset_register(uuid, text, text, text, bigint, int, int) to app_user;
-grant execute on function private.drive_transfer_on() to app_user;
+-- the switch and the trigger functions run only inside the database's own functions and triggers: nobody calls them directly
+revoke all on function private.drive_transfer_on(), private.file_versions_thin(), private.file_versions_assets() from public;
 do $$
 declare r text;
 begin
