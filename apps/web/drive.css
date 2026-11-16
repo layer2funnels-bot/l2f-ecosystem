@@ -182,7 +182,24 @@
 .drv-lockbox{margin-top:var(--space-5);padding-top:var(--space-4);border-top:var(--bw) solid var(--line)}
 .drv-share{margin-top:var(--space-3)}
 .drv-tbl td a[href]{min-height:44px;box-sizing:border-box}
-.drv-main a[href][title]{min-height:44px;display:inline-flex;align-items:center;box-sizing:border-box}
+.drv-main a[href][title]:not(.fcard):not(.folder){min-height:44px;display:inline-flex;align-items:center;box-sizing:border-box}
 .drv-main button.linklike{min-height:44px;box-sizing:border-box}
 .ovl:has(.drv-share){grid-template-columns:minmax(0,1fr)}.dlg:has(.drv-share){width:min(620px,100%);min-width:0;box-sizing:border-box}.drv-share,.drv-share section{min-width:0}.drv-share-add select{min-width:0}.drv-share-add .btn{flex:0 0 auto}
 @media (max-width:620px){.dlg:has(.drv-share){padding:20px 16px}}
+
+/* ---- V8 type chips are real links (Ctrl/middle-click open a new tab): the prototype's chip rules (pages/drive.css) applied to <a> as well */
+.v8p-drive .typechips a{display:inline-flex;align-items:center;gap:7px;min-height:32px;padding:0 12px 0 6px;border-radius:16px;border:var(--bw) solid var(--line);background:var(--surface);font-size:calc(13px * var(--ts, 1));font-weight:550;color:var(--text2)}
+.v8p-drive .typechips a>svg{margin-left:6px}
+.v8p-drive .typechips a[aria-selected="true"]{background:var(--text);color:var(--bg);border-color:var(--text)}
+.v8p-drive .typechips a{min-height:34px;border-radius:8px;font-size:calc(13.5px * var(--ts, 1));padding:0 12px 0 6px}
+.v8p-drive .typechips a{border-radius:6px}
+.v8p-drive .typechips a[aria-selected="true"]{background:var(--text);color:var(--bg)}
+.v8p-drive .typechips a{text-decoration:none;color:var(--text2)}.v8p-drive .typechips a[aria-selected="true"]{color:var(--bg)}
+.v8p-drive .folders .folder{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:none;color:inherit}.v8p-drive .folders .folder .fn{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.v8p-drive .selbar[hidden]{display:none}
+.side .nav a.dropon{outline:2px dashed var(--action);outline-offset:-2px;background:var(--action-tint)}
+.v8p-drive a.fcard{text-decoration:none;color:inherit}.v8p-drive a.fcard b{text-decoration:none}
+@media (pointer:coarse){.v8p-drive .typechips a{min-height:44px}}
+@media (pointer:coarse){.v8p-drive .tog button{min-height:44px}.v8p-drive .ftab .linklike,.v8p-drive .ftab .fname a{min-height:44px;box-sizing:border-box}}
+@media (pointer:coarse){.v8p-drive .ftab td .fname .linklike,.v8p-drive .ftab td .fname a{min-height:44px}.v8p-drive .cathead .btn,.v8p-drive .tb6 .sel,.v8p-drive .tb6 select{min-height:44px}}
+@media (pointer:coarse){.v8p-drive .ftab td .fname a,.v8p-drive .ftab td .fname .linklike{min-width:44px;display:inline-flex;align-items:center}}

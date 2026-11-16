@@ -1,4 +1,17 @@
-# Current project status — 15 Nov 2026 (end of the quality-recovery session)
+# Current project status — 16 Nov 2026 (end of the first Drive session)
+
+Sequence (owner): P00 Shell ✔ · P01 Office ✔ · **P02 Projects — not rebuilt, deferred** · P03 Tasks ✔ · **P04 Drive — IN PROGRESS (this session)** · P05 Planner … P14.
+
+## This session (15–16 Nov): Drive — branch `claude/kind-shannon-u0bd3t`, pushed, NOT merged, NO PR yet (Drive incomplete)
+- Production: **migration 0060 applied** with the owner's approval (PR #59 had been deployed without it; backup schema `backup_20261115b`; checklist passed). Not verified signed in on live.
+- Drive progress, tests and the honest remaining list: **`DRIVE_REPORT.md`**. Plan: `DRIVE_PLAN.md`.
+- Migration **0061_drive_v8.sql**: written and tested locally (unit 89/89, browser 36/36), **not applied to production**. Next free number: **0062**.
+- Fixed with root cause: Sheets "Not saved, retrying…" (rate limit vs autosave cadence), `#NAME?` (COUNTIFS and 30 more functions), Excel import losing formatting and rules, document pictures cluttering Drive, the Funnel Mapper dark-card leak in generated CSS.
+- New: V8 Drive pages, Move/Copy Library ↔ Personal, server stars/opens/presence, Slides editor, editor frame (no rail / no second header), Reset to original.
+
+---
+History (15 Nov, before this session):
+
 
 Sequence (owner): P00 Shell ✔ · P01 Office ✔ (repaired) · **P02 Projects — NOT rebuilt to V8, deferred** · P03 Tasks ✔ (built as “p02-tasks”, repaired) ·
 **P04 Drive — next session (owner's explicit instruction, sequence exception)** · P05 Planner … P14.

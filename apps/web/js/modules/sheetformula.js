@@ -272,11 +272,22 @@ export const FUNCTION_DOCS = {
   TODAY: ['TODAY()', 'Today’s date'], NOW: ['NOW()', 'Date and time now'], DATE: ['DATE(year, month, day)', 'Builds a date'], YEAR: ['YEAR(date)', 'Year of a date'], MONTH: ['MONTH(date)', 'Month of a date'], DAY: ['DAY(date)', 'Day of a date'],
   VLOOKUP: ['VLOOKUP(key, range, column, [approximate])', 'Looks down the first column'], HLOOKUP: ['HLOOKUP(key, range, row, [approximate])', 'Looks across the first row'], INDEX: ['INDEX(range, row, [column])', 'Value at a position'],
   MATCH: ['MATCH(key, range, [type])', 'Position of a value'], XLOOKUP: ['XLOOKUP(key, lookup_range, return_range, [if_not_found])', 'Finds and returns a match'],
+  COUNTIFS: ['COUNTIFS(range1, criterion1, …)', 'Counts rows that match every criterion'], SUMIFS: ['SUMIFS(sum_range, range1, criterion1, …)', 'Adds cells whose rows match every criterion'],
+  AVERAGEIFS: ['AVERAGEIFS(average_range, range1, criterion1, …)', 'Mean of cells whose rows match every criterion'], MAXIFS: ['MAXIFS(max_range, range1, criterion1, …)', 'Largest value whose row matches'], MINIFS: ['MINIFS(min_range, range1, criterion1, …)', 'Smallest value whose row matches'],
+  IFS: ['IFS(test1, value1, …)', 'First value whose test is true'], SWITCH: ['SWITCH(value, case1, result1, …, [default])', 'Picks the result for a matching case'], IFNA: ['IFNA(value, if_na)', 'Replaces #N/A'], ISNA: ['ISNA(value)', 'Is it #N/A'],
+  CHOOSE: ['CHOOSE(index, value1, …)', 'Value at a position in the list'], XOR: ['XOR(test1, …)', 'An odd number of tests are true'], ISEVEN: ['ISEVEN(number)', 'Is it even'], ISODD: ['ISODD(number)', 'Is it odd'], ISLOGICAL: ['ISLOGICAL(value)', 'Is it TRUE or FALSE'],
+  SUMPRODUCT: ['SUMPRODUCT(range1, [range2], …)', 'Adds the products of matching cells'], PRODUCT: ['PRODUCT(number1, …)', 'Multiplies numbers'], LARGE: ['LARGE(range, k)', 'k-th largest number'], SMALL: ['SMALL(range, k)', 'k-th smallest number'],
+  RANK: ['RANK(number, range, [ascending])', 'Position of a number in a list'], SIGN: ['SIGN(number)', '1, 0 or -1'], TRUNC: ['TRUNC(number, [digits])', 'Cuts off decimals'], CEILING: ['CEILING(number, [significance])', 'Rounds up to a multiple'], FLOOR: ['FLOOR(number, [significance])', 'Rounds down to a multiple'], PI: ['PI()', '3.14159…'],
+  TEXTJOIN: ['TEXTJOIN(delimiter, ignore_empty, text1, …)', 'Joins text with a separator'], REPT: ['REPT(text, times)', 'Repeats text'], EXACT: ['EXACT(text1, text2)', 'Same text, case sensitive'], SEARCH: ['SEARCH(find, within, [start])', 'Position of text (any case)'],
+  WEEKDAY: ['WEEKDAY(date, [type])', 'Day of the week as a number'], EDATE: ['EDATE(date, months)', 'Same day some months later'], EOMONTH: ['EOMONTH(date, months)', 'Last day of a month'], DAYS: ['DAYS(end, start)', 'Days between two dates'],
+  DATEDIF: ['DATEDIF(start, end, unit)', 'Difference in "D", "M" or "Y"'], NETWORKDAYS: ['NETWORKDAYS(start, end)', 'Working days (Mon–Fri) between two dates'],
   ISBLANK: ['ISBLANK(value)', 'Is the cell empty'], ISNUMBER: ['ISNUMBER(value)', 'Is it a number'], ISTEXT: ['ISTEXT(value)', 'Is it text'], ISERROR: ['ISERROR(value)', 'Is it an error'],
 };
 export const FUNCTION_NAMES = Object.keys(FUNCTION_DOCS);
 
 function createRuntime(host) {
+  // dates are serial numbers in the person's own time zone (a UTC date would show yesterday before 05:00 in Pakistan); host.now() pins the clock in tests
+  const localNow = () => { const t = host.now ? host.now() : Date.now(); return t - new Date(t).getTimezoneOffset() * 60000; };
   // host: { cell(si, c, r), sheetIndex(name) -> idx|-1, current: si }
   const isRange = (x) => x && x.rng === true;
   const vals = (g) => { if (g.c2 < g.c1 || g.r2 < g.r1) return []; const rows = []; for (let r = g.r1; r <= g.r2; r++) { const row = []; for (let c = g.c1; c <= g.c2; c++) row.push(host.cell(g.si, c, r)); rows.push(row); } return rows; };
@@ -288,6 +299,17 @@ function createRuntime(host) {
   const mustRange = (x) => (isRange(x) ? x : fail(E.VALUE));
   const approx = (key, list, desc) => { let best = -1; for (let i = 0; i < list.length; i++) { const c = compareValues(list[i], key); if (rank(list[i]) !== rank(key)) continue; if (desc ? c >= 0 : c <= 0) best = i; else break; } return best; };
   const exact = (key, list) => list.findIndex((v) => rank(v) === rank(key) && compareValues(v, key) === 0 && !(v === null));
+  // COUNTIFS/SUMIFS…: the rows (cells) of the first criteria range that match every (range, criterion) pair from position `from`
+  const ifsMask = (a, from, sizeOf) => {
+    if ((a.length - from) < 2 || (a.length - from) % 2) fail(E.VALUE);
+    const g0 = mustRange(sizeOf ?? a[from]); const w = g0.c2 - g0.c1, h = g0.r2 - g0.r1; let mask = null;
+    for (let i = from; i < a.length; i += 2) {
+      const g = mustRange(a[i]); if (g.c2 - g.c1 !== w || g.r2 - g.r1 !== h) fail(E.VALUE);
+      const t = criterion(scalar(a[i + 1])); const L = flat(g);
+      mask = mask ? mask.map((ok, j) => ok && t(L[j])) : L.map((v) => t(v));
+    }
+    return mask;
+  };
   const F = {
     SUM: (a) => numbers(a).reduce((x, y) => x + y, 0),
     AVERAGE: (a) => { const n = numbers(a); if (!n.length) fail(E.DIV0); return n.reduce((x, y) => x + y, 0) / n.length; },
@@ -315,7 +337,7 @@ function createRuntime(host) {
     SUBSTITUTE: (a) => { const s = toStr(scalar(a[0])), o = toStr(scalar(a[1])); return o === '' ? s : s.split(o).join(toStr(scalar(a[2]))); },
     FIND: (a) => { const i = toStr(scalar(a[1])).indexOf(toStr(scalar(a[0])), a[2] === undefined ? 0 : toNum(scalar(a[2])) - 1); if (i < 0) fail(E.VALUE); return i + 1; },
     VALUE: (a) => { const v = scalar(a[0]); if (typeof v === 'number') return v; const p = parseLiteral(toStr(v)).v; return typeof p === 'number' ? p : fail(E.VALUE); },
-    TODAY: () => Math.floor(toSerial(Date.now())), NOW: () => toSerial(Date.now()),
+    TODAY: () => Math.floor(toSerial(localNow())), NOW: () => toSerial(localNow()),
     DATE: (a) => { const y = Math.trunc(toNum(scalar(a[0]))), m = Math.trunc(toNum(scalar(a[1]))), d = Math.trunc(toNum(scalar(a[2]))); return dateSerial(y < 1900 ? y + 1900 : y, m, d); },
     YEAR: (a) => fromSerial(toNum(scalar(a[0]))).getUTCFullYear(), MONTH: (a) => fromSerial(toNum(scalar(a[0]))).getUTCMonth() + 1, DAY: (a) => fromSerial(toNum(scalar(a[0]))).getUTCDate(),
     VLOOKUP: (a) => { const g = mustRange(a[1]); const key = scalar(a[0]); const col = Math.trunc(toNum(scalar(a[2]))); if (col < 1 || col > g.c2 - g.c1 + 1) fail(E.REF); const rows = vals(g); const first = rows.map((r) => r[0]); const exactOnly = a[3] !== undefined && !toBool(scalar(a[3])); const i = exactOnly ? exact(key, first) : approx(key, first); if (i < 0) fail(E.NA); const out = rows[i][col - 1]; return out; },
@@ -323,25 +345,55 @@ function createRuntime(host) {
     INDEX: (a) => { const g = mustRange(a[0]); const rows = vals(g); let r = Math.trunc(toNum(scalar(a[1]))); let c = a[2] === undefined || a[2].t === 'empty' ? 1 : Math.trunc(toNum(scalar(a[2]))); if (rows.length === 1 && a[2] === undefined) { c = r; r = 1; } if (r < 1 || c < 1 || r > rows.length || c > rows[0].length) fail(E.REF); return rows[r - 1][c - 1]; },
     MATCH: (a) => { const g = mustRange(a[1]); const key = scalar(a[0]); const type = a[2] === undefined ? 1 : toNum(scalar(a[2])); const list = flat(g); const i = type === 0 ? (typeof key === 'string' && /[*?]/.test(key) ? list.findIndex((v) => criterion(key)(v)) : exact(key, list)) : approx(key, list, type < 0); if (i < 0) fail(E.NA); return i + 1; },
     XLOOKUP: (a) => { const L = flat(mustRange(a[1])); const R = mustRange(a[2]); const key = scalar(a[0]); const i = exact(key, L); if (i < 0) { if (a[3] !== undefined && a[3].t !== 'empty') return scalar(a[3]); fail(E.NA); } const w = R.c2 - R.c1 + 1; const h = R.r2 - R.r1 + 1; if (R.r1 === R.r2) return host.cell(R.si, R.c1 + i, R.r1); if (R.c1 === R.c2) return host.cell(R.si, R.c1, R.r1 + i); return i < w * h ? host.cell(R.si, R.c1 + (i % w), R.r1 + Math.floor(i / w)) : fail(E.REF); },
+    // multi-criteria family: pairs of (range, criterion); every range must be the same size as the first
+    COUNTIFS: (a) => ifsMask(a, 0).filter(Boolean).length,
+    SUMIFS: (a) => { const v = flat(mustRange(a[0])); const m = ifsMask(a, 1, a[0]); let s = 0; m.forEach((ok, i) => { if (ok && typeof v[i] === 'number') s += v[i]; }); return s; },
+    AVERAGEIFS: (a) => { const v = flat(mustRange(a[0])); const m = ifsMask(a, 1, a[0]); let s = 0, k = 0; m.forEach((ok, i) => { if (ok && typeof v[i] === 'number') { s += v[i]; k++; } }); if (!k) fail(E.DIV0); return s / k; },
+    MAXIFS: (a) => { const v = flat(mustRange(a[0])); const n = ifsMask(a, 1, a[0]).map((ok, i) => (ok && typeof v[i] === 'number' ? v[i] : null)).filter((x) => x !== null); return n.length ? Math.max(...n) : 0; },
+    MINIFS: (a) => { const v = flat(mustRange(a[0])); const n = ifsMask(a, 1, a[0]).map((ok, i) => (ok && typeof v[i] === 'number' ? v[i] : null)).filter((x) => x !== null); return n.length ? Math.min(...n) : 0; },
+    CHOOSE: (a) => { const i = Math.trunc(toNum(scalar(a[0]))); if (i < 1 || i >= a.length) fail(E.VALUE); return scalar(a[i]); },
+    XOR: (a) => { let k = 0; for (const x of a) for (const v of flat(x)) if (v !== null && toBool(v)) k++; return k % 2 === 1; },
+    ISEVEN: (a) => Math.trunc(toNum(scalar(a[0]))) % 2 === 0, ISODD: (a) => Math.abs(Math.trunc(toNum(scalar(a[0])))) % 2 === 1, ISLOGICAL: (a) => typeof scalar(a[0]) === 'boolean',
+    SUMPRODUCT: (a) => { const lists = a.map((x) => flat(x)); const n = lists[0].length; if (lists.some((l) => l.length !== n)) fail(E.VALUE); let s = 0; for (let i = 0; i < n; i++) { let p = 1; for (const l of lists) { if (l[i] instanceof CalcError) throw l[i]; p *= typeof l[i] === 'number' ? l[i] : 0; } s += p; } return s; },
+    PRODUCT: (a) => { const n = numbers(a); return n.length ? n.reduce((x, y) => x * y, 1) : 0; },
+    LARGE: (a) => { const n = numbers([a[0]]).sort((x, y) => y - x); const k = Math.trunc(toNum(scalar(a[1]))); if (k < 1 || k > n.length) fail(E.NUM); return n[k - 1]; },
+    SMALL: (a) => { const n = numbers([a[0]]).sort((x, y) => x - y); const k = Math.trunc(toNum(scalar(a[1]))); if (k < 1 || k > n.length) fail(E.NUM); return n[k - 1]; },
+    RANK: (a) => { const x = toNum(scalar(a[0])); const n = numbers([a[1]]); if (!n.includes(x)) fail(E.NA); const asc = a[2] !== undefined && toNum(scalar(a[2])) !== 0; return 1 + n.filter((y) => (asc ? y < x : y > x)).length; },
+    SIGN: (a) => Math.sign(toNum(scalar(a[0]))), TRUNC: (a) => { const f = 10 ** decimals(a[1] === undefined ? 0 : toNum(scalar(a[1]))); return Math.trunc(toNum(scalar(a[0])) * f) / f; },
+    CEILING: (a) => { const x = toNum(scalar(a[0])); const m = a[1] === undefined ? 1 : toNum(scalar(a[1])); if (!m) return 0; return round10(Math.ceil(x / m) * m); },
+    FLOOR: (a) => { const x = toNum(scalar(a[0])); const m = a[1] === undefined ? 1 : toNum(scalar(a[1])); if (!m) fail(E.DIV0); return round10(Math.floor(x / m) * m); },
+    PI: () => Math.PI,
+    TEXTJOIN: (a) => { const d = toStr(scalar(a[0])); const skip = toBool(scalar(a[1])); const out = []; for (const x of a.slice(2)) for (const v of flat(x)) { if (v instanceof CalcError) throw v; if (skip && (v === null || v === '')) continue; out.push(toStr(v)); } return out.join(d); },
+    REPT: (a) => { const n = Math.trunc(toNum(scalar(a[1]))); if (n < 0 || n > 10000) fail(E.VALUE); return toStr(scalar(a[0])).repeat(n); },
+    EXACT: (a) => toStr(scalar(a[0])) === toStr(scalar(a[1])),
+    SEARCH: (a) => { const f = toStr(scalar(a[0])).toLowerCase(); const w = toStr(scalar(a[1])).toLowerCase(); const st = a[2] === undefined ? 1 : Math.trunc(toNum(scalar(a[2]))); if (st < 1) fail(E.VALUE); const re = new RegExp(f.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.')); const i = w.slice(st - 1).search(re); if (i < 0) fail(E.VALUE); return i + st; },
+    WEEKDAY: (a) => { const d = fromSerial(Math.floor(toNum(scalar(a[0])))); const t = a[1] === undefined ? 1 : Math.trunc(toNum(scalar(a[1]))); const w = d.getUTCDay(); if (t === 1) return w + 1; if (t === 2) return ((w + 6) % 7) + 1; if (t === 3) return (w + 6) % 7; return fail(E.NUM); },
+    EDATE: (a) => { const d = fromSerial(Math.floor(toNum(scalar(a[0])))); const m = Math.trunc(toNum(scalar(a[1]))); const y = d.getUTCFullYear(), mo = d.getUTCMonth() + m; const last = new Date(Date.UTC(y, mo + 1, 0)).getUTCDate(); return toSerial(new Date(Date.UTC(y, mo, Math.min(d.getUTCDate(), last)))); },
+    EOMONTH: (a) => { const d = fromSerial(Math.floor(toNum(scalar(a[0])))); const m = Math.trunc(toNum(scalar(a[1]))); return toSerial(new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + m + 1, 0))); },
+    DAYS: (a) => Math.floor(toNum(scalar(a[0]))) - Math.floor(toNum(scalar(a[1]))),
+    DATEDIF: (a) => { const s = Math.floor(toNum(scalar(a[0]))), e = Math.floor(toNum(scalar(a[1]))); if (e < s) fail(E.NUM); const u = toStr(scalar(a[2])).toUpperCase(); if (u === 'D') return e - s; const A = fromSerial(s), B = fromSerial(e); let m = (B.getUTCFullYear() - A.getUTCFullYear()) * 12 + B.getUTCMonth() - A.getUTCMonth(); if (B.getUTCDate() < A.getUTCDate()) m--; if (u === 'M') return m; if (u === 'Y') return Math.floor(m / 12); return fail(E.NUM); },
+    NETWORKDAYS: (a) => { let s = Math.floor(toNum(scalar(a[0]))), e = Math.floor(toNum(scalar(a[1]))); const sign = e < s ? -1 : 1; if (e < s) [s, e] = [e, s]; if (e - s > 100000) fail(E.NUM); let k = 0; for (let d = s; d <= e; d++) { const w = fromSerial(d).getUTCDay(); if (w !== 0 && w !== 6) k++; } return k * sign; },
     ISBLANK: (a) => scalar(a[0]) === null, ISNUMBER: (a) => typeof scalar(a[0]) === 'number', ISTEXT: (a) => typeof scalar(a[0]) === 'string',
   };
   return { F, isRange, scalar };
 }
 const ARITY = { TODAY: [0, 0], NOW: [0, 0], NOT: [1, 1], ABS: [1, 1], INT: [1, 1], SQRT: [1, 1], LEN: [1, 1], UPPER: [1, 1], LOWER: [1, 1], PROPER: [1, 1], TRIM: [1, 1], YEAR: [1, 1], MONTH: [1, 1], DAY: [1, 1], VALUE: [1, 1], ISBLANK: [1, 1], ISNUMBER: [1, 1], ISTEXT: [1, 1], ISERROR: [1, 1],
-  ROUND: [1, 2], ROUNDUP: [1, 2], ROUNDDOWN: [1, 2], MOD: [2, 2], POWER: [2, 2], TEXT: [2, 2], LEFT: [1, 2], RIGHT: [1, 2], MID: [3, 3], DATE: [3, 3], IF: [2, 3], IFERROR: [2, 2], COUNTIF: [2, 2], SUMIF: [2, 3], AVERAGEIF: [2, 3], VLOOKUP: [3, 4], HLOOKUP: [3, 4], INDEX: [2, 3], MATCH: [2, 3], XLOOKUP: [3, 4], SUBSTITUTE: [3, 3], FIND: [2, 3] };
+  ROUND: [1, 2], ROUNDUP: [1, 2], ROUNDDOWN: [1, 2], MOD: [2, 2], POWER: [2, 2], TEXT: [2, 2], LEFT: [1, 2], RIGHT: [1, 2], MID: [3, 3], DATE: [3, 3], IF: [2, 3], IFERROR: [2, 2], COUNTIF: [2, 2], SUMIF: [2, 3], AVERAGEIF: [2, 3], VLOOKUP: [3, 4], HLOOKUP: [3, 4], INDEX: [2, 3], MATCH: [2, 3], XLOOKUP: [3, 4], SUBSTITUTE: [3, 3], FIND: [2, 3],
+  COUNTIFS: [2, 254], SUMIFS: [3, 255], AVERAGEIFS: [3, 255], MAXIFS: [3, 255], MINIFS: [3, 255], IFS: [2, 254], SWITCH: [3, 255], IFNA: [2, 2], ISNA: [1, 1], CHOOSE: [2, 255], ISEVEN: [1, 1], ISODD: [1, 1], ISLOGICAL: [1, 1],
+  LARGE: [2, 2], SMALL: [2, 2], RANK: [2, 3], SIGN: [1, 1], TRUNC: [1, 2], CEILING: [1, 2], FLOOR: [1, 2], PI: [0, 0], TEXTJOIN: [3, 255], REPT: [2, 2], EXACT: [2, 2], SEARCH: [2, 3], WEEKDAY: [1, 2], EDATE: [2, 2], EOMONTH: [2, 2], DAYS: [2, 2], DATEDIF: [3, 3], NETWORKDAYS: [2, 2] };
 
 /**
  * Evaluation engine for a whole book: createCalc(book) -> { get(si, key|c, r), value(si, c, r), invalidate(si, c, r), reset() }.
  * Cells are computed on demand and cached; a cell's formula records what it read so a later edit clears only what depends on it.
  */
-export function createCalc(book) {
+export function createCalc(book, opts = {}) {
   const memo = new Map(); const dependents = new Map(); const rangeDeps = new Map(); const visiting = new Set();
   let current = -1; let names = null;
   const id = (si, c, r) => ((si * 1024 + r) * 64 + c);
   const idSheet = (x) => Math.floor(x / 65536), idRow = (x) => Math.floor((x % 65536) / 64), idCol = (x) => x % 64;
   const sheetIndex = (name) => { if (!names) { names = new Map(); book.sheets.forEach((s, i) => names.set(s.name.toLowerCase(), i)); } return names.has(String(name).toLowerCase()) ? names.get(String(name).toLowerCase()) : -1; };
   const addDep = (x) => { if (current >= 0) { let s = dependents.get(x); if (!s) dependents.set(x, s = new Set()); s.add(current); } };
-  const rt = createRuntime({ cell: (si, c, r) => read(si, c, r, true) });   // cells read through a range are covered by the range subscription
+  const rt = createRuntime({ cell: (si, c, r) => read(si, c, r, true), now: opts.now });   // cells read through a range are covered by the range subscription
   function read(si, c, r, viaRange = false) {
     if (c < 0 || r < 0 || c >= COLS || r >= ROWS || si < 0) fail(E.REF);
     const x = id(si, c, r); if (!viaRange) addDep(x);
@@ -396,6 +448,10 @@ export function createCalc(book) {
     const name = n.name; const doc = FUNCTION_DOCS[name];
     if (name === 'IF') { checkArity(name, n.args.length); const t = toBool(rt.scalar(evalNode(n.args[0], si))); if (t) return evalNode(n.args[1], si); return n.args[2] ? evalNode(n.args[2], si) : false; }
     if (name === 'IFERROR') { checkArity(name, n.args.length); try { const v = rt.scalar(evalNode(n.args[0], si)); if (v instanceof CalcError) return evalNode(n.args[1], si); return v; } catch (e) { if (e instanceof CalcError && e !== E.CIRC) return evalNode(n.args[1], si); throw e; } }
+    if (name === 'IFS') { checkArity(name, n.args.length); if (n.args.length % 2) fail(E.VALUE); for (let i = 0; i < n.args.length; i += 2) if (toBool(rt.scalar(evalNode(n.args[i], si)))) return evalNode(n.args[i + 1], si); return fail(E.NA); }
+    if (name === 'SWITCH') { checkArity(name, n.args.length); const v = rt.scalar(evalNode(n.args[0], si)); const rest = n.args.slice(1); for (let i = 0; i + 1 < rest.length; i += 2) { const c = rt.scalar(evalNode(rest[i], si)); if (rank(c) === rank(v) && compareValues(c, v) === 0) return evalNode(rest[i + 1], si); } return rest.length % 2 ? evalNode(rest[rest.length - 1], si) : fail(E.NA); }
+    if (name === 'IFNA') { checkArity(name, n.args.length); try { const v = rt.scalar(evalNode(n.args[0], si)); return v === E.NA ? evalNode(n.args[1], si) : v; } catch (e) { if (e === E.NA) return evalNode(n.args[1], si); throw e; } }
+    if (name === 'ISNA') { try { return rt.scalar(evalNode(n.args[0], si)) === E.NA; } catch (e) { if (e === E.NA) return true; if (e instanceof CalcError) return false; throw e; } }
     if (name === 'ISERROR') { try { return rt.scalar(evalNode(n.args[0], si)) instanceof CalcError; } catch (e) { if (e instanceof CalcError) return true; throw e; } }
     if (!doc) fail(E.NAME);
     checkArity(name, n.args.length);
@@ -416,6 +472,15 @@ export function createCalc(book) {
   return {
     value: (si, c, r) => { try { return read(si, c, r); } catch (e) { return e instanceof CalcError ? e : E.ERR; } },
     get(si, key) { const p = parseRef(key); return p ? this.value(si, p.col, p.row) : null; },
+    // a formula that is not stored in a cell (conditional formats, validation sources), evaluated on sheet `si`; never cached, never throws
+    evaluate(si, text) { const saved = current; current = -1; try { let v = evalNode(parseFormula(String(text).replace(/^=/, '')), si); if (rt.isRange(v)) v = rt.scalar(v); return v; } catch (e) { return e instanceof CalcError ? e : E.ERR; } finally { current = saved; } },
+    // the values of a range written as text ("Lists!$B$2:$B$14" or "A1:A9"), read through the engine (formulas included), row by row
+    rangeValues(si, text) {
+      const m = /^(?:(?:'((?:[^']|'')+)'|([A-Za-z_][A-Za-z0-9_.]*))!)?\$?([A-Za-z]{1,3})\$?(\d{1,7})(?::\$?([A-Za-z]{1,3})\$?(\d{1,7}))?$/.exec(String(text).trim());
+      if (!m) return null; const sh = m[1] !== undefined ? m[1].replace(/''/g, "'") : m[2]; const tsi = sh === undefined ? si : sheetIndex(sh); if (tsi < 0) return null;
+      const g = parseRange(`${m[3]}${m[4]}${m[5] ? `:${m[5]}${m[6]}` : ''}`); if (!g) return null;
+      const out = []; for (let r = g.r1; r <= Math.min(g.r2, g.r1 + 999); r++) for (let c = g.c1; c <= g.c2; c++) out.push(this.value(tsi, c, r)); return out;
+    },
     invalidate, reset() { memo.clear(); dependents.clear(); rangeDeps.clear(); visiting.clear(); names = null; },
   };
 }

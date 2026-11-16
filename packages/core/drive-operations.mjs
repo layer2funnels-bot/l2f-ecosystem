@@ -118,7 +118,7 @@ const fileOps = [
     },
   }),
   defineOperation({
-    name: 'drive.files.versions.add', class: 'write', single: true, input: { ...id, storage_path: T(600), body: T(1000000), size_bytes: { type: 'int', min: 0 }, note: T(300), expected: { type: 'int', min: 1 } },
+    name: 'drive.files.versions.add', class: 'save', single: true, input: { ...id, storage_path: T(600), body: T(1000000), size_bytes: { type: 'int', min: 0 }, note: T(300), expected: { type: 'int', min: 1 } },
     run: async (q, ctx, i) => {
       const [f] = await q('select kind, current_version from files where id = $1', [i.id]);
       if (!f) return [];

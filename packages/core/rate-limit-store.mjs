@@ -8,7 +8,8 @@ import { DEFAULT_LIMITS } from './rate-limit.mjs';
 // keys are hashes: the table never holds a user id
 export const hashKey = (userId) => `u:${createHash('sha256').update(String(userId)).digest('hex').slice(0, 40)}`;
 
-export function createPgRateLimiter({ query, limits = DEFAULT_LIMITS, onError = () => {} }) {
+export function createPgRateLimiter({ query, limits: given = DEFAULT_LIMITS, onError = () => {} }) {
+  const limits = { ...DEFAULT_LIMITS, ...given };
   return {
     // query(sql, params) -> rows, on the server's own connection (NOT a request role)
     async take(userId, cls) {
@@ -19,7 +20,7 @@ export function createPgRateLimiter({ query, limits = DEFAULT_LIMITS, onError = 
   };
 }
 
-export function createTieredLimiter({ local, shared, sharedClasses = ['write', 'sensitive'], onError = () => {} }) {
+export function createTieredLimiter({ local, shared, sharedClasses = ['write', 'save', 'sensitive'], onError = () => {} }) {
   return {
     async take(userId, cls) {
       const first = local.take(userId, cls);

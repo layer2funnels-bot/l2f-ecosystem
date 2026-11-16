@@ -62,12 +62,18 @@ bottom; New list or folder with V8 people chips, per-person Can edit/Can view, E
 | # | File | Phase | Production |
 |---|---|---|---|
 | 0054–0059 | notifications, profile, office, avatar studio, admin access, tasks | P00–P03 | **applied 15 Nov** (backup schema `backup_20261115`) |
-| 0060 | `0060_recovery.sql` | recovery | **not applied** — needs the owner's go. Drops Access Review functions + `app_usage.reviewed_at`; adds `workspace_app_order` + `launcher_order_set`, `workspace_rename`, branding for admins, `my_org_icons`, `avatar_settings`, `doc_links`; funnel record select rule requires Office on for client contacts; grants `client_app_enabled` to `app_user`. Rollback tested locally (down → up). |
-Verify after applying: `list_migrations` ends with 0060 · the 3 new tables exist with RLS · `has_function_privilege('anon', 'public.workspace_rename(text)', 'execute')` false ·
+| 0060 | `0060_recovery.sql` | recovery | **applied 16 Nov** (owner's go; backup schema `backup_20261115b`). Drops Access Review functions + `app_usage.reviewed_at`; adds `workspace_app_order` + `launcher_order_set`, `workspace_rename`, branding for admins, `my_org_icons`, `avatar_settings`, `doc_links`; funnel record select rule requires Office on for client contacts; grants `client_app_enabled` to `app_user`. Rollback tested locally (down → up). |
+| 0061 | `0061_drive_v8.sql` | P04 Drive | **not applied** — stars, opens, presence, Move/Copy (`drive_transfer`), attachments (`doc_assets`), autosave thinning, original + latest, Reset to original; marks 47 document pictures app-owned. Apply with a fresh backup before/with the Drive merge. Verify: 5 new tables with RLS forced; `has_function_privilege('anon','public.drive_transfer(uuid[],uuid[],text,uuid,boolean)','execute')` false; `get_advisors(security)` no new findings. |
+Verify 0060 after applying: `list_migrations` ends with 0060 · the 3 new tables exist with RLS · `has_function_privilege('anon', 'public.workspace_rename(text)', 'execute')` false ·
 `select count(*) from pg_proc where proname like 'access_review%'` = 0 · `get_advisors(security)` no new findings.
 
 ## 7. Tests (local stack, 15 Nov)
 See `CURRENT_PROJECT_STATUS.md` › Tests for the final numbers (unit all green; browser suites run against the bundled build).
+
+## 7b. P04 — Drive (IN PROGRESS, branch `claude/kind-shannon-u0bd3t`) — `DRIVE_PLAN.md`, `DRIVE_REPORT.md`
+V8 pages on prototype markup with generated CSS (`pages/drive.css`, `drive-side.css`, `editor.css`); `drive-v8-operations.mjs`; Slides (`slides.js`, `slidemodel.js`);
+editor frame (`edframe.js`, shell `__editor`); attachments (`docassets.js`); Excel looks (`sheetxlsx.js`); templates (`drivetemplates.js`). Browser suite: `scripts/e2e-drive-v8.mjs` (production rate limits).
+Generator note: `build-page-css.mjs` now drops the prototype's unscoped Funnel Mapper sections (as `scope.py` does). **Watch class collisions with legacy `drive.css`** (one found: `.drv-main a[href][title]`).
 
 ## 8. Known remaining issues
 See `CURRENT_PROJECT_STATUS.md` › Remaining issues and `recovery/PERFORMANCE_REPORT.md` › Remaining bottlenecks.

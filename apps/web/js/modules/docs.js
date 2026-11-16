@@ -4,6 +4,8 @@
 // restore, audit), checked against the version the editor started from so two people never overwrite each other silently.
 // Model and safety rules: docmodel.js (JSON v2 with tabs, never HTML; links, colours, sizes, ids filtered). Surface <-> model: docdom.js.
 // Editing engine (formatting on the model, paste, find, tables, images): docedit.js. Downloads and printing: docexport.js.
+import { shareFile } from './sharedialog.js';
+import { attach as attachAsset, url as assetUrl } from './docassets.js';
 import { h, icon, toast, dialog, drawer, btn, notice, skeleton, errorState, noAccessState, readOnlyNotice, field } from '../ui.js';
 import { dirty } from '../dirty.js';
 import { parseBody, serialize, normalize, wordCount, charCount, outline, sizeOf, safeHref, MAX_CHARS, FONTS, SIZES, PAGES, MARGINS, DEFAULT_SIZE, MAX_TAB_DEPTH, MAX_TABS,
@@ -18,7 +20,7 @@ import { LANGS, SPEAKER_COLOURS, isUrdu, fmtClock, applyVoiceCommands, withSpaci
 import { SpeakerClusters, fingerprint, frameFeatures } from './docspeaker.js';
 
 export const BOARD_MIME = 'application/vnd.excalidraw+json';
-const AUTOSAVE_IDLE_MS = 1500, AUTOSAVE_MAX_WAIT_MS = 10000;   // a save about 1.5 s after typing stops, never later than 10 s after the first unsaved change
+const AUTOSAVE_IDLE_MS = 2000, AUTOSAVE_MAX_WAIT_MS = 10000, AUTOSAVE_MIN_GAP_MS = 3000;   // a save about 2 s after typing stops (never later than 10 s after the first unsaved change), autosaves at least 3 s apart
 const CHECK_IDLE_MS = 700, CHECK_MAX_MS = 5000;               // the model is read from the page when typing pauses, not on every key
 const reduced = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 const timeOf = (d) => new Date(d).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -121,8 +123,10 @@ export function docView({ api, id, ctx, opts = {} }) {
     // ---- images (stored as Drive files; the document keeps only the file id)
     const srcCache = new Map();
     const blobToUrl = (b) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(b); });
+    // a picture reference is an attachment of this document (0061: stored once, never a Drive file) or, in older documents, a Drive file id
     const imageSrc = (f) => {
       if (!srcCache.has(f)) srcCache.set(f, (async () => {
+        const a = await assetUrl(api, id, f); if (a) return a;
         const r = await api.call('drive.files.download', { id: f }); const u = r.ok ? r.data[0]?.url : null; if (!u) return null;
         try { const res = await fetch(u); if (res.ok) return await blobToUrl(await res.blob()); } catch { /* the bucket may not allow reads from this page: show the signed address directly */ }
         return u;
@@ -132,8 +136,9 @@ export function docView({ api, id, ctx, opts = {} }) {
     async function uploadImage(blob, name = 'image') {
       if (readOnly) return null;
       const mime = blob.type; if (!IMG_TYPES[mime]) { toast('Only PNG, JPEG, GIF and WebP pictures can be added.', false); return null; }
-      if (blob.size > 10 * 1024 * 1024) { toast('That picture is over 10 MB. Resize it first.', false); return null; }
-      const id2 = await uploadBlob(blob, name, mime, IMG_TYPES[mime]); if (id2) srcCache.set(id2, blobToUrl(blob)); return id2;
+      if (blob.size > 25 * 1024 * 1024) { toast('That picture is over 25 MB. Resize it first.', false); return null; }
+      try { const r = await attachAsset(api, id, blob); if (!r) return null; srcCache.set(r.asset, blobToUrl(blob)); if (r.reused) toast('Picture added (already stored, so nothing was uploaded again).'); return r.asset; }
+      catch (e) { toast(e.message ?? 'The picture could not be added.', false); return null; }
     }
     /** Stores bytes as a Drive file next to this document (same space, client, folder and project) and returns the new file's id. */
     async function uploadBlob(blob, name, mime, ext) {
@@ -209,7 +214,7 @@ export function docView({ api, id, ctx, opts = {} }) {
       if (used > 0.8) spaceEl.textContent = `This document is ${Math.round(used * 100)}% of its size limit: move part of it to another tab or document soon.`;
     }
     let chain = Promise.resolve(), retryN = 0, retryTimer = null, firstDirty = 0;
-    const schedule = () => { clearTimeout(timer); if (readOnly) return; firstDirty ||= Date.now(); timer = setTimeout(() => save({ manual: false }), Date.now() - firstDirty > AUTOSAVE_MAX_WAIT_MS ? 0 : AUTOSAVE_IDLE_MS); };
+    const schedule = () => { clearTimeout(timer); if (readOnly) return; firstDirty ||= Date.now(); const due = Date.now() - firstDirty > AUTOSAVE_MAX_WAIT_MS ? 0 : AUTOSAVE_IDLE_MS; timer = setTimeout(() => save({ manual: false }), Math.max(due, lastAuto + AUTOSAVE_MIN_GAP_MS - Date.now())); };
     /** Saves never overlap: a call made while one runs waits for it, then saves whatever changed in the meantime. */
     function save(o = {}) { chain = chain.then(() => doSave(o), () => doSave(o)); return chain; }
     async function doSave({ manual, note }) {
@@ -222,14 +227,17 @@ export function docView({ api, id, ctx, opts = {} }) {
       const r = await api.call('drive.files.versions.add', { id, body, expected: version, ...(note ? { note } : manual ? {} : { note: 'Autosave' }) });
       saving = false;
       if (r.ok) {
-        version = r.data[0].current_version; savedBody = body; savedAt = new Date().toISOString(); retryN = 0;
+        version = r.data[0].current_version; savedBody = body; savedAt = new Date().toISOString(); retryN = 0; if (!manual) lastAuto = Date.now();
         status = currentBody() !== savedBody ? 'dirty' : 'saved';
-        if (status === 'saved') { dirty.clear(); removeEventListener('beforeunload', warn); } else { firstDirty = Date.now(); timer = setTimeout(() => save({ manual: false }), AUTOSAVE_IDLE_MS); }
+        if (status === 'saved') { dirty.clear(); removeEventListener('beforeunload', warn); } else { firstDirty = Date.now(); schedule(); }
         paintStatus(); if (!gone()) ctx.announce('Saved.'); return true;
       }
       if (r.status === 409) { status = 'failed'; paintStatus(); conflict(); return false; }
       if (r.status === 404) { status = 'readonly'; readOnly = true; page.setAttribute('contenteditable', 'false'); paintStatus(); toast('You can read this document but not change it, so your last edit was not saved.', false); lockTools(); return false; }
-      if (r.status === 0 || r.status === 429 || r.status >= 500) {          // network or server trouble: the work stays, the save is tried again with a growing delay
+      if (r.status === 429) {                                                 // too many saves at once: wait exactly as long as the server asks
+        status = 'retrying'; paintStatus(); retryTimer = setTimeout(() => save({ manual: false }), Math.max(1000, (r.error?.retryAfterSeconds ?? 2) * 1000)); return false;
+      }
+      if (r.status === 0 || r.status >= 500) {          // network or server trouble: the work stays, the save is tried again with a growing delay
         status = 'retrying'; retryN += 1; paintStatus(); retryTimer = setTimeout(() => save({ manual: false }), Math.min(30000, 2000 * 2 ** (retryN - 1))); return false;
       }
       status = 'failed'; paintStatus(); toast(r.message ?? 'Couldn’t save. Try again.', false); return false;
@@ -589,6 +597,8 @@ export function docView({ api, id, ctx, opts = {} }) {
     }
     function oneMicOnly() { return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1) || matchMedia('(pointer: coarse)').matches; }
     function voiceStop() { vs.rec?.stop(); vs.listening = false; vInterim.textContent = ''; paintVoice(); stopMic(); }
+    // leaving the browser tab ends recognition in every browser: say so instead of showing a microphone that is no longer listening
+    document.addEventListener('visibilitychange', () => { if (document.hidden && vs.listening && root.isConnected) { voiceStop(); toast('Voice typing paused while this tab was in the background.'); } });
     /** One microphone stream feeds the voice analysis (speaker detection) and, when asked, the audio recording. */
     async function startMic() {
       try {
@@ -878,6 +888,8 @@ export function docView({ api, id, ctx, opts = {} }) {
     // ---- tabs (pages and sub-pages) and the outline of the open tab
     const parentIdOf = (tid) => { const f = findTab(doc, tid); return flatTabs(doc).find((x) => x.tab.children === f.parent)?.tab.id ?? null; };
     function openTab(tid, { focus = false } = {}) {
+      // dictation belongs to the place it started: switching document tab pauses it (no text in a stale position, no hidden listening)
+      if (vs.listening && tid !== activeTab) { voiceStop(); toast('Voice typing paused because you switched tabs. Press Start to continue here.'); }
       if (!findTab(doc, tid)) return; checkpoint(); if (tid === activeTab) return;
       closeFindHighlight(); activeTab = tid; ed.load(findTab(doc, tid).tab.blocks); lastBody = JSON.stringify(doc); paper.scrollTop = 0; window.scrollTo?.({ top: Math.max(0, root.getBoundingClientRect().top + scrollY - 8), behavior: 'auto' });
       stack.length = at + 1; stack.push({ body: lastBody, tab: tid, pos: null }); at = stack.length - 1;
@@ -998,7 +1010,7 @@ export function docView({ api, id, ctx, opts = {} }) {
     function fitHeight() { if (gone() || !root.isConnected) return; const top = root.getBoundingClientRect().top + scrollY; root.style.height = `max(420px, calc(100dvh - ${Math.max(0, Math.round(top))}px))`; }
     const addTabBtn = readOnly ? null : h('button', { type: 'button', class: 'btn dx-addtab', onclick: () => newTab(null) }, icon('plus'), ' New tab');
     const tabsPanel = h('aside', { class: 'dx-tabs', id: 'dx-tabs-panel', 'aria-label': 'Document tabs' }, h('div', { class: 'dx-tabshead' }, h('h2', {}, 'Tabs'), addTabBtn), tabsEl);
-    const bar = h('div', { class: 'docbar dx-top' }, backA, h('span', { class: 'dx-docico', 'aria-hidden': 'true' }, icon('doc')), titleIn, h('span', { class: 'dx-spacer' }), statusEl, btn('History', openHistory), saveBtn);
+    const bar = h('div', { class: 'docbar dx-top' }, backA, h('span', { class: 'dx-docico', 'aria-hidden': 'true' }, icon('doc')), titleIn, h('span', { class: 'dx-spacer' }), statusEl, btn('History', openHistory), btn('Share', () => shareFile(api, meta)), saveBtn);
     const chrome = h('div', { class: 'dx-chrome' }, h('div', { class: 'dx-menurow' }, menubar, tabsToggle), toolbar, tbar, imgBar, findBar);
     canvasEl = h('div', { class: 'dx-canvas' }, paper); const workspace = h('div', { class: 'dx-work' }, canvasEl);
     const body = h('div', { class: `docbody dx-body${opts.side ? ' has-side' : ''}${tabsOpen ? '' : ' no-tabs'}` }, tabsPanel, workspace, opts.side ? opts.side(meta) : null);

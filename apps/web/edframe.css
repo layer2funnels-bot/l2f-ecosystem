@@ -1,0 +1,12 @@
+/* V8 editor frame: what the prototype does not cover (generated frame styles: pages/editor.css). Slides items, placeholders, the editor page. */
+.ed-full{min-height:100vh;background:var(--sunk)}.ed-content{padding:0;margin:0;max-width:none}
+.v8p-ed .edx-flip{transform:scaleX(-1)}
+.v8p-ed [data-ph]:empty::before{content:attr(data-ph);opacity:.45}
+.v8p-ed .sbox{box-sizing:border-box;cursor:move;touch-action:none}
+.v8p-ed .sbox.on{outline:2px solid var(--action);outline-offset:2px}
+.v8p-ed .sbox-rs{position:absolute;right:-6px;bottom:-6px;width:12px;height:12px;border-radius:3px;background:var(--action);cursor:nwse-resize;display:none}
+.v8p-ed .sbox.on .sbox-rs{display:block}
+.v8p-ed .snav6 .sbox-rs{display:none}
+.v8p-ed .snav6 .sl{pointer-events:none}
+.v8p-ed .notes:empty::before{content:attr(data-ph);opacity:.5}
+.slides-present .sl{position:absolute;inset:0}

@@ -8,6 +8,7 @@ import { h, icon, toast, dialog, btn, notice, skeleton, errorState, noAccessStat
 import { dirty } from '../dirty.js';
 import * as M from './mediamodel.js';
 import { readStored, saveVersion, saveCopy, downloadBlob, versionsDrawer, autosavePref, createAutosave } from './mediaio.js';
+import { resetToOriginal, resetButton } from './mediareset.js';
 import { menuBar, topBar, backFor } from './edchrome.js';
 
 const BASE = '/media/';
@@ -585,7 +586,7 @@ export function pdfView({ api, id, ctx }) {
     else if (readOnly) banners.push(readOnlyNotice('You can read this PDF but not change it'));
     const histBtn = btn('History', () => versionsDrawer({ api, file: meta, current: () => version, readOnly, canRestore: !readOnly && !dirtyNow(), onRestored: async (blob, v) => { version = v; savedAt = new Date().toISOString(); await reloadFrom(blob, false); status = 'saved'; changed(); } }), '', { title: 'Version history' });
     const dlBtn = btn([icon('download'), h('span', { class: 'edx-lbl' }, 'Download')], () => download(), '', { title: 'Download' });
-    const top = topBar({ backHref: backFor(meta), glyph: 'doc', name: meta.name, readOnly, onRename: async (name) => { const r = await api.call('drive.files.update', { id: meta.id, name }); if (r.ok) { meta = { ...meta, name }; document.title = `${name} · PDF`; toast('Renamed.'); return true; } toast(r.message ?? 'Couldn’t rename.', false); return false; }, right: [statusEl, histBtn, dlBtn, saveBtn] });
+    const top = topBar({ backHref: backFor(meta), glyph: 'doc', name: meta.name, readOnly, onRename: async (name) => { const r = await api.call('drive.files.update', { id: meta.id, name }); if (r.ok) { meta = { ...meta, name }; document.title = `${name} · PDF`; toast('Renamed.'); return true; } toast(r.message ?? 'Couldn’t rename.', false); return false; }, right: [readOnly ? null : resetButton(() => resetToOriginal({ api, file: meta, version: () => version, isDirty: () => dirtyNow(), onDone: async (blob, v) => { version = v; savedAt = new Date().toISOString(); await reloadFrom(blob, false); status = 'saved'; changed(); } })), statusEl, histBtn, dlBtn, saveBtn].filter(Boolean) });
     const turnView = () => { st.viewRot = (st.viewRot + 90) % 360; buildPages(); };
     const toggleSide = () => { st.sidebar = !st.sidebar; side.hidden = !st.sidebar; sideToggle.setAttribute('aria-pressed', String(st.sidebar)); if (typeof st.zoom === 'string') setTimeout(buildPages, 50); };
     const sideToggle = btn([icon('layers'), h('span', { class: 'sr' }, 'Pages')], toggleSide, 'ix-ic', { 'aria-pressed': String(st.sidebar), title: 'Page thumbnails and bookmarks' });
