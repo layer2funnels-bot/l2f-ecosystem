@@ -4,6 +4,7 @@
 // restore, audit), checked against the version the editor started from so two people never overwrite each other silently.
 // Model and safety rules: docmodel.js (JSON v2 with tabs, never HTML; links, colours, sizes, ids filtered). Surface <-> model: docdom.js.
 // Editing engine (formatting on the model, paste, find, tables, images): docedit.js. Downloads and printing: docexport.js.
+import { shareFile } from './sharedialog.js';
 import { attach as attachAsset, url as assetUrl } from './docassets.js';
 import { h, icon, toast, dialog, drawer, btn, notice, skeleton, errorState, noAccessState, readOnlyNotice, field } from '../ui.js';
 import { dirty } from '../dirty.js';
@@ -1009,7 +1010,7 @@ export function docView({ api, id, ctx, opts = {} }) {
     function fitHeight() { if (gone() || !root.isConnected) return; const top = root.getBoundingClientRect().top + scrollY; root.style.height = `max(420px, calc(100dvh - ${Math.max(0, Math.round(top))}px))`; }
     const addTabBtn = readOnly ? null : h('button', { type: 'button', class: 'btn dx-addtab', onclick: () => newTab(null) }, icon('plus'), ' New tab');
     const tabsPanel = h('aside', { class: 'dx-tabs', id: 'dx-tabs-panel', 'aria-label': 'Document tabs' }, h('div', { class: 'dx-tabshead' }, h('h2', {}, 'Tabs'), addTabBtn), tabsEl);
-    const bar = h('div', { class: 'docbar dx-top' }, backA, h('span', { class: 'dx-docico', 'aria-hidden': 'true' }, icon('doc')), titleIn, h('span', { class: 'dx-spacer' }), statusEl, btn('History', openHistory), saveBtn);
+    const bar = h('div', { class: 'docbar dx-top' }, backA, h('span', { class: 'dx-docico', 'aria-hidden': 'true' }, icon('doc')), titleIn, h('span', { class: 'dx-spacer' }), statusEl, btn('History', openHistory), btn('Share', () => shareFile(api, meta)), saveBtn);
     const chrome = h('div', { class: 'dx-chrome' }, h('div', { class: 'dx-menurow' }, menubar, tabsToggle), toolbar, tbar, imgBar, findBar);
     canvasEl = h('div', { class: 'dx-canvas' }, paper); const workspace = h('div', { class: 'dx-work' }, canvasEl);
     const body = h('div', { class: `docbody dx-body${opts.side ? ' has-side' : ''}${tabsOpen ? '' : ' no-tabs'}` }, tabsPanel, workspace, opts.side ? opts.side(meta) : null);

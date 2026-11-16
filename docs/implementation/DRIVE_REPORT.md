@@ -48,3 +48,16 @@ plus the replaced function and policy definitions), then 0060 applied. Checklist
 | 8 | Trash "30 days": nothing empties the Trash automatically — the page says so truthfully; automatic emptying is a destructive change for the owner to decide | Decision |
 | 9 | Browser tests for pictures and Reset need a storage double in the local stack (DB tests cover them) | Low |
 | 10 | Bulk-selecting folders (folders are V8 tiles now; their menu still has every action) | Low |
+
+## 5. Owner's critical Drive requirements (16 Nov) — status
+| Requirement | Status |
+|---|---|
+| Personal ↔ Library Move and Copy (files, documents, folders, nested), from menus, the selection bar, a destination dialog and drag onto the sidebar; for every permitted user (not only owners); no download/upload; Move and Copy separate | **Done and tested** (DB 89 checks, browser MV1–MV4, PM1) |
+| Document pictures as attachments, compressed, stored once, never in Drive listings, kept for every version | **Done** (DB AT1–AT8; browser blocked locally: storage off) |
+| Share from inside the editor | **Done** for Docs and Slides (people, Can view/Can edit, remove; Personal and client files explain where they are shared). Not browser-tested this session |
+| Presence (who is viewing/editing) | **Done** on the Slides frame (real heartbeat); Docs still shows its old bar |
+| Cursor positions of others, conflict-free live sync | **Not done** (needs a realtime channel) |
+| Voice: cursor position, tab switching | Partly: inserts at the saved caret; pauses with a message on tab change (owner asked it to *continue* across tabs — browsers stop recognition in a background tab, so a resume-on-return is the next step) |
+| Voice: Roman Urdu, mixed English/Urdu keeping English terms | **Not done** |
+| Ruler | **Not done** |
+| Layout/format persistence, duplicate dialogs, paste, content-protection audits; full Create→…→Collaborate workflow test | **Not done** (only partial: dialog de-duplication, autosave fixes) |

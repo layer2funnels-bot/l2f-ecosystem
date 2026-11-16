@@ -6,6 +6,7 @@ import { createSession } from './session.js';
 import { edFrame } from './edframe.js';
 import { parseDeck, serializeDeck, emptySlide, duplicateSlide, moveSlide, THEMES, LAYOUTS, MAX_SLIDES, MAX_BOXES, newId } from './slidemodel.js';
 import { attach, url as assetUrl } from './docassets.js';
+import { shareFile } from './sharedialog.js';
 
 export function slidesView({ api, id, ctx }) {
   const root = h('section', { class: 'v8p-ed' }, h('div', { style: 'padding:40px' }, skeleton(3)));
@@ -108,7 +109,7 @@ export function slidesView({ api, id, ctx }) {
         h('span', { class: 'vs' }), themeSel, layoutSel, h('span', { class: 'grow' }), h('button', { type: 'button', class: 'btn ink sm', onclick: present }, icon('play'), 'Present')],
       body: [nav, h('div', { class: 'scanvas' }, stage, notes)], status: [count, h('span', { class: 'grow' })],
       onRename: async (n) => { const r = await api.call('drive.files.update', { id, name: n }); if (!r.ok) { toast(r.error?.message ?? 'Couldn’t rename.', false); return false; } file.name = n; document.title = `${n} · Slides`; return true; },
-      onHistory: () => sess.openHistory(!readOnly), appsEl });
+      onHistory: () => sess.openHistory(!readOnly), onShare: () => shareFile(api, file), appsEl });
     root.replaceChildren(...frame.root.childNodes); frame.setSave(readOnly ? 'Read only' : `Saved ${new Date(ver.created_at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`, readOnly ? 'readonly' : 'saved');
     document.title = `${file.name} · Slides`;
     function thumbs() {
