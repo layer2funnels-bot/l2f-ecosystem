@@ -21,6 +21,12 @@ const PAGES = {
       'grow', 'fgrid', 'avatar', 'vsw', 'pill', 'mono', 'sr', 'lede'] },
   'drive-side': { root: '.dside', ancestors: [{ tag: 'aside', cls: ['side'] }, { tag: 'div', cls: ['shell'], attrs: { 'data-app': 'drive' } }, { tag: 'main', attrs: { id: 'view' } }, { tag: 'body' }, { tag: 'html', attrs: { lang: 'en', 'data-concept': 'signal' } }],
     classes: ['storage', 'bar', 'hint', 'btn', 'primary'] },
+  // P04 editors (V8 drive6.js edFrame + v7.js ruler): one frame for Docs, Sheets, Slides, Image, PDF — 52 px top bar, 46 px menu + toolbar row, side panel, status bar
+  'editor': { root: '.v8p-ed', ancestors: [{ tag: 'main', attrs: { id: 'view' } }, { tag: 'body' }, { tag: 'html', attrs: { lang: 'en', 'data-concept': 'signal' } }],
+    classes: ['edx', 'ed-doc', 'ed-sheet', 'ed-slides', 'ed-image', 'ed-pdf', 'edx-top', 'edx-ic', 'edx-name', 'edx-bar', 'edx-body', 'edx-status', 'edx-panel', 'r-wrap', 'iconbtn', 'sm', 'xs', 'ft', 'doc', 'sheet', 'slides', 'image', 'pdf',
+      'savest', 'grow', 'presence', 'btn', 'quiet', 'primary', 'ink', 'ghost', 'danger', 'menus', 'vs', 'tools', 'tbtn', 'on', 'txt', 'col', 'fsz', 'tgrp', 'sel', 'pclose', 'over', 'vsw', 'verrow', 'pill', 'brand', 'pp-act', 'hint',
+      'comment', 'bub', 'composer', 'snav6', 'th', 'chip', 'scanvas', 'stage16', 'notes', 'sl', 'light', 'zoomc', 'lk', 'ruler', 'rl-in', 'maj', 'mid', 'rl-mg', 'l', 'r', 'rl-ind', 'rl-tab', 'vruler', 'dtabs', 'dt-h', 'dtab', 'dth',
+      'dcanvas', 'dpage', 'dtable-tb', 'dtable', 'voice', 'wavebars', 'live', 'itools6', 'icanvas6', 'ipic', 'ibadge', 'ipanel6', 'rng', 'filters', 'full', 'pdf-th', 'pg', 'pdf-main', 'pdf-page', 'avatar', 'field', 'seg3', 'row2', 'chk', 'swatches'] },
   'tasks-side': { root: '.tside', ancestors: [{ tag: 'aside', cls: ['side'] }, { tag: 'div', cls: ['shell'], attrs: { 'data-app': 'tasks' } }, { tag: 'main', attrs: { id: 'view' } }, { tag: 'body' }, { tag: 'html', attrs: { lang: 'en', 'data-concept': 'signal' } }],
     classes: ['coll', 'side-sec', 'sx', 'side-list', 'tl-ic', 'count', 'addrow', 'fold'] },
   'office': { root: '.v8p-office', ancestors: [{ tag: 'div', cls: ['content'] }, { tag: 'div', cls: ['main'] }, { tag: 'div', cls: ['shell'], attrs: { 'data-app': 'office' } }, { tag: 'main', attrs: { id: 'view' } }, { tag: 'body' }, { tag: 'html', attrs: { lang: 'en', 'data-concept': 'signal' } }],

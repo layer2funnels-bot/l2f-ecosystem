@@ -369,7 +369,7 @@ const LAZY = {
   doc: () => import('./modules/docs.js'), board: () => import('./modules/whiteboard.js'), clients: () => import('./modules/clients.js'), drive: () => import('./modules/drive.js'),
   public: () => import('./modules/publicview.js'), portal: () => import('./modules/portal.js'), forms: () => import('./modules/forms.js'), ladder: () => import('./modules/ladder.js'),
   boards: () => import('./modules/boards.js'), social: () => import('./modules/social.js'), sheet: () => import('./modules/sheets.js'), image: () => import('./modules/imageeditor.js'),
-  pdf: () => import('./modules/pdfeditor.js'), tasks: () => import('./modules/tasks.js'), strategies: () => import('./views/strategies.js'), strategy: () => import('./views/strategies.js'),
+  pdf: () => import('./modules/pdfeditor.js'), slides: () => import('./modules/slides.js'), tasks: () => import('./modules/tasks.js'), strategies: () => import('./views/strategies.js'), strategy: () => import('./views/strategies.js'),
   documents: () => import('./views/office-docs.js'),
 };
 const lazyKey = (route) => (route.name === 'office-page' && route.params.page === 'documents' ? 'documents' : route.name);
@@ -436,6 +436,8 @@ async function render(opts = {}) {
       h('div', { class: 'acts' }, btn(`Go to ${org.name} Office Home`, () => { unavailable = null; go(hrefFor.office()); }, 'primary'), btn(`Switch back to ${u.from}`, () => { unavailable = null; switchFlow(u.fromId); })),
       h('p', { style: 'margin:var(--space-4) 0 0;font-size:14px' }, `Need it here? `, btn(`Ask an ${org.name} admin`, () => toast('Message only for now. No request was sent.', false), 'link'), ' · ', h('a', { class: 'btn link', href: hrefFor.launcher(), onclick: () => { unavailable = null; } }, 'Browse all apps')));
   } else {
+    // every Drive editor records the open (Recent, "You opened …" on Drive Home); fire and forget, never blocks the page
+    if (['doc', 'sheet', 'slides', 'image', 'pdf'].includes(route.name) && route.params.id) api.call('drive.opens.touch', { file: route.params.id }).catch?.(() => {});
     switch (route.name) {
       case 'home': case 'launcher': case 'signin': case 'signup': case 'check-email': case 'forgot': case 'invite':
         content = launcherView({ catalog: ctx.catalog, error: ctx.catalogError, org, orgs: ctx.orgs, role, name: session.get()?.name, registry, loadWeather: () => loadWeather({ api, store: localStorage }), onSwitch: (i) => switchFlow(i), retry: async () => { await loadOrgContext(org); render(); }, saveOrder: (keys) => api.call('launcher.order.set', { apps: keys }) }); break;
@@ -457,6 +459,7 @@ async function render(opts = {}) {
       case 'funnel-record': { const v = V8REC[route.params.type]; const { id } = route.params;
         content = !v ? funnelRecordView(c, route.params.type, id) : id === 'new' ? v[2](c, null, route.params) : route.params.edit ? v[2](c, id, route.params) : v[1](c, id, route.params); break; }
       case 'doc': content = M.docView({ api, id: route.params.id, ctx: c }); break;
+      case 'slides': content = M.slidesView({ api, id: route.params.id, ctx: c }); break;
       case 'social': content = M.socialView({ api, ctx: c, route: { view: route.params.view, id: route.params.id, query: route.query } }); break;
       case 'boards': content = M.boardsView({ api, ctx: c, route: { query: route.query } }); break;
       case 'ladder': content = M.ladderView({ api, ctx: c, route: { view: route.params.view, id: route.params.id, query: route.query } }); break;

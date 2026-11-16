@@ -229,6 +229,12 @@ export function shellView({ onSearch = null, app, orgs, active, email, name, rou
   const appName = manifest?.name ?? catalog.find((a) => a.app_key === currentApp)?.name ?? appLabel(currentApp);
   // A full-screen app (Projects) brings its own sidebar: the shell keeps only its header (with the app switcher in it),
   // and the app fills everything below, edge to edge. No second menu, no frame around the app.
+  // V8 editors (05_DRIVE "editor frame"): no rail, no app sidebar, no second header. The editor's own 52 px top bar carries Back and the
+  // app switcher (the shell fills the editor's slot), so the page is all document.
+  if (content.__editor) {
+    content.__appsSlot?.replaceChildren(appSwitcher({ catalog, registry, launcherCurrent: false, suffix: '-ed', currentApp }));
+    return h('div', { class: 'app ed-full', 'data-org': active.slug ?? '' }, skip, h('main', { class: 'content ed-content', id: 'main', 'aria-busy': 'false' }, banner ?? null, content));
+  }
   const full = Boolean(content.__fullApp);
   // V8 "focused layout" (Your profile): the rail and a title bar with Back, no app sidebar and no app menu
   const focused = !full ? content.__focused ?? null : null;
