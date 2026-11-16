@@ -13,6 +13,7 @@ import { clientsOperations } from './client-operations.mjs';
 import { projectsCompatOperations } from './projects-compat-operations.mjs';   // the old Projects app retired with migration 0051
 import { collabOperations } from './collab-operations.mjs';
 import { driveOperations } from './drive-operations.mjs';
+import { driveV8Operations } from './drive-v8-operations.mjs';
 import { plannerOperations } from './planner-operations.mjs';
 import { plannerStrategyOperations } from './planner-strategy-operations.mjs';
 import { shellOperations } from './shell-operations.mjs';
@@ -38,6 +39,7 @@ export const operations = Object.freeze(Object.fromEntries([
   ...projectsCompatOperations,
   ...collabOperations,
   ...driveOperations,
+  ...driveV8Operations,
   ...plannerOperations,
   ...plannerStrategyOperations,
   ...shellOperations,
