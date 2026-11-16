@@ -28,12 +28,13 @@ const shot = (p, n) => p.screenshot({ path: `${SHOTS}/${n}.png` });
 const toastText = (p) => p.locator('.toast[data-show=true]').last().innerText().catch(() => '');
 const A = (await q("select id from workspaces where slug = 'aurj'"))[0].id;           // the workbook belongs to Aurj: it is tested in Aurj only
 const stamp = Date.now(); const PW = 'correct-horse-battery-staple';
+const made = [];   // people this run creates leave again at the end (other suites expect one owner per organization)
 async function person(name, role, ws) {
   const email = `dv.${name.split(' ')[0].toLowerCase()}.${stamp}@example.com`; const c = await browser.newContext(); const p = await c.newPage();
   await p.goto(`${base}/#/signup`); await p.fill('#nm', name); await p.fill('#em', email); await p.fill('#pw', PW); await p.click('button[type=submit]'); await p.waitForTimeout(1200); await c.close();
   const id = (await q('select id from auth.users where email = $1', [email]))[0].id;
   await q("insert into memberships (workspace_id,user_id,kind,role) values ($1,$2,'staff',$3) on conflict do nothing", [ws, id, role]); await q('update profiles set active_workspace_id = $1, display_name = $3 where id = $2', [ws, id, name]);
-  return { id, email, name };
+  made.push(id); return { id, email, name };
 }
 async function signIn(u, { w = 1440, h = 900 } = {}) {
   const p = watch(await (await browser.newContext({ viewport: { width: w, height: h } })).newPage());
@@ -172,4 +173,5 @@ const AO = await person('Ayesha Aurj', 'owner', A);
 
 check('Z1', 'No page errors or console errors', problems.length === 0, problems.slice(0, 5).join(' | '));
 const pc = results.filter((x) => x.ok).length; console.log(`\n${pc}/${results.length} checks passed`);
+await q("update memberships set status = 'deactivated' where user_id = any($1)", [made]).catch(() => q('delete from memberships where user_id = any($1)', [made]).catch(() => {}));
 await browser.close(); await admin.end(); await s.close?.(); process.exit(pc === results.length ? 0 : 1);
