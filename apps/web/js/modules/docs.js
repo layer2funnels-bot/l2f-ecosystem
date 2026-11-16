@@ -596,6 +596,8 @@ export function docView({ api, id, ctx, opts = {} }) {
     }
     function oneMicOnly() { return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1) || matchMedia('(pointer: coarse)').matches; }
     function voiceStop() { vs.rec?.stop(); vs.listening = false; vInterim.textContent = ''; paintVoice(); stopMic(); }
+    // leaving the browser tab ends recognition in every browser: say so instead of showing a microphone that is no longer listening
+    document.addEventListener('visibilitychange', () => { if (document.hidden && vs.listening && root.isConnected) { voiceStop(); toast('Voice typing paused while this tab was in the background.'); } });
     /** One microphone stream feeds the voice analysis (speaker detection) and, when asked, the audio recording. */
     async function startMic() {
       try {
@@ -885,6 +887,8 @@ export function docView({ api, id, ctx, opts = {} }) {
     // ---- tabs (pages and sub-pages) and the outline of the open tab
     const parentIdOf = (tid) => { const f = findTab(doc, tid); return flatTabs(doc).find((x) => x.tab.children === f.parent)?.tab.id ?? null; };
     function openTab(tid, { focus = false } = {}) {
+      // dictation belongs to the place it started: switching document tab pauses it (no text in a stale position, no hidden listening)
+      if (vs.listening && tid !== activeTab) { voiceStop(); toast('Voice typing paused because you switched tabs. Press Start to continue here.'); }
       if (!findTab(doc, tid)) return; checkpoint(); if (tid === activeTab) return;
       closeFindHighlight(); activeTab = tid; ed.load(findTab(doc, tid).tab.blocks); lastBody = JSON.stringify(doc); paper.scrollTop = 0; window.scrollTo?.({ top: Math.max(0, root.getBoundingClientRect().top + scrollY - 8), behavior: 'auto' });
       stack.length = at + 1; stack.push({ body: lastBody, tab: tid, pos: null }); at = stack.length - 1;
