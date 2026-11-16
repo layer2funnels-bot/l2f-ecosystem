@@ -199,3 +199,7 @@
 .v8p-drive .selbar[hidden]{display:none}
 .side .nav a.dropon{outline:2px dashed var(--action);outline-offset:-2px;background:var(--action-tint)}
 .v8p-drive a.fcard{text-decoration:none;color:inherit}.v8p-drive a.fcard b{text-decoration:none}
+@media (pointer:coarse){.v8p-drive .typechips a{min-height:44px}}
+@media (pointer:coarse){.v8p-drive .tog button{min-height:44px}.v8p-drive .ftab .linklike,.v8p-drive .ftab .fname a{min-height:44px;box-sizing:border-box}}
+@media (pointer:coarse){.v8p-drive .ftab td .fname .linklike,.v8p-drive .ftab td .fname a{min-height:44px}.v8p-drive .cathead .btn,.v8p-drive .tb6 .sel,.v8p-drive .tb6 select{min-height:44px}}
+@media (pointer:coarse){.v8p-drive .ftab td .fname a,.v8p-drive .ftab td .fname .linklike{min-width:44px;display:inline-flex;align-items:center}}

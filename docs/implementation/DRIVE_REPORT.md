@@ -29,7 +29,7 @@ plus the replaced function and policy definitions), then 0060 applied. Checklist
 
 ## 2. Test results (local stack, 16 Nov)
 `npm test` all suites green after fixes (audit 63/63 and direct-access 19/19 caught two real issues — new private functions executable by PUBLIC, API allow-list — both fixed);
-`drive-v8` 89/89 · `sheetmodel` 65/65 · `sheetxlsx` 13/13 · `web` 59/59 · `e2e-drive-v8` **36/36** (production rate limits) · `e2e-local` 71/71 · `e2e-recovery` 42/42 · `e2e-ui`: see `CURRENT_PROJECT_STATUS.md`.
+`drive-v8` 89/89 · `sheetmodel` 65/65 · `sheetxlsx` 13/13 · `web` 59/59 · `e2e-drive-v8` **36/36** (production rate limits) · `e2e-local` 71/71 · `e2e-recovery` 42/42 · `e2e-ui` **265/265** on the production bundle (its old Drive steps now follow the V8 pages; it found real touch-size gaps on the type chips, view toggle, category controls and short file-name links — fixed).
 
 ## 3. Production impact when merged (needs the owner's go)
 - **Migration 0061** must be applied (fresh backup first) **before or with** the merge. It changes data only by marking the 47 document pictures app-owned (reversible in the rollback).
