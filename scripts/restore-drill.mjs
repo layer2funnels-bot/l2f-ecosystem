@@ -38,7 +38,7 @@ try {
   execFileSync('pg_dump', ['-Fc', '--no-owner', '-f', dump, urlFor(SRC)]);
   execFileSync('pg_restore', ['--no-owner', '--exit-on-error', '-d', urlFor(DST), dump]);
 
-  const schema = (db) => execFileSync('pg_dump', ['--schema-only', '--no-owner', urlFor(db)], { encoding: 'utf8' })
+  const schema = (db) => execFileSync('pg_dump', ['--schema-only', '--no-owner', urlFor(db)], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
     .split('\n').filter(l => !l.startsWith('--') && !/^\\(un)?restrict /.test(l)).join('\n');
   check('R1', 'Restored schema (tables, functions, policies, triggers, grants) matches the source', schema(SRC) === schema(DST));
 
