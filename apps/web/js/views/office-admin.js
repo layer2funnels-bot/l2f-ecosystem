@@ -2,7 +2,7 @@
 // and a page per person. Owners and admins only (everyone else gets the not-found screen). Every switch is checked again by the database (migration 0058):
 // nobody changes their own access or an owner's; the Client Access Matrix is for owners AND admins (owner decision, 15 Nov 2026); branding is owners only.
 // The V4 dialogs stay in use (invite, manage a member or invitation, client portal contacts, access levels and assignments) through adminView({ parts: true }).
-import { h, put, icon, btn, toast, dialog, skeleton, errorState, emptyState, notFoundState, avatar, roleLabel } from '../ui.js';
+import { h, put, icon, btn, toast, dialog, skeleton, errorState, emptyState, notFoundState, avatar, roleLabel, orgMarkEl } from '../ui.js';
 import { hrefFor } from '../routes.js';
 import { plateOf, loadRegistry } from '../registry.js';
 import { adminView, emailLine } from './admin.js';
@@ -180,7 +180,7 @@ export function adminV8View({ api, ctx, org, role, route, go }) {
       if (!data) return toast(`That image is over ${maxKB} KB. Use a smaller file.`, false);
       const x = await call('branding.set', { slot, data }); if (!x.ok) return failed(x); toast(`${label.replace('Replace ', '')} updated.${slot === 'icon' ? ' It shows on the rail and the organization menus.' : ''}`); slot === 'icon' ? location.reload() : branding(); } }); i.click(); }, 'ghost sm');
     const removeIcon = b.brand_icon ? btn('Remove icon', async () => { const x = await call('branding.set', { slot: 'icon', data: '' }); if (!x.ok) return failed(x); toast('Icon removed.'); location.reload(); }, 'quiet sm') : null;
-    const mark = img(b.brand_icon, `${org.name} icon`, 40) ?? h('span', { class: 'plate', style: '--s:40px' }, org.name[0]);
+    const mark = img(b.brand_icon, `${org.name} icon`, 40) ?? orgMarkEl(org, 40);
     const t = tp.ok ? tp.data[0] : null; const versions = tv.ok ? tv.data : [];
     const verSel = h('select', { class: 'sel sm', 'aria-label': 'Template version' }, ...versions.map((v) => h('option', { value: String(v.version) }, `v${v.version} · ${new Date(v.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })} · ${v.by_name}`)));
     const useVer = btn('Make this the default', async () => { const v = Number(verSel.value); if (!v || v === t?.version) return toast('That version is already the default.');

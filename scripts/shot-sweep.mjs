@@ -17,7 +17,7 @@ const base = `http://127.0.0.1:${s.port}`; const browser = await chromium.launch
 const L = (await q("select id from workspaces where slug = 'layer2funnels'"))[0].id; const stamp = Date.now(); const PW = 'correct-horse-battery-staple';
 const errors = [];
 async function person(name, role) {
-  const email = `sw.${name.split(' ')[0].toLowerCase()}.${stamp}@example.com`; const c = await browser.newContext(); const p = await c.newPage();
+  const email = `sw.${name.replace(/\s+/g, '').toLowerCase()}.${stamp}@example.com`; const c = await browser.newContext(); const p = await c.newPage();
   await p.goto(`${base}/#/signup`); await p.fill('#nm', name); await p.fill('#em', email); await p.fill('#pw', PW); await p.click('button[type=submit]'); await p.waitForTimeout(1200); await c.close();
   const id = (await q('select id from auth.users where email = $1', [email]))[0].id;
   await q("insert into memberships (workspace_id,user_id,kind,role) values ($1,$2,'staff',$3) on conflict do nothing", [L, id, role]); await q('update profiles set active_workspace_id = $1, display_name = $3 where id = $2', [L, id, name]);
