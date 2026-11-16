@@ -472,6 +472,15 @@ export function createCalc(book, opts = {}) {
   return {
     value: (si, c, r) => { try { return read(si, c, r); } catch (e) { return e instanceof CalcError ? e : E.ERR; } },
     get(si, key) { const p = parseRef(key); return p ? this.value(si, p.col, p.row) : null; },
+    // a formula that is not stored in a cell (conditional formats, validation sources), evaluated on sheet `si`; never cached, never throws
+    evaluate(si, text) { const saved = current; current = -1; try { let v = evalNode(parseFormula(String(text).replace(/^=/, '')), si); if (rt.isRange(v)) v = rt.scalar(v); return v; } catch (e) { return e instanceof CalcError ? e : E.ERR; } finally { current = saved; } },
+    // the values of a range written as text ("Lists!$B$2:$B$14" or "A1:A9"), read through the engine (formulas included), row by row
+    rangeValues(si, text) {
+      const m = /^(?:(?:'((?:[^']|'')+)'|([A-Za-z_][A-Za-z0-9_.]*))!)?\$?([A-Za-z]{1,3})\$?(\d{1,7})(?::\$?([A-Za-z]{1,3})\$?(\d{1,7}))?$/.exec(String(text).trim());
+      if (!m) return null; const sh = m[1] !== undefined ? m[1].replace(/''/g, "'") : m[2]; const tsi = sh === undefined ? si : sheetIndex(sh); if (tsi < 0) return null;
+      const g = parseRange(`${m[3]}${m[4]}${m[5] ? `:${m[5]}${m[6]}` : ''}`); if (!g) return null;
+      const out = []; for (let r = g.r1; r <= Math.min(g.r2, g.r1 + 999); r++) for (let c = g.c1; c <= g.c2; c++) out.push(this.value(tsi, c, r)); return out;
+    },
     invalidate, reset() { memo.clear(); dependents.clear(); rangeDeps.clear(); visiting.clear(); names = null; },
   };
 }

@@ -4,6 +4,8 @@
 import { COLS, ROWS, colName, ref, parseRef, parseRange, rangeLabel, translateFormula, shiftFormula, renameSheetInFormula, dropSheetInFormula, parseLiteral, formatValue, impliedFormat, isError, createCalc, generalNumber, compareValues, fromSerial, NF_KINDS, FUNCTION_NAMES, FUNCTION_DOCS, CalcError, E, parseFormula } from './sheetformula.js';
 export { COLS, ROWS, colName, ref, parseRef, parseRange, rangeLabel, isError, createCalc, FUNCTION_NAMES, FUNCTION_DOCS, formatValue, parseLiteral, impliedFormat, translateFormula, CalcError, E, parseFormula };
 
+import { FONTS } from './docmodel.js';
+export { FONTS };
 export const MIME = 'application/vnd.l2f.sheet+json';
 export const MAX_CELLS = 60000, MAX_SHEETS = 20, MAX_RAW = 4000, MAX_CHARS = 1000000, MAX_STYLES = 400, MAX_MERGES = 2000;
 export const DEFAULT_COL_W = 100, DEFAULT_ROW_H = 26, MIN_COL_W = 24, MAX_COL_W = 600, MIN_ROW_H = 16, MAX_ROW_H = 400;
@@ -17,6 +19,7 @@ export function cleanStyle(o) {
   const s = {};
   for (const k of ['b', 'i', 'u', 'st', 'wr']) if (o[k]) s[k] = 1;
   if (isInt(o.fs, 8, 72)) s.fs = o.fs;
+  if (typeof o.ff === 'string' && Object.hasOwn(FONTS, o.ff)) s.ff = o.ff;
   if (typeof o.fc === 'string' && HEX.test(o.fc)) s.fc = o.fc.toLowerCase();
   if (typeof o.bg === 'string' && HEX.test(o.bg)) s.bg = o.bg.toLowerCase();
   if (['l', 'c', 'r'].includes(o.ha)) s.ha = o.ha;
@@ -104,7 +107,8 @@ export function parseBook(text) {
 }
 const rc = (k) => parseRef(k);
 const ruleOut = (r) => { const { g, ...rest } = r; return { ...rest, range: rangeLabel(g) }; };
-export const CHART_TYPES = ['column', 'bar', 'line', 'pie'], CF_TYPES = ['gt', 'lt', 'between', 'eq', 'contains', 'empty', 'notempty'];
+export const CHART_TYPES = ['column', 'bar', 'line', 'pie'], CF_TYPES = ['gt', 'lt', 'ge', 'le', 'ne', 'between', 'eq', 'contains', 'empty', 'notempty', 'formula', 'scale'];
+export const DV_KINDS = ['whole', 'decimal', 'date'], DV_OPS = ['between', 'gt', 'ge', 'lt', 'le', 'eq', 'ne'];
 const str = (v, n) => (typeof v === 'string' ? v.replace(/[\u0000-\u001f]/g, ' ').slice(0, n) : '');
 /** charts, conditional formats, validation lists, notes, links, tab colour, protection, zoom and print settings of one stored sheet (everything is checked). */
 function cleanExtras(s, sh) {
@@ -114,13 +118,52 @@ function cleanExtras(s, sh) {
     sh.charts.push({ id: str(c.id, 12) || `c${sh.charts.length + 1}`, type: c.type, range: rangeLabel(g), title: str(c.title, 80), legend: c.legend !== false, head: c.head !== false, x: n(c.x, 0, 20000, 40), y: n(c.y, 0, 40000, 40), w: n(c.w, 160, 1200, 420), h: n(c.h, 120, 900, 280) });
   }
   const ruleList = (list, max, ok) => { const out = []; for (const r of (Array.isArray(list) ? list : []).slice(0, max)) { const g = typeof r?.range === 'string' ? parseRange(r.range) : null; if (g) { const x = ok(r, g); if (x) out.push(x); } } return out; };
-  sh.cf = ruleList(s?.cf, 50, (r, g) => { if (!CF_TYPES.includes(r.type)) return null; const o = { g, type: r.type, a: str(String(r.a ?? ''), 100), b: str(String(r.b ?? ''), 100) }; if (typeof r.fc === 'string' && HEX.test(r.fc)) o.fc = r.fc.toLowerCase(); if (typeof r.bg === 'string' && HEX.test(r.bg)) o.bg = r.bg.toLowerCase(); return o.fc || o.bg ? o : null; });
-  sh.dv = ruleList(s?.dv, 50, (r, g) => { const list = (Array.isArray(r.list) ? r.list : []).filter((x) => typeof x === 'string' && x !== '').map((x) => str(x, 100)).slice(0, 100); return list.length ? { g, list } : null; });
+  sh.cf = ruleList(s?.cf, 50, (r, g) => {
+    if (!CF_TYPES.includes(r.type)) return null;
+    if (r.type === 'scale') {   // colour scale: 2 or 3 points { v: number, c: '#rrggbb' } in rising order
+      const pts = (Array.isArray(r.pts) ? r.pts : []).filter((p) => Number.isFinite(p?.v) && typeof p?.c === 'string' && HEX.test(p.c)).slice(0, 3).map((p) => ({ v: p.v, c: p.c.toLowerCase() })).sort((x, y) => x.v - y.v);
+      return pts.length >= 2 ? { g, type: 'scale', pts } : null;
+    }
+    const o = { g, type: r.type, a: str(String(r.a ?? ''), r.type === 'formula' ? 500 : 100), b: str(String(r.b ?? ''), 100) };
+    if (typeof r.fc === 'string' && HEX.test(r.fc)) o.fc = r.fc.toLowerCase(); if (typeof r.bg === 'string' && HEX.test(r.bg)) o.bg = r.bg.toLowerCase(); if (r.b === 1 || r.bold === true) o.bold = true;
+    return o.fc || o.bg || o.bold ? o : null;
+  });
+  // validation: a fixed list, a list read from a range ("Lists!$B$2:$B$14"), or a number/date rule; msg = what to say when an entry is refused
+  sh.dv = ruleList(s?.dv, 50, (r, g) => {
+    const msg = str(String(r.msg ?? ''), 200);
+    if (typeof r.src === 'string' && r.src.trim() && r.src.length <= 120 && /^[^=]/.test(r.src)) return { g, src: str(r.src.trim(), 120), ...(msg ? { msg } : {}) };
+    if (DV_KINDS.includes(r.kind) && DV_OPS.includes(r.op) && Number.isFinite(Number(r.a))) return { g, kind: r.kind, op: r.op, a: Number(r.a), ...(Number.isFinite(Number(r.b)) && r.op === 'between' ? { b: Number(r.b) } : {}), ...(msg ? { msg } : {}) };
+    const list = (Array.isArray(r.list) ? r.list : []).filter((x) => typeof x === 'string' && x !== '').map((x) => str(x, 100)).slice(0, 100); return list.length ? { g, list, ...(msg ? { msg } : {}) } : null;
+  });
   for (const [k, v] of Object.entries(dict(s?.notes))) if (own(s.notes, k) && parseRef(k) && typeof v === 'string' && v.trim() && Object.keys(sh.notes).length < 500) sh.notes[k.toUpperCase()] = str(v, 1000);
   for (const [k, v] of Object.entries(dict(s?.links))) if (own(s.links, k) && parseRef(k) && Object.keys(sh.links).length < 500) { const u = safeLink(v); if (u) sh.links[k.toUpperCase()] = u; }
   if (typeof s?.tab === 'string' && HEX.test(s.tab)) sh.tab = s.tab.toLowerCase();
   sh.lock = s?.lock === true; sh.zoom = isInt(s?.zoom, 50, 200) ? s.zoom : 100;
   if (s?.print && typeof s.print === 'object') sh.print = { fit: s.print.fit !== false, orient: s.print.orient === 'landscape' ? 'landscape' : 'portrait' };
+}
+/**
+ * Applies what sheetxlsx.readXlsxLooks found for one imported sheet (styles, widths, heights, hidden lines, frozen panes, filter, tab colour,
+ * validation, conditional formats) to sheet `s` of `book`, through the same checks as a stored body. Colour-scale "min"/"max" points become the
+ * range's real lowest/highest number (`calc` reads them).
+ */
+export function applyImportedLooks(book, si, looks, calc) {
+  const s = book.sheets[si]; if (!s || !looks) return;
+  for (const [k, st] of Object.entries(looks.sty ?? {})) {
+    if (!parseRef(k)) continue; const prev = s.sty[k] !== undefined ? book.styles[s.sty[k]] : null;
+    const idx = internStyle(book, { ...st, ...(prev?.nf ? { nf: prev.nf } : {}) }); if (idx >= 0) { if (s.sty[k] === undefined && s.cells[k] === undefined) book.n += 1; s.sty[k] = idx; }
+  }
+  for (const [c, w] of Object.entries(looks.cw ?? {})) if (isInt(Number(c), 0, COLS - 1) && Number.isFinite(w)) s.cw[c] = Math.max(MIN_COL_W, Math.min(MAX_COL_W, Math.round(w)));
+  for (const [r, h] of Object.entries(looks.rh ?? {})) if (isInt(Number(r), 0, ROWS - 1) && Number.isFinite(h)) s.rh[r] = Math.max(MIN_ROW_H, Math.min(MAX_ROW_H, Math.round(h)));
+  s.hc = [...new Set((looks.hc ?? []).filter((x) => isInt(x, 0, COLS - 1)))]; s.hr = [...new Set((looks.hr ?? []).filter((x) => isInt(x, 0, ROWS - 1)))];
+  if (looks.freeze) s.freeze = { r: isInt(looks.freeze.r, 0, 30) ? looks.freeze.r : 0, c: isInt(looks.freeze.c, 0, 10) ? looks.freeze.c : 0 };
+  if (looks.filter) { const f = looks.filter; if ([f.c1, f.c2, f.r1, f.r2].every((x) => Number.isInteger(x) && x >= 0) && f.c2 < COLS && f.r2 < ROWS) s.filter = { c1: f.c1, c2: f.c2, r1: f.r1, r2: f.r2, hide: {} }; }
+  if (looks.tab && HEX.test(looks.tab)) s.tab = looks.tab.toLowerCase();
+  const cf = (looks.cf ?? []).map((r) => {
+    if (r.type !== 'scale' || r.pts.every((p) => Number.isFinite(p.v))) return r;
+    const nums = (calc?.rangeValues(si, r.range) ?? []).filter((v) => typeof v === 'number'); if (!nums.length) return null;
+    const lo = Math.min(...nums), hi = Math.max(...nums); return { ...r, pts: r.pts.map((p) => ({ ...p, v: p.v === -Infinity ? lo : p.v === Infinity ? hi : p.v })) };
+  }).filter(Boolean);
+  const tmp = emptySheet(); cleanExtras({ cf: [...s.cf.map(ruleOut), ...cf], dv: [...s.dv.map(ruleOut), ...(looks.dv ?? [])] }, tmp); s.cf = tmp.cf; s.dv = tmp.dv;
 }
 /** Only web and mail links are kept (the same rule as documents). */
 export function safeLink(h) {
@@ -137,19 +180,55 @@ export function cfMatch(rule, v, t) {
   if (rule.type === 'empty') return empty; if (rule.type === 'notempty') return !empty;
   if (empty) return false;
   if (rule.type === 'contains') return String(t).toLowerCase().includes(rule.a.toLowerCase()) && rule.a !== '';
+  if (rule.type === 'ne') return !cfMatch({ ...rule, type: 'eq' }, v, t);
   if (rule.type === 'eq') return typeof v === 'number' && !Number.isNaN(num(rule.a)) ? v === num(rule.a) : String(t).toLowerCase() === rule.a.toLowerCase();
   if (typeof v !== 'number') return false; const a = num(rule.a), b = num(rule.b);
-  if (rule.type === 'gt') return v > a; if (rule.type === 'lt') return v < a; if (rule.type === 'between') return v >= Math.min(a, b) && v <= Math.max(a, b);
+  if (rule.type === 'gt') return v > a; if (rule.type === 'lt') return v < a; if (rule.type === 'ge') return v >= a; if (rule.type === 'le') return v <= a; if (rule.type === 'between') return v >= Math.min(a, b) && v <= Math.max(a, b);
   return false;
 }
-/** { fc, bg } from the conditional formats of a cell (a later rule wins), or null. */
-export function cfStyle(s, c, r, v, t) {
+const hexRgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+const mix = (a, b, t) => `#${hexRgb(a).map((x, i) => Math.round(x + (hexRgb(b)[i] - x) * t).toString(16).padStart(2, '0')).join('')}`;
+/** Colour of a value on a colour scale (points in rising order), or null for non-numbers. */
+export function scaleColor(pts, v) {
+  if (typeof v !== 'number' || !Number.isFinite(v)) return null;
+  if (v <= pts[0].v) return pts[0].c; const last = pts[pts.length - 1]; if (v >= last.v) return last.c;
+  for (let i = 1; i < pts.length; i++) if (v <= pts[i].v) { const a = pts[i - 1], b = pts[i]; return mix(a.c, b.c, b.v === a.v ? 0 : (v - a.v) / (b.v - a.v)); }
+  return last.c;
+}
+/**
+ * { fc, bg, b } from the conditional formats of a cell (a later rule wins), or null. `cx` = { calc, si } lets formula rules run: a rule's formula is
+ * written for the top-left cell of its range and shifted to this cell, like Excel ("$U2<TODAY()" on U7 reads U7).
+ */
+export function cfStyle(s, c, r, v, t, cx = null) {
   if (!s.cf.length) return null; let out = null;
-  for (const rule of ruleFor(s.cf, c, r)) if (cfMatch(rule, v, t)) out = { ...out, ...(rule.fc ? { fc: rule.fc } : {}), ...(rule.bg ? { bg: rule.bg } : {}) };
+  for (const rule of ruleFor(s.cf, c, r)) {
+    if (rule.type === 'scale') { const bg = scaleColor(rule.pts, v); if (bg) out = { ...out, bg }; continue; }
+    let hit;
+    if (rule.type === 'formula') { if (!cx?.calc) continue; const res = cx.calc.evaluate(cx.si, translateFormula(rule.a, r - rule.g.r1, c - rule.g.c1)); hit = res === true || (typeof res === 'number' && res !== 0); }
+    else hit = cfMatch(rule, v, t);
+    if (hit) out = { ...out, ...(rule.fc ? { fc: rule.fc } : {}), ...(rule.bg ? { bg: rule.bg } : {}), ...(rule.bold ? { b: 1 } : {}) };
+  }
   return out;
 }
-/** The list of allowed values for a cell, or null. */
+/** The validation rule of a cell (the last one that covers it), or null. */
+export const dvRule = (s, c, r) => (s.dv.length ? (ruleFor(s.dv, c, r).at(-1) ?? null) : null);
+/** The allowed values of a list rule: a fixed list, or the non-empty values of its source range read through `calc` (sheet index `si`). */
+export function dvValues(rule, calc, si) {
+  if (!rule) return null; if (rule.list) return rule.list; if (!rule.src || !calc) return null;
+  const vals = calc.rangeValues(si, rule.src); if (!vals) return null;
+  const out = []; for (const v of vals) { if (v === null || v === '' || isError(v)) continue; const t = typeof v === 'number' ? generalNumber(v) : String(v); if (!out.includes(t)) out.push(t); }
+  return out.slice(0, 500);
+}
+/** The list of allowed values for a cell, or null (fixed lists only; use dvValues for range-sourced lists). */
 export const dvList = (s, c, r) => (s.dv.length ? (ruleFor(s.dv, c, r).at(-1)?.list ?? null) : null);
+/** Whether `v` (the entered value, already parsed) passes a number/date rule; true when the rule is not a number/date rule. */
+export function dvAccepts(rule, v) {
+  if (!rule?.kind) return true; if (v === null || v === '') return true;
+  if (typeof v !== 'number') return false; if (rule.kind === 'whole' && !Number.isInteger(v)) return false;
+  const a = rule.a, b = rule.b;
+  switch (rule.op) { case 'gt': return v > a; case 'ge': return v >= a; case 'lt': return v < a; case 'le': return v <= a; case 'eq': return v === a; case 'ne': return v !== a;
+    case 'between': return v >= Math.min(a, b ?? a) && v <= Math.max(a, b ?? a); default: return true; }
+}
 /** Data behind a chart: { cats, series: [{ name, values }] } from the chart's range (first row = names when head, first column = categories when it is text). */
 export function chartData(book, si, calc, chart) {
   const g = parseRange(chart.range); if (!g) return { cats: [], series: [] };

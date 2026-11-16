@@ -9,6 +9,8 @@ import { createGrid } from './sheetgrid.js';
 import { drawChart } from './sheetchart.js';
 import { MIME, COLS, ROWS, MAX_CHARS, MAX_SHEETS, MAX_CELLS, DEFAULT_COL_W, DEFAULT_ROW_H, MIN_COL_W, MAX_COL_W, MIN_ROW_H, MAX_ROW_H, colName, ref, parseRef, parseRange, rangeLabel, parseBook, serializeBook, emptySheet, createCalc, cellText, formatValue, impliedFormat, parseLiteral, patchStyle, internStyle, styleOf, Tx, insertLines, deleteLines, renameSheet, removeSheet, duplicateSheet, uniqueName, mergeAt, mergeRange, unmergeRange, sortRange, fillRange, filteredRows, dataRegion, usedRange, countCells, chartData, cfStyle, dvList, linkOf, safeLink, parseCSV, toCSV, toTSV, parseTSV, csvCell, translateFormula, FUNCTION_NAMES, FUNCTION_DOCS, isError } from './sheetmodel.js';
 
+import { applyImportedLooks, dvRule, dvValues, dvAccepts, FONTS } from './sheetmodel.js';
+import { readXlsxLooks } from './sheetxlsx.js';
 export { MIME };
 const timeOf = (iso) => { try { return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); } catch { return ''; } };
 const NS = 'http://www.w3.org/2000/svg';
@@ -58,7 +60,7 @@ export function sheetView({ api, id, ctx }) {
 
     // ------------------------------------------------------------ the editor object the grid talks to
     const ed = {
-      zoom, cfFor: (c, r, v, t) => cfStyle(sheet(), c, r, v, t), noteAt: (k) => sheet().notes[k] ?? null, linkAt: (k) => linkOf(sheet(), k), dvAt: (c, r) => Boolean(dvList(sheet(), c, r)), dvMenu: (a) => dvMenu(a), chartsMoved: () => drawCharts(),
+      zoom, cfFor: (c, r, v, t) => cfStyle(sheet(), c, r, v, t, { calc, si }), noteAt: (k) => sheet().notes[k] ?? null, linkAt: (k) => linkOf(sheet(), k), dvAt: (c, r) => Boolean(dvValues(dvRule(sheet(), c, r), calc, si)?.length), dvMenu: (a) => dvMenu(a), chartsMoved: () => drawCharts(),
       sheet: () => sheet(), book: () => book, si: () => si, calc: () => calc, range: () => range(), active: () => activeCell(), filtered: () => filtered, fillPoint: () => fillPoint(),
       filterOn: () => false, matchAt: (c, r) => matches.size > 0 && matches.has(ref(c, r)), focusGrid: () => { if (pointMode()) return; commitEditing(); focusGrid(); },
       filterBtnAt: (c, r) => { const f = sheet().filter; return f && r === f.r1 && c >= f.c1 && c <= f.c2 ? ((f.hide[c]?.length ?? 0) > 0 ? 'on' : 'off') : null; },
@@ -137,7 +139,9 @@ export function sheetView({ api, id, ctx }) {
     // ------------------------------------------------------------ writing cells
     const rawOf = (v) => { if (v === null || v === undefined) return ''; if (typeof v === 'boolean') return v ? 'TRUE' : 'FALSE'; if (typeof v === 'number') return String(v); if (typeof v === 'string') { if (v === '') return ''; const p = parseLiteral(v); return typeof p.v !== 'string' || v[0] === '=' || v[0] === "'" ? `'${v}` : v; } return ''; };
     function setCell(c, r, text) {
-      const list = dvList(sheet(), c, r); if (list && text !== '' && !list.some((x) => x.toLowerCase() === String(text).toLowerCase())) { toast(`Choose one of the listed values: ${list.slice(0, 6).join(', ')}${list.length > 6 ? '…' : ''}`, false); return; }
+      const rule = dvRule(sheet(), c, r); const list = dvValues(rule, calc, si);
+      if (list && text !== '' && !list.some((x) => x.toLowerCase() === String(text).toLowerCase())) { toast(rule.msg || `Choose one of the listed values: ${list.slice(0, 6).join(', ')}${list.length > 6 ? '…' : ''}`, false); return; }
+      if (rule?.kind && text !== '' && !String(text).startsWith('=') && !dvAccepts(rule, parseLiteral(String(text)).v)) { toast(rule.msg || (rule.kind === 'date' ? 'Enter a valid date.' : 'Enter a number that fits this column.'), false); return; }
       edit((tx) => { if (mergeOf(c, r) && !(mergeOf(c, r).c1 === c && mergeOf(c, r).r1 === r)) return true; return tx.raw(si, ref(c, r), text); }); }
     function clearContents() { const g = range(); edit((tx) => { for (const k of Object.keys(sheet().cells)) { const p = parseRef(k); if (p.col >= g.c1 && p.col <= g.c2 && p.row >= g.r1 && p.row <= g.r2) tx.raw(si, k, ''); } return true; }); }
     function clearFormats() { const g = range(); edit((tx) => { for (const k of Object.keys(sheet().sty)) { const p = parseRef(k); if (p.col >= g.c1 && p.col <= g.c2 && p.row >= g.r1 && p.row <= g.r2) tx.style(si, k, -1); } return true; }); }
@@ -567,7 +571,7 @@ export function sheetView({ api, id, ctx }) {
     }
     const cfDialog = () => { if (denied()) return; ruleDialog('cf'); }, dvDialog = () => { if (denied()) return; ruleDialog('dv'); };
     function dvMenu(anchor) {
-      const a = activeCell(); const list = dvList(sheet(), a.c, a.r); if (!list) return;
+      const a = activeCell(); const list = dvValues(dvRule(sheet(), a.c, a.r), calc, si); if (!list?.length) return;
       menuBtn(anchor, list.map((x) => ({ label: x, checked: rawAt(a.c, a.r) === x, on: () => { setCell(a.c, a.r, x); focusGrid(); } })));
     }
 
@@ -733,7 +737,8 @@ export function sheetView({ api, id, ctx }) {
           if (/\.xlsx$/i.test(f.name) || (head[0] === 0x50 && head[1] === 0x4b)) {
             let bridge; try { bridge = await import('/sheetjs/xlsx.js'); } catch { toast('Excel import isn’t available in this build. Save the file as CSV and import that.', false); return; }
             const parts = bridge.readXlsx(await f.arrayBuffer(), { maxRows: ROWS, maxCols: COLS });
-            const made = parts.map((p) => ({ name: p.name, rows: p.rows.map((row) => (row ?? []).map((cell) => { if (!cell) return { raw: '' }; let raw; if (cell.f) raw = `=${cell.f}`; else if (typeof cell.v === 'number') raw = String(cell.v); else if (typeof cell.v === 'boolean') raw = cell.v ? 'TRUE' : 'FALSE'; else raw = rawOf(String(cell.v ?? '')); return { raw, nf: nfFromExcel(cell.z, cell.t === 'd' || /^\d{4}-\d\d-\d\d$/.test(String(cell.v))) }; })), merges: p.merges }));
+            let looks = null; try { looks = readXlsxLooks(parts.files ?? {}, { maxRows: ROWS, maxCols: COLS }); } catch { looks = null; }   // looks are a bonus: values still import if this fails
+            const made = parts.map((p) => ({ name: p.name, looks: looks?.get(p.name) ?? null, rows: p.rows.map((row) => (row ?? []).map((cell) => { if (!cell) return { raw: '' }; let raw; if (cell.f) raw = `=${cell.f}`; else if (typeof cell.v === 'number') raw = String(cell.v); else if (typeof cell.v === 'boolean') raw = cell.v ? 'TRUE' : 'FALSE'; else raw = rawOf(String(cell.v ?? '')); return { raw, nf: nfFromExcel(cell.z, cell.t === 'd' || /^\d{4}-\d\d-\d\d$/.test(String(cell.v))) }; })), merges: p.merges }));
             done(f.name, made);
           } else done(f.name, [{ name: f.name.replace(/\.[^.]+$/, '').slice(0, 40) || 'Imported', rows: parseCSV(await f.text()).map((row) => row.map((raw) => ({ raw }))), merges: [] }]);
         } catch { toast('Couldn’t read that file.', false); }
@@ -742,13 +747,13 @@ export function sheetView({ api, id, ctx }) {
       const total = parts.reduce((n, p) => n + p.rows.reduce((m, r) => m + r.length, 0), 0);
       const over = parts.some((p) => p.rows.length > ROWS || p.rows.some((r) => r.length > COLS));
       const mode = h('select', { 'aria-label': 'How to import' }, h('option', { value: 'new' }, 'Add as new sheet(s)'), h('option', { value: 'replace' }, 'Replace everything in this spreadsheet'));
-      dialog({ title: `Import ${name}`, body: h('div', {}, h('p', {}, `${parts.length} sheet${parts.length === 1 ? '' : 's'}, about ${total.toLocaleString()} cells. Formulas, values and number formats come across; colours and fonts do not.`), over ? notice('warn', 'warn', `Only the first ${ROWS.toLocaleString()} rows and ${COLS} columns fit. The rest is left out.`) : null, h('label', { class: 'fine' }, 'Where should it go? ', mode)),
+      dialog({ title: `Import ${name}`, body: h('div', {}, h('p', {}, `${parts.length} sheet${parts.length === 1 ? '' : 's'}, about ${total.toLocaleString()} cells. Values, formulas, number formats, fonts, colours, borders, column widths, frozen rows, filters, dropdowns and conditional formats come across.`), over ? notice('warn', 'warn', `Only the first ${ROWS.toLocaleString()} rows and ${COLS} columns fit. The rest is left out.`) : null, h('label', { class: 'fine' }, 'Where should it go? ', mode)),
         actions: [{ label: 'Import', cls: 'primary', on: () => { runImport(parts, mode.value); } }, { label: 'Cancel' }] });
     }
     function runImport(parts, mode) {
       structural(() => {
         if (mode === 'replace') { book.sheets = []; book.styles = []; delete book._sk; book.n = 0; si = 0; } else if (book.sheets.length + parts.length > MAX_SHEETS) { toast(`A spreadsheet holds up to ${MAX_SHEETS} sheets.`, false); return false; }
-        let first = -1;
+        let first = -1; const looksFor = [];
         for (const p of parts) {
           const s = emptySheet(uniqueName(book.sheets, p.name.slice(0, 40) || 'Imported')); book.sheets.push(s); if (first < 0) first = book.sheets.length - 1;
           p.rows.slice(0, ROWS).forEach((row, r) => row.slice(0, COLS).forEach((cell, c) => {
@@ -756,7 +761,9 @@ export function sheetView({ api, id, ctx }) {
             if (cell.raw === '' && !hasNf) return; if (cell.raw !== '') s.cells[k] = String(cell.raw).slice(0, 4000); if (hasNf) { const idx = internStyle(book, { nf: cell.nf }); if (idx >= 0) s.sty[k] = idx; } book.n += 1;
           }));
           s.merges = (p.merges ?? []).filter((m) => m.r2 < ROWS && m.c2 < COLS).map((m) => ({ c1: m.c1, r1: m.r1, c2: m.c2, r2: m.r2 }));
+          if (p.looks) looksFor.push([book.sheets.length - 1, p.looks]);
         }
+        if (looksFor.length) { const c2 = createCalc(book); for (const [i, lk] of looksFor) applyImportedLooks(book, i, lk, c2); }
         if (!book.sheets.length) book.sheets.push(emptySheet()); si = first >= 0 ? first : 0; sel = { a: { c: 0, r: 0 }, f: { c: 0, r: 0 }, kind: 'cell' }; memoSel.clear(); return true;
       });
       toast('Imported.');

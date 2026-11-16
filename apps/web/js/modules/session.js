@@ -6,7 +6,7 @@
 import { h, toast, dialog, drawer, btn } from '../ui.js';
 import { dirty } from '../dirty.js';
 
-export function createSession({ api, id, ctx, version, savedBody, savedAt, readOnly, getBody, setBody, label, onStatus = () => {}, idleMs = 1500, minMs = 0, maxChars = 200000, restoreNote = (n) => `Restored version ${n}` }) {
+export function createSession({ api, id, ctx, version, savedBody, savedAt, readOnly, getBody, setBody, label, onStatus = () => {}, idleMs = 2000, minMs = 3000, maxChars = 200000, restoreNote = (n) => `Restored version ${n}` }) {
   let status = readOnly ? 'readonly' : 'saved', timer = null, retryTimer = null, retryN = 0, firstDirty = 0, chain = Promise.resolve(), saving = false, lastAuto = 0, ro = readOnly, at = savedAt, ver = version, base = savedBody;
   const gone = () => !ctx.live();
   const warn = (e) => { if (status === 'dirty' || status === 'failed' || status === 'retrying' || status === 'saving') { e.preventDefault(); e.returnValue = ''; } };
@@ -59,7 +59,10 @@ export function createSession({ api, id, ctx, version, savedBody, savedAt, readO
     }
     if (r.status === 409) { status = 'failed'; paint(); conflict(); return false; }
     if (r.status === 404) { ro = true; status = 'readonly'; paint(); toast('You can read this but not change it, so your last edit was not saved.', false); return false; }
-    if (r.status === 0 || r.status === 429 || r.status >= 500) {            // network or server trouble: keep the work, try again with a growing delay
+    if (r.status === 429) {                                                   // too many saves at once: wait exactly as long as the server asks, then save what is there
+      status = 'retrying'; paint(); retryTimer = setTimeout(() => self.save({ manual: false }), Math.max(1000, (r.error?.retryAfterSeconds ?? 2) * 1000)); return false;
+    }
+    if (r.status === 0 || r.status >= 500) {                                  // network or server trouble: keep the work, try again with a growing delay
       status = 'retrying'; retryN += 1; paint(); retryTimer = setTimeout(() => self.save({ manual: false }), Math.min(30000, 2000 * 2 ** (retryN - 1))); return false;
     }
     status = 'failed'; paint(); toast(r.message ?? 'Couldn’t save. Try again.', false); return false;

@@ -18,7 +18,7 @@ import { LANGS, SPEAKER_COLOURS, isUrdu, fmtClock, applyVoiceCommands, withSpaci
 import { SpeakerClusters, fingerprint, frameFeatures } from './docspeaker.js';
 
 export const BOARD_MIME = 'application/vnd.excalidraw+json';
-const AUTOSAVE_IDLE_MS = 1500, AUTOSAVE_MAX_WAIT_MS = 10000;   // a save about 1.5 s after typing stops, never later than 10 s after the first unsaved change
+const AUTOSAVE_IDLE_MS = 2000, AUTOSAVE_MAX_WAIT_MS = 10000, AUTOSAVE_MIN_GAP_MS = 3000;   // a save about 2 s after typing stops (never later than 10 s after the first unsaved change), autosaves at least 3 s apart
 const CHECK_IDLE_MS = 700, CHECK_MAX_MS = 5000;               // the model is read from the page when typing pauses, not on every key
 const reduced = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 const timeOf = (d) => new Date(d).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -209,7 +209,7 @@ export function docView({ api, id, ctx, opts = {} }) {
       if (used > 0.8) spaceEl.textContent = `This document is ${Math.round(used * 100)}% of its size limit: move part of it to another tab or document soon.`;
     }
     let chain = Promise.resolve(), retryN = 0, retryTimer = null, firstDirty = 0;
-    const schedule = () => { clearTimeout(timer); if (readOnly) return; firstDirty ||= Date.now(); timer = setTimeout(() => save({ manual: false }), Date.now() - firstDirty > AUTOSAVE_MAX_WAIT_MS ? 0 : AUTOSAVE_IDLE_MS); };
+    const schedule = () => { clearTimeout(timer); if (readOnly) return; firstDirty ||= Date.now(); const due = Date.now() - firstDirty > AUTOSAVE_MAX_WAIT_MS ? 0 : AUTOSAVE_IDLE_MS; timer = setTimeout(() => save({ manual: false }), Math.max(due, lastAuto + AUTOSAVE_MIN_GAP_MS - Date.now())); };
     /** Saves never overlap: a call made while one runs waits for it, then saves whatever changed in the meantime. */
     function save(o = {}) { chain = chain.then(() => doSave(o), () => doSave(o)); return chain; }
     async function doSave({ manual, note }) {
@@ -222,14 +222,17 @@ export function docView({ api, id, ctx, opts = {} }) {
       const r = await api.call('drive.files.versions.add', { id, body, expected: version, ...(note ? { note } : manual ? {} : { note: 'Autosave' }) });
       saving = false;
       if (r.ok) {
-        version = r.data[0].current_version; savedBody = body; savedAt = new Date().toISOString(); retryN = 0;
+        version = r.data[0].current_version; savedBody = body; savedAt = new Date().toISOString(); retryN = 0; if (!manual) lastAuto = Date.now();
         status = currentBody() !== savedBody ? 'dirty' : 'saved';
-        if (status === 'saved') { dirty.clear(); removeEventListener('beforeunload', warn); } else { firstDirty = Date.now(); timer = setTimeout(() => save({ manual: false }), AUTOSAVE_IDLE_MS); }
+        if (status === 'saved') { dirty.clear(); removeEventListener('beforeunload', warn); } else { firstDirty = Date.now(); schedule(); }
         paintStatus(); if (!gone()) ctx.announce('Saved.'); return true;
       }
       if (r.status === 409) { status = 'failed'; paintStatus(); conflict(); return false; }
       if (r.status === 404) { status = 'readonly'; readOnly = true; page.setAttribute('contenteditable', 'false'); paintStatus(); toast('You can read this document but not change it, so your last edit was not saved.', false); lockTools(); return false; }
-      if (r.status === 0 || r.status === 429 || r.status >= 500) {          // network or server trouble: the work stays, the save is tried again with a growing delay
+      if (r.status === 429) {                                                 // too many saves at once: wait exactly as long as the server asks
+        status = 'retrying'; paintStatus(); retryTimer = setTimeout(() => save({ manual: false }), Math.max(1000, (r.error?.retryAfterSeconds ?? 2) * 1000)); return false;
+      }
+      if (r.status === 0 || r.status >= 500) {          // network or server trouble: the work stays, the save is tried again with a growing delay
         status = 'retrying'; retryN += 1; paintStatus(); retryTimer = setTimeout(() => save({ manual: false }), Math.min(30000, 2000 * 2 ** (retryN - 1))); return false;
       }
       status = 'failed'; paintStatus(); toast(r.message ?? 'Couldn’t save. Try again.', false); return false;

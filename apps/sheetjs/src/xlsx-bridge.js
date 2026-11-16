@@ -3,8 +3,8 @@ import * as XLSX from 'xlsx';
 
 /** ArrayBuffer -> [{ name, rows: [[{ v, f, z }|null]] }] (v: value, f: formula text without '=', z: number format) */
 export function readXlsx(buf, { maxRows = 1000, maxCols = 52 } = {}) {
-  const wb = XLSX.read(buf, { type: 'array', cellFormula: true, cellDates: true, cellNF: true });
-  return wb.SheetNames.slice(0, 20).map((name) => {
+  const wb = XLSX.read(buf, { type: 'array', cellFormula: true, cellDates: true, cellNF: true, bookFiles: true });
+  const parts = wb.SheetNames.slice(0, 20).map((name) => {
     const ws = wb.Sheets[name]; const rows = [];
     const ref = ws['!ref']; if (!ref) return { name, rows, merges: [] };
     const rg = XLSX.utils.decode_range(ref);
@@ -19,6 +19,13 @@ export function readXlsx(buf, { maxRows = 1000, maxCols = 52 } = {}) {
     const merges = (ws['!merges'] || []).filter((m) => m.e.r < maxRows && m.e.c < maxCols).map((m) => ({ r1: m.s.r, c1: m.s.c, r2: m.e.r, c2: m.e.c }));
     return { name, rows, merges };
   });
+  // the workbook's XML parts (styles, sheets, theme): the editor reads looks and rules from them (sheetxlsx.js)
+  const files = {};
+  for (const [k, v] of Object.entries(wb.files ?? {})) {
+    const key = k.replace(/^\//, ''); if (!/^xl\/(workbook\.xml|styles\.xml|_rels\/workbook\.xml\.rels|theme\/theme1\.xml|worksheets\/sheet\d+\.xml)$/.test(key)) continue;
+    const c = v?.content; files[key] = typeof c === 'string' ? c : c ? new TextDecoder().decode(c) : '';
+  }
+  return Object.assign(parts, { files });
 }
 
 /** [{ name, rows: [[value|{f}|null]] }] -> Uint8Array (.xlsx). Cell: string | number | boolean | { f: 'SUM(A1:A2)', v: cachedValue }. */

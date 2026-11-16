@@ -2,7 +2,7 @@
 // The scroller owns the scroll bars; a sticky "stage" holds four panes (corner, top, left, main) whose layers are moved with transforms, so a
 // 1,000 x 52 sheet scrolls as smoothly as a small one. All cell state comes from the editor object `ed`; this file never changes the book.
 import { h } from '../dom.js';
-import { COLS, ROWS, DEFAULT_COL_W, DEFAULT_ROW_H, colName, ref, styleOf, cellText } from './sheetmodel.js';
+import { COLS, ROWS, DEFAULT_COL_W, DEFAULT_ROW_H, colName, ref, styleOf, cellText, FONTS } from './sheetmodel.js';
 
 export const HW = 48, HH = 26, OVER = 3;
 const bisect = (arr, v, n) => { let lo = 0, hi = n; while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (arr[mid] <= v) lo = mid; else hi = mid - 1; } return lo; };
@@ -80,21 +80,24 @@ export function createGrid(ed) {
     const z = ed.zoom(); const cf = ed.cfFor(c, r, v, text); const note = ed.noteAt(key); const link = ed.linkAt(key); const dv = isAct && ed.dvAt(c, r);
     const kind = v instanceof Object ? 'err' : typeof v === 'number' ? 'num' : typeof v === 'boolean' ? 'bool' : '';  const kcls = kind ? `sx-${kind}` : '';
     const fb = ed.filterBtnAt(c, r); const fill = ed.fillPoint?.(); const hasFill = fill && fill.c === c && fill.r === r;
-    const flags = (touchesR ? 'R' : '') + (eT ? 'T' : '') + (eB ? 'B' : '') + (eL ? 'L' : '') + (eR ? 'r' : '') + (isAct ? 'A' : '') + (fb ? 'F' : '') + (hasFill ? 'H' : '') + (ed.matchAt(c, r) ? 'M' : '') + (dv ? 'D' : '') + (note ? 'N' : '') + (link ? 'L' : '') + z + (cf ? `${cf.fc ?? ''}${cf.bg ?? ''}` : '');
+    const flags = (touchesR ? 'R' : '') + (eT ? 'T' : '') + (eB ? 'B' : '') + (eL ? 'L' : '') + (eR ? 'r' : '') + (isAct ? 'A' : '') + (fb ? 'F' : '') + (hasFill ? 'H' : '') + (ed.matchAt(c, r) ? 'M' : '') + (dv ? 'D' : '') + (note ? 'N' : '') + (link ? 'L' : '') + z + (cf ? `${cf.b ? 'b' : ''}${cf.fc ?? ''}${cf.bg ?? ''}` : '');
     const w = colLeft[mm.c2 + 1] - colLeft[mm.c1], hh = rowTop[mm.r2 + 1] - rowTop[mm.r1];
     const sig = `${text}|${ed.sheet().sty[key] ?? ''}|${flags}|${w}|${hh}|${kind}|${fb ?? ''}`;
     if (el._sig === sig) return; el._sig = sig;
     el.className = `sx-c${kcls ? ` ${kcls}` : ''}${inR || touchesR ? ' sx-in' : ''}${eT ? ' sx-eT' : ''}${eB ? ' sx-eB' : ''}${eL ? ' sx-eL' : ''}${eR ? ' sx-eR' : ''}${isAct ? ' sx-act' : ''}${ed.matchAt(c, r) ? ' sx-match' : ''}${st?.wr ? ' sx-wrap' : ''}${link ? ' sx-lnk' : ''}`;
     el.setAttribute('aria-selected', isAct ? 'true' : 'false');
     const s = el.style; s.width = `${w}px`; s.height = `${hh}px`;
-    s.fontSize = st?.fs || z !== 1 ? `${(st?.fs ?? 14) * z}px` : ''; s.fontWeight = st?.b ? '700' : ''; s.fontStyle = st?.i ? 'italic' : '';
+    s.fontSize = st?.fs || z !== 1 ? `${(st?.fs ?? 14) * z}px` : ''; s.fontWeight = st?.b || cf?.b ? '700' : ''; s.fontFamily = st?.ff ? (FONTS[st.ff]?.css ?? '') : ''; s.fontStyle = st?.i ? 'italic' : '';
     s.textDecoration = [st?.u ? 'underline' : '', st?.st ? 'line-through' : ''].filter(Boolean).join(' ');
     const fg = cf?.fc ?? st?.fc, bgc = cf?.bg ?? st?.bg;
     s.color = fg ?? (bgc ? (lum(bgc) > 0.4 ? '#14161c' : '#ffffff') : '');
     s.backgroundColor = bgc ?? '';
     const ha = st?.ha ?? (kind === 'num' ? 'r' : kind === 'bool' || kind === 'err' ? 'c' : 'l'); const va = st?.va ?? 'b';
     s.justifyContent = { l: 'flex-start', c: 'center', r: 'flex-end' }[ha]; s.alignItems = { t: 'flex-start', m: 'center', b: 'flex-end' }[va]; s.textAlign = { l: 'left', c: 'center', r: 'right' }[ha];
-    const bd = st?.bd; const sh = []; if (bd) { const col = 'var(--text)'; if (bd.t) sh.push(`inset 0 1px 0 0 ${col}`); if (bd.b) sh.push(`inset 0 -1px 0 0 ${col}`); if (bd.l) sh.push(`inset 1px 0 0 0 ${col}`); if (bd.r) sh.push(`inset -1px 0 0 0 ${col}`); }
+    // a border between two cells is drawn once (by the cell below / to the right only when the other side does not draw it), in a soft ink
+    const bd = st?.bd; const sh = []; if (bd) { const col = 'color-mix(in srgb, var(--text) 55%, transparent)';
+      const upB = r > 0 && styleOf(book, ed.sheet(), ref(c, r - 1))?.bd?.b, leftR = c > 0 && styleOf(book, ed.sheet(), ref(c - 1, r))?.bd?.r;
+      if (bd.t && !upB) sh.push(`inset 0 1px 0 0 ${col}`); if (bd.b) sh.push(`inset 0 -1px 0 0 ${col}`); if (bd.l && !leftR) sh.push(`inset 1px 0 0 0 ${col}`); if (bd.r) sh.push(`inset -1px 0 0 0 ${col}`); }
     s.boxShadow = sh.join(',');
     const t = el.firstChild ?? el.appendChild(h('span', { class: 'sx-t' })); t.textContent = text;
     while (el.childNodes.length > 1) el.lastChild.remove();

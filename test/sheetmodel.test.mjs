@@ -137,5 +137,39 @@ check('SM48', 'Hostile formulas cannot hang or escape: deep nesting, huge number
   check('SM54', 'Inserting rows moves notes, links, rules and chart ranges with the cells; deleting their rows drops them', s.notes.A3 === 'hello' && s.cf[0].g.r1 === 3 && s.charts[0].range === 'A3:C5' && (M.deleteLines(b, 0, 'r', 2, 3), s.notes.A3 === undefined && s.charts.length === 0));
 }
 
+// ---- P04 Drive: functions the owner's real workbooks use (OR-35) and the Aurj Dream 100 Tracker acceptance (OR-37)
+{
+  const D = { A1: 'x', A2: 'y', A3: 'x', A4: 'x', B1: '1', B2: '2', B3: '3', B4: '4', C1: 'Open', C2: 'Open', C3: 'Done', C4: 'Open' };
+  check('SF1', 'COUNTIFS / SUMIFS / AVERAGEIFS / MAXIFS / MINIFS match rows on every criterion', f1('=COUNTIFS(A1:A4,"x",C1:C4,"Open")', D) === '2' && f1('=SUMIFS(B1:B4,A1:A4,"x",C1:C4,"<>Done")', D) === '5'
+    && Math.abs(val({ ...D, Z1: '=AVERAGEIFS(B1:B4,A1:A4,"x")' }, 'Z1') - 8 / 3) < 1e-9 && f1('=MAXIFS(B1:B4,C1:C4,"Open")', D) === '4' && f1('=MINIFS(B1:B4,A1:A4,"x")', D) === '1');
+  check('SF2', 'COUNTIFS with ranges of different sizes is #VALUE!, not a wrong number', f1('=COUNTIFS(A1:A4,"x",B1:B3,">0")', D) === '#VALUE!');
+  check('SF3', 'IFS, SWITCH, IFNA, ISNA, CHOOSE, XOR', f1('=IFS(B1>5,"a",B2=2,"b")', D) === 'b' && f1('=SWITCH(A2,"x",1,"y",2,9)', D) === '2' && f1('=SWITCH("q","x",1,9)') === '9'
+    && f1('=IFNA(MATCH("z",A1:A4,0),"none")', D) === 'none' && f1('=ISNA(MATCH("z",A1:A4,0))', D) === 'TRUE' && f1('=CHOOSE(2,"a","b","c")') === 'b' && f1('=XOR(TRUE,TRUE,TRUE)') === 'TRUE');
+  check('SF4', 'SUMPRODUCT, PRODUCT, LARGE, SMALL, RANK, TRUNC, CEILING, FLOOR, SIGN', f1('=SUMPRODUCT(B1:B2,B3:B4)', D) === '11' && f1('=PRODUCT(B1:B4)', D) === '24' && f1('=LARGE(B1:B4,2)', D) === '3'
+    && f1('=SMALL(B1:B4,1)', D) === '1' && f1('=RANK(3,B1:B4)', D) === '2' && f1('=TRUNC(2.789,1)') === '2.7' && f1('=CEILING(7,5)') === '10' && f1('=FLOOR(7,5)') === '5' && f1('=SIGN(-3)') === '-1');
+  check('SF5', 'TEXTJOIN, REPT, EXACT, SEARCH', f1('=TEXTJOIN("-",TRUE,A1:A2,"z")', D) === 'x-y-z' && f1('=REPT("ab",3)') === 'ababab' && f1('=EXACT("a","A")') === 'FALSE' && f1('=SEARCH("B","abc")') === '2');
+  check('SF6', 'Dates: WEEKDAY, EDATE, EOMONTH, DAYS, DATEDIF, NETWORKDAYS', f1('=WEEKDAY(DATE(2026,11,16))') === '2' && f1('=DAY(EOMONTH(DATE(2026,2,10),0))') === '28' && f1('=MONTH(EDATE(DATE(2026,1,31),1))') === '2'
+    && f1('=DAYS(DATE(2026,11,16),DATE(2026,11,1))') === '15' && f1('=DATEDIF(DATE(2020,5,1),DATE(2026,4,30),"Y")') === '5' && f1('=NETWORKDAYS(DATE(2026,11,16),DATE(2026,11,22))') === '5');
+  const pinned = (y, m, d, h) => { const b = book([{ cells: { A1: '=TODAY()' } }]); return createCalc(b, { now: () => new Date(y, m - 1, d, h).getTime() }).get(0, 'A1'); };
+  check('SF7', 'TODAY() is the person’s own date (01:00 local is still that day, not yesterday in UTC)', pinned(2026, 11, 16, 1) === pinned(2026, 11, 16, 23) && pinned(2026, 11, 16, 1) - pinned(2026, 11, 15, 23) === 1);
+  // The Dream 100 workbook: every formula, evaluated by our engine on the day Excel last saved it, equals Excel's saved value
+  const { readFileSync } = await import('node:fs');
+  const fx = JSON.parse(readFileSync(new URL('./fixtures/dream100.cells.json', import.meta.url), 'utf8'));
+  const b = { v: 2, styles: [], n: 0, sheets: fx.sheets.map((s) => ({ ...M.emptySheet(s.name), cells: s.cells })) };
+  const calc = createCalc(b, { now: () => new Date(2026, 10, 5, 12).getTime() });
+  let total = 0, same = 0; const diff = [];
+  fx.sheets.forEach((s, si) => { for (const [k, want] of Object.entries(s.expect)) { total++; const got = calc.get(si, k); const g = isError(got) ? got.code : got;
+    const ok = typeof want === 'number' && typeof g === 'number' ? Math.abs(want - g) < 1e-9 : String(g ?? '') === String(want ?? ''); if (ok) same++; else diff.push(`${s.name}!${k}=${g} (Excel ${want})`); } });
+  check('SF8', `Dream 100 Tracker: all ${total} formulas equal Excel's saved values (Dashboard, Prospects priority scores, follow-up counts)`, total === 675 && same === total, diff.slice(0, 5).join('; '));
+  const dash = fx.sheets.findIndex((s) => s.name === 'Dashboard');
+  check('SF9', 'Dream 100: the Dashboard B5:B13 (prospects 1, average score 73, tiers 0/1/0, archived 0, overdue 0, due this week 1, interactions 1) equal Excel on the save date', ['B5', 'B6', 'B7', 'B8', 'B9', 'B10', 'B11', 'B12', 'B13'].map((k) => calc.get(dash, k)).join() === '1,73,0,1,0,0,0,1,1',
+    ['B5', 'B6', 'B7', 'B8', 'B9', 'B10', 'B11', 'B12', 'B13'].map((k) => calc.get(dash, k)).join());
+  const nameErr = fx.sheets.flatMap((s, si) => Object.keys(s.expect).filter((k) => { const v = calc.get(si, k); return isError(v) && v.code === '#NAME?'; }));
+  check('SF10', 'Dream 100: no #NAME? anywhere', nameErr.length === 0, nameErr.join());
+  // a change in the data flows to the dashboard (no hard-coded results)
+  const pros = fx.sheets.findIndex((s) => s.name === 'Prospects'); b.sheets[pros].cells.B3 = 'New prospect'; calc.invalidate(pros, 1, 2);
+  check('SF11', 'Dream 100: adding a prospect changes the Dashboard count', calc.get(dash, 'B6') !== undefined && calc.get(dash, 'B5') === 2, String(calc.get(dash, 'B5')));
+}
+
 for (const x of results) console.log(`${x.ok ? 'PASS' : 'FAIL'}  ${x.id.padEnd(5)} ${x.name}`);
 const pc = results.filter((x) => x.ok).length; console.log(`\n${pc}/${results.length} checks passed`); process.exit(pc === results.length ? 0 : 1);
