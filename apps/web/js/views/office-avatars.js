@@ -314,9 +314,7 @@ export function avatarEditView(ctx, id, chapter = 'about') {
       const move = (i, dir) => { const j = i + dir; if (j < 0 || j >= p.sections.length) return; [p.sections[i], p.sections[j]] = [p.sections[j], p.sections[i]]; touch(); paint(); };
       const nav = h('nav', { class: 'chapters' }, h('p', { class: 'over' }, 'Sections'),
         h('a', { href: `${base(id)}/edit/about`, onclick: (e) => { e.preventDefault(); chapter = 'about'; history.replaceState(null, '', `${base(id)}/edit/about`); paint(); }, ...(chapter === 'about' ? { 'aria-current': 'page' } : {}) }, 'Name and look'),
-        ...p.sections.map((s, i) => h('div', { class: `navrow ${s.id === chapter ? 'on' : ''}`.trim() }, h('a', { href: `${base(id)}/edit/${s.id}`, onclick: (e) => { e.preventDefault(); chapter = s.id; history.replaceState(null, '', `${base(id)}/edit/${s.id}`); paint(); }, ...(s.id === chapter ? { 'aria-current': 'page' } : {}) }, `${i + 1}. ${s.title}`),
-          h('button', { class: 'iconbtn xs', type: 'button', 'aria-label': `Move ${s.title} up`, disabled: i === 0, onclick: () => move(i, -1) }, h('span', { style: 'display:inline-flex;transform:rotate(-90deg)' }, icon('right'))),
-          h('button', { class: 'iconbtn xs', type: 'button', 'aria-label': `Move ${s.title} down`, disabled: i === p.sections.length - 1, onclick: () => move(i, 1) }, h('span', { style: 'display:inline-flex;transform:rotate(90deg)' }, icon('right'))))),
+        ...p.sections.map((s, i) => h('a', { href: `${base(id)}/edit/${s.id}`, title: s.title, onclick: (e) => { e.preventDefault(); chapter = s.id; history.replaceState(null, '', `${base(id)}/edit/${s.id}`); paint(); }, ...(s.id === chapter ? { 'aria-current': 'page' } : {}) }, `${i + 1}. ${s.title}`)),
         h('a', { href: `${base(id)}/edit/evidence`, onclick: (e) => { e.preventDefault(); chapter = 'evidence'; history.replaceState(null, '', `${base(id)}/edit/evidence`); paint(); }, ...(chapter === 'evidence' ? { 'aria-current': 'page' } : {}) }, 'Evidence'),
         h('button', { class: 'addrow', type: 'button', onclick: newSection }, icon('plus'), 'Add a section'));
       const ed = h('div', {});
@@ -342,7 +340,9 @@ export function avatarEditView(ctx, id, chapter = 'about') {
         const del = h('button', { class: 'btn quiet sm dng', type: 'button', onclick: () => dialog({ title: `Delete “${s.title}”?`, body: h('p', {}, 'The section and its content leave this avatar when you save. A saved version keeps the old copy.'),
           actions: [{ label: 'Delete section', cls: 'dng', on: () => { p.sections.splice(i, 1); p.cards = p.cards.filter((k) => k.sid !== s.id); touch(); chapter = p.sections[Math.max(0, i - 1)]?.id ?? 'about'; history.replaceState(null, '', `${base(id)}/edit/${chapter}`); paint(); } }, { label: 'Cancel' }] }) }, icon('trash'), 'Delete section');
         const preview = btn([icon('eye'), 'Preview'], () => dialog({ title: s.title, wide: true, body: h('div', { class: 'avb' }, ...renderBlocks(s.blocks)), actions: [{ label: 'Close' }] }), 'quiet sm');
-        put(ed, h('div', { class: 'edhead' }, title), h('div', { class: 'tb6' }, kind, prof, h('span', { class: 'grow' }), preview, del), blockEditor(s, touch),
+        const up = btn([h('span', { style: 'display:inline-flex;transform:rotate(-90deg)' }, icon('right')), 'Move up'], () => move(i, -1), 'quiet sm', i === 0 ? { disabled: true } : {});
+        const down = btn([h('span', { style: 'display:inline-flex;transform:rotate(90deg)' }, icon('right')), 'Move down'], () => move(i, 1), 'quiet sm', i === p.sections.length - 1 ? { disabled: true } : {});
+        put(ed, h('div', { class: 'edhead' }, title), h('div', { class: 'tb6 edtools' }, h('label', { class: 'edkind' }, h('span', {}, 'Kind'), kind), prof, h('span', { class: 'grow' }), up, down, preview, del), blockEditor(s, touch),
           s.type === 'custom' ? null : h('p', { class: 'hint', style: 'margin-top:8px' }, `Kind: ${typeTitle(s.type)}. Sub-headings such as “External desires” or a beliefs table let the Use it tab find copy angles.`));
       }
       put(wrap, h('div', { class: 'studio-body' }, h('div', { class: 'deep' }, nav, h('div', {}, ed,

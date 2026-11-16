@@ -11,7 +11,7 @@ import { NOT_FOUND, SESSION_EXPIRED, BAD_REQUEST, FAILED } from './errors.mjs';
 
 const MAX_BODY_BYTES = 16 * 1024;
 // Saving a first-party document (Docs, Sheets, boards: up to 1,000,000 characters) needs a larger body; every other operation keeps the 16 KB limit.
-const LARGE_BODY_OPS = new Set(['drive.files.create', 'drive.files.versions.add', 'fmp.funnels.create', 'fmp.funnels.update', 'fmp.versions.add', 'fmp.templates.create', 'fmp.actuals.save', 'fmp.assets.add']);   // funnel maps can be large too
+const LARGE_BODY_OPS = new Set(['drive.files.create', 'drive.files.versions.add', 'fmp.funnels.create', 'fmp.funnels.update', 'fmp.versions.add', 'fmp.templates.create', 'fmp.actuals.save', 'fmp.assets.add', 'funnels.avatars.create', 'funnels.avatars.update']);   // funnel maps and customer avatars (a whole research document, profile up to 400 KB) can be large too
 const LARGE_BODY_BYTES = 4 * 1024 * 1024;
 // Projects V2 (pm.*) takes one args object of up to 120,000 characters (long task descriptions, rich pages).
 const PM_BODY_BYTES = 128 * 1024;

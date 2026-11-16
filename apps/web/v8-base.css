@@ -218,3 +218,19 @@ button.tfold-empty:hover{color:var(--text)}
 .v8p-tasks .ol-row{min-width:0;max-width:100%}
 .v8p-tasks .ol-row .ol-t{flex:1 1 auto;min-width:0;overflow-wrap:anywhere}
 @media (max-width:640px){.v8p-tasks .ol-row{flex-wrap:wrap;row-gap:2px}.v8p-tasks .ol-row .ol-t{flex-basis:calc(100% - 120px)}}
+/* Avatar editor: the section list stays in its column (long names end in …, a long list scrolls inside itself) */
+.v8p-office .deep .chapters{min-width:0;max-height:calc(100vh - 130px);overflow:auto;padding-right:4px}
+.v8p-office .deep .chapters a{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;line-height:38px}
+.v8p-office .deep .chapters .ring{vertical-align:middle;margin-right:8px}
+.v8p-office .edtools{flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.v8p-office .edkind{display:inline-flex;align-items:center;gap:8px;font-size:calc(13px * var(--ts, 1));color:var(--muted)}
+.v8p-office .edkind .sel{min-width:200px}
+.v8p-office .edhead .tp-title{width:100%}
+/* Client Access Matrix: one column per app, however many apps there are; every cell visible (off = outlined box, on = green with a tick) */
+.v8p-office .cagrid .cahead,.v8p-office .cagrid .carow{grid-template-columns:minmax(160px,220px) repeat(var(--n,10),48px);width:max-content;min-width:100%}
+.v8p-office .cagrid .cahead>span:not(:first-child){display:grid;place-items:center}
+.v8p-office .cagrid .cell{display:grid;place-items:center;width:32px;height:32px;margin:0 auto;border:1.5px solid var(--line-strong,#C9CBD1);border-radius:8px;background:var(--surface);color:#fff;cursor:pointer;padding:0}
+.v8p-office .cagrid .cell:hover{border-color:#13A592}
+.v8p-office .cagrid .cell.busy{opacity:.5}
+.v8p-office .cagrid .cell svg{width:16px;height:16px}
+@media (max-width:760px){.v8p-office .cagrid .cahead,.v8p-office .cagrid .carow{grid-template-columns:140px repeat(var(--n,10),44px)}}
